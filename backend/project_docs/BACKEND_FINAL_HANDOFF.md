@@ -2,7 +2,7 @@
 
 Project: Dental Clinic Management System Website
 
-Current phase: 12K.Final
+Current phase/status: 12K.Final.1 plus schedule/leave visibility hardening
 
 Backend stack: Django, Django REST Framework, PostgreSQL
 
@@ -58,18 +58,29 @@ Run backend commands from `backend` with the virtualenv active.
 
 ## Verification
 
-Latest full regression result:
+Latest full regression:
 
 ```text
 python -m pytest -q
-383 passed in 6.13s
+397 passed
 ```
 
-Latest targeted final verification result:
+Django check:
 
 ```text
-python -m pytest tests/accounts tests/patients tests/scheduling tests/appointments tests/visits tests/xrays tests/ai_results tests/billing tests/clinic tests/dashboard tests/security tests/audit tests/workflows -q -vv
-378 passed in 6.80s
+passed
+```
+
+Migration drift check:
+
+```text
+no changes detected
+```
+
+Health endpoint:
+
+```text
+200 {"status":"ok"}
 ```
 
 ## Packaging Hygiene
