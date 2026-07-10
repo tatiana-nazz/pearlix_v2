@@ -7,6 +7,7 @@ import type {
   PatientListItem,
   PatientPayload,
   PatientUpdatePayload,
+  PatientVersionPayload,
   UpdatePatientPayload,
 } from "../../types/patients";
 import type { VisitDetail } from "../../types/visits";
@@ -19,7 +20,11 @@ export function patientListQuery(filters?: PatientListFilters): QueryParams | un
     page: filters.page,
     search: filters.search || undefined,
     name: filters.name || undefined,
-    phone: filters.phone || undefined,
+    first_name: filters.first_name || undefined,
+    last_name: filters.last_name || undefined,
+    phone_number: filters.phone_number || undefined,
+    email: filters.email || undefined,
+    national_id_or_passport: filters.national_id_or_passport || undefined,
     is_archived: filters.is_archived,
     my_patients: filters.my_patients || undefined,
     upcoming_with_me: filters.upcoming_with_me || undefined,
@@ -43,12 +48,12 @@ export function updatePatient(id: number, payload: UpdatePatientPayload) {
   return api.patch<PatientDetail, UpdatePatientPayload>(`/patients/${id}/`, payload);
 }
 
-export function archivePatient(id: number) {
-  return api.post<PatientDetail>(`/patients/${id}/archive/`);
+export function archivePatient(id: number, payload: PatientVersionPayload) {
+  return api.post<PatientDetail, PatientVersionPayload>(`/patients/${id}/archive/`, payload);
 }
 
-export function unarchivePatient(id: number) {
-  return api.post<PatientDetail>(`/patients/${id}/unarchive/`);
+export function unarchivePatient(id: number, payload: PatientVersionPayload) {
+  return api.post<PatientDetail, PatientVersionPayload>(`/patients/${id}/unarchive/`, payload);
 }
 
 export function getPatientVisits(id: number, query?: QueryParams) {

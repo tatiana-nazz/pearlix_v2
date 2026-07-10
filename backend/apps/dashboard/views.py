@@ -23,7 +23,7 @@ def _role_required(request, role):
 
 
 def _patient_summary(patient):
-    return {"id": patient.id, "full_name": patient.full_name, "phone": patient.phone}
+    return {"id": patient.id, "full_name": patient.full_name, "phone_number": patient.phone_number}
 
 
 def _user_summary(user):

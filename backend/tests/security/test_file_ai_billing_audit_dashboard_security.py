@@ -53,8 +53,8 @@ def test_ai_runs_are_stubbed_disclaimed_and_do_not_mutate_clinical_or_billing_st
     active_visit.clinical_notes = "Original clinical notes"
     active_visit.save(update_fields=["symptoms", "diagnosis", "treatment", "clinical_notes", "updated_at"])
     patient = active_visit.patient
-    patient.medical_summary = "Original patient summary"
-    patient.save(update_fields=["medical_summary", "updated_at"])
+    patient.medical_conditions_history = "Original patient summary"
+    patient.save(update_fields=["medical_conditions_history", "updated_at"])
     appointment = active_visit.appointment
     xray = xray_attachment_factory()
     external = external_xray_case_factory()
@@ -79,7 +79,7 @@ def test_ai_runs_are_stubbed_disclaimed_and_do_not_mutate_clinical_or_billing_st
     patient.refresh_from_db()
     active_visit.refresh_from_db()
     appointment.refresh_from_db()
-    assert patient.medical_summary == "Original patient summary"
+    assert patient.medical_conditions_history == "Original patient summary"
     assert active_visit.symptoms == "Original symptoms"
     assert active_visit.diagnosis == "Original diagnosis"
     assert active_visit.treatment == "Original treatment"

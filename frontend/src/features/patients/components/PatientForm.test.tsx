@@ -12,8 +12,8 @@ describe("PatientForm", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Save patient" }));
 
-    expect(await screen.findByText("Full name is required.")).toBeInTheDocument();
-    expect(screen.getByText("Phone is required.")).toBeInTheDocument();
+    expect(await screen.findByText("First name is required.")).toBeInTheDocument();
+    expect(screen.getByText("Last name is required.")).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -21,14 +21,14 @@ describe("PatientForm", () => {
     const error = new ApiClientError({
       code: "VALIDATION_ERROR",
       message: "Some fields are invalid.",
-      details: { phone: ["Phone is required."] },
+      details: { phone_number: ["Phone number is invalid."] },
       status: 400,
     });
 
     render(<PatientForm mode="create" role="STAFF" error={error} onSubmit={vi.fn()} />);
 
-    expect(screen.getByText("Phone is required.")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Full name/)).toHaveValue("");
+    expect(screen.getByText("Phone number is invalid.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/First name/)).toHaveValue("");
   });
 
   it("renders Doctor note without archive fields", () => {

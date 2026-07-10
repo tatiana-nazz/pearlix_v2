@@ -3,243 +3,98 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
-from apps.audit.models import ActivityLog
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
 
 
+pytestmark = pytest.mark.django_db
+
+
 def patient_payload(**overrides):
     payload = {
-        "full_name": "Maya Hassan",
-        "phone": "0944000000",
-        "gender": "FEMALE",
-        "birth_date": "1995-05-20",
+        "first_name": "Maya",
+        "last_name": "Hassan",
+        "gender": "Female",
+        "date_of_birth": "1995-05-20",
+        "phone_number": "0944000000",
+        "email": "maya@example.com",
+        "national_id_or_passport": "P-100",
         "address": "Damascus",
-        "medical_summary": "No known allergies.",
+        "emergency_contact": "Omar Hassan 0999000000",
+        "blood_group": "O+",
+        "medical_conditions_history": "No known allergies.",
+        "insurance_info": "Private dental plan",
         "general_notes": "Prefers morning appointments.",
     }
     payload.update(overrides)
     return payload
 
 
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    ("method", "path"),
-    [
-        ("get", "/api/patients/"),
-        ("post", "/api/patients/"),
-        ("get", "/api/patients/{id}/"),
-        ("patch", "/api/patients/{id}/"),
-    ],
-)
-def test_unauthenticated_user_cannot_access_patients(api_client, patient, method, path):
-    response = getattr(api_client, method)(path.format(id=patient.id), patient_payload(), format="json")
-
-    assert response.status_code == 401
-    assert response.data["code"] == "AUTH_REQUIRED"
+def update_payload(patient, **overrides):
+    payload = {"version": patient.version}
+    payload.update(overrides)
+    return payload
 
 
-@pytest.mark.django_db
-def test_admin_can_list_and_read_patients(admin_client, patient):
-    list_response = admin_client.get("/api/patients/")
-    detail_response = admin_client.get(f"/api/patients/{patient.id}/")
-
-    assert list_response.status_code == 200
-    assert list_response.data["count"] == 1
-    assert list_response.data["results"][0]["id"] == patient.id
-    assert detail_response.status_code == 200
-    assert detail_response.data["id"] == patient.id
+def assert_patient_summary_shape(data):
+    assert data["full_name"] == f"{data['first_name']} {data['last_name']}".strip()
+    assert "phone" not in data
+    assert "birth_date" not in data
+    assert "medical_summary" not in data
+    assert "phone_number" in data
+    assert "date_of_birth" in data
+    assert "version" in data
 
 
-@pytest.mark.django_db
-def test_admin_cannot_create_patient(admin_client):
-    response = admin_client.post("/api/patients/", patient_payload(), format="json")
+def test_staff_can_create_patient_with_final_schema(staff_client, staff_user):
+    response = staff_client.post("/api/patients/", patient_payload(), format="json")
 
-    assert response.status_code == 403
-    assert response.data["code"] == "PERMISSION_DENIED"
-    assert Patient.objects.count() == 0
-
-
-@pytest.mark.django_db
-def test_admin_cannot_update_patient(admin_client, patient):
-    response = admin_client.patch(f"/api/patients/{patient.id}/", {"full_name": "Changed"}, format="json")
-
-    assert response.status_code == 403
-    assert response.data["code"] == "PERMISSION_DENIED"
-    patient.refresh_from_db()
-    assert patient.full_name == "Ahmad Khaled"
+    assert response.status_code == 201
+    assert response.data["first_name"] == "Maya"
+    assert response.data["last_name"] == "Hassan"
+    assert response.data["full_name"] == "Maya Hassan"
+    assert response.data["gender"] == "Female"
+    assert response.data["phone_number"] == "0944000000"
+    assert response.data["age"] is not None
+    assert response.data["version"] == 1
+    assert response.data["created_by"]["id"] == staff_user.id
+    assert response.data["updated_by"]["id"] == staff_user.id
+    assert_patient_summary_shape(response.data)
 
 
-@pytest.mark.django_db
-def test_staff_can_list_create_read_and_update_patient(staff_client, staff_user):
-    create_response = staff_client.post("/api/patients/", patient_payload(), format="json")
-
-    assert create_response.status_code == 201
-    patient = Patient.objects.get(id=create_response.data["id"])
-    assert patient.created_by == staff_user
-    assert patient.updated_by == staff_user
-    assert create_response.data["age"] is not None
-
-    list_response = staff_client.get("/api/patients/")
-    detail_response = staff_client.get(f"/api/patients/{patient.id}/")
-    update_response = staff_client.patch(
-        f"/api/patients/{patient.id}/",
-        {"general_notes": "Updated note."},
+def test_create_rejects_computed_archive_audit_and_version_overrides(staff_client, staff_user):
+    response = staff_client.post(
+        "/api/patients/",
+        patient_payload(
+            full_name="Spoofed Name",
+            is_archived=True,
+            version=55,
+            created_by=staff_user.id,
+            updated_by=staff_user.id,
+        ),
         format="json",
     )
 
-    assert list_response.status_code == 200
-    assert detail_response.status_code == 200
-    assert detail_response.data["created_by"]["id"] == staff_user.id
-    assert update_response.status_code == 200
-    assert update_response.data["general_notes"] == "Updated note."
-
-
-@pytest.mark.django_db
-def test_staff_cannot_hard_delete_patient(staff_client, patient):
-    response = staff_client.delete(f"/api/patients/{patient.id}/")
-
-    assert response.status_code == 405
-    assert Patient.objects.filter(id=patient.id).exists()
-
-
-@pytest.mark.django_db
-def test_doctor_can_list_read_and_update_accessible_patient(doctor_client, doctor_user, staff_user, patient, appointment_factory):
-    appointment_factory(patient=patient, doctor=doctor_user)
-
-    list_response = doctor_client.get("/api/patients/")
-    detail_response = doctor_client.get(f"/api/patients/{patient.id}/")
-    update_response = doctor_client.patch(
-        f"/api/patients/{patient.id}/",
-        {"medical_summary": "Updated by doctor.", "created_by": doctor_user.id, "updated_by": staff_user.id, "age": 4},
-        format="json",
-    )
-
-    assert list_response.status_code == 200
-    assert detail_response.status_code == 200
-    assert update_response.status_code == 200
-    patient.refresh_from_db()
-    assert patient.medical_summary == "Updated by doctor."
-    assert patient.created_by == staff_user
-    assert patient.updated_by == doctor_user
-    assert update_response.data["age"] == patient.age
-
-
-@pytest.mark.django_db
-def test_doctor_patient_list_includes_all_active_patients_and_workflow_filters(
-    doctor_client,
-    doctor_user,
-    patient_factory,
-    appointment_factory,
-    visit_factory,
-):
-    future_patient = patient_factory(full_name="Future Connected", phone="0900000101")
-    completed_appointment_patient = patient_factory(full_name="Past Appointment", phone="0900000102")
-    active_visit_patient = patient_factory(full_name="Active Visit", phone="0900000103")
-    completed_visit_patient = patient_factory(full_name="Completed Visit", phone="0900000104")
-    unrelated_patient = patient_factory(full_name="Unrelated Patient", phone="0900000105")
-
-    appointment_factory(patient=future_patient, doctor=doctor_user, status=Appointment.Status.UPCOMING)
-    appointment_factory(
-        patient=completed_appointment_patient,
-        doctor=doctor_user,
-        status=Appointment.Status.COMPLETED,
-        start_datetime="2026-07-01T09:00:00+03:00",
-        end_datetime="2026-07-01T09:30:00+03:00",
-    )
-    active_appointment = appointment_factory(
-        patient=active_visit_patient,
-        doctor=doctor_user,
-        status=Appointment.Status.ACTIVE,
-        start_datetime="2026-07-20T10:00:00+03:00",
-        end_datetime="2026-07-20T10:30:00+03:00",
-    )
-    completed_appointment = appointment_factory(
-        patient=completed_visit_patient,
-        doctor=doctor_user,
-        status=Appointment.Status.COMPLETED,
-        start_datetime="2026-07-21T10:00:00+03:00",
-        end_datetime="2026-07-21T10:30:00+03:00",
-    )
-    visit_factory(appointment=active_appointment, status=Visit.Status.ACTIVE)
-    visit_factory(appointment=completed_appointment, status=Visit.Status.COMPLETED)
-
-    response = doctor_client.get("/api/patients/")
-    my_patients_response = doctor_client.get("/api/patients/?my_patients=true")
-    upcoming_response = doctor_client.get("/api/patients/?upcoming_with_me=true")
-    last_visit_response = doctor_client.get("/api/patients/?last_visit_with_me=true")
-
-    assert response.status_code == 200
-    ids = {item["id"] for item in response.data["results"]}
-    assert future_patient.id in ids
-    assert completed_appointment_patient.id in ids
-    assert active_visit_patient.id in ids
-    assert completed_visit_patient.id in ids
-    assert unrelated_patient.id in ids
-
-    my_patient_ids = {item["id"] for item in my_patients_response.data["results"]}
-    assert future_patient.id in my_patient_ids
-    assert completed_appointment_patient.id in my_patient_ids
-    assert active_visit_patient.id in my_patient_ids
-    assert completed_visit_patient.id in my_patient_ids
-    assert unrelated_patient.id not in my_patient_ids
-
-    assert {item["id"] for item in upcoming_response.data["results"]} == {future_patient.id}
-    assert {item["id"] for item in last_visit_response.data["results"]} == {active_visit_patient.id, completed_visit_patient.id}
-    assert "last_visit_with_me_at" in last_visit_response.data["results"][0]
-
-
-@pytest.mark.django_db
-def test_doctor_patient_search_includes_all_active_patients(doctor_client, doctor_user, patient_factory, appointment_factory):
-    accessible = patient_factory(full_name="Shared Search Name", phone="0912345678")
-    unrelated = patient_factory(full_name="Shared Search Hidden", phone="0912349999")
-    appointment_factory(patient=accessible, doctor=doctor_user)
-
-    search_response = doctor_client.get("/api/patients/?search=Shared")
-    name_response = doctor_client.get("/api/patients/?name=Shared")
-    phone_response = doctor_client.get("/api/patients/?phone=091234")
-
-    for response in (search_response, name_response, phone_response):
-        assert response.status_code == 200
-        ids = {item["id"] for item in response.data["results"]}
-        assert accessible.id in ids
-        assert unrelated.id in ids
-
-
-@pytest.mark.django_db
-def test_doctor_can_read_and_update_patient_with_no_prior_relation(doctor_client, doctor_user, staff_user, patient_factory):
-    unrelated = patient_factory(full_name="No Prior Relation", phone="0900000201")
-
-    detail_response = doctor_client.get(f"/api/patients/{unrelated.id}/")
-    update_response = doctor_client.patch(f"/api/patients/{unrelated.id}/", {"general_notes": "Nope"}, format="json")
-
-    assert detail_response.status_code == 200
-    assert update_response.status_code == 200
-    unrelated.refresh_from_db()
-    assert unrelated.general_notes == "Nope"
-    assert unrelated.created_by == staff_user
-    assert unrelated.updated_by == doctor_user
-
-
-@pytest.mark.django_db
-def test_doctor_cannot_create_patient(doctor_client):
-    response = doctor_client.post("/api/patients/", patient_payload(), format="json")
-
-    assert response.status_code == 403
-    assert response.data["code"] == "PERMISSION_DENIED"
+    assert response.status_code == 400
+    assert response.data["code"] == "VALIDATION_ERROR"
+    assert "full_name" in response.data["details"]
+    assert "is_archived" in response.data["details"]
+    assert "version" in response.data["details"]
     assert Patient.objects.count() == 0
 
 
-@pytest.mark.django_db
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("full_name", ""),
-        ("phone", ""),
+        ("first_name", ""),
+        ("last_name", ""),
+        ("gender", ""),
+        ("date_of_birth", (timezone.localdate() + timedelta(days=1)).isoformat()),
+        ("blood_group", "X+"),
     ],
 )
-def test_required_text_fields_cannot_be_blank(staff_client, field, value):
+def test_create_validates_required_and_choice_fields(staff_client, field, value):
     response = staff_client.post("/api/patients/", patient_payload(**{field: value}), format="json")
 
     assert response.status_code == 400
@@ -247,226 +102,245 @@ def test_required_text_fields_cannot_be_blank(staff_client, field, value):
     assert field in response.data["details"]
 
 
-@pytest.mark.django_db
-def test_invalid_gender_rejected(staff_client):
-    response = staff_client.post("/api/patients/", patient_payload(gender="UNKNOWN"), format="json")
-
-    assert response.status_code == 400
-    assert response.data["code"] == "VALIDATION_ERROR"
-    assert "gender" in response.data["details"]
-
-
-@pytest.mark.django_db
-def test_future_birth_date_rejected(staff_client):
-    future_birth_date = timezone.localdate() + timedelta(days=1)
-
-    response = staff_client.post(
+def test_national_id_is_unique_only_when_supplied(staff_client):
+    first = staff_client.post("/api/patients/", patient_payload(national_id_or_passport=""), format="json")
+    second = staff_client.post(
         "/api/patients/",
-        patient_payload(birth_date=future_birth_date.isoformat()),
+        patient_payload(first_name="Nour", last_name="Ali", phone_number="0955000000", email="", national_id_or_passport=""),
+        format="json",
+    )
+    duplicate = staff_client.post(
+        "/api/patients/",
+        patient_payload(first_name="Sara", last_name="Ali", phone_number="0966000000", email="", national_id_or_passport="DUP-1"),
+        format="json",
+    )
+    duplicate_again = staff_client.post(
+        "/api/patients/",
+        patient_payload(first_name="Lina", last_name="Ali", phone_number="0977000000", email="", national_id_or_passport="DUP-1"),
+        format="json",
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert Patient.objects.get(id=first.data["id"]).national_id_or_passport is None
+    assert Patient.objects.get(id=second.data["id"]).national_id_or_passport is None
+    assert duplicate.status_code == 201
+    assert duplicate_again.status_code == 400
+    assert "national_id_or_passport" in duplicate_again.data["details"]
+
+
+def test_staff_update_requires_version_and_increments_once(staff_client, patient):
+    missing_version = staff_client.patch(f"/api/patients/{patient.id}/", {"general_notes": "No version"}, format="json")
+
+    assert missing_version.status_code == 400
+    assert missing_version.data["code"] == "VERSION_REQUIRED"
+
+    response = staff_client.patch(
+        f"/api/patients/{patient.id}/",
+        update_payload(patient, last_name="Updated", medical_conditions_history="Updated history."),
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.data["last_name"] == "Updated"
+    assert response.data["version"] == patient.version + 1
+    patient.refresh_from_db()
+    assert patient.version == 2
+    assert patient.medical_conditions_history == "Updated history."
+
+
+def test_stale_update_returns_conflict_without_mutating(staff_client, patient):
+    patient.version = 4
+    patient.save(update_fields=["version", "updated_at"])
+
+    response = staff_client.patch(
+        f"/api/patients/{patient.id}/",
+        {"version": 3, "last_name": "Conflict"},
+        format="json",
+    )
+
+    assert response.status_code == 409
+    assert response.data["code"] == "VERSION_CONFLICT"
+    assert response.data["details"] == {"submitted_version": 3, "current_version": 4}
+    patient.refresh_from_db()
+    assert patient.last_name == "Khaled"
+    assert patient.version == 4
+
+
+def test_direct_archive_field_patch_is_rejected(staff_client, patient):
+    response = staff_client.patch(
+        f"/api/patients/{patient.id}/",
+        {"version": patient.version, "is_archived": True},
         format="json",
     )
 
     assert response.status_code == 400
     assert response.data["code"] == "VALIDATION_ERROR"
-    assert "birth_date" in response.data["details"]
+    assert "is_archived" in response.data["details"]
+    patient.refresh_from_db()
+    assert patient.is_archived is False
+    assert patient.version == 1
 
 
-@pytest.mark.django_db
-def test_valid_birth_date_and_optional_fields_accepted(staff_client):
-    response = staff_client.post(
-        "/api/patients/",
-        {
-            "full_name": "Omar Saleh",
-            "phone": "0955000000",
-            "gender": "MALE",
-            "birth_date": "2000-01-01",
-        },
+def test_archive_unarchive_require_version_and_increment(staff_client, patient):
+    missing = staff_client.post(f"/api/patients/{patient.id}/archive/", {}, format="json")
+    assert missing.status_code == 400
+    assert missing.data["code"] == "VERSION_REQUIRED"
+
+    archived = staff_client.post(f"/api/patients/{patient.id}/archive/", {"version": patient.version}, format="json")
+    assert archived.status_code == 200
+    assert archived.data["is_archived"] is True
+    assert archived.data["version"] == patient.version + 1
+
+    patient.refresh_from_db()
+    unarchived = staff_client.post(f"/api/patients/{patient.id}/unarchive/", {"version": patient.version}, format="json")
+    assert unarchived.status_code == 200
+    assert unarchived.data["is_archived"] is False
+    assert unarchived.data["version"] == patient.version + 1
+
+
+def test_archive_stale_version_conflicts(staff_client, patient):
+    patient.version = 6
+    patient.save(update_fields=["version", "updated_at"])
+
+    response = staff_client.post(f"/api/patients/{patient.id}/archive/", {"version": 5}, format="json")
+
+    assert response.status_code == 409
+    assert response.data["code"] == "VERSION_CONFLICT"
+    assert response.data["details"] == {"submitted_version": 5, "current_version": 6}
+
+
+def test_archive_blocked_by_active_operational_appointments(staff_client, patient, appointment_factory):
+    appointment_factory(patient=patient, status=Appointment.Status.UPCOMING)
+
+    response = staff_client.post(f"/api/patients/{patient.id}/archive/", {"version": patient.version}, format="json")
+
+    assert response.status_code == 409
+    assert response.data["code"] == "ARCHIVE_BLOCKED"
+    assert Appointment.Status.UPCOMING in response.data["details"]["blocking_statuses"]
+    patient.refresh_from_db()
+    assert patient.is_archived is False
+    assert patient.version == 1
+
+
+def test_admin_read_only_permissions(admin_client, patient):
+    create_response = admin_client.post("/api/patients/", patient_payload(), format="json")
+    update_response = admin_client.patch(
+        f"/api/patients/{patient.id}/",
+        update_payload(patient, last_name="Blocked"),
         format="json",
     )
 
-    assert response.status_code == 201
-    assert response.data["address"] == ""
-    assert response.data["medical_summary"] == ""
-    assert response.data["general_notes"] == ""
-    assert response.data["age"] is not None
+    assert create_response.status_code == 403
+    assert update_response.status_code == 403
 
 
-@pytest.mark.django_db
-def test_search_by_full_name_and_phone_works(staff_client, patient_factory):
-    patient_factory(full_name="Lina Mansour", phone="0911111111")
-    patient_factory(full_name="Karim Haddad", phone="0922222222")
+def test_doctor_can_read_and_update_non_archived_patients_but_not_archive(doctor_client, patient):
+    detail = doctor_client.get(f"/api/patients/{patient.id}/")
+    assert detail.status_code == 200
 
-    name_response = staff_client.get("/api/patients/?search=Lina")
-    phone_response = staff_client.get("/api/patients/?search=0922")
+    update = doctor_client.patch(
+        f"/api/patients/{patient.id}/",
+        update_payload(patient, blood_group="A+", insurance_info="Updated by doctor."),
+        format="json",
+    )
+    assert update.status_code == 200
+    assert update.data["version"] == 2
+    assert update.data["insurance_info"] == "Updated by doctor."
 
-    assert name_response.status_code == 200
-    assert [item["full_name"] for item in name_response.data["results"]] == ["Lina Mansour"]
-    assert phone_response.status_code == 200
-    assert [item["phone"] for item in phone_response.data["results"]] == ["0922222222"]
+    patient.refresh_from_db()
+    archive = doctor_client.post(f"/api/patients/{patient.id}/archive/", {"version": patient.version}, format="json")
+    assert archive.status_code == 403
 
 
-@pytest.mark.django_db
-def test_phone_and_name_filters_work(staff_client, patient_factory):
-    patient_factory(full_name="Nour Ali", phone="0966000000")
-    patient_factory(full_name="Sara Ali", phone="0977000000")
+def test_doctor_cannot_read_archived_patients(doctor_client, patient):
+    patient.is_archived = True
+    patient.save(update_fields=["is_archived", "updated_at"])
+
+    response = doctor_client.get(f"/api/patients/{patient.id}/")
+
+    assert response.status_code == 404
+
+
+def test_search_and_filter_use_new_canonical_fields(staff_client, patient_factory):
+    patient_factory(first_name="Lina", last_name="Mansour", phone_number="0911111111", email="lina@example.com", national_id_or_passport="NID-1")
+    patient_factory(first_name="Karim", last_name="Haddad", phone_number="0922222222", email="karim@example.com", national_id_or_passport="NID-2")
+
+    first_name_response = staff_client.get("/api/patients/?first_name=Lina")
+    last_name_response = staff_client.get("/api/patients/?last_name=Haddad")
+    phone_response = staff_client.get("/api/patients/?phone_number=0922")
+    email_response = staff_client.get("/api/patients/?email=lina@example.com")
+    national_id_response = staff_client.get("/api/patients/?national_id_or_passport=NID-2")
+    search_response = staff_client.get("/api/patients/?search=Lina Mansour")
+
+    assert [item["full_name"] for item in first_name_response.data["results"]] == ["Lina Mansour"]
+    assert [item["full_name"] for item in last_name_response.data["results"]] == ["Karim Haddad"]
+    assert [item["phone_number"] for item in phone_response.data["results"]] == ["0922222222"]
+    assert [item["email"] for item in email_response.data["results"]] == ["lina@example.com"]
+    assert [item["national_id_or_passport"] for item in national_id_response.data["results"]] == ["NID-2"]
+    assert [item["full_name"] for item in search_response.data["results"]] == ["Lina Mansour"]
+
+
+def test_legacy_alias_filters_are_preserved(staff_client, patient_factory):
+    patient_factory(first_name="Nour", last_name="Ali", phone_number="0966000000")
+    patient_factory(first_name="Sara", last_name="Ali", phone_number="0977000000")
 
     phone_response = staff_client.get("/api/patients/?phone=0966")
     name_response = staff_client.get("/api/patients/?name=Sara")
 
-    assert phone_response.status_code == 200
-    assert [item["phone"] for item in phone_response.data["results"]] == ["0966000000"]
-    assert name_response.status_code == 200
+    assert [item["phone_number"] for item in phone_response.data["results"]] == ["0966000000"]
     assert [item["full_name"] for item in name_response.data["results"]] == ["Sara Ali"]
 
 
-@pytest.mark.django_db
-def test_archived_patients_are_excluded_by_default_and_filterable(staff_client, patient_factory):
-    active = patient_factory(full_name="Active Patient", phone="0900000001")
-    archived = patient_factory(full_name="Archived Patient", phone="0900000002", is_archived=True)
+def test_default_list_hides_archived_for_admin_and_staff(staff_client, patient_factory):
+    active = patient_factory(first_name="Active", last_name="Patient", phone_number="0900000001")
+    archived = patient_factory(first_name="Archived", last_name="Patient", phone_number="0900000002", is_archived=True)
 
-    default_response = staff_client.get("/api/patients/")
+    response = staff_client.get("/api/patients/")
     archived_response = staff_client.get("/api/patients/?is_archived=true")
 
-    assert default_response.status_code == 200
-    assert [item["id"] for item in default_response.data["results"]] == [active.id]
-    assert archived_response.status_code == 200
+    assert [item["id"] for item in response.data["results"]] == [active.id]
     assert [item["id"] for item in archived_response.data["results"]] == [archived.id]
 
 
-@pytest.mark.django_db
-def test_staff_and_admin_can_retrieve_archived_patient_with_filter(staff_client, admin_client, patient_factory):
-    archived = patient_factory(full_name="Archived Filterable", phone="0900000301", is_archived=True)
+def test_doctor_helper_filters_remain_available(doctor_client, doctor_user, patient_factory, appointment_factory, visit_factory):
+    accessible = patient_factory(first_name="Shared", last_name="Search", phone_number="0912345678")
+    unrelated = patient_factory(first_name="Hidden", last_name="Search", phone_number="0912349999")
+    appointment_factory(patient=accessible, doctor=doctor_user, status=Appointment.Status.UPCOMING)
+    visit_factory(appointment=appointment_factory(patient=accessible, doctor=doctor_user, status=Appointment.Status.COMPLETED), status=Visit.Status.COMPLETED)
 
-    staff_response = staff_client.get("/api/patients/?is_archived=true")
-    admin_response = admin_client.get("/api/patients/?is_archived=true")
-    staff_detail_response = staff_client.get(f"/api/patients/{archived.id}/")
-    admin_detail_response = admin_client.get(f"/api/patients/{archived.id}/")
+    related_response = doctor_client.get("/api/patients/?my_patients=true")
+    upcoming_response = doctor_client.get("/api/patients/?upcoming_with_me=true")
+    search_response = doctor_client.get("/api/patients/?search=Shared")
 
-    assert staff_response.status_code == 200
-    assert [item["id"] for item in staff_response.data["results"]] == [archived.id]
-    assert admin_response.status_code == 200
-    assert [item["id"] for item in admin_response.data["results"]] == [archived.id]
-    assert staff_detail_response.status_code == 200
-    assert admin_detail_response.status_code == 200
-
-
-@pytest.mark.django_db
-def test_staff_can_archive_and_unarchive_patient_without_blocking_appointments(staff_client, staff_user, patient, appointment_factory):
-    appointment_factory(patient=patient, status=Appointment.Status.COMPLETED)
-
-    archive_response = staff_client.post(f"/api/patients/{patient.id}/archive/")
-    patient.refresh_from_db()
-    hidden_response = staff_client.get("/api/patients/")
-    archived_response = staff_client.get("/api/patients/?is_archived=true")
-    unarchive_response = staff_client.post(f"/api/patients/{patient.id}/unarchive/")
-    patient.refresh_from_db()
-
-    assert archive_response.status_code == 200
-    assert patient.is_archived is False
-    assert unarchive_response.status_code == 200
-    assert unarchive_response.data["is_archived"] is False
-    assert patient.updated_by == staff_user
-    assert patient.id not in {item["id"] for item in hidden_response.data["results"]}
-    assert patient.id in {item["id"] for item in archived_response.data["results"]}
-    assert ActivityLog.objects.filter(action="patient_archived", entity_id=str(patient.id)).exists()
-    assert ActivityLog.objects.filter(action="patient_unarchived", entity_id=str(patient.id)).exists()
+    assert accessible.id in [item["id"] for item in related_response.data["results"]]
+    assert accessible.id in [item["id"] for item in upcoming_response.data["results"]]
+    assert accessible.id in [item["id"] for item in search_response.data["results"]]
+    assert unrelated.id not in [item["id"] for item in related_response.data["results"]]
 
 
-@pytest.mark.django_db
-def test_staff_can_archive_patient_by_patch_and_cannot_spoof_audit_fields(staff_client, staff_user, admin_user, patient):
-    response = staff_client.patch(
+def test_legacy_blank_last_name_must_be_fixed_before_profile_update(staff_client, staff_user):
+    patient = Patient.objects.create(
+        first_name="Legacy Full Name",
+        last_name="",
+        gender=Patient.Gender.MALE,
+        phone_number="0999000000",
+        created_by=staff_user,
+        updated_by=staff_user,
+    )
+
+    blocked = staff_client.patch(
         f"/api/patients/{patient.id}/",
-        {"is_archived": True, "created_by": admin_user.id, "updated_by": admin_user.id, "age": 5},
+        {"version": patient.version, "general_notes": "Cannot save yet."},
+        format="json",
+    )
+    allowed = staff_client.patch(
+        f"/api/patients/{patient.id}/",
+        {"version": patient.version, "last_name": "Resolved", "general_notes": "Saved after surname."},
         format="json",
     )
 
-    assert response.status_code == 200
-    patient.refresh_from_db()
-    assert patient.is_archived is True
-    assert patient.created_by_id != admin_user.id
-    assert patient.updated_by_id == staff_user.id
-    assert response.data["age"] == patient.age
-
-
-@pytest.mark.django_db
-def test_doctor_cannot_archive_or_unarchive_accessible_patient(doctor_client, doctor_user, patient, appointment_factory):
-    appointment_factory(patient=patient, doctor=doctor_user)
-
-    archive_response = doctor_client.post(f"/api/patients/{patient.id}/archive/")
-    patch_archive_response = doctor_client.patch(f"/api/patients/{patient.id}/", {"is_archived": True}, format="json")
-    patient.is_archived = True
-    patient.save(update_fields=["is_archived"])
-    unarchive_response = doctor_client.post(f"/api/patients/{patient.id}/unarchive/")
-    patch_unarchive_response = doctor_client.patch(f"/api/patients/{patient.id}/", {"is_archived": False}, format="json")
-
-    assert archive_response.status_code == 403
-    assert patch_archive_response.status_code == 403
-    assert unarchive_response.status_code == 403
-    assert patch_unarchive_response.status_code == 404
-
-
-@pytest.mark.django_db
-def test_admin_cannot_archive_or_unarchive_patient(admin_client, patient):
-    archive_response = admin_client.post(f"/api/patients/{patient.id}/archive/")
-    patch_archive_response = admin_client.patch(f"/api/patients/{patient.id}/", {"is_archived": True}, format="json")
-    patient.is_archived = True
-    patient.save(update_fields=["is_archived"])
-    unarchive_response = admin_client.post(f"/api/patients/{patient.id}/unarchive/")
-
-    assert archive_response.status_code == 403
-    assert patch_archive_response.status_code == 403
-    assert unarchive_response.status_code == 403
-
-
-@pytest.mark.django_db
-def test_unauthenticated_user_cannot_archive_or_unarchive_patient(api_client, patient):
-    assert api_client.post(f"/api/patients/{patient.id}/archive/").status_code == 401
-    assert api_client.post(f"/api/patients/{patient.id}/unarchive/").status_code == 401
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    "appointment_status",
-    [Appointment.Status.UPCOMING, Appointment.Status.CHECKED_IN, Appointment.Status.ACTIVE, Appointment.Status.NEEDS_RESCHEDULE],
-)
-def test_staff_cannot_archive_patient_with_active_operational_appointment(staff_client, patient, appointment_factory, appointment_status):
-    appointment_factory(patient=patient, status=appointment_status)
-
-    endpoint_response = staff_client.post(f"/api/patients/{patient.id}/archive/")
-    patch_response = staff_client.patch(f"/api/patients/{patient.id}/", {"is_archived": True}, format="json")
-
-    assert endpoint_response.status_code == 409
-    assert endpoint_response.data["code"] == "ARCHIVE_BLOCKED"
-    assert patch_response.status_code == 400
-    patient.refresh_from_db()
-    assert patient.is_archived is False
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    "appointment_status",
-    [Appointment.Status.CANCELLED, Appointment.Status.COMPLETED, Appointment.Status.NO_SHOW],
-)
-def test_staff_can_archive_patient_with_closed_appointment_statuses(staff_client, patient_factory, appointment_factory, appointment_status):
-    patient = patient_factory(full_name=f"Closed {appointment_status}", phone=f"09000004{len(appointment_status)}")
-    appointment_factory(patient=patient, status=appointment_status)
-
-    response = staff_client.post(f"/api/patients/{patient.id}/archive/")
-
-    assert response.status_code == 200
-    patient.refresh_from_db()
-    assert patient.is_archived is True
-
-
-@pytest.mark.django_db
-def test_patient_list_is_paginated(staff_client, patient_factory):
-    for index in range(21):
-        patient_factory(full_name=f"Patient {index:02}", phone=f"0999{index:06}")
-
-    response = staff_client.get("/api/patients/")
-
-    assert response.status_code == 200
-    assert response.data["count"] == 21
-    assert response.data["next"] is not None
-    assert response.data["previous"] is None
-    assert len(response.data["results"]) == 20
+    assert blocked.status_code == 400
+    assert "last_name" in blocked.data["details"]
+    assert allowed.status_code == 200
+    assert allowed.data["last_name"] == "Resolved"

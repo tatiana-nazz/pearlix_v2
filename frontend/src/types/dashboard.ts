@@ -7,7 +7,7 @@ import type { VisitStatus } from "./visits";
 export interface DashboardPatientSummary {
   id: number;
   full_name: string;
-  phone: string;
+  phone_number: string;
 }
 
 export interface DashboardUserSummary {

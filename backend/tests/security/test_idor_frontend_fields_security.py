@@ -98,17 +98,18 @@ def test_frontend_controlled_fields_are_rejected_or_overridden(
     spoofed_patient = staff_client.post(
         "/api/patients/",
         {
-            "full_name": "Spoofed Audit Fields",
-            "phone": "0901000002",
+            "first_name": "Spoofed",
+            "last_name": "Audit Fields",
+            "phone_number": "0901000002",
+            "gender": "Female",
             "created_by": admin_user.id,
             "updated_by": admin_user.id,
         },
         format="json",
     )
-    assert spoofed_patient.status_code == 201
-    created_patient = Patient.objects.get(id=spoofed_patient.data["id"])
-    assert created_patient.created_by_id == staff_user.id
-    assert created_patient.updated_by_id == staff_user.id
+    assert spoofed_patient.status_code == 400
+    assert "created_by" in spoofed_patient.data["details"]
+    assert "updated_by" in spoofed_patient.data["details"]
 
     WorkingHour.objects.create(doctor=doctor_user, weekday=0, start_time="09:00", end_time="17:00")
     create_appointment = staff_client.post(

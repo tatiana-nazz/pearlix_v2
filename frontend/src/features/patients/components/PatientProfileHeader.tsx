@@ -22,7 +22,7 @@ export function PatientProfileHeader({ role, patient, onEdit, onArchive, onUnarc
         <p className="eyebrow">Patient profile</p>
         <h2>{patient.full_name}</h2>
         <p>
-          {displayText(patient.phone)} · {patient.age ? `${patient.age} years old` : "Age not recorded"} · {patient.gender.replace("_", " ")}
+          {displayText(patient.phone_number)} - {patient.age ? `${patient.age} years old` : "Age not recorded"} - {patient.gender}
         </p>
       </div>
       <div className="profile-actions">

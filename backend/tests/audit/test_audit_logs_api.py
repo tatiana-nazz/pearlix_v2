@@ -103,11 +103,15 @@ def test_important_actions_create_safe_audit_logs(
 
     patient_response = staff_client.post(
         "/api/patients/",
-        {"full_name": "Audit Patient", "phone": "0922000000", "gender": "UNSPECIFIED"},
+        {"first_name": "Audit", "last_name": "Patient", "phone_number": "0922000000", "gender": "Female"},
         format="json",
     )
     patient_id = patient_response.data["id"]
-    staff_client.patch(f"/api/patients/{patient_id}/", {"general_notes": "safe patient update"}, format="json")
+    staff_client.patch(
+        f"/api/patients/{patient_id}/",
+        {"version": patient_response.data["version"], "general_notes": "safe patient update"},
+        format="json",
+    )
 
     update_appointment = staff_client.post(
         "/api/appointments/",

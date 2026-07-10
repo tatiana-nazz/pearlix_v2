@@ -36,7 +36,7 @@ VITE_API_BASE_URL=http://127.0.0.1:8000/api
 - `/admin/patients` loads active patients and has no Add Patient action.
 - `/staff/patients` loads active patients and shows Add Patient.
 - `/doctor/patients` loads active non-archived patients.
-- Search by name or phone preserves URL state.
+- Search by name, phone number, email, or ID preserves URL state.
 - Staff/Admin archive filter switches between active and archived records.
 - Doctor sees workflow filters and no archived filter.
 - Pagination preserves search and filter state.

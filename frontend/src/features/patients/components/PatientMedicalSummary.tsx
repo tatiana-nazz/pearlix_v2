@@ -12,7 +12,7 @@ interface PatientMedicalSummaryProps {
 }
 
 export function PatientMedicalSummary({ role, patient, onEdit }: PatientMedicalSummaryProps) {
-  const hasSummary = Boolean(patient.medical_summary || patient.general_notes);
+  const hasSummary = Boolean(patient.medical_conditions_history || patient.insurance_info || patient.general_notes);
   const canEdit = getPatientPermissions(role, patient).canEdit;
 
   return (
@@ -21,8 +21,12 @@ export function PatientMedicalSummary({ role, patient, onEdit }: PatientMedicalS
       {hasSummary ? (
         <div className="medical-summary-grid">
           <section>
-            <h3>Medical summary</h3>
-            <p>{patient.medical_summary || "No medical summary has been recorded."}</p>
+            <h3>Medical conditions history</h3>
+            <p>{patient.medical_conditions_history || "No medical history has been recorded."}</p>
+          </section>
+          <section>
+            <h3>Insurance information</h3>
+            <p>{patient.insurance_info || "No insurance information has been recorded."}</p>
           </section>
           <section>
             <h3>General notes</h3>

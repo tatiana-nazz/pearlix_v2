@@ -11,9 +11,10 @@ def test_wf_004_clinical_permission_workflow(admin_client, staff_client, doctor_
     patient_response = staff_client.post(
         "/api/patients/",
         {
-            "full_name": "Workflow Patient",
-            "phone": "0966000000",
-            "gender": "UNSPECIFIED",
+            "first_name": "Workflow",
+            "last_name": "Patient",
+            "phone_number": "0966000000",
+            "gender": "Female",
         },
         format="json",
     )
