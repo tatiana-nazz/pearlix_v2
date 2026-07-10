@@ -1,4 +1,4 @@
-import { Navigate, Outlet, createBrowserRouter } from "react-router-dom";
+import { Navigate, createBrowserRouter } from "react-router-dom";
 
 import { AuthGuard } from "../auth/AuthGuard";
 import { PasswordChangeGuard } from "../auth/PasswordChangeGuard";
@@ -21,55 +21,62 @@ type PlaceholderRoute = {
   path: string;
   title: string;
   role: UserRole;
+  plannedPhase?: string;
 };
 
 const adminRoutes: PlaceholderRoute[] = [
-  { path: "users", title: "Users", role: "ADMIN" },
-  { path: "clinic-settings", title: "Clinic settings", role: "ADMIN" },
-  { path: "doctors", title: "Doctors", role: "ADMIN" },
-  { path: "leave", title: "Leave management", role: "ADMIN" },
-  { path: "patients", title: "Patients", role: "ADMIN" },
-  { path: "appointments", title: "Appointments", role: "ADMIN" },
-  { path: "appointments/day", title: "Appointments day view", role: "ADMIN" },
-  { path: "appointments/week", title: "Appointments week view", role: "ADMIN" },
-  { path: "appointments/month", title: "Appointments month view", role: "ADMIN" },
-  { path: "appointments/list", title: "Appointments list", role: "ADMIN" },
-  { path: "appointments/needs-reschedule", title: "Needs reschedule", role: "ADMIN" },
-  { path: "audit-logs", title: "Audit logs", role: "ADMIN" },
+  { path: "users", title: "Users", role: "ADMIN", plannedPhase: "Phase 13J" },
+  { path: "clinic-settings", title: "Clinic Settings", role: "ADMIN", plannedPhase: "Phase 13J" },
+  { path: "doctors", title: "Doctors & Staff", role: "ADMIN", plannedPhase: "Phase 13J" },
+  { path: "leave", title: "Schedules & Leave", role: "ADMIN", plannedPhase: "Phase 13J" },
+  { path: "patients", title: "Patients", role: "ADMIN", plannedPhase: "Phase 13E" },
+  { path: "appointments", title: "Appointments", role: "ADMIN", plannedPhase: "Phase 13F" },
+  { path: "appointments/day", title: "Appointments Day View", role: "ADMIN", plannedPhase: "Phase 13F" },
+  { path: "appointments/week", title: "Appointments Week View", role: "ADMIN", plannedPhase: "Phase 13F" },
+  { path: "appointments/month", title: "Appointments Month View", role: "ADMIN", plannedPhase: "Phase 13F" },
+  { path: "appointments/list", title: "Appointments List", role: "ADMIN", plannedPhase: "Phase 13F" },
+  { path: "appointments/needs-reschedule", title: "Needs Reschedule", role: "ADMIN", plannedPhase: "Phase 13F" },
+  { path: "billing", title: "Billing", role: "ADMIN", plannedPhase: "Phase 13I" },
+  { path: "audit-logs", title: "Audit Logs", role: "ADMIN", plannedPhase: "Phase 13J" },
+  { path: "profile", title: "Profile", role: "ADMIN", plannedPhase: "Phase 13C" },
 ];
 
 const staffRoutes: PlaceholderRoute[] = [
-  { path: "patients", title: "Patients", role: "STAFF" },
-  { path: "appointments", title: "Appointments", role: "STAFF" },
-  { path: "appointments/day", title: "Appointments day view", role: "STAFF" },
-  { path: "appointments/week", title: "Appointments week view", role: "STAFF" },
-  { path: "appointments/month", title: "Appointments month view", role: "STAFF" },
-  { path: "appointments/list", title: "Appointments list", role: "STAFF" },
-  { path: "appointments/needs-reschedule", title: "Needs reschedule", role: "STAFF" },
-  { path: "billing/handoffs", title: "Billing handoffs", role: "STAFF" },
-  { path: "billing/invoices", title: "Invoices", role: "STAFF" },
-  { path: "profile/schedule", title: "My schedule", role: "STAFF" },
-  { path: "profile/leave", title: "My leave", role: "STAFF" },
+  { path: "appointments", title: "Appointments", role: "STAFF", plannedPhase: "Phase 13F" },
+  { path: "appointments/day", title: "Appointments Day View", role: "STAFF", plannedPhase: "Phase 13F" },
+  { path: "appointments/week", title: "Appointments Week View", role: "STAFF", plannedPhase: "Phase 13F" },
+  { path: "appointments/month", title: "Appointments Month View", role: "STAFF", plannedPhase: "Phase 13F" },
+  { path: "appointments/list", title: "Appointments List", role: "STAFF", plannedPhase: "Phase 13F" },
+  { path: "appointments/needs-reschedule", title: "Needs Reschedule", role: "STAFF", plannedPhase: "Phase 13F" },
+  { path: "patients", title: "Patients", role: "STAFF", plannedPhase: "Phase 13E" },
+  { path: "billing/handoffs", title: "Billing Handoffs", role: "STAFF", plannedPhase: "Phase 13I" },
+  { path: "billing/invoices", title: "Invoices", role: "STAFF", plannedPhase: "Phase 13I" },
+  { path: "billing/payments", title: "Payments", role: "STAFF", plannedPhase: "Phase 13I" },
+  { path: "profile/schedule", title: "Schedules View", role: "STAFF", plannedPhase: "Phase 13J" },
+  { path: "profile/leave", title: "Profile Leave", role: "STAFF", plannedPhase: "Phase 13J" },
+  { path: "profile", title: "Profile", role: "STAFF", plannedPhase: "Phase 13C" },
 ];
 
 const doctorRoutes: PlaceholderRoute[] = [
-  { path: "appointments", title: "Appointments", role: "DOCTOR" },
-  { path: "appointments/day", title: "Appointments day view", role: "DOCTOR" },
-  { path: "appointments/week", title: "Appointments week view", role: "DOCTOR" },
-  { path: "appointments/list", title: "Appointments list", role: "DOCTOR" },
-  { path: "appointments/needs-reschedule", title: "Needs reschedule", role: "DOCTOR" },
-  { path: "visits/active", title: "Active visit", role: "DOCTOR" },
-  { path: "patients", title: "Patients", role: "DOCTOR" },
-  { path: "external-xrays", title: "External X-rays", role: "DOCTOR" },
-  { path: "profile/schedule", title: "My schedule", role: "DOCTOR" },
-  { path: "profile/leave", title: "My leave", role: "DOCTOR" },
-  { path: "billing/handoffs", title: "Billing handoffs", role: "DOCTOR" },
+  { path: "appointments", title: "My Appointments", role: "DOCTOR", plannedPhase: "Phase 13F" },
+  { path: "appointments/day", title: "Appointments Day View", role: "DOCTOR", plannedPhase: "Phase 13F" },
+  { path: "appointments/week", title: "Appointments Week View", role: "DOCTOR", plannedPhase: "Phase 13F" },
+  { path: "appointments/list", title: "Appointments List", role: "DOCTOR", plannedPhase: "Phase 13F" },
+  { path: "appointments/needs-reschedule", title: "Needs Reschedule", role: "DOCTOR", plannedPhase: "Phase 13F" },
+  { path: "visits/active", title: "Active Visit", role: "DOCTOR", plannedPhase: "Phase 13G" },
+  { path: "patients", title: "Patients", role: "DOCTOR", plannedPhase: "Phase 13E" },
+  { path: "xrays", title: "X-rays & AI", role: "DOCTOR", plannedPhase: "Phase 13H" },
+  { path: "external-xrays", title: "External X-ray Workspace", role: "DOCTOR", plannedPhase: "Phase 13H" },
+  { path: "profile/schedule", title: "Profile Schedule", role: "DOCTOR", plannedPhase: "Phase 13J" },
+  { path: "profile/leave", title: "Profile Leave", role: "DOCTOR", plannedPhase: "Phase 13J" },
+  { path: "billing/handoffs", title: "My Billing Handoffs", role: "DOCTOR", plannedPhase: "Phase 13I" },
+  { path: "profile", title: "Profile", role: "DOCTOR", plannedPhase: "Phase 13C" },
 ];
 
 function placeholderChildren(routes: PlaceholderRoute[]) {
   return routes.map((route) => ({
     path: route.path,
-    element: <PlaceholderPage title={route.title} role={route.role} />,
+    element: <PlaceholderPage title={route.title} role={route.role} plannedPhase={route.plannedPhase} />,
   }));
 }
 
@@ -79,6 +86,10 @@ function HomeRedirect() {
 }
 
 export const router = createBrowserRouter([
+  {
+    path: "*",
+    element: <NotFoundPage />,
+  },
   {
     path: "/login",
     element: (
@@ -144,10 +155,6 @@ export const router = createBrowserRouter([
               { path: "dashboard", element: <DoctorDashboardPage /> },
               ...placeholderChildren(doctorRoutes),
             ],
-          },
-          {
-            element: <Outlet />,
-            children: [{ path: "*", element: <NotFoundPage /> }],
           },
         ],
       },

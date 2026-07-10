@@ -47,5 +47,15 @@ export function normalizeApiError(error: unknown): ApiError {
 }
 
 export function toApiClientError(error: unknown): ApiClientError {
-  return error instanceof ApiClientError ? error : new ApiClientError(normalizeApiError(error));
+  if (error instanceof ApiClientError) return error;
+  if (error && typeof error === "object" && "code" in error && "message" in error && "status" in error) {
+    const payload = error as Partial<ApiError>;
+    return new ApiClientError({
+      code: String(payload.code ?? "REQUEST_FAILED"),
+      message: String(payload.message ?? "Request failed."),
+      details: (payload.details as Record<string, unknown>) ?? {},
+      status: Number(payload.status ?? 0),
+    });
+  }
+  return new ApiClientError(normalizeApiError(error));
 }

@@ -2,7 +2,7 @@ import axios, { type AxiosInstance, type AxiosRequestConfig, type Method } from 
 
 import type { QueryParams } from "../types/api";
 import type { RefreshResponse } from "../types/auth";
-import { toApiClientError } from "./errors";
+import { ApiClientError, toApiClientError } from "./errors";
 
 type TokenAccessors = {
   getAccessToken: () => string | null;
@@ -38,7 +38,7 @@ client.interceptors.request.use((config) => {
 
 async function refreshAccessToken(): Promise<string> {
   if (!tokenAccessors?.getRefreshToken()) {
-    throw toApiClientError({ code: "AUTH_REQUIRED", message: "Authentication required.", details: {}, status: 401 });
+    throw new ApiClientError({ code: "AUTH_REQUIRED", message: "Authentication required.", details: {}, status: 401 });
   }
 
   if (!refreshPromise) {

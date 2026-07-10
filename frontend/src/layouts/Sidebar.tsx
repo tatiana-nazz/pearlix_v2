@@ -6,40 +6,42 @@ import { roleLabel } from "../utils/roles";
 type NavItem = {
   label: string;
   path: string;
+  compactLabel: string;
 };
 
 const navItems: Record<UserRole, NavItem[]> = {
   ADMIN: [
-    { label: "Dashboard", path: "/admin/dashboard" },
-    { label: "Users", path: "/admin/users" },
-    { label: "Clinic settings", path: "/admin/clinic-settings" },
-    { label: "Doctors", path: "/admin/doctors" },
-    { label: "Leave", path: "/admin/leave" },
-    { label: "Patients", path: "/admin/patients" },
-    { label: "Appointments", path: "/admin/appointments" },
-    { label: "Needs reschedule", path: "/admin/appointments/needs-reschedule" },
-    { label: "Audit logs", path: "/admin/audit-logs" },
+    { label: "Dashboard", path: "/admin/dashboard", compactLabel: "D" },
+    { label: "Users", path: "/admin/users", compactLabel: "U" },
+    { label: "Doctors & Staff", path: "/admin/doctors", compactLabel: "DS" },
+    { label: "Schedules & Leave", path: "/admin/leave", compactLabel: "SL" },
+    { label: "Appointments", path: "/admin/appointments", compactLabel: "A" },
+    { label: "Patients", path: "/admin/patients", compactLabel: "P" },
+    { label: "Billing", path: "/admin/billing", compactLabel: "B" },
+    { label: "Clinic Settings", path: "/admin/clinic-settings", compactLabel: "CS" },
+    { label: "Audit Logs", path: "/admin/audit-logs", compactLabel: "AL" },
+    { label: "Profile", path: "/admin/profile", compactLabel: "PR" },
   ],
   STAFF: [
-    { label: "Dashboard", path: "/staff/dashboard" },
-    { label: "Patients", path: "/staff/patients" },
-    { label: "Appointments", path: "/staff/appointments" },
-    { label: "Needs reschedule", path: "/staff/appointments/needs-reschedule" },
-    { label: "Billing handoffs", path: "/staff/billing/handoffs" },
-    { label: "Invoices", path: "/staff/billing/invoices" },
-    { label: "My schedule", path: "/staff/profile/schedule" },
-    { label: "My leave", path: "/staff/profile/leave" },
+    { label: "Dashboard", path: "/staff/dashboard", compactLabel: "D" },
+    { label: "Appointments", path: "/staff/appointments", compactLabel: "A" },
+    { label: "Needs Reschedule", path: "/staff/appointments/needs-reschedule", compactLabel: "NR" },
+    { label: "Patients", path: "/staff/patients", compactLabel: "P" },
+    { label: "Billing Handoffs", path: "/staff/billing/handoffs", compactLabel: "BH" },
+    { label: "Invoices", path: "/staff/billing/invoices", compactLabel: "I" },
+    { label: "Payments", path: "/staff/billing/payments", compactLabel: "PY" },
+    { label: "Schedules View", path: "/staff/profile/schedule", compactLabel: "SV" },
+    { label: "Profile", path: "/staff/profile", compactLabel: "PR" },
   ],
   DOCTOR: [
-    { label: "Dashboard", path: "/doctor/dashboard" },
-    { label: "Appointments", path: "/doctor/appointments" },
-    { label: "Needs reschedule", path: "/doctor/appointments/needs-reschedule" },
-    { label: "Active visit", path: "/doctor/visits/active" },
-    { label: "Patients", path: "/doctor/patients" },
-    { label: "External X-rays", path: "/doctor/external-xrays" },
-    { label: "My schedule", path: "/doctor/profile/schedule" },
-    { label: "My leave", path: "/doctor/profile/leave" },
-    { label: "Billing handoffs", path: "/doctor/billing/handoffs" },
+    { label: "Dashboard", path: "/doctor/dashboard", compactLabel: "D" },
+    { label: "My Appointments", path: "/doctor/appointments", compactLabel: "MA" },
+    { label: "Active Visit", path: "/doctor/visits/active", compactLabel: "AV" },
+    { label: "Patients", path: "/doctor/patients", compactLabel: "P" },
+    { label: "X-rays & AI", path: "/doctor/xrays", compactLabel: "XA" },
+    { label: "External X-ray Workspace", path: "/doctor/external-xrays", compactLabel: "EX" },
+    { label: "My Billing Handoffs", path: "/doctor/billing/handoffs", compactLabel: "BH" },
+    { label: "Profile", path: "/doctor/profile", compactLabel: "PR" },
   ],
 };
 
@@ -59,7 +61,14 @@ export function Sidebar({ role }: SidebarProps) {
       </div>
       <nav className="sidebar-nav">
         {navItems[role].map((item) => (
-          <NavLink key={item.path} to={item.path} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+          <NavLink
+            key={item.path}
+            to={item.path}
+            title={item.label}
+            aria-label={item.label}
+            data-compact-label={item.compactLabel}
+            className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+          >
             {item.label}
           </NavLink>
         ))}
