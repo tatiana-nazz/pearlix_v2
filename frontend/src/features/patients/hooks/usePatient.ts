@@ -1,0 +1,52 @@
+import { useQuery } from "@tanstack/react-query";
+
+import { appointmentsApi } from "../../../api/endpoints/appointments";
+import {
+  getPatient,
+  getPatientAiResults,
+  getPatientVisits,
+  getPatientXrays,
+} from "../../../api/endpoints/patients";
+
+export function patientKey(patientId: number) {
+  return ["patient", patientId] as const;
+}
+
+export function usePatient(patientId: number) {
+  return useQuery({
+    queryKey: patientKey(patientId),
+    queryFn: () => getPatient(patientId),
+  });
+}
+
+export function usePatientVisits(patientId: number, enabled = true) {
+  return useQuery({
+    queryKey: ["patient", patientId, "visits"],
+    queryFn: () => getPatientVisits(patientId),
+    enabled,
+  });
+}
+
+export function usePatientAppointments(patientId: number, enabled = true) {
+  return useQuery({
+    queryKey: ["patient", patientId, "appointments"],
+    queryFn: () => appointmentsApi.list({ patient_id: patientId }),
+    enabled,
+  });
+}
+
+export function usePatientXrays(patientId: number, enabled = true) {
+  return useQuery({
+    queryKey: ["patient", patientId, "xrays"],
+    queryFn: () => getPatientXrays(patientId),
+    enabled,
+  });
+}
+
+export function usePatientAiResults(patientId: number, enabled = true) {
+  return useQuery({
+    queryKey: ["patient", patientId, "ai-results"],
+    queryFn: () => getPatientAiResults(patientId),
+    enabled,
+  });
+}
