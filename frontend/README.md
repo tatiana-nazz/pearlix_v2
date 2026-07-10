@@ -60,7 +60,25 @@ npm run build
 
 ## Browser QA
 
-Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA against real Admin, Staff, and Doctor credentials.
+Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Local QA accounts were successfully seeded; browser QA execution is still pending.
+
+## Local QA Accounts
+
+Phase 13D.1 adds a local development QA account command. Local browser QA users were successfully seeded and can be created or reset from the backend:
+
+```bash
+cd backend
+python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user
+```
+
+- Admin: `admin.qa@pearlix.local`
+- Staff: `staff.qa@pearlix.local`
+- Doctor: `doctor.qa@pearlix.local`
+- Must-change-password Doctor: `doctor.mustchange@pearlix.local`
+- Password is whichever value was passed to the command.
+- Do not hardcode credentials in frontend code.
+- Do not commit credentials to Git.
+- These accounts are for local QA only.
 
 ## Role Dashboards
 
@@ -69,9 +87,9 @@ Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend
 - Doctor dashboard uses `GET /dashboard/doctor/`.
 - Dashboards render real backend data only; no permanent demo dashboard data is hardcoded.
 - Full patient, appointment, billing, visit, X-ray, AI, audit, and admin management workflows remain later phases.
-- Real credential browser QA is required to verify live role data, 401 refresh behavior, and backend 403 handling.
+- Browser QA is still pending execution with the seeded local QA accounts to verify live role data, 401 refresh behavior, and backend 403 handling.
 
-## Included Through Phase 13D
+## Included Through Phase 13D.1
 
 - Vite, React, TypeScript app structure.
 - TanStack Query provider.
@@ -82,6 +100,7 @@ Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend
 - Shared TypeScript contracts based on the Phase 13A integration audit.
 - Real-data Admin, Staff, and Doctor dashboard pages.
 - Shared dashboard UI components for cards, states, headers, status pills, and summary lists.
+- Local dev QA account command for seeded Admin, Staff, Doctor, and must-change-password Doctor users.
 - Browser QA documentation for auth/layout guard and dashboard verification.
 
 ## Design Contract
