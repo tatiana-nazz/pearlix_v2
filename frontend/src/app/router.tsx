@@ -12,6 +12,8 @@ import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { AdminDashboardPage } from "../pages/admin/AdminDashboardPage";
+import { AppointmentsPage } from "../pages/appointments/AppointmentsPage";
+import { RescheduleAppointmentPage } from "../pages/appointments/RescheduleAppointmentPage";
 import { DoctorDashboardPage } from "../pages/doctor/DoctorDashboardPage";
 import { NewPatientPage } from "../pages/patients/NewPatientPage";
 import { PatientProfilePage } from "../pages/patients/PatientProfilePage";
@@ -32,24 +34,12 @@ const adminRoutes: PlaceholderRoute[] = [
   { path: "clinic-settings", title: "Clinic Settings", role: "ADMIN", plannedPhase: "Phase 13J" },
   { path: "doctors", title: "Doctors & Staff", role: "ADMIN", plannedPhase: "Phase 13J" },
   { path: "leave", title: "Schedules & Leave", role: "ADMIN", plannedPhase: "Phase 13J" },
-  { path: "appointments", title: "Appointments", role: "ADMIN", plannedPhase: "Phase 13F" },
-  { path: "appointments/day", title: "Appointments Day View", role: "ADMIN", plannedPhase: "Phase 13F" },
-  { path: "appointments/week", title: "Appointments Week View", role: "ADMIN", plannedPhase: "Phase 13F" },
-  { path: "appointments/month", title: "Appointments Month View", role: "ADMIN", plannedPhase: "Phase 13F" },
-  { path: "appointments/list", title: "Appointments List", role: "ADMIN", plannedPhase: "Phase 13F" },
-  { path: "appointments/needs-reschedule", title: "Needs Reschedule", role: "ADMIN", plannedPhase: "Phase 13F" },
   { path: "billing", title: "Billing", role: "ADMIN", plannedPhase: "Phase 13I" },
   { path: "audit-logs", title: "Audit Logs", role: "ADMIN", plannedPhase: "Phase 13J" },
   { path: "profile", title: "Profile", role: "ADMIN", plannedPhase: "Phase 13C" },
 ];
 
 const staffRoutes: PlaceholderRoute[] = [
-  { path: "appointments", title: "Appointments", role: "STAFF", plannedPhase: "Phase 13F" },
-  { path: "appointments/day", title: "Appointments Day View", role: "STAFF", plannedPhase: "Phase 13F" },
-  { path: "appointments/week", title: "Appointments Week View", role: "STAFF", plannedPhase: "Phase 13F" },
-  { path: "appointments/month", title: "Appointments Month View", role: "STAFF", plannedPhase: "Phase 13F" },
-  { path: "appointments/list", title: "Appointments List", role: "STAFF", plannedPhase: "Phase 13F" },
-  { path: "appointments/needs-reschedule", title: "Needs Reschedule", role: "STAFF", plannedPhase: "Phase 13F" },
   { path: "billing/handoffs", title: "Billing Handoffs", role: "STAFF", plannedPhase: "Phase 13I" },
   { path: "billing/invoices", title: "Invoices", role: "STAFF", plannedPhase: "Phase 13I" },
   { path: "billing/payments", title: "Payments", role: "STAFF", plannedPhase: "Phase 13I" },
@@ -59,11 +49,6 @@ const staffRoutes: PlaceholderRoute[] = [
 ];
 
 const doctorRoutes: PlaceholderRoute[] = [
-  { path: "appointments", title: "My Appointments", role: "DOCTOR", plannedPhase: "Phase 13F" },
-  { path: "appointments/day", title: "Appointments Day View", role: "DOCTOR", plannedPhase: "Phase 13F" },
-  { path: "appointments/week", title: "Appointments Week View", role: "DOCTOR", plannedPhase: "Phase 13F" },
-  { path: "appointments/list", title: "Appointments List", role: "DOCTOR", plannedPhase: "Phase 13F" },
-  { path: "appointments/needs-reschedule", title: "Needs Reschedule", role: "DOCTOR", plannedPhase: "Phase 13F" },
   { path: "visits/active", title: "Active Visit", role: "DOCTOR", plannedPhase: "Phase 13G" },
   { path: "xrays", title: "X-rays & AI", role: "DOCTOR", plannedPhase: "Phase 13H" },
   { path: "external-xrays", title: "External X-ray Workspace", role: "DOCTOR", plannedPhase: "Phase 13H" },
@@ -127,6 +112,12 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/admin/dashboard" replace /> },
               { path: "dashboard", element: <AdminDashboardPage /> },
+              { path: "appointments", element: <Navigate to="/admin/appointments/day" replace /> },
+              { path: "appointments/day", element: <AppointmentsPage role="ADMIN" view="day" /> },
+              { path: "appointments/week", element: <AppointmentsPage role="ADMIN" view="week" /> },
+              { path: "appointments/month", element: <AppointmentsPage role="ADMIN" view="month" /> },
+              { path: "appointments/list", element: <AppointmentsPage role="ADMIN" view="list" /> },
+              { path: "appointments/needs-reschedule", element: <AppointmentsPage role="ADMIN" view="needs-reschedule" /> },
               { path: "patients", element: <PatientsPage role="ADMIN" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="ADMIN" /> },
               ...placeholderChildren(adminRoutes),
@@ -142,6 +133,13 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/staff/dashboard" replace /> },
               { path: "dashboard", element: <StaffDashboardPage /> },
+              { path: "appointments", element: <Navigate to="/staff/appointments/day" replace /> },
+              { path: "appointments/day", element: <AppointmentsPage role="STAFF" view="day" /> },
+              { path: "appointments/week", element: <AppointmentsPage role="STAFF" view="week" /> },
+              { path: "appointments/month", element: <AppointmentsPage role="STAFF" view="month" /> },
+              { path: "appointments/list", element: <AppointmentsPage role="STAFF" view="list" /> },
+              { path: "appointments/needs-reschedule", element: <AppointmentsPage role="STAFF" view="needs-reschedule" /> },
+              { path: "appointments/:appointmentId/reschedule", element: <RescheduleAppointmentPage /> },
               { path: "patients", element: <PatientsPage role="STAFF" /> },
               { path: "patients/new", element: <NewPatientPage role="STAFF" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="STAFF" /> },
@@ -158,6 +156,11 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/doctor/dashboard" replace /> },
               { path: "dashboard", element: <DoctorDashboardPage /> },
+              { path: "appointments", element: <Navigate to="/doctor/appointments/day" replace /> },
+              { path: "appointments/day", element: <AppointmentsPage role="DOCTOR" view="day" /> },
+              { path: "appointments/week", element: <AppointmentsPage role="DOCTOR" view="week" /> },
+              { path: "appointments/list", element: <AppointmentsPage role="DOCTOR" view="list" /> },
+              { path: "appointments/needs-reschedule", element: <AppointmentsPage role="DOCTOR" view="needs-reschedule" /> },
               { path: "patients", element: <PatientsPage role="DOCTOR" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="DOCTOR" /> },
               { path: "patients/:patientId/clinical-history", element: <PatientProfilePage role="DOCTOR" defaultTab="visits" /> },

@@ -96,7 +96,14 @@ p {
 .patient-form select,
 .patient-form textarea,
 .patient-filters input,
-.patient-filters select {
+.patient-filters select,
+.appointment-form input,
+.appointment-form select,
+.appointment-form textarea,
+.appointment-filters input,
+.appointment-filters select,
+.reschedule-grid input,
+.reschedule-grid select {
   width: 100%;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -110,7 +117,14 @@ p {
 .patient-form select:focus,
 .patient-form textarea:focus,
 .patient-filters input:focus,
-.patient-filters select:focus {
+.patient-filters select:focus,
+.appointment-form input:focus,
+.appointment-form select:focus,
+.appointment-form textarea:focus,
+.appointment-filters input:focus,
+.appointment-filters select:focus,
+.reschedule-grid input:focus,
+.reschedule-grid select:focus {
   border-color: var(--color-primary);
   outline: 3px solid rgba(17, 109, 143, 0.16);
 }
@@ -537,6 +551,11 @@ p {
   gap: var(--space-6);
 }
 
+.appointment-page {
+  display: grid;
+  gap: var(--space-6);
+}
+
 .patient-page.narrow {
   max-width: 840px;
 }
@@ -549,32 +568,69 @@ p {
 }
 
 .patient-filters label,
-.patient-form label {
+.patient-form label,
+.appointment-filters label,
+.appointment-form label,
+.reschedule-grid label {
   display: grid;
   gap: var(--space-2);
   color: var(--color-text);
   font-weight: 650;
 }
 
+.appointment-tabs {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.appointment-tabs a {
+  min-height: 44px;
+  border-bottom: 3px solid transparent;
+  color: var(--color-muted);
+  padding: var(--space-3) var(--space-4);
+  text-decoration: none;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.appointment-tabs a.active {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary-strong);
+}
+
+.appointment-filters {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(180px, 240px) minmax(220px, 1fr);
+  gap: var(--space-4);
+  align-items: end;
+}
+
 .table-scroll {
   overflow-x: auto;
 }
 
-.patient-table {
+.patient-table,
+.appointment-table {
   width: 100%;
   min-width: 860px;
   border-collapse: collapse;
 }
 
 .patient-table th,
-.patient-table td {
+.patient-table td,
+.appointment-table th,
+.appointment-table td {
   border-bottom: 1px solid var(--color-border);
   padding: var(--space-3);
   text-align: left;
   vertical-align: middle;
 }
 
-.patient-table th {
+.patient-table th,
+.appointment-table th {
   color: var(--color-muted);
   font-size: var(--font-size-xs);
   text-transform: uppercase;
@@ -584,8 +640,16 @@ p {
   cursor: pointer;
 }
 
-.patient-table tbody tr:hover {
+.patient-table tbody tr:hover,
+.appointment-table tbody tr:hover {
   background: #fbfdfe;
+}
+
+.appointment-table td span {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
 }
 
 .row-actions {
@@ -615,10 +679,110 @@ p {
   gap: var(--space-5);
 }
 
-.patient-form-grid {
+.patient-form-grid,
+.appointment-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
+}
+
+.appointment-form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.appointment-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(180px, 1fr));
+  gap: var(--space-3);
+  overflow-x: auto;
+}
+
+.appointment-calendar-column {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-height: 320px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  background: #fbfdfe;
+}
+
+.appointment-calendar-column h3,
+.appointment-month-cell h3 {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.appointment-calendar-item,
+.appointment-month-cell button,
+.availability-grid button {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  padding: var(--space-3);
+  text-align: left;
+}
+
+.appointment-calendar-item:hover,
+.appointment-month-cell button:hover,
+.availability-grid button:hover,
+.availability-grid button.active {
+  border-color: var(--color-primary);
+  background: #f3fbfd;
+}
+
+.appointment-calendar-item span,
+.availability-grid span {
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.appointment-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(128px, 1fr));
+  gap: var(--space-2);
+  overflow-x: auto;
+}
+
+.appointment-month-cell {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-height: 136px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  background: var(--color-surface);
+}
+
+.appointment-month-cell.muted {
+  background: #f7fafc;
+  color: var(--color-muted);
+}
+
+.needs-reschedule-view {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.availability-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.reschedule-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  gap: var(--space-5);
 }
 
 .field-error {
@@ -885,6 +1049,10 @@ p {
 
   .patient-filters,
   .patient-form-grid,
+  .appointment-filters,
+  .appointment-form-grid,
+  .availability-grid,
+  .reschedule-grid,
   .detail-grid {
     grid-template-columns: 1fr;
   }
