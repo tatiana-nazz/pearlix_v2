@@ -20,7 +20,7 @@ Expected backend URL: `http://127.0.0.1:8000/api`
 
 ## Local QA Accounts
 
-Create or reset local QA users from the backend:
+Local QA users were successfully seeded in the development database. Create or reset them from the backend when needed:
 
 ```bash
 cd backend
@@ -65,4 +65,4 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 
 ## QA Notes
 
-Automated browser QA against real backend credentials was not completed in this phase because no real Admin, Staff, or Doctor credentials were provided. Do not invent demo credentials. Manual credential-based QA should be completed by a developer with valid backend users.
+Local QA accounts are available for credential-based testing. Browser QA execution is still pending and should be completed with the seeded Admin, Staff, Doctor, and must-change-password Doctor accounts.
