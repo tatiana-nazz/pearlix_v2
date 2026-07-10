@@ -679,6 +679,32 @@ p {
   gap: var(--space-5);
 }
 
+.patient-form-section {
+  display: grid;
+  gap: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-5);
+}
+
+.patient-form-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.patient-form-section h4 {
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+}
+
+.conflict-banner {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.conflict-banner p {
+  margin: 0;
+}
+
 .patient-form-grid,
 .appointment-form-grid {
   display: grid;

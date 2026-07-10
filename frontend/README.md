@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phase 13F makes the React + Vite + TypeScript frontend foundation operational for auth, role guards, workspace shell behavior, role dashboards, patient list/profile workflows, and appointment scheduling/rescheduling workflows backed by real backend APIs.
+Phase 13E.1 plus Phase 13F make the React + Vite + TypeScript frontend foundation operational for auth, role guards, workspace shell behavior, role dashboards, upgraded patient list/profile workflows, and appointment scheduling/rescheduling workflows backed by real backend APIs.
 
 ## Install
 
@@ -62,7 +62,7 @@ npm run build
 ## Browser QA
 
 Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Local QA accounts were successfully seeded; browser QA execution is still pending.
-Use `frontend/QA_13E.md` for patient list/profile QA. Use `frontend/QA_13F.md` for appointment and reschedule QA.
+Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA.
 
 ## Local QA Accounts
 
@@ -93,7 +93,7 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 
 ## Patient Management
 
-Phase 13E adds real patient management routes:
+Phase 13E adds real patient management routes. Phase 13E.1 upgrades the patient schema and frontend contract:
 
 - Admin: `/admin/patients`, `/admin/patients/:patientId`
 - Staff: `/staff/patients`, `/staff/patients/new`, `/staff/patients/:patientId`
@@ -103,7 +103,11 @@ Role behavior:
 
 - Admin can list and view patients read-only.
 - Staff can create, edit, archive, unarchive, and view active or archived patients.
-- Doctor can list active/non-archived patients and edit allowed profile fields, but cannot archive or view archived filters.
+- Doctor can list active/non-archived patients and edit profile fields, but cannot archive or view archived filters.
+- Create uses `first_name`, `last_name`, and `gender` (`Male` or `Female`); `full_name` and `age` are read-only computed fields.
+- Optional profile fields include `date_of_birth`, `phone_number`, `email`, `national_id_or_passport`, `address`, `emergency_contact`, `blood_group`, `medical_conditions_history`, `insurance_info`, and `general_notes`.
+- Updates, archive, and unarchive send the current `version` for optimistic locking. `VERSION_CONFLICT` keeps local edits visible and offers a reload path.
+- Direct `is_archived` edits are not sent by frontend code; archive state uses backend action endpoints.
 - Patient profiles include Overview, Medical Summary, Visits, Appointments, X-rays & AI, and role-aware Billing/Handoff placeholder content.
 
 Frontend tests use Vitest, jsdom, and Testing Library:
@@ -142,6 +146,7 @@ Role behavior:
 - Shared dashboard UI components for cards, states, headers, status pills, and summary lists.
 - Local dev QA account command for seeded Admin, Staff, Doctor, and must-change-password Doctor users.
 - Real patient list/profile integration with role-aware actions, filters, pagination, and profile tabs.
+- Phase 13E.1 upgraded patient schema fields, canonical patient filters, versioned update/archive payloads, and conflict handling.
 - Focused frontend patient feature tests.
 - Real appointment day/week/month/list/needs-reschedule views with role-aware Staff actions and Doctor start-visit entry point.
 - Focused frontend appointment feature tests.
@@ -166,4 +171,8 @@ Future frontend phases must follow these files for the professional dental clini
 - Protected media rendering screens.
 - X-ray upload, AI run, overlays, and external X-ray workspace flows.
 - Full billing, invoice, payment, itemization, tax, discount, insurance, and online payment workflows.
-- Backend behavior changes.
+
+## Future Phase Order
+
+- Accepted next sequence: Phase 13F.1 shift-aware appointment/frontend adjustments, then 13G, 13H, 13I, 13J, and 13K.
+- Shift rules are locked for future work; Phase 13E.1 does not implement shift behavior.

@@ -8,8 +8,8 @@ def test_wf_010_admin_operational_actions_are_read_only(admin_client, patient, a
     invoice = invoice_factory(patient=patient, total_amount="40.00", status=Invoice.Status.UNPAID)
 
     denied_responses = [
-        admin_client.post("/api/patients/", {"full_name": "Blocked", "phone": "0900000000", "gender": "UNSPECIFIED"}, format="json"),
-        admin_client.patch(f"/api/patients/{patient.id}/", {"full_name": "Blocked"}, format="json"),
+        admin_client.post("/api/patients/", {"first_name": "Blocked", "last_name": "Patient", "phone_number": "0900000000", "gender": "Female"}, format="json"),
+        admin_client.patch(f"/api/patients/{patient.id}/", {"version": patient.version, "last_name": "Blocked"}, format="json"),
         admin_client.post(
             "/api/appointments/",
             {

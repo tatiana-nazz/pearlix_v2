@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 
 import type { UserRole } from "../../../types/auth";
-import type { PatientDetail } from "../../../types/patients";
+import type { PatientBloodGroup, PatientDetail, PatientGender } from "../../../types/patients";
 import {
   PatientFormErrors,
   PatientFormValues,
@@ -22,13 +22,28 @@ interface PatientFormProps {
   error?: unknown;
   onSubmit: (values: PatientFormValues) => Promise<void> | void;
   onCancel?: () => void;
+  onReloadLatest?: () => void;
+  onContinueReviewing?: () => void;
 }
+
+const bloodGroups = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
 function hasErrors(errors: PatientFormErrors) {
   return Object.values(errors).some(Boolean);
 }
 
-export function PatientForm({ mode, role, patient, submitLabel, isSubmitting, error, onSubmit, onCancel }: PatientFormProps) {
+export function PatientForm({
+  mode,
+  role,
+  patient,
+  submitLabel,
+  isSubmitting,
+  error,
+  onSubmit,
+  onCancel,
+  onReloadLatest,
+  onContinueReviewing,
+}: PatientFormProps) {
   const [values, setValues] = useState<PatientFormValues>(() => (mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues));
   const [errors, setErrors] = useState<PatientFormErrors>({});
 
@@ -40,7 +55,7 @@ export function PatientForm({ mode, role, patient, submitLabel, isSubmitting, er
     if (error) setErrors(apiErrorToFormErrors(error));
   }, [error]);
 
-  function updateField(field: keyof PatientFormValues, value: string) {
+  function updateField<K extends keyof PatientFormValues>(field: K, value: PatientFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
   }
@@ -60,67 +75,126 @@ export function PatientForm({ mode, role, patient, submitLabel, isSubmitting, er
   return (
     <form className="patient-form" onSubmit={handleSubmit} noValidate>
       {errors.form ? <div className="form-error">{errors.form}</div> : null}
-      <div className="patient-form-grid">
+      {errors.conflict ? (
+        <div className="form-error conflict-banner">
+          <p>{errors.conflict}</p>
+          <div className="form-actions">
+            <button className="button secondary compact-button" type="button" onClick={onContinueReviewing}>
+              Continue reviewing my changes
+            </button>
+            <button className="button primary compact-button" type="button" onClick={onReloadLatest}>
+              Reload latest record
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <section className="patient-form-section">
+        <h4>Identity</h4>
+        <div className="patient-form-grid">
+          <label>
+            First name <span aria-hidden="true">*</span>
+            <input
+              id={`${fieldPrefix}-first-name`}
+              value={values.first_name}
+              onChange={(event) => updateField("first_name", event.target.value)}
+              aria-invalid={Boolean(errors.first_name)}
+              aria-describedby={errors.first_name ? `${fieldPrefix}-first-name-error` : undefined}
+            />
+            {errors.first_name ? <span id={`${fieldPrefix}-first-name-error`} className="field-error">{errors.first_name}</span> : null}
+          </label>
+
+          <label>
+            Last name <span aria-hidden="true">*</span>
+            <input
+              id={`${fieldPrefix}-last-name`}
+              value={values.last_name}
+              onChange={(event) => updateField("last_name", event.target.value)}
+              aria-invalid={Boolean(errors.last_name)}
+              aria-describedby={errors.last_name ? `${fieldPrefix}-last-name-error` : undefined}
+            />
+            {errors.last_name ? <span id={`${fieldPrefix}-last-name-error`} className="field-error">{errors.last_name}</span> : null}
+          </label>
+
+          <label>
+            Gender <span aria-hidden="true">*</span>
+            <select value={values.gender} onChange={(event) => updateField("gender", event.target.value as PatientGender)}>
+              <option value="Female">Female</option>
+              <option value="Male">Male</option>
+            </select>
+          </label>
+
+          <label>
+            Date of birth
+            <input
+              type="date"
+              value={values.date_of_birth}
+              onChange={(event) => updateField("date_of_birth", event.target.value)}
+              aria-invalid={Boolean(errors.date_of_birth)}
+            />
+            {errors.date_of_birth ? <span className="field-error">{errors.date_of_birth}</span> : null}
+          </label>
+        </div>
+      </section>
+
+      <section className="patient-form-section">
+        <h4>Contact and identifiers</h4>
+        <div className="patient-form-grid">
+          <label>
+            Phone
+            <input id={`${fieldPrefix}-phone-number`} value={values.phone_number} onChange={(event) => updateField("phone_number", event.target.value)} />
+            {errors.phone_number ? <span className="field-error">{errors.phone_number}</span> : null}
+          </label>
+          <label>
+            Email
+            <input type="email" value={values.email} onChange={(event) => updateField("email", event.target.value)} />
+            {errors.email ? <span className="field-error">{errors.email}</span> : null}
+          </label>
+          <label>
+            National ID or passport
+            <input value={values.national_id_or_passport} onChange={(event) => updateField("national_id_or_passport", event.target.value)} />
+            {errors.national_id_or_passport ? <span className="field-error">{errors.national_id_or_passport}</span> : null}
+          </label>
+          <label>
+            Emergency contact
+            <input value={values.emergency_contact} onChange={(event) => updateField("emergency_contact", event.target.value)} />
+            {errors.emergency_contact ? <span className="field-error">{errors.emergency_contact}</span> : null}
+          </label>
+        </div>
         <label>
-          Full name <span aria-hidden="true">*</span>
-          <input
-            id={`${fieldPrefix}-full-name`}
-            value={values.full_name}
-            onChange={(event) => updateField("full_name", event.target.value)}
-            aria-invalid={Boolean(errors.full_name)}
-            aria-describedby={errors.full_name ? `${fieldPrefix}-full-name-error` : undefined}
-          />
-          {errors.full_name ? <span id={`${fieldPrefix}-full-name-error`} className="field-error">{errors.full_name}</span> : null}
+          Address
+          <textarea value={values.address} onChange={(event) => updateField("address", event.target.value)} rows={3} />
         </label>
+      </section>
 
+      <section className="patient-form-section">
+        <h4>Clinical profile</h4>
+        <div className="patient-form-grid">
+          <label>
+            Blood group
+            <select value={values.blood_group} onChange={(event) => updateField("blood_group", event.target.value as PatientBloodGroup)}>
+              {bloodGroups.map((group) => (
+                <option key={group || "none"} value={group}>
+                  {group || "Not recorded"}
+                </option>
+              ))}
+            </select>
+            {errors.blood_group ? <span className="field-error">{errors.blood_group}</span> : null}
+          </label>
+        </div>
         <label>
-          Phone <span aria-hidden="true">*</span>
-          <input
-            id={`${fieldPrefix}-phone`}
-            value={values.phone}
-            onChange={(event) => updateField("phone", event.target.value)}
-            aria-invalid={Boolean(errors.phone)}
-            aria-describedby={errors.phone ? `${fieldPrefix}-phone-error` : undefined}
-          />
-          {errors.phone ? <span id={`${fieldPrefix}-phone-error`} className="field-error">{errors.phone}</span> : null}
+          Medical conditions history
+          <textarea value={values.medical_conditions_history} onChange={(event) => updateField("medical_conditions_history", event.target.value)} rows={5} />
         </label>
-
         <label>
-          Gender
-          <select value={values.gender} onChange={(event) => updateField("gender", event.target.value)}>
-            <option value="UNSPECIFIED">Unspecified</option>
-            <option value="FEMALE">Female</option>
-            <option value="MALE">Male</option>
-            <option value="OTHER">Other</option>
-          </select>
+          Insurance information
+          <textarea value={values.insurance_info} onChange={(event) => updateField("insurance_info", event.target.value)} rows={4} />
         </label>
-
         <label>
-          Birth date
-          <input
-            type="date"
-            value={values.birth_date}
-            onChange={(event) => updateField("birth_date", event.target.value)}
-            aria-invalid={Boolean(errors.birth_date)}
-          />
-          {errors.birth_date ? <span className="field-error">{errors.birth_date}</span> : null}
+          General notes
+          <textarea value={values.general_notes} onChange={(event) => updateField("general_notes", event.target.value)} rows={5} />
         </label>
-      </div>
-
-      <label>
-        Address
-        <textarea value={values.address} onChange={(event) => updateField("address", event.target.value)} rows={3} />
-      </label>
-
-      <label>
-        Medical summary
-        <textarea value={values.medical_summary} onChange={(event) => updateField("medical_summary", event.target.value)} rows={5} />
-      </label>
-
-      <label>
-        General notes
-        <textarea value={values.general_notes} onChange={(event) => updateField("general_notes", event.target.value)} rows={5} />
-      </label>
+      </section>
 
       {role === "DOCTOR" ? <p className="form-note">Doctors can update patient profile fields for active patients only. Archive controls are hidden.</p> : null}
 

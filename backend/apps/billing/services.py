@@ -423,7 +423,7 @@ def invoice_print_data(invoice: Invoice) -> dict:
         "patient": {
             "id": invoice.patient_id,
             "full_name": invoice.patient.full_name,
-            "phone": invoice.patient.phone,
+            "phone_number": invoice.patient.phone_number,
         },
         "visit": {
             "id": invoice.visit_id,

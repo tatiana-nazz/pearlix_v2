@@ -15,19 +15,39 @@ export function PatientOverview({ patient }: PatientOverviewProps) {
       <dl className="detail-grid">
         <div>
           <dt>Phone</dt>
-          <dd>{displayText(patient.phone)}</dd>
+          <dd>{displayText(patient.phone_number)}</dd>
+        </div>
+        <div>
+          <dt>Email</dt>
+          <dd>{displayText(patient.email)}</dd>
+        </div>
+        <div>
+          <dt>National ID or passport</dt>
+          <dd>{displayText(patient.national_id_or_passport)}</dd>
+        </div>
+        <div>
+          <dt>Emergency contact</dt>
+          <dd>{displayText(patient.emergency_contact)}</dd>
         </div>
         <div>
           <dt>Gender</dt>
-          <dd>{patient.gender.replace("_", " ")}</dd>
+          <dd>{patient.gender}</dd>
         </div>
         <div>
-          <dt>Birth date</dt>
-          <dd>{patient.birth_date ? formatDate(patient.birth_date) : "Not recorded"}</dd>
+          <dt>Date of birth</dt>
+          <dd>{patient.date_of_birth ? formatDate(patient.date_of_birth) : "Not recorded"}</dd>
         </div>
         <div>
           <dt>Age</dt>
           <dd>{patient.age ?? "Not recorded"}</dd>
+        </div>
+        <div>
+          <dt>Blood group</dt>
+          <dd>{displayText(patient.blood_group)}</dd>
+        </div>
+        <div>
+          <dt>Version</dt>
+          <dd>{patient.version}</dd>
         </div>
         <div className="detail-wide">
           <dt>Address</dt>

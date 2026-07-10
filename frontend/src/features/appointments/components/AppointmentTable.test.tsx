@@ -7,7 +7,23 @@ import { AppointmentTable } from "./AppointmentTable";
 
 const base = {
   id: 1,
-  patient: { id: 10, full_name: "Maya Patient", phone: "555", gender: "FEMALE", birth_date: null, age: 31, is_archived: false },
+  patient: {
+    id: 10,
+    first_name: "Maya",
+    last_name: "Patient",
+    full_name: "Maya Patient",
+    gender: "Female",
+    date_of_birth: null,
+    age: 31,
+    phone_number: "555",
+    email: "",
+    national_id_or_passport: null,
+    blood_group: "",
+    is_archived: false,
+    version: 1,
+    created_at: "2026-07-01T00:00:00Z",
+    updated_at: "2026-07-01T00:00:00Z",
+  },
   doctor: { id: 20, full_name: "Dr. Lin", email: "lin@example.com", role: "DOCTOR", is_active: true },
   start_datetime: "2026-07-10T09:00:00Z",
   end_datetime: "2026-07-10T09:30:00Z",
@@ -36,7 +52,7 @@ describe("AppointmentTable", () => {
   it("renders multiple needs reschedule appointments in the full table", () => {
     const rows = [
       { ...base, id: 1, status: "NEEDS_RESCHEDULE" },
-      { ...base, id: 2, patient: { ...base.patient, full_name: "Nora Patient" }, status: "NEEDS_RESCHEDULE" },
+      { ...base, id: 2, patient: { ...base.patient, first_name: "Nora", full_name: "Nora Patient" }, status: "NEEDS_RESCHEDULE" },
     ] as AppointmentListItem[];
 
     render(

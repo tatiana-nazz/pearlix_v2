@@ -8,12 +8,18 @@ import { ArchivePatientDialog } from "./ArchivePatientDialog";
 
 const patient = {
   id: 1,
+  first_name: "QA",
+  last_name: "Patient",
   full_name: "QA Patient",
-  phone: "555",
-  gender: "UNSPECIFIED",
-  birth_date: null,
+  gender: "Female",
+  date_of_birth: null,
   age: null,
+  phone_number: "555",
+  email: "",
+  national_id_or_passport: null,
+  blood_group: "",
   is_archived: false,
+  version: 1,
   created_at: "2026-07-10T08:00:00Z",
   updated_at: "2026-07-10T08:00:00Z",
 } satisfies PatientListItem;

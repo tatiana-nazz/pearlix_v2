@@ -89,16 +89,24 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   }
 
   async function handleUpdate(values: PatientFormValues) {
-    await updatePatient.mutateAsync(updatePayloadFromForm(values));
+    if (!patient.data) return;
+    await updatePatient.mutateAsync(updatePayloadFromForm(values, patient.data.version));
     closeEdit();
   }
 
   async function handleArchiveChange() {
     const currentPatient = patient.data;
     if (!archiveMode || !currentPatient) return;
-    if (archiveMode === "archive") await archivePatient.mutateAsync(currentPatient.id);
-    else await unarchivePatient.mutateAsync(currentPatient.id);
+    if (archiveMode === "archive") await archivePatient.mutateAsync({ id: currentPatient.id, version: currentPatient.version });
+    else await unarchivePatient.mutateAsync({ id: currentPatient.id, version: currentPatient.version });
     setArchiveMode(null);
+  }
+
+  async function handleReloadLatestPatient() {
+    if (window.confirm("Reload the latest patient record and discard unsaved edits?")) {
+      await patient.refetch();
+      updatePatient.reset();
+    }
   }
 
   const archiveError = archiveMode === "archive" ? archivePatient.error : unarchivePatient.error;
@@ -136,6 +144,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
               error={updatePatient.error}
               onSubmit={handleUpdate}
               onCancel={closeEdit}
+              onReloadLatest={() => void handleReloadLatestPatient()}
+              onContinueReviewing={() => updatePatient.reset()}
             />
           </section>
         </div>

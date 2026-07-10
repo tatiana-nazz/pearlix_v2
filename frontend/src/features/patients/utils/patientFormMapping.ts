@@ -1,69 +1,97 @@
 import { ApiClientError } from "../../../api/errors";
-import type { CreatePatientPayload, PatientDetail, PatientGender, UpdatePatientPayload } from "../../../types/patients";
+import type { CreatePatientPayload, PatientBloodGroup, PatientDetail, PatientGender, UpdatePatientPayload } from "../../../types/patients";
 
 export interface PatientFormValues {
-  full_name: string;
-  phone: string;
+  first_name: string;
+  last_name: string;
   gender: PatientGender;
-  birth_date: string;
+  date_of_birth: string;
+  phone_number: string;
+  email: string;
+  national_id_or_passport: string;
   address: string;
-  medical_summary: string;
+  emergency_contact: string;
+  blood_group: PatientBloodGroup;
+  medical_conditions_history: string;
+  insurance_info: string;
   general_notes: string;
 }
 
-export type PatientFormErrors = Partial<Record<keyof PatientFormValues | "form", string>>;
+export type PatientFormErrors = Partial<Record<keyof PatientFormValues | "form" | "conflict", string>>;
 
 export const emptyPatientFormValues: PatientFormValues = {
-  full_name: "",
-  phone: "",
-  gender: "UNSPECIFIED",
-  birth_date: "",
+  first_name: "",
+  last_name: "",
+  gender: "Female",
+  date_of_birth: "",
+  phone_number: "",
+  email: "",
+  national_id_or_passport: "",
   address: "",
-  medical_summary: "",
+  emergency_contact: "",
+  blood_group: "",
+  medical_conditions_history: "",
+  insurance_info: "",
   general_notes: "",
 };
 
 export function formValuesFromPatient(patient?: PatientDetail | null): PatientFormValues {
   if (!patient) return emptyPatientFormValues;
   return {
-    full_name: patient.full_name,
-    phone: patient.phone,
+    first_name: patient.first_name,
+    last_name: patient.last_name,
     gender: patient.gender,
-    birth_date: patient.birth_date ?? "",
+    date_of_birth: patient.date_of_birth ?? "",
+    phone_number: patient.phone_number,
+    email: patient.email,
+    national_id_or_passport: patient.national_id_or_passport ?? "",
     address: patient.address,
-    medical_summary: patient.medical_summary,
+    emergency_contact: patient.emergency_contact,
+    blood_group: patient.blood_group,
+    medical_conditions_history: patient.medical_conditions_history,
+    insurance_info: patient.insurance_info,
     general_notes: patient.general_notes,
   };
 }
 
 export function createPayloadFromForm(values: PatientFormValues): CreatePatientPayload {
   return {
-    full_name: values.full_name.trim(),
-    phone: values.phone.trim(),
+    first_name: values.first_name.trim(),
+    last_name: values.last_name.trim(),
     gender: values.gender,
-    birth_date: values.birth_date || null,
+    date_of_birth: values.date_of_birth || null,
+    phone_number: values.phone_number.trim(),
+    email: values.email.trim(),
+    national_id_or_passport: values.national_id_or_passport.trim() || null,
     address: values.address.trim(),
-    medical_summary: values.medical_summary.trim(),
+    emergency_contact: values.emergency_contact.trim(),
+    blood_group: values.blood_group,
+    medical_conditions_history: values.medical_conditions_history.trim(),
+    insurance_info: values.insurance_info.trim(),
     general_notes: values.general_notes.trim(),
   };
 }
 
-export function updatePayloadFromForm(values: PatientFormValues): UpdatePatientPayload {
-  return createPayloadFromForm(values);
+export function updatePayloadFromForm(values: PatientFormValues, version: number): UpdatePatientPayload {
+  return { ...createPayloadFromForm(values), version };
 }
 
 export function validatePatientForm(values: PatientFormValues): PatientFormErrors {
   const errors: PatientFormErrors = {};
-  if (!values.full_name.trim()) errors.full_name = "Full name is required.";
-  if (!values.phone.trim()) errors.phone = "Phone is required.";
-  if (values.birth_date && values.birth_date > new Date().toISOString().slice(0, 10)) {
-    errors.birth_date = "Birth date cannot be in the future.";
+  if (!values.first_name.trim()) errors.first_name = "First name is required.";
+  if (!values.last_name.trim()) errors.last_name = "Last name is required.";
+  if (!values.gender) errors.gender = "Gender is required.";
+  if (values.date_of_birth && values.date_of_birth > new Date().toISOString().slice(0, 10)) {
+    errors.date_of_birth = "Date of birth cannot be in the future.";
   }
   return errors;
 }
 
 export function apiErrorToFormErrors(error: unknown): PatientFormErrors {
   if (!(error instanceof ApiClientError)) return { form: "Request failed." };
+  if (error.code === "VERSION_CONFLICT") {
+    return { conflict: "This patient was changed elsewhere. Reload the latest record before saving over it." };
+  }
   const errors: PatientFormErrors = {};
   for (const field of Object.keys(emptyPatientFormValues) as Array<keyof PatientFormValues>) {
     const detail = error.details[field];

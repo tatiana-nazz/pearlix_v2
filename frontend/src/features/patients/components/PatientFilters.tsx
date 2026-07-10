@@ -29,7 +29,7 @@ export function PatientFilters({
         <input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search by name or phone"
+          placeholder="Search by name, phone, email, or ID"
           aria-label="Search patients"
         />
       </label>

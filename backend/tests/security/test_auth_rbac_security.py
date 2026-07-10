@@ -93,7 +93,14 @@ def test_representative_role_boundaries_block_privilege_escalation(
     xray = xray_attachment_factory()
     invoice = invoice_factory()
 
-    assert admin_client.post("/api/patients/", {"full_name": "Blocked", "phone": "0900000000"}, format="json").status_code == 403
+    assert (
+        admin_client.post(
+            "/api/patients/",
+            {"first_name": "Blocked", "last_name": "Patient", "phone_number": "0900000000", "gender": "Female"},
+            format="json",
+        ).status_code
+        == 403
+    )
     assert admin_client.patch(f"/api/appointments/{appointment.id}/", {"reason": "Blocked"}, format="json").status_code == 403
     assert admin_client.patch(f"/api/visits/{active_visit.id}/clinical-notes/", {"diagnosis": "Blocked"}, format="json").status_code == 403
     assert admin_client.post(f"/api/xrays/{xray.id}/run-ai/").status_code == 403

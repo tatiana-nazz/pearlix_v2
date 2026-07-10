@@ -7,14 +7,14 @@ from apps.billing.models import BillingHandoff, Invoice, Payment
 class BillingHandoffAdmin(admin.ModelAdmin):
     list_display = ("id", "patient", "visit", "doctor", "status", "suggested_amount", "currency", "created_at")
     list_filter = ("status", "currency", "created_at")
-    search_fields = ("patient__full_name", "doctor__full_name", "note")
+    search_fields = ("patient__first_name", "patient__last_name", "doctor__full_name", "note")
 
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
     list_display = ("invoice_number", "patient", "currency", "total_amount", "status", "created_at")
     list_filter = ("status", "currency", "created_at")
-    search_fields = ("invoice_number", "patient__full_name", "notes")
+    search_fields = ("invoice_number", "patient__first_name", "patient__last_name", "notes")
 
 
 @admin.register(Payment)

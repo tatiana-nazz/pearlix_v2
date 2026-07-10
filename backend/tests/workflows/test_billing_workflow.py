@@ -12,9 +12,10 @@ def test_wf_008_billing_handoff_to_invoice_payment_workflow(admin_client, staff_
     patient_response = staff_client.post(
         "/api/patients/",
         {
-            "full_name": "Billing Workflow Patient",
-            "phone": "0988000000",
-            "gender": "UNSPECIFIED",
+            "first_name": "Billing Workflow",
+            "last_name": "Patient",
+            "phone_number": "0988000000",
+            "gender": "Female",
         },
         format="json",
     )

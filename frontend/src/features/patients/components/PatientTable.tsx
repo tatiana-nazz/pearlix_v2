@@ -44,8 +44,8 @@ export function PatientTable({ role, patients, showArchivedStatus, onArchive, on
                 <td>
                   <strong>{patient.full_name}</strong>
                 </td>
-                <td>{displayText(patient.phone)}</td>
-                <td>{patient.gender.replace("_", " ")}</td>
+                <td>{displayText(patient.phone_number || patient.email)}</td>
+                <td>{patient.gender}</td>
                 <td>{patient.age ?? "Not recorded"}</td>
                 {showArchivedStatus ? (
                   <td>

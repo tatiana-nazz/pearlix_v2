@@ -3,10 +3,10 @@ from rest_framework import serializers
 
 from apps.accounts.serializers import UserSummarySerializer
 from apps.patients.models import Patient
-from apps.patients.selectors import ARCHIVE_BLOCKING_APPOINTMENT_STATUSES, patient_has_archive_blocking_appointments
 
 
 class PatientListSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(read_only=True)
     age = serializers.IntegerField(read_only=True)
     last_visit_with_me_at = serializers.DateTimeField(read_only=True, required=False)
 
@@ -14,20 +14,36 @@ class PatientListSerializer(serializers.ModelSerializer):
         model = Patient
         fields = (
             "id",
+            "first_name",
+            "last_name",
             "full_name",
-            "phone",
             "gender",
-            "birth_date",
+            "date_of_birth",
             "age",
+            "phone_number",
+            "email",
+            "national_id_or_passport",
+            "blood_group",
             "is_archived",
+            "version",
             "last_visit_with_me_at",
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "age", "created_at", "updated_at")
+        read_only_fields = (
+            "id",
+            "full_name",
+            "age",
+            "is_archived",
+            "version",
+            "created_at",
+            "updated_at",
+            "last_visit_with_me_at",
+        )
 
 
 class PatientDetailSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(read_only=True)
     age = serializers.IntegerField(read_only=True)
     created_by = UserSummarySerializer(read_only=True)
     updated_by = UserSummarySerializer(read_only=True)
@@ -36,51 +52,88 @@ class PatientDetailSerializer(serializers.ModelSerializer):
         model = Patient
         fields = (
             "id",
+            "first_name",
+            "last_name",
             "full_name",
-            "phone",
             "gender",
-            "birth_date",
+            "date_of_birth",
             "age",
+            "phone_number",
+            "email",
+            "national_id_or_passport",
             "address",
-            "medical_summary",
+            "emergency_contact",
+            "blood_group",
+            "medical_conditions_history",
+            "insurance_info",
             "general_notes",
             "is_archived",
+            "version",
             "created_at",
             "updated_at",
             "created_by",
             "updated_by",
         )
-        read_only_fields = ("id", "age", "created_at", "updated_at", "created_by", "updated_by")
+        read_only_fields = ("id", "full_name", "age", "is_archived", "created_at", "updated_at", "created_by", "updated_by")
 
-    def validate_full_name(self, value):
+    def validate_first_name(self, value):
         if not value or not value.strip():
-            raise serializers.ValidationError("Full name is required.")
+            raise serializers.ValidationError("First name is required.")
         return value.strip()
 
-    def validate_phone(self, value):
+    def validate_last_name(self, value):
         if not value or not value.strip():
-            raise serializers.ValidationError("Phone is required.")
+            raise serializers.ValidationError("Last name is required.")
         return value.strip()
 
-    def validate_birth_date(self, value):
+    def validate_phone_number(self, value):
+        return value.strip()
+
+    def validate_email(self, value):
+        return value.strip()
+
+    def validate_national_id_or_passport(self, value):
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            return None
+        queryset = Patient.objects.filter(national_id_or_passport=normalized)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A patient with this national ID or passport already exists.")
+        return normalized
+
+    def validate_date_of_birth(self, value):
         if value and value > timezone.localdate():
-            raise serializers.ValidationError("Birth date cannot be in the future.")
+            raise serializers.ValidationError("Date of birth cannot be in the future.")
         return value
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
-        if "is_archived" not in attrs:
+        initial_data = getattr(self, "initial_data", {})
+
+        if self.instance is None:
+            forbidden_create_fields = {"full_name", "age", "is_archived", "version", "created_at", "updated_at", "created_by", "updated_by"}
+            forbidden_supplied = sorted(field for field in forbidden_create_fields if field in initial_data)
+            if forbidden_supplied:
+                raise serializers.ValidationError({field: ["This field is read-only."] for field in forbidden_supplied})
+            if not attrs.get("first_name", "").strip():
+                raise serializers.ValidationError({"first_name": ["First name is required."]})
+            if not attrs.get("last_name", "").strip():
+                raise serializers.ValidationError({"last_name": ["Last name is required."]})
+            if "gender" not in attrs:
+                raise serializers.ValidationError({"gender": ["Gender is required."]})
             return attrs
 
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        if not user or user.role != "STAFF":
-            raise serializers.ValidationError({"is_archived": ["You do not have permission to archive patients."]})
+        if "is_archived" in initial_data:
+            raise serializers.ValidationError({"is_archived": ["Use the archive or unarchive action instead."]})
 
-        is_archived = attrs["is_archived"]
-        if self.instance and is_archived and not self.instance.is_archived and patient_has_archive_blocking_appointments(self.instance):
-            blocked = ", ".join(ARCHIVE_BLOCKING_APPOINTMENT_STATUSES)
-            raise serializers.ValidationError(
-                {"is_archived": [f"Patient cannot be archived while appointments are in these statuses: {blocked}."]}
-            )
+        first_name = attrs.get("first_name", self.instance.first_name)
+        last_name = attrs.get("last_name", self.instance.last_name)
+        if not first_name or not first_name.strip():
+            raise serializers.ValidationError({"first_name": ["First name is required."]})
+        if not last_name or not last_name.strip():
+            raise serializers.ValidationError({"last_name": ["Last name is required."]})
         return attrs

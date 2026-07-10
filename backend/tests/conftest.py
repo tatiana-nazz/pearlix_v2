@@ -82,10 +82,28 @@ def other_doctor_client(other_doctor_user):
 @pytest.fixture
 def patient_factory(db, staff_user):
     def create_patient(**overrides):
+        full_name = overrides.pop("full_name", None)
+        if full_name:
+            name_parts = full_name.split(" ", 1)
+            overrides.setdefault("first_name", name_parts[0])
+            overrides.setdefault("last_name", name_parts[1] if len(name_parts) > 1 else "Patient")
+        if "phone" in overrides:
+            overrides.setdefault("phone_number", overrides.pop("phone"))
+        if "birth_date" in overrides:
+            overrides.setdefault("date_of_birth", overrides.pop("birth_date"))
+        if "medical_summary" in overrides:
+            overrides.setdefault("medical_conditions_history", overrides.pop("medical_summary"))
+        if overrides.get("gender") == "MALE":
+            overrides["gender"] = Patient.Gender.MALE
+        if overrides.get("gender") == "FEMALE":
+            overrides["gender"] = Patient.Gender.FEMALE
+        if overrides.get("gender") in {"OTHER", "UNSPECIFIED"}:
+            overrides["gender"] = Patient.Gender.FEMALE
         defaults = {
-            "full_name": "Ahmad Khaled",
-            "phone": "0933000000",
-            "gender": Patient.Gender.UNSPECIFIED,
+            "first_name": "Ahmad",
+            "last_name": "Khaled",
+            "phone_number": "0933000000",
+            "gender": Patient.Gender.MALE,
             "created_by": staff_user,
             "updated_by": staff_user,
         }

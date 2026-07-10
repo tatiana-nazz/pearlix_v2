@@ -68,7 +68,7 @@ function patientRow(item: DashboardPatientSummary) {
     <li className="summary-row compact" key={item.id}>
       <div>
         <strong>{item.full_name}</strong>
-        <span>{displayText(item.phone, "No phone recorded")}</span>
+        <span>{displayText(item.phone_number, "No phone recorded")}</span>
       </div>
     </li>
   );

@@ -2,7 +2,7 @@
 
 Project: Dental Clinic Management System Website
 
-Current phase/status: 12K.Final.1 plus schedule/leave visibility hardening
+Current phase/status: 13E.1 patient schema and frontend contract upgrade
 
 Backend stack: Django, Django REST Framework, PostgreSQL
 
@@ -30,7 +30,7 @@ Run backend commands from `backend` with the virtualenv active.
 ## Capabilities
 
 - Accounts: no public signup, Admin-created users, temporary-password flow, required password change support, authenticated change-password, Admin reset-password, self/last-admin deactivation safeguards.
-- Patients: no hard delete, Staff archive/unarchive, archived patients hidden by default, archive blocked by `UPCOMING`, `CHECKED_IN`, `ACTIVE`, and `NEEDS_RESCHEDULE` appointments.
+- Patients: final Phase 13E.1 patient schema, `Male`/`Female` gender contract, optional profile fields, nullable unique national ID/passport, computed `full_name`/`age`, versioned updates, no hard delete, Staff archive/unarchive, archived patients hidden by default, archive blocked by `UPCOMING`, `CHECKED_IN`, `ACTIVE`, and `NEEDS_RESCHEDULE` appointments.
 - Scheduling: working hours, availability exceptions, appointment capacity/conflict validation, doctor leave marking future overlapping appointments as `NEEDS_RESCHEDULE`, Staff reschedule back to `UPCOMING`, and leave cancel/void instead of hard delete.
 - Visits and clinical records: Doctors start/complete own visits and edit own clinical notes; other roles are read-only or denied according to role.
 - X-rays and AI: protected media, saved and external X-ray workflows, clinic-wide Doctor patient-profile attach for own temporary external cases, mock AI adapter with disclaimer, disabled real-service modes return `AI_SERVICE_NOT_CONFIGURED`.
@@ -58,11 +58,56 @@ Run backend commands from `backend` with the virtualenv active.
 
 ## Verification
 
+Phase 13E.1 local migration precheck before applying the migration:
+
+```text
+patient_count=0
+archived_count=0
+gender_distribution=[]
+unsafe_gender_sample=[]
+appointment_fk_count=0
+visit_fk_count=0
+```
+
+Safe local backup command before applying the migration:
+
+```bash
+cd backend
+pg_dump "$DATABASE_URL" --file ../_local_backups/pearlix_before_13e1_patient_schema.sql
+```
+
+Phase 13E.1 migration checks:
+
+```text
+python manage.py showmigrations patients
+patients.0001_initial applied
+patients.0002_patient_schema_upgrade pending before migrate
+
+python manage.py migrate --plan
+patients.0002_patient_schema_upgrade planned
+
+python manage.py migrate
+patients.0002_patient_schema_upgrade OK
+```
+
+Post-migration aggregate checks:
+
+```text
+patient_count=0
+archived_count=0
+appointment_fk_count=0
+visit_fk_count=0
+null_patient_pk_count=0
+missing_version_count=0
+gender_distribution=[]
+unexpected_gender_count=0
+```
+
 Latest full regression:
 
 ```text
 python -m pytest -q
-397 passed
+399 passed
 ```
 
 Django check:
@@ -97,4 +142,4 @@ Before handoff or upload, exclude:
 
 ## Next Step
 
-Recommended next step: frontend/backend integration pass.
+Recommended next step: Phase 13F.1 shift-aware appointment/frontend adjustment, then 13G, 13H, 13I, 13J, and 13K.

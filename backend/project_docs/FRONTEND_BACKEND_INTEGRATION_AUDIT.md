@@ -89,15 +89,15 @@ There is no dedicated Staff profile CRUD endpoint and no dedicated Doctor profil
 - `GET /api/patients/` - paged list.
 - `POST /api/patients/` - Staff only create.
 - `GET /api/patients/{id}/` - detail.
-- `PATCH /api/patients/{id}/` - Staff can update; Doctor can update allowed profile fields for active/non-archived patients; Admin is read-only.
-- `POST /api/patients/{id}/archive/` - Staff only.
-- `POST /api/patients/{id}/unarchive/` - Staff only.
+- `PATCH /api/patients/{id}/` - Staff and Doctor can update active profile fields with required `version`; Admin is read-only.
+- `POST /api/patients/{id}/archive/` - Staff only, body `{ version }`.
+- `POST /api/patients/{id}/unarchive/` - Staff only, body `{ version }`.
 - `GET /api/patients/{id}/visits/` - patient visit history.
 - `GET /api/patients/{id}/xrays/` - patient X-rays.
 - `POST /api/patients/{id}/xrays/` - Doctor only upload patient-profile X-ray.
 - `GET /api/patients/{id}/ai-results/` - saved AI results for patient X-rays.
 
-Patient list query params: `is_archived`, `phone`, `name`, `search`, and Doctor helper filters `my_patients`, `upcoming_with_me`, `last_visit_with_me`.
+Patient list query params: `is_archived`, `first_name`, `last_name`, `phone_number`, `email`, `national_id_or_passport`, `search`, and Doctor helper filters `my_patients`, `upcoming_with_me`, `last_visit_with_me`. Legacy `name` and `phone` aliases are tolerated but new frontend code should use canonical names.
 
 ### Scheduling / Working Hours / Availability Exceptions
 
@@ -485,9 +485,9 @@ Hidden actions:
 
 `UserSummary`: `id`, `email`, `full_name`, `role`, `is_active`, `theme_preference`, `language_preference`.
 
-`PatientList`: `id`, `full_name`, `phone`, `gender`, `birth_date`, `age`, `is_archived`, optional `last_visit_with_me_at`, `created_at`, `updated_at`.
+`PatientList`: `id`, `first_name`, `last_name`, computed `full_name`, `gender` (`Male` or `Female`), `date_of_birth`, computed `age`, `phone_number`, `email`, `national_id_or_passport`, `blood_group`, `is_archived`, `version`, optional `last_visit_with_me_at`, `created_at`, `updated_at`.
 
-`PatientDetail`: `PatientList` plus `address`, `medical_summary`, `general_notes`, `created_by`, `updated_by`.
+`PatientDetail`: `PatientList` plus `address`, `emergency_contact`, `medical_conditions_history`, `insurance_info`, `general_notes`, `created_by`, `updated_by`.
 
 `AppointmentDetail`: `id`, `patient`, `doctor`, `start_datetime`, `end_datetime`, `duration_minutes`, `reason`, `notes`, `status`, `reschedule_source_exception`, `reschedule_previous_status`, `created_by`, `updated_by`, timestamps.
 
@@ -558,17 +558,19 @@ Hidden actions:
 ### Patients List
 
 - Endpoint: `GET /api/patients/`
-- Query params: `page`, `is_archived`, `phone`, `name`, `search`, Doctor helper filters `my_patients`, `upcoming_with_me`, `last_visit_with_me`.
+- Query params: `page`, `is_archived`, `first_name`, `last_name`, `phone_number`, `email`, `national_id_or_passport`, `search`, Doctor helper filters `my_patients`, `upcoming_with_me`, `last_visit_with_me`.
 - Response: `Page<PatientList>`.
 - Behavior: Admin/Staff default hides archived patients; Doctors only see active/non-archived patients.
 
 ### Patient Profile
 
 - Endpoints: `GET/PATCH /api/patients/{id}/`, `POST /archive/`, `POST /unarchive/`
-- Payload: `{ full_name?, phone?, gender?, birth_date?, address?, medical_summary?, general_notes? }`; Staff may use archive actions or `is_archived` through serializer.
+- Create payload: `{ first_name, last_name, gender, date_of_birth?, phone_number?, email?, national_id_or_passport?, address?, emergency_contact?, blood_group?, medical_conditions_history?, insurance_info?, general_notes? }`.
+- Update payload: same editable fields plus required `{ version }`.
+- Archive/unarchive payload: `{ version }`.
 - Response: `PatientDetail`.
-- Errors: required `full_name`, required `phone`, future `birth_date`, `ARCHIVE_BLOCKED` 409 for blocking appointments.
-- Role notes: Admin read-only; Staff edit/archive; Doctor can update allowed fields but not `is_archived` and only for active/non-archived patients.
+- Errors: required `first_name`, required `last_name`, required `gender`, future `date_of_birth`, duplicate non-null `national_id_or_passport`, `VERSION_REQUIRED` 400, `VERSION_CONFLICT` 409, `ARCHIVE_BLOCKED` 409 for blocking appointments.
+- Role notes: Admin read-only; Staff edit/archive; Doctor can update full profile fields but cannot archive/unarchive and only sees active/non-archived patients. Direct `PATCH is_archived` is rejected.
 
 ### Appointment Day / Week / Month / List
 
@@ -577,6 +579,12 @@ Hidden actions:
 - Response: `Page<AppointmentList>`.
 - Status values: `UPCOMING`, `CHECKED_IN`, `ACTIVE`, `COMPLETED`, `CANCELLED`, `NO_SHOW`, `NEEDS_RESCHEDULE`.
 - Admin/Staff can list all; Doctor list is limited to own appointments.
+
+### Phase Order After 13E.1
+
+- Phase 13E.1 is the accepted patient schema/frontend contract upgrade.
+- Next sequence: 13F.1 shift-aware appointment/frontend adjustments, then 13G, 13H, 13I, 13J, and 13K.
+- Shift rules are locked for future implementation and are not part of the patient schema migration.
 
 ### Needs Reschedule Tab
 

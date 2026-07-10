@@ -104,8 +104,8 @@ export function PatientsPage({ role }: PatientsPageProps) {
 
   async function confirmArchiveChange() {
     if (!dialogPatient) return;
-    if (dialogMode === "archive") await archive.mutateAsync(dialogPatient.id);
-    else await unarchive.mutateAsync(dialogPatient.id);
+    if (dialogMode === "archive") await archive.mutateAsync({ id: dialogPatient.id, version: dialogPatient.version });
+    else await unarchive.mutateAsync({ id: dialogPatient.id, version: dialogPatient.version });
     setDialogPatient(null);
   }
 
