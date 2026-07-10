@@ -52,6 +52,18 @@ npm run build
 - Workspace layout with sidebar, topbar, and medical SaaS styling tokens.
 - Shared TypeScript contracts based on the Phase 13A integration audit.
 
+## Design Contract
+
+Phase 13B.1 adds strict design documentation under `frontend/design/`:
+
+- `DESIGN_SYSTEM.md`
+- `RESPONSIVE_LAYOUT_SPEC.md`
+- `COMPONENT_CONTRACT.md`
+- `SCREEN_BLUEPRINTS.md`
+- `INTERACTION_STATES.md`
+
+Future frontend phases must follow these files for the professional dental clinic SaaS visual direction, responsive behavior, component contracts, screen blueprints, and interaction states.
+
 ## Intentionally Not Implemented Yet
 
 - Full dashboards.
