@@ -62,6 +62,24 @@ npm run build
 
 Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA against real Admin, Staff, and Doctor credentials.
 
+## Local QA Accounts
+
+Local browser QA users can be created from the backend:
+
+```bash
+cd backend
+python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user
+```
+
+- Admin: `admin.qa@pearlix.local`
+- Staff: `staff.qa@pearlix.local`
+- Doctor: `doctor.qa@pearlix.local`
+- Must-change-password Doctor: `doctor.mustchange@pearlix.local`
+- Password is whichever value was passed to the command.
+- Do not hardcode credentials in frontend code.
+- Do not commit credentials to Git.
+- These accounts are for local QA only.
+
 ## Role Dashboards
 
 - Admin dashboard uses `GET /dashboard/admin/`.
