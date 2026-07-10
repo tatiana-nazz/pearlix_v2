@@ -7,15 +7,24 @@ import { dashboardPathForRole } from "../utils/roles";
 
 export function ChangePasswordPage() {
   const navigate = useNavigate();
-  const { changePassword } = useAuthStore();
+  const { changePassword, logout } = useAuthStore();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError("Current password, new password, and confirmation are required.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("New password and confirmation must match.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const user = await changePassword({
@@ -52,9 +61,22 @@ export function ChangePasswordPage() {
           required
         />
       </label>
+      <label>
+        Confirm new password
+        <input
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          type="password"
+          autoComplete="new-password"
+          required
+        />
+      </label>
       {error ? <div className="form-error">{error}</div> : null}
       <button className="button primary" type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Updating..." : "Change password"}
+      </button>
+      <button className="button secondary" type="button" onClick={() => void logout()} disabled={isSubmitting}>
+        Logout
       </button>
     </form>
   );

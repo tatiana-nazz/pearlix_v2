@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phase 13B creates the React + Vite + TypeScript foundation for the Dental Clinic Management System.
+Phase 13C makes the React + Vite + TypeScript frontend foundation operational for auth, role guards, workspace shell behavior, and browser QA documentation.
 
 ## Install
 
@@ -41,16 +41,37 @@ npm run build
 - If refresh fails, auth state is cleared.
 - Users with `must_change_password` are routed to `/change-password`.
 - Role guards separate Admin, Staff, and Doctor workspaces.
+- Authenticated users visiting `/login` are redirected to their role dashboard.
+- Logout calls `/auth/logout/` when a refresh token exists and clears local auth state even if backend logout fails.
 
-## Included In Phase 13B
+## Role Redirects
+
+- Admin: `/admin/dashboard`
+- Staff: `/staff/dashboard`
+- Doctor: `/doctor/dashboard`
+
+## Route Guard Behavior
+
+- Anonymous users visiting protected routes go to `/login`.
+- Users who must change password can only use `/change-password` and logout.
+- Wrong-role workspace access shows the Access Denied page.
+- Unknown routes show the Not Found page.
+- Backend permissions remain authoritative; frontend guards do not replace API authorization.
+
+## Browser QA
+
+Use `frontend/QA_13C.md` for the manual browser QA checklist. The checklist covers login, invalid credentials, role redirects, must-change-password flow, wrong-role denial, logout, token reload behavior, and 768/1024/1280/1440px layout checks.
+
+## Included Through Phase 13C
 
 - Vite, React, TypeScript app structure.
 - TanStack Query provider.
 - Typed API client and endpoint wrappers.
-- Auth store, route guards, login, and change-password forms.
+- Hardened auth store, route guards, login, and change-password forms.
 - Role-aware route skeletons and placeholder pages.
 - Workspace layout with sidebar, topbar, and medical SaaS styling tokens.
 - Shared TypeScript contracts based on the Phase 13A integration audit.
+- Browser QA documentation for auth/layout guard verification.
 
 ## Design Contract
 

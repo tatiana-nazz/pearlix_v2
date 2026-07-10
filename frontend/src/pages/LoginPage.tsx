@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../auth/authStore";
@@ -7,11 +7,21 @@ import { dashboardPathForRole } from "../utils/roles";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, role, mustChangePassword, login } = useAuthStore();
+  const { accessToken, authStatus, isAuthenticated, role, mustChangePassword, login, loadMe } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (accessToken && authStatus === "unknown") {
+      void loadMe();
+    }
+  }, [accessToken, authStatus, loadMe]);
+
+  if (accessToken && authStatus === "unknown") {
+    return <div className="screen-center">Restoring session...</div>;
+  }
 
   if (isAuthenticated) {
     return <Navigate to={mustChangePassword ? "/change-password" : dashboardPathForRole(role)} replace />;
@@ -20,6 +30,10 @@ export function LoginPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    if (!email.trim() || !password) {
+      setError("Email and password are required.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const user = await login({ email, password });
