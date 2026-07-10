@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phase 13E makes the React + Vite + TypeScript frontend foundation operational for auth, role guards, workspace shell behavior, role dashboards, and patient list/profile workflows backed by real backend APIs.
+Phase 13F makes the React + Vite + TypeScript frontend foundation operational for auth, role guards, workspace shell behavior, role dashboards, patient list/profile workflows, and appointment scheduling/rescheduling workflows backed by real backend APIs.
 
 ## Install
 
@@ -62,7 +62,7 @@ npm run build
 ## Browser QA
 
 Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Local QA accounts were successfully seeded; browser QA execution is still pending.
-Use `frontend/QA_13E.md` for patient list/profile QA.
+Use `frontend/QA_13E.md` for patient list/profile QA. Use `frontend/QA_13F.md` for appointment and reschedule QA.
 
 ## Local QA Accounts
 
@@ -112,7 +112,24 @@ Frontend tests use Vitest, jsdom, and Testing Library:
 npm run test:run
 ```
 
-## Included Through Phase 13E
+## Appointment Management
+
+Phase 13F adds real appointment routes:
+
+- Admin: `/admin/appointments/day`, `/admin/appointments/week`, `/admin/appointments/month`, `/admin/appointments/list`, `/admin/appointments/needs-reschedule`
+- Staff: `/staff/appointments/day`, `/staff/appointments/week`, `/staff/appointments/month`, `/staff/appointments/list`, `/staff/appointments/needs-reschedule`, `/staff/appointments/:appointmentId/reschedule`
+- Doctor: `/doctor/appointments/day`, `/doctor/appointments/week`, `/doctor/appointments/list`, `/doctor/appointments/needs-reschedule`
+
+Role behavior:
+
+- Admin can view appointment calendars and worklists read-only.
+- Staff can create, edit, reschedule, check in, cancel, and no-show appointments using existing backend action endpoints.
+- Doctor can view their own appointment data and start a visit from a checked-in appointment when backend permissions allow.
+- Needs Reschedule is a full tab/view with a full-width list/table, not a side panel.
+- Availability selection reads from `GET /appointments/availability/`.
+- Appointment forms do not PATCH `status`; status changes use dedicated backend action endpoints.
+
+## Included Through Phase 13F
 
 - Vite, React, TypeScript app structure.
 - TanStack Query provider.
@@ -126,7 +143,9 @@ npm run test:run
 - Local dev QA account command for seeded Admin, Staff, Doctor, and must-change-password Doctor users.
 - Real patient list/profile integration with role-aware actions, filters, pagination, and profile tabs.
 - Focused frontend patient feature tests.
-- Browser QA documentation for auth/layout guard, dashboard, and patient verification.
+- Real appointment day/week/month/list/needs-reschedule views with role-aware Staff actions and Doctor start-visit entry point.
+- Focused frontend appointment feature tests.
+- Browser QA documentation for auth/layout guard, dashboard, patient, and appointment verification.
 
 ## Design Contract
 
@@ -142,8 +161,7 @@ Future frontend phases must follow these files for the professional dental clini
 
 ## Intentionally Not Implemented Yet
 
-- Full patient, appointment, visit, billing, X-ray, AI, audit, and admin management workflows.
-- Complete appointment scheduling/rescheduling workflows.
+- Visit, billing, X-ray, AI, audit, and admin management workflows.
 - Clinical note editing and active-visit completion workflows.
 - Protected media rendering screens.
 - X-ray upload, AI run, overlays, and external X-ray workspace flows.

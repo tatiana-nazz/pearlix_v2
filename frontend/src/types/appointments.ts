@@ -30,13 +30,34 @@ export interface AppointmentDetail extends AppointmentList {
   updated_by: UserSummary | null;
 }
 
-export interface AppointmentPayload {
-  patient_id?: number;
-  doctor_id?: number;
-  start_datetime?: string;
+export interface CreateAppointmentPayload {
+  patient_id: number;
+  doctor_id: number;
+  start_datetime: string;
   duration_minutes?: number;
   reason?: string;
   notes?: string;
+}
+
+export type UpdateAppointmentPayload = Partial<CreateAppointmentPayload>;
+export type AppointmentPayload = UpdateAppointmentPayload;
+export type AppointmentListItem = AppointmentList;
+export type AppointmentViewMode = "day" | "week" | "month" | "list" | "needs-reschedule";
+
+export interface AppointmentListFilters {
+  page?: number;
+  doctor_id?: number;
+  patient_id?: number;
+  status?: AppointmentStatus;
+  date?: string;
+  start_from?: string;
+  start_to?: string;
+}
+
+export interface AppointmentAvailabilityFilters {
+  doctor_id: number;
+  date: string;
+  duration_minutes?: number;
 }
 
 export interface AvailabilitySlot {
