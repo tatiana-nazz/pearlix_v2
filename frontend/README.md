@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phase 13C makes the React + Vite + TypeScript frontend foundation operational for auth, role guards, workspace shell behavior, and browser QA documentation.
+Phase 13D makes the React + Vite + TypeScript frontend foundation operational for auth, role guards, workspace shell behavior, and role dashboards backed by real backend dashboard endpoints.
 
 ## Install
 
@@ -60,9 +60,18 @@ npm run build
 
 ## Browser QA
 
-Use `frontend/QA_13C.md` for the manual browser QA checklist. The checklist covers login, invalid credentials, role redirects, must-change-password flow, wrong-role denial, logout, token reload behavior, and 768/1024/1280/1440px layout checks.
+Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA against real Admin, Staff, and Doctor credentials.
 
-## Included Through Phase 13C
+## Role Dashboards
+
+- Admin dashboard uses `GET /dashboard/admin/`.
+- Staff dashboard uses `GET /dashboard/staff/`.
+- Doctor dashboard uses `GET /dashboard/doctor/`.
+- Dashboards render real backend data only; no permanent demo dashboard data is hardcoded.
+- Full patient, appointment, billing, visit, X-ray, AI, audit, and admin management workflows remain later phases.
+- Real credential browser QA is required to verify live role data, 401 refresh behavior, and backend 403 handling.
+
+## Included Through Phase 13D
 
 - Vite, React, TypeScript app structure.
 - TanStack Query provider.
@@ -71,7 +80,9 @@ Use `frontend/QA_13C.md` for the manual browser QA checklist. The checklist cove
 - Role-aware route skeletons and placeholder pages.
 - Workspace layout with sidebar, topbar, and medical SaaS styling tokens.
 - Shared TypeScript contracts based on the Phase 13A integration audit.
-- Browser QA documentation for auth/layout guard verification.
+- Real-data Admin, Staff, and Doctor dashboard pages.
+- Shared dashboard UI components for cards, states, headers, status pills, and summary lists.
+- Browser QA documentation for auth/layout guard and dashboard verification.
 
 ## Design Contract
 
@@ -87,8 +98,7 @@ Future frontend phases must follow these files for the professional dental clini
 
 ## Intentionally Not Implemented Yet
 
-- Full dashboards.
-- Patient, appointment, visit, billing, X-ray, AI, audit, and admin management workflows.
+- Full patient, appointment, visit, billing, X-ray, AI, audit, and admin management workflows.
 - Detailed form validation beyond the auth foundation.
 - Protected media rendering screens.
 - Backend behavior changes.
