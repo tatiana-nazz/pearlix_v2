@@ -2,7 +2,7 @@
 
 Project: Dental Clinic Management System Website
 
-Current phase/status: 13F.1 Admin-controlled shifts and availability upgrade complete
+Current phase/status: 13G active visits and clinical notes frontend integration complete; backend contract unchanged
 
 Backend stack: Django, Django REST Framework, PostgreSQL
 
@@ -32,7 +32,7 @@ Run backend commands from `backend` with the virtualenv active.
 - Accounts: no public signup, Admin-created users, temporary-password flow, required password change support, authenticated change-password, Admin reset-password, self/last-admin deactivation safeguards.
 - Patients: final Phase 13E.1 patient schema, `Male`/`Female` gender contract, optional profile fields, nullable unique national ID/passport, computed `full_name`/`age`, versioned updates, no hard delete, Staff archive/unarchive, archived patients hidden by default, archive blocked by `UPCOMING`, `CHECKED_IN`, `ACTIVE`, and `NEEDS_RESCHEDULE` appointments.
 - Scheduling: clinic default shift templates, independent Doctor and Staff working shifts, split-shift availability, versioned availability exceptions, explicit Doctor appointment-impact confirmation, appointment capacity/conflict validation, `NEEDS_RESCHEDULE` leave/shift source tracking, and no hard deletion.
-- Visits and clinical records: Doctors start/complete own visits and edit own clinical notes; other roles are read-only or denied according to role.
+- Visits and clinical records: Doctors start/complete own visits and edit own clinical notes; completed own notes remain editable where supported by the current service. The Phase 13G frontend provides Doctor active/detail routes and Admin/Staff read-only visit detail routes without changing backend behavior.
 - X-rays and AI: protected media, saved and external X-ray workflows, clinic-wide Doctor patient-profile attach for own temporary external cases, mock AI adapter with disclaimer, disabled real-service modes return `AI_SERVICE_NOT_CONFIGURED`.
 - Clinic settings: Admin sees and updates full settings; Staff/Doctor see safe settings only.
 - Billing: Doctors create handoffs for own completed visits; Staff converts handoffs to invoices and records payments; invoices/payments are hidden from Doctors; status and totals are backend-controlled; invoice numbers use a DB-backed date sequence with row locking.
@@ -164,4 +164,4 @@ Before handoff or upload, exclude:
 
 ## Next Step
 
-Recommended next step: Phase 13G, then 13H, 13I, 13J, and 13K.
+Recommended next step: Phase 13H, then 13I, 13J, and 13K.

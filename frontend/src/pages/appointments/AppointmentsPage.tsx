@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Card } from "../../components/Card";
 import { ErrorState } from "../../components/ErrorState";
@@ -56,6 +56,7 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   const [detailsAppointment, setDetailsAppointment] = useState<AppointmentListItem | null>(null);
   const [actionAppointment, setActionAppointment] = useState<AppointmentListItem | null>(null);
   const [action, setAction] = useState<StatusAction | null>(null);
+  const navigate = useNavigate();
 
   const date = searchParams.get("date") || todayInputValue();
   const status = (searchParams.get("status") || "ALL") as AppointmentStatusFilter;
@@ -116,7 +117,13 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
     if (action === "check-in") await checkIn.mutateAsync(actionAppointment.id);
     if (action === "cancel") await cancel.mutateAsync(actionAppointment.id);
     if (action === "no-show") await noShow.mutateAsync(actionAppointment.id);
-    if (action === "start-visit") await startVisit.mutateAsync(actionAppointment.id);
+    if (action === "start-visit") {
+      const visit = await startVisit.mutateAsync(actionAppointment.id);
+      setActionAppointment(null);
+      setAction(null);
+      navigate(`/doctor/visits/${visit.id}`);
+      return;
+    }
     setActionAppointment(null);
     setAction(null);
   }

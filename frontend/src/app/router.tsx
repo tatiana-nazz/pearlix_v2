@@ -23,6 +23,8 @@ import { PatientsPage } from "../pages/patients/PatientsPage";
 import { StaffDashboardPage } from "../pages/staff/StaffDashboardPage";
 import { OwnSchedulePage } from "../pages/profile/OwnSchedulePage";
 import { OwnLeavePage } from "../pages/profile/OwnLeavePage";
+import { DoctorActiveVisitPage } from "../pages/visits/DoctorActiveVisitPage";
+import { VisitDetailPage } from "../pages/visits/VisitDetailPage";
 import type { UserRole } from "../types/auth";
 import { dashboardPathForRole } from "../utils/roles";
 
@@ -50,7 +52,6 @@ const staffRoutes: PlaceholderRoute[] = [
 ];
 
 const doctorRoutes: PlaceholderRoute[] = [
-  { path: "visits/active", title: "Active Visit", role: "DOCTOR", plannedPhase: "Phase 13G" },
   { path: "xrays", title: "X-rays & AI", role: "DOCTOR", plannedPhase: "Phase 13H" },
   { path: "external-xrays", title: "External X-ray Workspace", role: "DOCTOR", plannedPhase: "Phase 13H" },
   { path: "billing/handoffs", title: "My Billing Handoffs", role: "DOCTOR", plannedPhase: "Phase 13I" },
@@ -121,6 +122,7 @@ export const router = createBrowserRouter([
               { path: "appointments/needs-reschedule", element: <AppointmentsPage role="ADMIN" view="needs-reschedule" /> },
               { path: "patients", element: <PatientsPage role="ADMIN" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="ADMIN" /> },
+              { path: "visits/:visitId", element: <VisitDetailPage role="ADMIN" /> },
               ...placeholderChildren(adminRoutes),
             ],
           },
@@ -146,6 +148,7 @@ export const router = createBrowserRouter([
               { path: "patients", element: <PatientsPage role="STAFF" /> },
               { path: "patients/new", element: <NewPatientPage role="STAFF" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="STAFF" /> },
+              { path: "visits/:visitId", element: <VisitDetailPage role="STAFF" /> },
               ...placeholderChildren(staffRoutes),
             ],
           },
@@ -169,6 +172,8 @@ export const router = createBrowserRouter([
               { path: "patients", element: <PatientsPage role="DOCTOR" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="DOCTOR" /> },
               { path: "patients/:patientId/clinical-history", element: <PatientProfilePage role="DOCTOR" defaultTab="visits" /> },
+              { path: "visits/active", element: <DoctorActiveVisitPage /> },
+              { path: "visits/:visitId", element: <VisitDetailPage role="DOCTOR" /> },
               ...placeholderChildren(doctorRoutes),
             ],
           },
