@@ -1,4 +1,4 @@
-"""Fail fast when the release documentation drifts from the Phase 13K contract."""
+"""Fail fast when current documentation drifts from the Phase 14A contract."""
 
 from __future__ import annotations
 
@@ -11,11 +11,15 @@ ROOT = Path(__file__).resolve().parents[1]
 PROJECT_STATUS = ROOT / "backend" / "project_docs" / "PROJECT_STATUS.md"
 README = ROOT / "frontend" / "README.md"
 QA_13K = ROOT / "frontend" / "QA_13K.md"
+QA_14A = ROOT / "frontend" / "QA_14A.md"
+DEMO_STORY = ROOT / "backend" / "project_docs" / "DEMO_STORY.md"
 AUDIT = ROOT / "backend" / "project_docs" / "FRONTEND_BACKEND_INTEGRATION_AUDIT.md"
 CURRENT_DOCS = [
     PROJECT_STATUS,
     README,
     QA_13K,
+    QA_14A,
+    DEMO_STORY,
     AUDIT,
     ROOT / "backend" / "project_docs" / "BACKEND_FINAL_HANDOFF.md",
     ROOT / "backend" / "project_docs" / "CURRENT_BACKEND_DECISIONS.md",
@@ -54,7 +58,7 @@ REQUIRED_ROUTES = {
 
 REQUIRED_PHASE_HISTORY = [
     "13B", "13B.1", "13C", "13D", "13D.1", "13E", "13E.1", "13F", "13F.1",
-    "13G", "13H", "13I", "13J", "13K",
+    "13G", "13H", "13I", "13J", "13K", "14A",
 ]
 
 
@@ -90,10 +94,10 @@ def main() -> int:
 
     status = PROJECT_STATUS.read_text(encoding="utf-8")
     for expected in (
-        "Current completed phase: 13K",
+        "Current completed phase: 14A",
         "Phase 13 series: complete",
-        "Next phase: none",
-        "Next step: deployment and live user acceptance testing",
+        "Next phase: 14B Visual Audit and Design Freeze",
+        "Next step: complete Phase 14B Visual Audit and Design Freeze",
     ):
         if status.count(expected) != 1:
             errors.append(f"PROJECT_STATUS must contain exactly one '{expected}'.")
@@ -102,18 +106,19 @@ def main() -> int:
             errors.append(f"PROJECT_STATUS must have exactly one canonical '{label}' declaration.")
 
     readme = README.read_text(encoding="utf-8")
-    for expected in ("Phase 13K", "PROJECT_STATUS.md", "frontend/QA_13K.md"):
+    for expected in ("Phase 14A", "PROJECT_STATUS.md", "frontend/QA_14A.md"):
         if expected not in readme:
             errors.append(f"README is missing '{expected}'.")
-    if re.search(r"Phase 13K.{0,50}(future|pending|deferred|next)", readme, re.IGNORECASE):
-        errors.append("README presents Phase 13K as future, pending, deferred, or next.")
+    if re.search(r"Phase 14A.{0,50}(future|pending|deferred|next)", readme, re.IGNORECASE):
+        errors.append("README presents Phase 14A as future, pending, deferred, or next.")
     if "placeholder" in readme.lower():
         errors.append("README describes a completed capability as a placeholder.")
 
     stale_patterns = (
         r"Phase 13J is next",
         r"Phase 13K is next",
-        r"Phase 13K has not started",
+        r"Phase 14A is next",
+        r"Phase 14A has not started",
         r"capabilities implemented through Phase 13J only",
     )
     for path in CURRENT_DOCS:
@@ -153,15 +158,14 @@ def main() -> int:
         if missing:
             errors.append(f"Missing {role.title()} routes: {', '.join(missing)}.")
 
-    qa = QA_13K.read_text(encoding="utf-8")
-    for expected in ("Final Automated Results", "Browser QA/UAT", "405 passed", "51 passed"):
+    qa = QA_14A.read_text(encoding="utf-8")
+    for expected in ("Phase 14A", "seed_demo_clinic_story", "Browser checklist", "pending execution"):
         if expected not in qa:
-            errors.append(f"QA_13K is missing '{expected}'.")
-    for status_label, qa_label in (("Final backend full regression", "Full backend regression"), ("Final frontend regression", "Frontend regression")):
-        status_match = re.search(rf"{status_label}: (\d+ passed)", status)
-        qa_match = re.search(rf"{qa_label}: (\d+ passed)", qa)
-        if not status_match or not qa_match or status_match.group(1) != qa_match.group(1):
-            errors.append(f"PROJECT_STATUS and QA_13K disagree on {qa_label.lower()} totals.")
+            errors.append(f"QA_14A is missing '{expected}'.")
+    demo_story = DEMO_STORY.read_text(encoding="utf-8")
+    for expected in ("--reset-demo", "--reference-date", "pearlix-demo.local", "demo14a-"):
+        if expected not in demo_story:
+            errors.append(f"DEMO_STORY is missing '{expected}'.")
 
     if errors:
         print("Documentation consistency check failed:")
