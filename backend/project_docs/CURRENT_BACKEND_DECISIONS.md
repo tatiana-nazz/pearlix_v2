@@ -117,6 +117,16 @@ After any payment exists:
 - Staff leave is visibility-only and cancellation does not affect appointments.
 - No automatic notifications are sent in the MVP.
 
+## Shift and Availability Administration
+
+- Phase 13F.1 uses `ClinicDefaultShift` templates and independent `WorkingShift` employee records. Weekday `0` is Monday.
+- Admin alone creates, edits, activates, deactivates, applies, and copies shifts, and manages availability exceptions.
+- Active shifts may be split or adjacent but cannot overlap. Shifts and leave are deactivated/cancelled, never hard-deleted.
+- Clinic defaults never auto-propagate. `MISSING_ONLY` adds compatible default/source shifts; `REPLACE_ALL` deactivates active target shifts and creates independent replacements.
+- Doctor schedule reductions, moves, replacements, or deactivations first return `SHIFT_CHANGE_REQUIRES_CONFIRMATION` when future appointments are invalidated. Confirmation marks only affected future `UPCOMING` and `CHECKED_IN` appointments as `NEEDS_RESCHEDULE` with a `SHIFT_CHANGE` source.
+- Staff shifts never affect appointment availability. Appointment availability uses active Doctor `WorkingShift` records and keeps `GET /api/doctors/{id}/working-hours/` as a read-compatible Doctor schedule route.
+- Default shifts, working shifts, and availability exception update/cancel actions use `version`; missing versions return `VERSION_REQUIRED`, stale versions return `VERSION_CONFLICT`.
+
 ## External X-ray Attach
 
 - Active Doctors can attach their own temporary external X-ray cases to any active/non-archived patient.
@@ -146,5 +156,5 @@ After any payment exists:
 
 ## Future Phase Order
 
-- Accepted sequence after Phase 13E.1: 13F.1 shift-aware appointment/frontend adjustments, then 13G, 13H, 13I, 13J, and 13K.
-- Shift behavior remains a locked future rule set; do not implement shift logic in patient schema work.
+- Phase 13F.1 is complete. The accepted shift and availability rules are implemented through `ClinicDefaultShift`, `WorkingShift`, versioned leave operations, and explicit Doctor appointment-impact confirmation.
+- The next phase is 13G, followed by 13H, 13I, 13J, and 13K.

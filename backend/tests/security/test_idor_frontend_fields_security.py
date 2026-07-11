@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from apps.billing.models import BillingHandoff, Invoice
 from apps.patients.models import Patient
-from apps.scheduling.models import Appointment, WorkingHour
+from apps.scheduling.models import Appointment, WorkingShift
 from apps.visits.models import Visit
 from apps.xrays.models import ExternalXrayCase, XrayAttachment
 
@@ -111,7 +111,7 @@ def test_frontend_controlled_fields_are_rejected_or_overridden(
     assert "created_by" in spoofed_patient.data["details"]
     assert "updated_by" in spoofed_patient.data["details"]
 
-    WorkingHour.objects.create(doctor=doctor_user, weekday=0, start_time="09:00", end_time="17:00")
+    WorkingShift.objects.create(employee=doctor_user, name="Test shift", weekday=0, start_time="09:00", end_time="17:00")
     create_appointment = staff_client.post(
         "/api/appointments/",
         {

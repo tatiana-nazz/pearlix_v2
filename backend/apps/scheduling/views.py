@@ -12,29 +12,17 @@ from rest_framework.response import Response
 
 from apps.audit.services import log_activity
 from apps.common.errors import error_response
-from apps.scheduling.models import Appointment, AvailabilityException, WorkingHour
-from apps.scheduling.permissions import AppointmentPermission, AvailabilityExceptionPermission
-from apps.scheduling.serializers import (
-    AppointmentDetailSerializer,
-    AppointmentListSerializer,
-    AvailabilityExceptionSerializer,
-    DoctorListSerializer,
-    WorkingHourReplaceSerializer,
-    WorkingHourSerializer,
-)
-from apps.scheduling.services import (
-    AppointmentRuleError,
-    build_availability_slots,
-    cancel_availability_exception,
-    create_appointment,
-    get_clinic_settings,
-    save_availability_exception,
-    update_appointment,
-    update_availability_exception,
-)
+from apps.scheduling.models import Appointment, AvailabilityException, ClinicDefaultShift, WorkingShift
+from apps.scheduling.permissions import AppointmentPermission, AvailabilityExceptionPermission, ScheduleAdminPermission, WorkingShiftPermission
+from apps.scheduling.serializers import AppointmentDetailSerializer, AppointmentListSerializer, AvailabilityExceptionSerializer, ClinicDefaultShiftSerializer, DoctorListSerializer, LegacyWorkingHoursReplaceSerializer, WorkingShiftSerializer
+from apps.scheduling.services import AppointmentRuleError, apply_default_schedule, build_availability_slots, cancel_availability_exception, copy_employee_schedule, create_appointment, create_working_shift, get_clinic_settings, save_availability_exception, save_default_shift, set_default_shift_active, set_working_shift_active, update_appointment, update_availability_exception, update_default_shift, update_working_shift
 
 
 User = get_user_model()
+
+
+def _rule_error(exc): return exc.to_response()
+def _employee_or_404(pk): return get_object_or_404(User, id=pk, role__in=[User.Role.DOCTOR, User.Role.STAFF])
 
 
 @api_view(["GET"])
@@ -44,332 +32,202 @@ def doctors_list(request):
     return Response(DoctorListSerializer(doctors, many=True).data)
 
 
-def _get_doctor_or_404(doctor_id):
-    return get_object_or_404(User, id=doctor_id, role=User.Role.DOCTOR)
-
-
-def _can_read_working_hours(user, doctor):
-    if user.role in {"ADMIN", "STAFF"}:
-        return True
-    return user.role == "DOCTOR" and user.id == doctor.id
+def _can_read_doctor_schedule(user, doctor): return user.role in {"ADMIN", "STAFF"} or (user.role == "DOCTOR" and user.id == doctor.id)
 
 
 @api_view(["GET", "PUT"])
 @permission_classes([IsAuthenticated])
 def doctor_working_hours(request, doctor_id):
-    doctor = _get_doctor_or_404(doctor_id)
+    doctor = get_object_or_404(User, id=doctor_id, role=User.Role.DOCTOR)
     if request.method == "GET":
-        if not _can_read_working_hours(request.user, doctor):
-            return error_response("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
-        hours = WorkingHour.objects.filter(doctor=doctor)
-        return Response({"working_hours": WorkingHourSerializer(hours, many=True).data})
+        if not _can_read_doctor_schedule(request.user, doctor): return error_response("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
+        shifts = WorkingShift.objects.filter(employee=doctor).order_by("weekday", "start_time", "id")
+        return Response({"working_hours": WorkingShiftSerializer(shifts, many=True).data})
+    if request.user.role != User.Role.ADMIN: return error_response("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
+    serializer = LegacyWorkingHoursReplaceSerializer(data=request.data, context={"doctor": doctor}); serializer.is_valid(raise_exception=True)
+    templates = [type("LegacyShift", (), {"name": row["name"], "weekday": row["weekday"], "start_time": row["start_time"], "end_time": row["end_time"], "is_active": row.get("is_active", True)}) for row in serializer.validated_data["working_hours"]]
+    try:
+        from apps.scheduling.services import _apply_schedule
+        _apply_schedule(employee=doctor, templates=templates, mode="REPLACE_ALL", user=request.user, confirm_appointment_impact=serializer.validated_data["confirm_appointment_impact"], request=request)
+    except AppointmentRuleError as exc: return _rule_error(exc)
+    shifts = WorkingShift.objects.filter(employee=doctor).order_by("weekday", "start_time", "id")
+    return Response({"working_hours": WorkingShiftSerializer(shifts, many=True).data})
 
-    if request.user.role != "ADMIN":
-        return error_response("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
 
-    serializer = WorkingHourReplaceSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    hours = serializer.save(doctor=doctor)
-    return Response({"working_hours": WorkingHourSerializer(hours, many=True).data})
+class ClinicDefaultShiftViewSet(viewsets.ModelViewSet):
+    serializer_class = ClinicDefaultShiftSerializer
+    permission_classes = [ScheduleAdminPermission]
+    http_method_names = ["get", "post", "patch", "head", "options"]
+    queryset = ClinicDefaultShift.objects.select_related("created_by", "updated_by").all()
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data); serializer.is_valid(raise_exception=True)
+        try: instance = save_default_shift(serializer=serializer, user=request.user)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action="clinic_default_shift_created", entity_type="clinic_default_shift", entity_id=instance.id, metadata={"weekday": instance.weekday})
+        return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
 
-class AvailabilityExceptionViewSet(viewsets.ModelViewSet):
-    serializer_class = AvailabilityExceptionSerializer
-    permission_classes = [AvailabilityExceptionPermission]
-    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
-
-    def get_queryset(self):
-        queryset = AvailabilityException.objects.select_related("doctor", "staff", "created_by", "updated_by", "cancelled_by").all()
-        user = self.request.user
-        if user.is_authenticated:
-            if user.role == "DOCTOR":
-                queryset = queryset.filter(doctor=user)
-            elif user.role == "STAFF":
-                queryset = queryset.filter(Q(doctor__isnull=False) | Q(staff=user))
-
-        doctor_id = self.request.query_params.get("doctor_id")
-        staff_id = self.request.query_params.get("staff_id")
-        exception_type = self.request.query_params.get("type")
-        start_from = self.request.query_params.get("start_from")
-        end_to = self.request.query_params.get("end_to")
-
-        if doctor_id:
-            queryset = queryset.filter(doctor_id=doctor_id)
-        if staff_id:
-            queryset = queryset.filter(staff_id=staff_id)
-        if exception_type:
-            queryset = queryset.filter(type=exception_type)
-        if start_from:
-            queryset = queryset.filter(start_datetime__gte=start_from)
-        if end_to:
-            queryset = queryset.filter(end_datetime__lte=end_to)
-        return queryset
-
-    def perform_create(self, serializer):
-        availability_exception, marked = save_availability_exception(
-            serializer=serializer,
-            user=self.request.user,
-            request=self.request,
-        )
-        log_activity(
-            request=self.request,
-            action="availability_exception_created",
-            entity_type="availability_exception",
-            entity_id=availability_exception.id,
-            metadata={
-                "availability_exception_id": availability_exception.id,
-                "doctor_id": availability_exception.doctor_id,
-                "staff_id": availability_exception.staff_id,
-                "marked_needs_reschedule_count": len(marked),
-            },
-        )
-
-    def perform_update(self, serializer):
-        availability_exception, marked = update_availability_exception(
-            serializer=serializer,
-            user=self.request.user,
-            request=self.request,
-        )
-        log_activity(
-            request=self.request,
-            action="availability_exception_updated",
-            entity_type="availability_exception",
-            entity_id=availability_exception.id,
-            metadata={
-                "availability_exception_id": availability_exception.id,
-                "doctor_id": availability_exception.doctor_id,
-                "staff_id": availability_exception.staff_id,
-                "marked_needs_reschedule_count": len(marked),
-            },
-        )
-
-    def destroy(self, request, *args, **kwargs):
-        return error_response(
-            "METHOD_NOT_ALLOWED",
-            "Availability exceptions must be cancelled, not deleted.",
-            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object(); serializer = self.get_serializer(instance, data=request.data, partial=True); serializer.is_valid(raise_exception=True)
+        try: instance = update_default_shift(instance=instance, serializer=serializer, user=request.user)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action="clinic_default_shift_updated", entity_type="clinic_default_shift", entity_id=instance.id, metadata={"weekday": instance.weekday})
+        return Response(self.get_serializer(instance).data)
 
     @action(detail=True, methods=["post"])
-    def cancel(self, request, pk=None):
-        availability_exception = self.get_object()
-        try:
-            availability_exception, restored, still_blocked = cancel_availability_exception(
-                availability_exception=availability_exception,
-                user=request.user,
-                request=request,
-            )
-        except AppointmentRuleError as exc:
-            return exc.to_response()
-        log_activity(
-            request=request,
-            action="availability_exception_cancelled",
-            entity_type="availability_exception",
-            entity_id=availability_exception.id,
-            metadata={
-                "availability_exception_id": availability_exception.id,
-                "doctor_id": availability_exception.doctor_id,
-                "staff_id": availability_exception.staff_id,
-                "restored_appointments_count": len(restored),
-                "still_blocked_appointments_count": len(still_blocked),
-            },
-        )
-        return Response(
-            {
-                **AvailabilityExceptionSerializer(availability_exception).data,
-                "restored_appointments_count": len(restored),
-                "still_blocked_appointments_count": len(still_blocked),
-            }
-        )
+    def activate(self, request, pk=None): return self._set_active(request, True, "clinic_default_shift_activated")
+    @action(detail=True, methods=["post"])
+    def deactivate(self, request, pk=None): return self._set_active(request, False, "clinic_default_shift_deactivated")
+    def _set_active(self, request, active, audit_action):
+        instance = self.get_object()
+        try: instance = set_default_shift_active(instance=instance, version=request.data.get("version"), is_active=active, user=request.user)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action=audit_action, entity_type="clinic_default_shift", entity_id=instance.id, metadata={"weekday": instance.weekday})
+        return Response(self.get_serializer(instance).data)
 
 
-class AppointmentPagination(PageNumberPagination):
-    page_size = 20
-
-
-class AppointmentViewSet(viewsets.ModelViewSet):
-    serializer_class = AppointmentDetailSerializer
-    permission_classes = [AppointmentPermission]
-    pagination_class = AppointmentPagination
+class WorkingShiftViewSet(viewsets.ModelViewSet):
+    serializer_class = WorkingShiftSerializer
+    permission_classes = [WorkingShiftPermission]
     http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):
-        queryset = Appointment.objects.select_related("patient", "doctor", "created_by", "updated_by").all()
+        query = WorkingShift.objects.select_related("employee", "created_by", "updated_by", "source_default_shift").all()
         user = self.request.user
-        if user.is_authenticated and user.role == "DOCTOR":
-            queryset = queryset.filter(doctor=user)
-
-        doctor_id = self.request.query_params.get("doctor_id")
-        patient_id = self.request.query_params.get("patient_id")
-        appointment_status = self.request.query_params.get("status")
-        date_value = self.request.query_params.get("date")
-        start_from = self.request.query_params.get("start_from")
-        start_to = self.request.query_params.get("start_to")
-
-        if doctor_id:
-            queryset = queryset.filter(doctor_id=doctor_id)
-        if patient_id:
-            queryset = queryset.filter(patient_id=patient_id)
-        if appointment_status:
-            queryset = queryset.filter(status=appointment_status)
-        if date_value:
-            queryset = queryset.filter(start_datetime__date=date_value)
-        if start_from:
-            queryset = queryset.filter(start_datetime__gte=start_from)
-        if start_to:
-            queryset = queryset.filter(start_datetime__lte=start_to)
-        return queryset
-
-    def get_serializer_class(self):
-        if self.action == "list":
-            return AppointmentListSerializer
-        return AppointmentDetailSerializer
+        if user.is_authenticated and user.role in {User.Role.STAFF, User.Role.DOCTOR}: query = query.filter(employee=user)
+        params = self.request.query_params
+        if params.get("employee_id") and user.role == User.Role.ADMIN: query = query.filter(employee_id=params["employee_id"])
+        if params.get("role") and user.role == User.Role.ADMIN: query = query.filter(employee__role=params["role"])
+        if params.get("weekday") is not None: query = query.filter(weekday=params["weekday"])
+        if params.get("is_active") in {"true", "false"}: query = query.filter(is_active=params["is_active"] == "true")
+        return query
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            appointment = create_appointment(serializer=serializer, user=request.user)
-        except AppointmentRuleError as exc:
-            return exc.to_response()
-        log_activity(
-            request=request,
-            action="appointment_created",
-            entity_type="appointment",
-            entity_id=appointment.id,
-            metadata={"appointment_id": appointment.id, "patient_id": appointment.patient_id, "doctor_id": appointment.doctor_id},
-        )
-        return Response(AppointmentDetailSerializer(appointment).data, status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(data=request.data); serializer.is_valid(raise_exception=True)
+        try: instance = create_working_shift(serializer=serializer, user=request.user)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action="working_shift_created", entity_type="working_shift", entity_id=instance.id, metadata={"employee_id": instance.employee_id, "weekday": instance.weekday})
+        return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
-        if "status" in request.data:
-            return error_response("VALIDATION_ERROR", "Some fields are invalid.", {"status": ["Use appointment status action endpoints."]})
-        partial = kwargs.pop("partial", False)
-        appointment = self.get_object()
-        old_status = appointment.status
-        serializer = self.get_serializer(appointment, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        try:
-            appointment = update_appointment(appointment=appointment, serializer=serializer, user=request.user)
-        except AppointmentRuleError as exc:
-            return exc.to_response()
-        action_name = "appointment_rescheduled" if old_status == Appointment.Status.NEEDS_RESCHEDULE and appointment.status == Appointment.Status.UPCOMING else "appointment_updated"
-        log_activity(
-            request=request,
-            action=action_name,
-            entity_type="appointment",
-            entity_id=appointment.id,
-            metadata={"appointment_id": appointment.id, "updated_fields": sorted(request.data.keys())},
-        )
-        return Response(AppointmentDetailSerializer(appointment).data)
-
-    def partial_update(self, request, *args, **kwargs):
-        kwargs["partial"] = True
-        return self.update(request, *args, **kwargs)
-
-    def _transition(self, request, pk, *, allowed_statuses, target_status, timestamp_field, audit_action):
-        appointment = self.get_object()
-        if appointment.status not in allowed_statuses:
-            return error_response(
-                "INVALID_STATUS_TRANSITION",
-                "Invalid appointment status transition.",
-                status_code=status.HTTP_409_CONFLICT,
-            )
-        appointment.status = target_status
-        setattr(appointment, timestamp_field, timezone.now())
-        appointment.updated_by = request.user
-        appointment.save(update_fields=["status", timestamp_field, "updated_by", "updated_at"])
-        log_activity(
-            request=request,
-            action=audit_action,
-            entity_type="appointment",
-            entity_id=appointment.id,
-            metadata={"appointment_id": appointment.id, "patient_id": appointment.patient_id, "doctor_id": appointment.doctor_id},
-        )
-        return Response(AppointmentDetailSerializer(appointment).data)
-
-    @action(detail=True, methods=["post"], url_path="check-in")
-    def check_in(self, request, pk=None):
-        return self._transition(
-            request,
-            pk,
-            allowed_statuses=[Appointment.Status.UPCOMING],
-            target_status=Appointment.Status.CHECKED_IN,
-            timestamp_field="checked_in_at",
-            audit_action="appointment_checked_in",
-        )
+        instance = self.get_object(); serializer = self.get_serializer(instance, data=request.data, partial=True); serializer.is_valid(raise_exception=True)
+        try: instance, impacted = update_working_shift(instance=instance, serializer=serializer, user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action="working_shift_updated", entity_type="working_shift", entity_id=instance.id, metadata={"employee_id": instance.employee_id, "weekday": instance.weekday, "impacted_appointments_count": impacted})
+        return Response({**self.get_serializer(instance).data, "impacted_appointments_count": impacted})
 
     @action(detail=True, methods=["post"])
+    def activate(self, request, pk=None): return self._set_active(request, True, "working_shift_activated")
+    @action(detail=True, methods=["post"])
+    def deactivate(self, request, pk=None): return self._set_active(request, False, "working_shift_deactivated")
+    def _set_active(self, request, active, audit_action):
+        instance = self.get_object()
+        try: instance, impacted = set_working_shift_active(instance=instance, version=request.data.get("version"), is_active=active, user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action=audit_action, entity_type="working_shift", entity_id=instance.id, metadata={"employee_id": instance.employee_id, "impacted_appointments_count": impacted})
+        return Response({**self.get_serializer(instance).data, "impacted_appointments_count": impacted})
+
+    @action(detail=False, methods=["post"], url_path="apply-default")
+    def apply_default(self, request):
+        employee = _employee_or_404(request.data.get("employee_id"))
+        try: result = apply_default_schedule(employee=employee, mode=request.data.get("mode"), user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action="default_schedule_applied", entity_type="user", entity_id=employee.id, metadata={"employee_id": employee.id, "mode": request.data.get("mode"), **result})
+        return Response({"employee": {"id": employee.id, "full_name": employee.full_name, "role": employee.role}, "mode": request.data.get("mode"), **result, "working_shifts": self.get_serializer(WorkingShift.objects.filter(employee=employee), many=True).data})
+
+    @action(detail=False, methods=["post"], url_path="copy-schedule")
+    def copy_schedule(self, request):
+        source = _employee_or_404(request.data.get("source_employee_id")); target = _employee_or_404(request.data.get("target_employee_id"))
+        try: result = copy_employee_schedule(source=source, target=target, mode=request.data.get("mode"), user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action="employee_schedule_copied", entity_type="user", entity_id=target.id, metadata={"source_employee_id": source.id, "target_employee_id": target.id, "mode": request.data.get("mode"), **result})
+        return Response({"employee": {"id": target.id, "full_name": target.full_name, "role": target.role}, "mode": request.data.get("mode"), **result, "working_shifts": self.get_serializer(WorkingShift.objects.filter(employee=target), many=True).data})
+
+
+class AvailabilityExceptionViewSet(viewsets.ModelViewSet):
+    serializer_class = AvailabilityExceptionSerializer; permission_classes = [AvailabilityExceptionPermission]; http_method_names = ["get", "post", "patch", "head", "options"]
+    def get_queryset(self):
+        query = AvailabilityException.objects.select_related("doctor", "staff", "created_by", "updated_by", "cancelled_by").all(); user = self.request.user
+        if user.is_authenticated:
+            if user.role == "DOCTOR": query = query.filter(doctor=user)
+            elif user.role == "STAFF": query = query.filter(Q(doctor__isnull=False) | Q(staff=user))
+        for field in ("doctor_id", "staff_id", "type"):
+            if self.request.query_params.get(field): query = query.filter(**{field: self.request.query_params[field]})
+        if self.request.query_params.get("start_from"): query = query.filter(start_datetime__gte=self.request.query_params["start_from"])
+        if self.request.query_params.get("end_to"): query = query.filter(end_datetime__lte=self.request.query_params["end_to"])
+        if self.request.query_params.get("is_cancelled") in {"true", "false"}: query = query.filter(is_cancelled=self.request.query_params["is_cancelled"] == "true")
+        return query
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data); serializer.is_valid(raise_exception=True); instance, marked = save_availability_exception(serializer=serializer, user=request.user, request=request)
+        log_activity(request=request, action="availability_exception_created", entity_type="availability_exception", entity_id=instance.id, metadata={"doctor_id": instance.doctor_id, "staff_id": instance.staff_id, "marked_needs_reschedule_count": len(marked)})
+        return Response({**self.get_serializer(instance).data, "marked_needs_reschedule_count": len(marked)}, status=status.HTTP_201_CREATED)
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object(); serializer = self.get_serializer(instance, data=request.data, partial=True); serializer.is_valid(raise_exception=True)
+        try: instance, marked = update_availability_exception(instance=instance, serializer=serializer, user=request.user, request=request)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action="availability_exception_updated", entity_type="availability_exception", entity_id=instance.id, metadata={"marked_needs_reschedule_count": len(marked)})
+        return Response({**self.get_serializer(instance).data, "marked_needs_reschedule_count": len(marked)})
+    @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
-        return self._transition(
-            request,
-            pk,
-            allowed_statuses=[Appointment.Status.UPCOMING, Appointment.Status.CHECKED_IN],
-            target_status=Appointment.Status.CANCELLED,
-            timestamp_field="cancelled_at",
-            audit_action="appointment_cancelled",
-        )
+        try: instance, restored, blocked = cancel_availability_exception(availability_exception=self.get_object(), user=request.user, version=request.data.get("version"), request=request)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action="availability_exception_cancelled", entity_type="availability_exception", entity_id=instance.id, metadata={"restored_appointments_count": len(restored), "still_blocked_appointments_count": len(blocked)})
+        return Response({**self.get_serializer(instance).data, "restored_appointments_count": len(restored), "still_blocked_appointments_count": len(blocked)})
 
+
+class AppointmentPagination(PageNumberPagination): page_size = 20
+class AppointmentViewSet(viewsets.ModelViewSet):
+    serializer_class = AppointmentDetailSerializer; permission_classes = [AppointmentPermission]; pagination_class = AppointmentPagination; http_method_names = ["get", "post", "patch", "head", "options"]
+    def get_queryset(self):
+        query = Appointment.objects.select_related("patient", "doctor", "created_by", "updated_by", "reschedule_source_exception", "reschedule_source_working_shift").all()
+        if self.request.user.is_authenticated and self.request.user.role == "DOCTOR": query = query.filter(doctor=self.request.user)
+        for field in ("doctor_id", "patient_id", "status"):
+            if self.request.query_params.get(field): query = query.filter(**{field: self.request.query_params[field]})
+        if self.request.query_params.get("date"): query = query.filter(start_datetime__date=self.request.query_params["date"])
+        if self.request.query_params.get("start_from"): query = query.filter(start_datetime__gte=self.request.query_params["start_from"])
+        if self.request.query_params.get("start_to"): query = query.filter(start_datetime__lte=self.request.query_params["start_to"])
+        return query
+    def get_serializer_class(self): return AppointmentListSerializer if self.action == "list" else AppointmentDetailSerializer
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data); serializer.is_valid(raise_exception=True)
+        try: instance = create_appointment(serializer=serializer, user=request.user)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action="appointment_created", entity_type="appointment", entity_id=instance.id, metadata={"appointment_id": instance.id, "patient_id": instance.patient_id, "doctor_id": instance.doctor_id})
+        return Response(AppointmentDetailSerializer(instance).data, status=status.HTTP_201_CREATED)
+    def update(self, request, *args, **kwargs):
+        if "status" in request.data: return error_response("VALIDATION_ERROR", "Some fields are invalid.", {"status": ["Use appointment status action endpoints."]})
+        instance = self.get_object(); old = instance.status; serializer = self.get_serializer(instance, data=request.data, partial=kwargs.pop("partial", False)); serializer.is_valid(raise_exception=True)
+        try: instance = update_appointment(appointment=instance, serializer=serializer, user=request.user)
+        except AppointmentRuleError as exc: return _rule_error(exc)
+        log_activity(request=request, action="appointment_rescheduled" if old == Appointment.Status.NEEDS_RESCHEDULE else "appointment_updated", entity_type="appointment", entity_id=instance.id, metadata={"appointment_id": instance.id})
+        return Response(AppointmentDetailSerializer(instance).data)
+    def partial_update(self, request, *args, **kwargs): kwargs["partial"] = True; return self.update(request, *args, **kwargs)
+    def _transition(self, request, *, allowed, target, timestamp_field, audit_action):
+        instance = self.get_object()
+        if instance.status not in allowed: return error_response("INVALID_STATUS_TRANSITION", "Invalid appointment status transition.", status_code=status.HTTP_409_CONFLICT)
+        instance.status = target; setattr(instance, timestamp_field, timezone.now()); instance.updated_by = request.user; instance.save(update_fields=["status", timestamp_field, "updated_by", "updated_at"]); log_activity(request=request, action=audit_action, entity_type="appointment", entity_id=instance.id, metadata={"appointment_id": instance.id}); return Response(AppointmentDetailSerializer(instance).data)
+    @action(detail=True, methods=["post"], url_path="check-in")
+    def check_in(self, request, pk=None): return self._transition(request, allowed=[Appointment.Status.UPCOMING], target=Appointment.Status.CHECKED_IN, timestamp_field="checked_in_at", audit_action="appointment_checked_in")
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None): return self._transition(request, allowed=[Appointment.Status.UPCOMING, Appointment.Status.CHECKED_IN], target=Appointment.Status.CANCELLED, timestamp_field="cancelled_at", audit_action="appointment_cancelled")
     @action(detail=True, methods=["post"], url_path="no-show")
-    def no_show(self, request, pk=None):
-        return self._transition(
-            request,
-            pk,
-            allowed_statuses=[Appointment.Status.UPCOMING],
-            target_status=Appointment.Status.NO_SHOW,
-            timestamp_field="no_show_at",
-            audit_action="appointment_marked_no_show",
-        )
-
+    def no_show(self, request, pk=None): return self._transition(request, allowed=[Appointment.Status.UPCOMING], target=Appointment.Status.NO_SHOW, timestamp_field="no_show_at", audit_action="appointment_marked_no_show")
     @action(detail=True, methods=["post"], url_path="start-visit")
     def start_visit(self, request, pk=None):
         from apps.visits.serializers import VisitDetailSerializer
         from apps.visits.services import VisitRuleError, start_visit_from_appointment
-
-        appointment = self.get_object()
         try:
-            visit = start_visit_from_appointment(appointment=appointment, user=request.user)
+            visit = start_visit_from_appointment(appointment=self.get_object(), user=request.user)
         except VisitRuleError as exc:
             return exc.to_response()
-        log_activity(
-            request=request,
-            action="visit_started",
-            entity_type="visit",
-            entity_id=visit.id,
-            metadata={"visit_id": visit.id, "appointment_id": appointment.id, "patient_id": visit.patient_id, "doctor_id": visit.doctor_id},
-        )
+        log_activity(request=request, action="visit_started", entity_type="visit", entity_id=visit.id, metadata={"visit_id": visit.id, "appointment_id": visit.appointment_id})
         return Response(VisitDetailSerializer(visit).data, status=status.HTTP_201_CREATED)
-
     @action(detail=False, methods=["get"])
     def availability(self, request):
-        doctor_id = request.query_params.get("doctor_id")
-        date_text = request.query_params.get("date")
-        duration = request.query_params.get("duration_minutes")
-        if not doctor_id or not date_text:
-            return error_response("VALIDATION_ERROR", "Some fields are invalid.", {"doctor_id": ["This field is required."], "date": ["This field is required."]})
+        doctor_id, date_text, duration = request.query_params.get("doctor_id"), request.query_params.get("date"), request.query_params.get("duration_minutes")
+        if not doctor_id or not date_text: return error_response("VALIDATION_ERROR", "Some fields are invalid.", {"doctor_id": ["This field is required."], "date": ["This field is required."]})
         doctor = get_object_or_404(User, id=doctor_id, role=User.Role.DOCTOR, is_active=True)
-        if request.user.role == "DOCTOR" and request.user.id != doctor.id:
-            return error_response("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
-        try:
-            date_value = date.fromisoformat(date_text)
-        except ValueError:
-            return error_response("VALIDATION_ERROR", "Some fields are invalid.", {"date": ["Use YYYY-MM-DD."]})
-
-        try:
-            duration_minutes = int(duration) if duration else get_clinic_settings().default_appointment_duration_minutes
-            slots = build_availability_slots(doctor=doctor, date_value=date_value, duration_minutes=duration_minutes)
-        except (ValueError, AppointmentRuleError) as exc:
-            if isinstance(exc, AppointmentRuleError):
-                return exc.to_response()
-            return error_response("VALIDATION_ERROR", "Some fields are invalid.", {"duration_minutes": ["Invalid duration."]})
-
-        settings = get_clinic_settings()
-        return Response(
-            {
-                "doctor_id": doctor.id,
-                "date": date_value.isoformat(),
-                "duration_minutes": duration_minutes,
-                "capacity_per_slot": settings.capacity_per_slot,
-                "available_slots": slots,
-            }
-        )
+        if request.user.role == "DOCTOR" and request.user.id != doctor.id: return error_response("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
+        try: value = date.fromisoformat(date_text); minutes = int(duration) if duration else get_clinic_settings().default_appointment_duration_minutes; slots = build_availability_slots(doctor=doctor, date_value=value, duration_minutes=minutes)
+        except (ValueError, AppointmentRuleError) as exc: return _rule_error(exc) if isinstance(exc, AppointmentRuleError) else error_response("VALIDATION_ERROR", "Some fields are invalid.", {"duration_minutes": ["Invalid duration."]})
+        settings = get_clinic_settings(); return Response({"doctor_id": doctor.id, "date": value.isoformat(), "duration_minutes": minutes, "capacity_per_slot": settings.capacity_per_slot, "available_slots": slots})

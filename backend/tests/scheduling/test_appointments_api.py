@@ -3,7 +3,7 @@ import pytest
 from apps.accounts.models import User
 from apps.audit.models import ActivityLog
 from apps.clinic.models import ClinicSettings
-from apps.scheduling.models import Appointment, AvailabilityException, WorkingHour
+from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
 
 
 FUTURE_START = "2026-07-20T09:00:00+03:00"
@@ -23,7 +23,7 @@ def appointment_payload(patient, doctor, **overrides):
 
 
 def add_working_hour(doctor, weekday=0, start="09:00", end="17:00"):
-    return WorkingHour.objects.create(doctor=doctor, weekday=weekday, start_time=start, end_time=end)
+    return WorkingShift.objects.create(employee=doctor, name="Test shift", weekday=weekday, start_time=start, end_time=end)
 
 
 @pytest.mark.django_db
@@ -180,12 +180,12 @@ def test_working_hours_and_unavailable_exception_are_enforced(staff_client, pati
     assert no_hours_response.status_code == 409
     assert no_hours_response.data["code"] == "OUTSIDE_WORKING_HOURS"
 
-    WorkingHour.objects.create(doctor=doctor_user, weekday=0, start_time="09:00", end_time="09:15")
+    WorkingShift.objects.create(employee=doctor_user, name="Short shift", weekday=0, start_time="09:00", end_time="09:15")
     partial_response = staff_client.post("/api/appointments/", appointment_payload(patient, doctor_user), format="json")
     assert partial_response.status_code == 409
     assert partial_response.data["code"] == "OUTSIDE_WORKING_HOURS"
 
-    WorkingHour.objects.filter(doctor=doctor_user).delete()
+    WorkingShift.objects.filter(employee=doctor_user).delete()
     add_working_hour(doctor_user)
     AvailabilityException.objects.create(
         doctor=doctor_user,

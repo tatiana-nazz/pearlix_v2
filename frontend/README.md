@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phase 13E.1 plus Phase 13F make the React + Vite + TypeScript frontend foundation operational for auth, role guards, workspace shell behavior, role dashboards, upgraded patient list/profile workflows, and appointment scheduling/rescheduling workflows backed by real backend APIs.
+Phases through 13F.1 make the React + Vite + TypeScript frontend operational for auth, role guards, workspace shell behavior, role dashboards, patient and appointment workflows, and Admin-controlled Doctor/Staff schedules and leave backed by real APIs.
 
 ## Install
 
@@ -133,7 +133,7 @@ Role behavior:
 - Availability selection reads from `GET /appointments/availability/`.
 - Appointment forms do not PATCH `status`; status changes use dedicated backend action endpoints.
 
-## Included Through Phase 13F
+## Included Through Phase 13F.1
 
 - Vite, React, TypeScript app structure.
 - TanStack Query provider.
@@ -151,6 +151,8 @@ Role behavior:
 - Real appointment day/week/month/list/needs-reschedule views with role-aware Staff actions and Doctor start-visit entry point.
 - Focused frontend appointment feature tests.
 - Browser QA documentation for auth/layout guard, dashboard, patient, and appointment verification.
+- Admin-controlled clinic default schedules, Doctor and Staff working shifts, explicit default application/copy modes, versioned leave cancellation, and Doctor/Staff read-only own-schedule routes.
+- Phase 13F.1 QA contract: `frontend/QA_13F1.md`.
 
 ## Design Contract
 
@@ -174,5 +176,5 @@ Future frontend phases must follow these files for the professional dental clini
 
 ## Future Phase Order
 
-- Accepted next sequence: Phase 13F.1 shift-aware appointment/frontend adjustments, then 13G, 13H, 13I, 13J, and 13K.
-- Shift rules are locked for future work; Phase 13E.1 does not implement shift behavior.
+- Phase 13F.1 implements the accepted shift-aware scheduling contract.
+- Accepted next sequence: Phase 13G, 13H, 13I, 13J, and 13K.

@@ -9,7 +9,11 @@ pytestmark = pytest.mark.django_db(transaction=True)
 
 def leaf_targets_with_patient(target):
     executor = MigrationExecutor(connection)
-    return [node for node in executor.loader.graph.leaf_nodes() if node[0] != "patients"] + [target]
+    scheduling_target = (
+        "scheduling",
+        "0004_appointment_reschedule_previous_status_and_more" if target[1] == "0001_initial" else "0005_admin_shifts_availability",
+    )
+    return [node for node in executor.loader.graph.leaf_nodes() if node[0] not in {"patients", "scheduling"}] + [target, scheduling_target]
 
 
 def migrate_to(targets):

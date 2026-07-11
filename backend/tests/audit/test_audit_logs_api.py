@@ -8,7 +8,7 @@ from apps.accounts.models import User
 from apps.audit.models import ActivityLog
 from apps.billing.models import Invoice
 from apps.patients.models import Patient
-from apps.scheduling.models import Appointment, WorkingHour
+from apps.scheduling.models import Appointment, WorkingShift
 from apps.visits.models import Visit
 
 
@@ -89,7 +89,7 @@ def test_important_actions_create_safe_audit_logs(
     appointment_factory,
     visit_factory,
 ):
-    WorkingHour.objects.create(doctor=doctor_user, weekday=0, start_time="09:00", end_time="15:00")
+    WorkingShift.objects.create(employee=doctor_user, name="Test shift", weekday=0, start_time="09:00", end_time="15:00")
 
     user_create = admin_client.post(
         "/api/users/",

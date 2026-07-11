@@ -1,13 +1,13 @@
 import pytest
 
 from apps.billing.models import BillingHandoff, Invoice
-from apps.scheduling.models import Appointment, WorkingHour
+from apps.scheduling.models import Appointment, WorkingShift
 from apps.visits.models import Visit
 
 
 @pytest.mark.django_db
 def test_wf_008_billing_handoff_to_invoice_payment_workflow(admin_client, staff_client, doctor_client, doctor_user):
-    WorkingHour.objects.create(doctor=doctor_user, weekday=0, start_time="09:00", end_time="15:00")
+    WorkingShift.objects.create(employee=doctor_user, name="Test shift", weekday=0, start_time="09:00", end_time="15:00")
 
     patient_response = staff_client.post(
         "/api/patients/",

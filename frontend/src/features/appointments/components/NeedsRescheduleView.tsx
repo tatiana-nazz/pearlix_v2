@@ -12,7 +12,7 @@ interface NeedsRescheduleViewProps {
 export function NeedsRescheduleView({ role, appointments, onEdit, onDetails }: NeedsRescheduleViewProps) {
   return (
     <div className="needs-reschedule-view">
-      <p className="panel-note">Appointments affected by leave or unavailable time appear here as a full-width worklist.</p>
+      <p className="panel-note">Appointments affected by leave, unavailable periods, or shift changes appear here as a full-width worklist.</p>
       <AppointmentTable role={role} appointments={appointments} onEdit={onEdit} onDetails={onDetails} />
     </div>
   );

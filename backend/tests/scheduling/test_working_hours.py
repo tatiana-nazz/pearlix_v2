@@ -1,7 +1,7 @@
 import pytest
 
 from apps.accounts.models import User
-from apps.scheduling.models import WorkingHour
+from apps.scheduling.models import WorkingShift
 
 
 def working_hours_payload(*items):
@@ -70,7 +70,7 @@ def test_admin_can_replace_working_hours(admin_client, doctor_user):
     )
 
     assert response.status_code == 200
-    assert WorkingHour.objects.filter(doctor=doctor_user).count() == 2
+    assert WorkingShift.objects.filter(employee=doctor_user).count() == 2
     assert [item["start_time"] for item in response.data["working_hours"]] == ["09:00:00", "16:00:00"]
 
 
@@ -123,4 +123,4 @@ def test_invalid_put_payload_does_not_partially_update_schedule(admin_client, do
     )
 
     assert response.status_code == 400
-    assert list(WorkingHour.objects.filter(doctor=doctor_user).values_list("id", flat=True)) == [existing.id]
+    assert list(WorkingShift.objects.filter(employee=doctor_user).values_list("id", flat=True)) == [existing.id]
