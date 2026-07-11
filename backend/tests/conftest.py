@@ -7,7 +7,7 @@ from apps.ai_results.models import AIResult
 from apps.accounts.models import User
 from apps.billing.models import BillingHandoff, Invoice, Payment
 from apps.patients.models import Patient
-from apps.scheduling.models import Appointment, AvailabilityException, WorkingHour
+from apps.scheduling.models import Appointment, AvailabilityException, Weekday, WorkingShift
 from apps.visits.models import Visit
 from apps.xrays.models import ExternalXrayCase, XrayAttachment
 
@@ -121,15 +121,18 @@ def patient(patient_factory):
 @pytest.fixture
 def working_hour_factory(db, doctor_user):
     def create_working_hour(**overrides):
+        if "doctor" in overrides:
+            overrides["employee"] = overrides.pop("doctor")
         defaults = {
-            "doctor": doctor_user,
-            "weekday": WorkingHour.Weekday.MONDAY,
+            "employee": doctor_user,
+            "weekday": Weekday.MONDAY,
+            "name": "Test shift",
             "start_time": "09:00",
             "end_time": "13:00",
             "is_active": True,
         }
         defaults.update(overrides)
-        return WorkingHour.objects.create(**defaults)
+        return WorkingShift.objects.create(**defaults)
 
     return create_working_hour
 

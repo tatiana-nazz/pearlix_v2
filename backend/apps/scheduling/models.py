@@ -5,45 +5,72 @@ from django.db import models
 from apps.common.models import TimeStampedModel
 
 
-class WorkingHour(TimeStampedModel):
-    class Weekday(models.IntegerChoices):
-        MONDAY = 0, "Monday"
-        TUESDAY = 1, "Tuesday"
-        WEDNESDAY = 2, "Wednesday"
-        THURSDAY = 3, "Thursday"
-        FRIDAY = 4, "Friday"
-        SATURDAY = 5, "Saturday"
-        SUNDAY = 6, "Sunday"
+class Weekday(models.IntegerChoices):
+    MONDAY = 0, "Monday"
+    TUESDAY = 1, "Tuesday"
+    WEDNESDAY = 2, "Wednesday"
+    THURSDAY = 3, "Thursday"
+    FRIDAY = 4, "Friday"
+    SATURDAY = 5, "Saturday"
+    SUNDAY = 6, "Sunday"
 
-    doctor = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="working_hours",
-    )
+
+class ClinicDefaultShift(TimeStampedModel):
+    name = models.CharField(max_length=100)
     weekday = models.PositiveSmallIntegerField(choices=Weekday.choices)
     start_time = models.TimeField()
     end_time = models.TimeField()
     is_active = models.BooleanField(default=True)
+    version = models.PositiveIntegerField(default=1)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="default_shifts_created")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="default_shifts_updated")
 
     class Meta:
-        indexes = [
-            models.Index(fields=["doctor", "weekday", "is_active"]),
-        ]
+        indexes = [models.Index(fields=["weekday", "is_active"])]
         ordering = ["weekday", "start_time", "id"]
 
     def clean(self):
         errors = {}
-        if self.doctor_id and self.doctor.role != "DOCTOR":
-            errors["doctor"] = "Working hours must belong to a doctor."
-        if self.weekday not in self.Weekday.values:
+        self.name = self.name.strip()
+        if not self.name:
+            errors["name"] = "Shift name is required."
+        if self.weekday not in Weekday.values:
             errors["weekday"] = "Weekday must be between 0 and 6."
         if self.start_time and self.end_time and self.start_time >= self.end_time:
             errors["end_time"] = "End time must be after start time."
         if errors:
             raise ValidationError(errors)
 
-    def __str__(self) -> str:
-        return f"{self.doctor} {self.weekday} {self.start_time}-{self.end_time}"
+
+class WorkingShift(TimeStampedModel):
+    employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="working_shifts")
+    name = models.CharField(max_length=100)
+    weekday = models.PositiveSmallIntegerField(choices=Weekday.choices)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    is_active = models.BooleanField(default=True)
+    source_default_shift = models.ForeignKey(ClinicDefaultShift, null=True, blank=True, on_delete=models.SET_NULL, related_name="applied_working_shifts")
+    version = models.PositiveIntegerField(default=1)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="working_shifts_created")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="working_shifts_updated")
+
+    class Meta:
+        indexes = [models.Index(fields=["employee", "weekday", "is_active"])]
+        ordering = ["weekday", "start_time", "id"]
+
+    def clean(self):
+        errors = {}
+        self.name = self.name.strip()
+        if not self.name:
+            errors["name"] = "Shift name is required."
+        if self.employee_id and self.employee.role not in {"DOCTOR", "STAFF"}:
+            errors["employee"] = "Working shifts must belong to a doctor or staff user."
+        if self.weekday not in Weekday.values:
+            errors["weekday"] = "Weekday must be between 0 and 6."
+        if self.start_time and self.end_time and self.start_time >= self.end_time:
+            errors["end_time"] = "End time must be after start time."
+        if errors:
+            raise ValidationError(errors)
 
 
 class AvailabilityException(TimeStampedModel):
@@ -51,55 +78,21 @@ class AvailabilityException(TimeStampedModel):
         UNAVAILABLE = "UNAVAILABLE", "Unavailable"
         AVAILABLE_OVERRIDE = "AVAILABLE_OVERRIDE", "Available override"
 
-    doctor = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.CASCADE,
-        related_name="doctor_availability_exceptions",
-    )
-    staff = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.CASCADE,
-        related_name="staff_availability_exceptions",
-    )
+    doctor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE, related_name="doctor_availability_exceptions")
+    staff = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE, related_name="staff_availability_exceptions")
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
     type = models.CharField(max_length=30, choices=Type.choices, default=Type.UNAVAILABLE)
     reason = models.CharField(max_length=255, blank=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="availability_exceptions_created",
-    )
-    updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="availability_exceptions_updated",
-    )
+    version = models.PositiveIntegerField(default=1)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="availability_exceptions_created")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="availability_exceptions_updated")
     is_cancelled = models.BooleanField(default=False)
     cancelled_at = models.DateTimeField(null=True, blank=True)
-    cancelled_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="availability_exceptions_cancelled",
-    )
+    cancelled_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="availability_exceptions_cancelled")
 
     class Meta:
-        indexes = [
-            models.Index(fields=["doctor", "start_datetime"]),
-            models.Index(fields=["staff", "start_datetime"]),
-            models.Index(fields=["type"]),
-            models.Index(fields=["is_cancelled"]),
-        ]
+        indexes = [models.Index(fields=["doctor", "start_datetime"]), models.Index(fields=["staff", "start_datetime"]), models.Index(fields=["type"]), models.Index(fields=["is_cancelled"])]
         ordering = ["start_datetime", "id"]
 
     def clean(self):
@@ -114,10 +107,6 @@ class AvailabilityException(TimeStampedModel):
             errors["end_datetime"] = "End datetime must be after start datetime."
         if errors:
             raise ValidationError(errors)
-
-    def __str__(self) -> str:
-        target = self.doctor or self.staff
-        return f"{target} {self.type} {self.start_datetime}-{self.end_datetime}"
 
 
 class Appointment(TimeStampedModel):
@@ -141,37 +130,14 @@ class Appointment(TimeStampedModel):
     checked_in_at = models.DateTimeField(null=True, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
     no_show_at = models.DateTimeField(null=True, blank=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="appointments_created",
-    )
-    updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="appointments_updated",
-    )
-    reschedule_source_exception = models.ForeignKey(
-        "scheduling.AvailabilityException",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="reschedule_appointments",
-    )
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="appointments_created")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="appointments_updated")
+    reschedule_source_exception = models.ForeignKey("scheduling.AvailabilityException", null=True, blank=True, on_delete=models.SET_NULL, related_name="reschedule_appointments")
+    reschedule_source_working_shift = models.ForeignKey("scheduling.WorkingShift", null=True, blank=True, on_delete=models.SET_NULL, related_name="reschedule_appointments")
     reschedule_previous_status = models.CharField(max_length=20, choices=Status.choices, null=True, blank=True)
 
     class Meta:
-        indexes = [
-            models.Index(fields=["doctor", "start_datetime"]),
-            models.Index(fields=["start_datetime", "status"]),
-            models.Index(fields=["patient", "start_datetime"]),
-            models.Index(fields=["status"]),
-            models.Index(fields=["reschedule_source_exception", "status"]),
-        ]
+        indexes = [models.Index(fields=["doctor", "start_datetime"]), models.Index(fields=["start_datetime", "status"]), models.Index(fields=["patient", "start_datetime"]), models.Index(fields=["status"]), models.Index(fields=["reschedule_source_exception", "status"]), models.Index(fields=["reschedule_source_working_shift", "status"])]
         ordering = ["start_datetime", "id"]
 
     def clean(self):
@@ -182,6 +148,3 @@ class Appointment(TimeStampedModel):
             errors["end_datetime"] = "End datetime must be after start datetime."
         if errors:
             raise ValidationError(errors)
-
-    def __str__(self) -> str:
-        return f"{self.patient} with {self.doctor} at {self.start_datetime}"

@@ -4,7 +4,7 @@ import pytest
 from django.utils import timezone
 
 from apps.billing.models import BillingHandoff, Invoice
-from apps.scheduling.models import Appointment, AvailabilityException, WorkingHour
+from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
 from apps.visits.models import Visit
 
 
@@ -250,7 +250,7 @@ def test_doctor_dashboard_is_scoped_to_requesting_doctor(
         created_by=doctor_user,
         updated_by=doctor_user,
     )
-    schedule = WorkingHour.objects.create(doctor=doctor_user, weekday=0, start_time="09:00", end_time="13:00")
+    schedule = WorkingShift.objects.create(employee=doctor_user, name="Test shift", weekday=0, start_time="09:00", end_time="13:00")
     own_leave = AvailabilityException.objects.create(
         doctor=doctor_user,
         start_datetime=today_at(17),

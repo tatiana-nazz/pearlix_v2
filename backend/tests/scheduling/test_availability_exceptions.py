@@ -3,7 +3,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.audit.models import ActivityLog
-from apps.scheduling.models import Appointment, AvailabilityException, WorkingHour
+from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
 from apps.visits.models import Visit
 
 
@@ -20,7 +20,7 @@ def exception_payload(target_key="doctor_id", target_id=None, **overrides):
 
 
 def add_working_hour(doctor, weekday=0, start="09:00", end="17:00"):
-    return WorkingHour.objects.create(doctor=doctor, weekday=weekday, start_time=start, end_time=end, is_active=True)
+    return WorkingShift.objects.create(employee=doctor, name="Test shift", weekday=weekday, start_time=start, end_time=end, is_active=True)
 
 
 @pytest.mark.django_db
@@ -66,7 +66,7 @@ def test_admin_can_list_read_create_update_and_delete_is_rejected(admin_client, 
     )
     update_response = admin_client.patch(
         f"/api/availability-exceptions/{existing.id}/",
-        {"reason": "Updated reason"},
+        {"reason": "Updated reason", "version": existing.version},
         format="json",
     )
     delete_response = admin_client.delete(f"/api/availability-exceptions/{existing.id}/")
@@ -179,10 +179,14 @@ def test_admin_can_create_update_and_cancel_leave(admin_client, doctor_user):
     )
     update_response = admin_client.patch(
         f"/api/availability-exceptions/{create_response.data['id']}/",
-        {"reason": "Updated admin leave"},
+        {"reason": "Updated admin leave", "version": create_response.data["version"]},
         format="json",
     )
-    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/")
+    cancel_response = admin_client.post(
+        f"/api/availability-exceptions/{create_response.data['id']}/cancel/",
+        {"version": update_response.data["version"]},
+        format="json",
+    )
 
     assert create_response.status_code == 201
     assert update_response.status_code == 200
@@ -336,7 +340,7 @@ def test_cancel_doctor_leave_restores_still_unrescheduled_appointment(admin_clie
         format="json",
     )
 
-    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/")
+    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/", {"version": create_response.data["version"]}, format="json")
 
     assert cancel_response.status_code == 200
     assert cancel_response.data["is_cancelled"] is True
@@ -361,7 +365,7 @@ def test_cancelled_leave_no_longer_blocks_scheduling(admin_client, staff_client,
         ),
         format="json",
     )
-    admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/")
+    admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/", {"version": create_response.data["version"]}, format="json")
 
     response = staff_client.post(
         "/api/appointments/",
@@ -406,7 +410,7 @@ def test_cancel_leave_after_staff_reschedule_does_not_move_appointment_back(
         {"start_datetime": "2026-07-21T09:00:00+03:00", "duration_minutes": 30},
         format="json",
     )
-    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/")
+    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/", {"version": create_response.data["version"]}, format="json")
 
     assert reschedule_response.status_code == 200
     assert cancel_response.status_code == 200
@@ -445,7 +449,7 @@ def test_cancel_leave_keeps_needs_reschedule_when_another_active_leave_blocks_sl
         end_datetime="2026-07-20T10:00:00+03:00",
     )
 
-    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/")
+    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/", {"version": create_response.data["version"]}, format="json")
 
     assert cancel_response.status_code == 200
     assert cancel_response.data["restored_appointments_count"] == 0
@@ -482,7 +486,7 @@ def test_cancel_leave_does_not_affect_completed_cancelled_or_no_show_appointment
         format="json",
     )
 
-    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/")
+    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/", {"version": create_response.data["version"]}, format="json")
 
     assert cancel_response.status_code == 200
     appointment.refresh_from_db()
@@ -506,7 +510,7 @@ def test_staff_leave_cancel_does_not_affect_appointments(admin_client, staff_use
         format="json",
     )
 
-    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/")
+    cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/", {"version": create_response.data["version"]}, format="json")
 
     assert cancel_response.status_code == 200
     appointment.refresh_from_db()
@@ -520,11 +524,11 @@ def test_updating_cancelled_leave_is_rejected(admin_client, doctor_user):
         exception_payload(target_id=doctor_user.id),
         format="json",
     )
-    admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/")
+    admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/", {"version": create_response.data["version"]}, format="json")
 
     response = admin_client.patch(
         f"/api/availability-exceptions/{create_response.data['id']}/",
-        {"reason": "Should not update"},
+        {"reason": "Should not update", "version": 2},
         format="json",
     )
 
@@ -603,12 +607,12 @@ def test_availability_exception_update_marks_newly_overlapping_without_auto_rest
 
     expand_response = admin_client.patch(
         f"/api/availability-exceptions/{exception.id}/",
-        {"end_datetime": "2026-07-20T10:30:00+03:00"},
+        {"end_datetime": "2026-07-20T10:30:00+03:00", "version": exception.version},
         format="json",
     )
     shrink_response = admin_client.patch(
         f"/api/availability-exceptions/{exception.id}/",
-        {"end_datetime": "2026-07-20T09:15:00+03:00"},
+        {"end_datetime": "2026-07-20T09:15:00+03:00", "version": expand_response.data["version"]},
         format="json",
     )
 

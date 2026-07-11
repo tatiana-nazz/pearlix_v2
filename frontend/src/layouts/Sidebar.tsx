@@ -14,7 +14,8 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "Dashboard", path: "/admin/dashboard", compactLabel: "D" },
     { label: "Users", path: "/admin/users", compactLabel: "U" },
     { label: "Doctors & Staff", path: "/admin/doctors", compactLabel: "DS" },
-    { label: "Schedules & Leave", path: "/admin/leave", compactLabel: "SL" },
+    { label: "Schedules", path: "/admin/doctors", compactLabel: "S" },
+    { label: "Leave", path: "/admin/leave", compactLabel: "L" },
     { label: "Appointments", path: "/admin/appointments", compactLabel: "A" },
     { label: "Patients", path: "/admin/patients", compactLabel: "P" },
     { label: "Billing", path: "/admin/billing", compactLabel: "B" },
@@ -31,6 +32,7 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "Invoices", path: "/staff/billing/invoices", compactLabel: "I" },
     { label: "Payments", path: "/staff/billing/payments", compactLabel: "PY" },
     { label: "Schedules View", path: "/staff/profile/schedule", compactLabel: "SV" },
+    { label: "My Leave", path: "/staff/profile/leave", compactLabel: "ML" },
     { label: "Profile", path: "/staff/profile", compactLabel: "PR" },
   ],
   DOCTOR: [
@@ -41,6 +43,8 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "X-rays & AI", path: "/doctor/xrays", compactLabel: "XA" },
     { label: "External X-ray Workspace", path: "/doctor/external-xrays", compactLabel: "EX" },
     { label: "My Billing Handoffs", path: "/doctor/billing/handoffs", compactLabel: "BH" },
+    { label: "My Schedule", path: "/doctor/profile/schedule", compactLabel: "MS" },
+    { label: "My Leave", path: "/doctor/profile/leave", compactLabel: "ML" },
     { label: "Profile", path: "/doctor/profile", compactLabel: "PR" },
   ],
 };

@@ -8,7 +8,7 @@ from rest_framework import status
 from apps.billing.models import BillingHandoff, Invoice
 from apps.common.errors import error_response
 from apps.patients.models import Patient
-from apps.scheduling.models import Appointment, AvailabilityException, WorkingHour
+from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
 from apps.visits.models import Visit
 
 
@@ -164,7 +164,7 @@ def staff_dashboard(request):
             "pending_billing_handoffs": [_handoff_summary(item) for item in pending_handoffs],
             "unpaid_or_partially_paid_invoices": [_invoice_summary(item) for item in due_invoices],
             "recent_patients": [_patient_summary(item) for item in recent_patients],
-            "own_working_schedule": [],
+            "own_working_schedule": [_working_hour_summary(item) for item in WorkingShift.objects.filter(employee=request.user).order_by("weekday", "start_time", "id")],
             "own_availability_exceptions": [_availability_exception_summary(item) for item in own_leave],
             "doctor_unavailable_exceptions": [_availability_exception_summary(item) for item in doctor_unavailable],
         }
@@ -191,7 +191,7 @@ def doctor_dashboard(request):
         doctor=request.user,
         status=BillingHandoff.Status.PENDING,
     )[:10]
-    own_working_schedule = WorkingHour.objects.filter(doctor=request.user).order_by("weekday", "start_time", "id")
+    own_working_schedule = WorkingShift.objects.filter(employee=request.user).order_by("weekday", "start_time", "id")
     own_leave = AvailabilityException.objects.select_related("doctor").filter(doctor=request.user).order_by("-start_datetime", "-id")[:10]
     return Response(
         {

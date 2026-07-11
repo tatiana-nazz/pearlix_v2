@@ -12,6 +12,8 @@ import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { AdminDashboardPage } from "../pages/admin/AdminDashboardPage";
+import { ScheduleManagementPage } from "../pages/admin/ScheduleManagementPage";
+import { LeaveManagementPage } from "../pages/admin/LeaveManagementPage";
 import { AppointmentsPage } from "../pages/appointments/AppointmentsPage";
 import { RescheduleAppointmentPage } from "../pages/appointments/RescheduleAppointmentPage";
 import { DoctorDashboardPage } from "../pages/doctor/DoctorDashboardPage";
@@ -19,6 +21,8 @@ import { NewPatientPage } from "../pages/patients/NewPatientPage";
 import { PatientProfilePage } from "../pages/patients/PatientProfilePage";
 import { PatientsPage } from "../pages/patients/PatientsPage";
 import { StaffDashboardPage } from "../pages/staff/StaffDashboardPage";
+import { OwnSchedulePage } from "../pages/profile/OwnSchedulePage";
+import { OwnLeavePage } from "../pages/profile/OwnLeavePage";
 import type { UserRole } from "../types/auth";
 import { dashboardPathForRole } from "../utils/roles";
 
@@ -32,8 +36,7 @@ type PlaceholderRoute = {
 const adminRoutes: PlaceholderRoute[] = [
   { path: "users", title: "Users", role: "ADMIN", plannedPhase: "Phase 13J" },
   { path: "clinic-settings", title: "Clinic Settings", role: "ADMIN", plannedPhase: "Phase 13J" },
-  { path: "doctors", title: "Doctors & Staff", role: "ADMIN", plannedPhase: "Phase 13J" },
-  { path: "leave", title: "Schedules & Leave", role: "ADMIN", plannedPhase: "Phase 13J" },
+  { path: "doctors", title: "Doctors & Staff", role: "ADMIN", plannedPhase: "Phase 13F.1" },
   { path: "billing", title: "Billing", role: "ADMIN", plannedPhase: "Phase 13I" },
   { path: "audit-logs", title: "Audit Logs", role: "ADMIN", plannedPhase: "Phase 13J" },
   { path: "profile", title: "Profile", role: "ADMIN", plannedPhase: "Phase 13C" },
@@ -43,8 +46,6 @@ const staffRoutes: PlaceholderRoute[] = [
   { path: "billing/handoffs", title: "Billing Handoffs", role: "STAFF", plannedPhase: "Phase 13I" },
   { path: "billing/invoices", title: "Invoices", role: "STAFF", plannedPhase: "Phase 13I" },
   { path: "billing/payments", title: "Payments", role: "STAFF", plannedPhase: "Phase 13I" },
-  { path: "profile/schedule", title: "Schedules View", role: "STAFF", plannedPhase: "Phase 13J" },
-  { path: "profile/leave", title: "Profile Leave", role: "STAFF", plannedPhase: "Phase 13J" },
   { path: "profile", title: "Profile", role: "STAFF", plannedPhase: "Phase 13C" },
 ];
 
@@ -52,8 +53,6 @@ const doctorRoutes: PlaceholderRoute[] = [
   { path: "visits/active", title: "Active Visit", role: "DOCTOR", plannedPhase: "Phase 13G" },
   { path: "xrays", title: "X-rays & AI", role: "DOCTOR", plannedPhase: "Phase 13H" },
   { path: "external-xrays", title: "External X-ray Workspace", role: "DOCTOR", plannedPhase: "Phase 13H" },
-  { path: "profile/schedule", title: "Profile Schedule", role: "DOCTOR", plannedPhase: "Phase 13J" },
-  { path: "profile/leave", title: "Profile Leave", role: "DOCTOR", plannedPhase: "Phase 13J" },
   { path: "billing/handoffs", title: "My Billing Handoffs", role: "DOCTOR", plannedPhase: "Phase 13I" },
   { path: "profile", title: "Profile", role: "DOCTOR", plannedPhase: "Phase 13C" },
 ];
@@ -112,6 +111,8 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/admin/dashboard" replace /> },
               { path: "dashboard", element: <AdminDashboardPage /> },
+              { path: "doctors", element: <ScheduleManagementPage /> },
+              { path: "leave", element: <LeaveManagementPage /> },
               { path: "appointments", element: <Navigate to="/admin/appointments/day" replace /> },
               { path: "appointments/day", element: <AppointmentsPage role="ADMIN" view="day" /> },
               { path: "appointments/week", element: <AppointmentsPage role="ADMIN" view="week" /> },
@@ -133,6 +134,8 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/staff/dashboard" replace /> },
               { path: "dashboard", element: <StaffDashboardPage /> },
+              { path: "profile/schedule", element: <OwnSchedulePage /> },
+              { path: "profile/leave", element: <OwnLeavePage /> },
               { path: "appointments", element: <Navigate to="/staff/appointments/day" replace /> },
               { path: "appointments/day", element: <AppointmentsPage role="STAFF" view="day" /> },
               { path: "appointments/week", element: <AppointmentsPage role="STAFF" view="week" /> },
@@ -156,6 +159,8 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/doctor/dashboard" replace /> },
               { path: "dashboard", element: <DoctorDashboardPage /> },
+              { path: "profile/schedule", element: <OwnSchedulePage /> },
+              { path: "profile/leave", element: <OwnLeavePage /> },
               { path: "appointments", element: <Navigate to="/doctor/appointments/day" replace /> },
               { path: "appointments/day", element: <AppointmentsPage role="DOCTOR" view="day" /> },
               { path: "appointments/week", element: <AppointmentsPage role="DOCTOR" view="week" /> },

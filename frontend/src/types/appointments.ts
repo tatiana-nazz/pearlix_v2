@@ -21,6 +21,9 @@ export interface AppointmentList extends Timestamped {
   reason: string;
   status: AppointmentStatus;
   reschedule_source_exception: number | null;
+  reschedule_source_working_shift: number | null;
+  reschedule_source_type: "LEAVE" | "SHIFT_CHANGE" | null;
+  reschedule_source_label: string | null;
   reschedule_previous_status: AppointmentStatus | null;
 }
 

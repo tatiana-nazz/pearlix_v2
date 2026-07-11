@@ -2,7 +2,7 @@
 
 Project: Dental Clinic Management System Website
 
-Current phase/status: 13E.1 patient schema and frontend contract upgrade
+Current phase/status: 13F.1 Admin-controlled shifts and availability upgrade complete
 
 Backend stack: Django, Django REST Framework, PostgreSQL
 
@@ -31,7 +31,7 @@ Run backend commands from `backend` with the virtualenv active.
 
 - Accounts: no public signup, Admin-created users, temporary-password flow, required password change support, authenticated change-password, Admin reset-password, self/last-admin deactivation safeguards.
 - Patients: final Phase 13E.1 patient schema, `Male`/`Female` gender contract, optional profile fields, nullable unique national ID/passport, computed `full_name`/`age`, versioned updates, no hard delete, Staff archive/unarchive, archived patients hidden by default, archive blocked by `UPCOMING`, `CHECKED_IN`, `ACTIVE`, and `NEEDS_RESCHEDULE` appointments.
-- Scheduling: working hours, availability exceptions, appointment capacity/conflict validation, doctor leave marking future overlapping appointments as `NEEDS_RESCHEDULE`, Staff reschedule back to `UPCOMING`, and leave cancel/void instead of hard delete.
+- Scheduling: clinic default shift templates, independent Doctor and Staff working shifts, split-shift availability, versioned availability exceptions, explicit Doctor appointment-impact confirmation, appointment capacity/conflict validation, `NEEDS_RESCHEDULE` leave/shift source tracking, and no hard deletion.
 - Visits and clinical records: Doctors start/complete own visits and edit own clinical notes; other roles are read-only or denied according to role.
 - X-rays and AI: protected media, saved and external X-ray workflows, clinic-wide Doctor patient-profile attach for own temporary external cases, mock AI adapter with disclaimer, disabled real-service modes return `AI_SERVICE_NOT_CONFIGURED`.
 - Clinic settings: Admin sees and updates full settings; Staff/Doctor see safe settings only.
@@ -103,11 +103,33 @@ gender_distribution=[]
 unexpected_gender_count=0
 ```
 
+Phase 13F.1 scheduling migration precheck and postcheck:
+
+```text
+doctor_working_hour_count_before=0
+active_doctor_working_hour_count_before=0
+availability_exception_count_before=0
+future_appointment_count_before=0
+working_shift_count_after=0
+availability_exception_count_after=0
+appointment_count_after=0
+staff_shift_count_after=0
+clinic_default_shift_count_after=0
+```
+
+Safe local backup command:
+
+```bash
+pg_dump "$DATABASE_URL" --file ../_local_backups/pearlix_before_13f1_schedules.sql
+```
+
+Scheduling migration `0005_admin_shifts_availability` is applied locally; `migrate --plan` reports no planned operations.
+
 Latest full regression:
 
 ```text
 python -m pytest -q
-399 passed
+405 passed
 ```
 
 Django check:
@@ -142,4 +164,4 @@ Before handoff or upload, exclude:
 
 ## Next Step
 
-Recommended next step: Phase 13F.1 shift-aware appointment/frontend adjustment, then 13G, 13H, 13I, 13J, and 13K.
+Recommended next step: Phase 13G, then 13H, 13I, 13J, and 13K.

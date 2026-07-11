@@ -3,7 +3,7 @@
 Phase: 13A - Frontend/Backend Integration Audit  
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: frozen after 12K.Final.1 plus schedule/leave visibility hardening
+Backend status: Phase 13F.1 shift and availability API upgrade complete
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -102,16 +102,22 @@ Patient list query params: `is_archived`, `first_name`, `last_name`, `phone_numb
 ### Scheduling / Working Hours / Availability Exceptions
 
 - `GET /api/doctors/`
-- `GET /api/doctors/{doctor_id}/working-hours/`
-- `PUT /api/doctors/{doctor_id}/working-hours/`
+- `GET /api/clinic-default-shifts/`, `POST`, `PATCH`, and versioned `activate`/`deactivate` actions - Admin only; no DELETE.
+- `GET /api/working-shifts/` - Admin sees all; Staff and Doctor see own rows only. Admin-only `POST`, `PATCH`, versioned `activate`/`deactivate`, `apply-default`, and `copy-schedule`; no DELETE.
+- `POST /api/working-shifts/apply-default/` - modes `MISSING_ONLY` and `REPLACE_ALL`; copied rows are independent.
+- `POST /api/working-shifts/copy-schedule/` - copies active source rows independently using `MISSING_ONLY` or `REPLACE_ALL`.
+- `GET /api/doctors/{doctor_id}/working-hours/` - compatibility read backed by `WorkingShift`; Admin/Staff can read any Doctor and Doctor can read self.
+- `PUT /api/doctors/{doctor_id}/working-hours/` - Admin-only compatibility replacement with explicit appointment-impact confirmation when required.
 - `GET /api/availability-exceptions/`
 - `POST /api/availability-exceptions/` - Admin only create leave/unavailable/available override.
 - `GET /api/availability-exceptions/{id}/`
-- `PATCH /api/availability-exceptions/{id}/` - Admin only update uncancelled exception.
-- `POST /api/availability-exceptions/{id}/cancel/` - Admin only cancel/void leave.
+- `PATCH /api/availability-exceptions/{id}/` - Admin only update uncancelled exception; requires `version`.
+- `POST /api/availability-exceptions/{id}/cancel/` - Admin only cancel/void leave; requires `version`.
 - `DELETE /api/availability-exceptions/{id}/` - do not use. Admin receives `405 METHOD_NOT_ALLOWED`; Staff/Doctor receive permission denial.
 
-Availability query params: `doctor_id`, `staff_id`, `type`, `start_from`, `end_to`.
+Working shift query params: `employee_id`, `role`, `weekday`, `is_active`. Availability query params: `doctor_id`, `staff_id`, `type`, `start_from`, `end_to`, `is_cancelled`.
+
+Shift/default/leave stale writes return `VERSION_CONFLICT`. Doctor schedule changes that invalidate future appointments return `SHIFT_CHANGE_REQUIRES_CONFIRMATION` until resent with `confirm_appointment_impact: true`; confirmed appointments expose `reschedule_source_type: SHIFT_CHANGE`.
 
 ### Appointments
 
@@ -927,7 +933,7 @@ Network/offline fallback:
 
 - `DoctorProfile` and `StaffProfile` models exist, but there is no dedicated profile CRUD API. Doctor list exposes `doctor_profile` read-only summary; Staff profile fields are not exposed.
 - User list has no backend query filtering by role/search. Admin user management may need client-side filters or a future backend filter endpoint if user volume grows.
-- Staff own schedule is represented as an empty `own_working_schedule` in dashboard; there is no Staff working-hours API.
+- Staff own schedule returns real `WorkingShift` rows through the dashboard and role-scoped `GET /api/working-shifts/` contract.
 - External X-ray routes are Admin/Doctor only; Staff X-ray work must use saved patient X-rays, not external workspace.
 - Protected media cannot be rendered directly in `<img src="/api/...">` unless the app can attach auth headers through a blob fetch.
 - The router can appear to expose update/delete routes for some DRF viewsets, but `http_method_names` blocks them. Use only the effective methods documented here.
@@ -950,7 +956,7 @@ No critical backend blocker was found for frontend integration planning.
 - 13G visits/clinical notes: Doctor active visit workflow, own-note editing, completion, read-only history.
 - 13H X-rays/AI: saved X-rays, protected media blob handling, AI results, external workspace.
 - 13I billing: handoffs, invoice conversion, invoice CRUD, payments, print-data view.
-- 13J admin settings/users/schedules: users, password reset, clinic settings, working hours, leave management.
+- Phase 13F.1 provides Admin default/employee schedule and leave management; later Admin phases retain users, password reset, clinic settings, and audit work.
 - 13K QA/regression/polish: role matrix tests, API error mapping, calendar edge cases, protected media rendering, accessibility, responsive QA.
 
 ## Phase 13A Completion
