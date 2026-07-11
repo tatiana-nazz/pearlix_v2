@@ -156,5 +156,5 @@ After any payment exists:
 
 ## Future Phase Order
 
-- Accepted sequence after Phase 13E.1: 13F.1 shift-aware appointment/frontend adjustments, then 13G, 13H, 13I, 13J, and 13K.
-- Shift behavior remains a locked future rule set; do not implement shift logic in patient schema work.
+- Phase 13F.1 is complete. The accepted shift and availability rules are implemented through `ClinicDefaultShift`, `WorkingShift`, versioned leave operations, and explicit Doctor appointment-impact confirmation.
+- The next phase is 13G, followed by 13H, 13I, 13J, and 13K.

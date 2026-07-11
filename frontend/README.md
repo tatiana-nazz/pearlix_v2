@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phase 13E.1 plus Phase 13F make the React + Vite + TypeScript frontend foundation operational for auth, role guards, workspace shell behavior, role dashboards, upgraded patient list/profile workflows, and appointment scheduling/rescheduling workflows backed by real backend APIs.
+Phases through 13F.1 make the React + Vite + TypeScript frontend operational for auth, role guards, workspace shell behavior, role dashboards, patient and appointment workflows, and Admin-controlled Doctor/Staff schedules and leave backed by real APIs.
 
 ## Install
 
