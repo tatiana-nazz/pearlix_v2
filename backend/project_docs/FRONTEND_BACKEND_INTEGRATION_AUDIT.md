@@ -1,9 +1,9 @@
 # Frontend/Backend Integration Audit
 
-Phase: Originally created for 13A; capability audit through completed Phase 13J. See `PROJECT_STATUS.md` for canonical current/next phase status.
+Phase: Originally created for 13A; capability audit through completed Phase 13K. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 13J frontend Admin management/audit integration complete; existing backend APIs unchanged
+Backend status: Phase 13K final regression and release-readiness polish complete; existing backend APIs unchanged
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -272,8 +272,10 @@ Recommended React route structure:
 /admin/external-xrays
 /admin/external-xrays/:caseId
 /admin/billing/handoffs
+/admin/billing/handoffs/:handoffId
 /admin/billing/invoices
 /admin/billing/invoices/:invoiceId
+/admin/billing/invoices/:invoiceId/print
 /admin/audit-logs
 /admin/audit-logs/:auditLogId
 
@@ -301,6 +303,7 @@ Recommended React route structure:
 /staff/billing/invoices/new
 /staff/billing/invoices/:invoiceId
 /staff/billing/invoices/:invoiceId/payments
+/staff/billing/invoices/:invoiceId/print
 
 /doctor
 /doctor/dashboard
@@ -321,6 +324,7 @@ Recommended React route structure:
 /doctor/profile/schedule
 /doctor/profile/leave
 /doctor/billing/handoffs
+/doctor/billing/handoffs/:handoffId
 ```
 
 Patient profile nested views should include `overview`, `appointments`, `visits`, `clinical-notes`, `xrays`, `ai-results`, and role-aware `billing` links for Staff/Admin only.
@@ -598,7 +602,7 @@ Hidden actions:
 - Phase 13I is complete: role-aware billing handoffs, invoices, payments, and print data use existing backend APIs and backend-controlled financial values.
 - Phase 13I verification: backend runtime and migrations unchanged; 405 backend tests and 49 frontend tests passed; browser QA remains pending.
 - Phase 13J is complete: Admin routes implement user create/update/reset/deactivation, full clinic settings, and read-only audit logs. Reactivation is not exposed because no dedicated backend operation exists; DoctorProfile/StaffProfile CRUD is not implemented.
-- The next phase is 13K.
+- Phase 13K is complete: final regression, route/navigation cleanup, accessibility polish, and documentation consistency validation required no backend runtime or migration changes. The Phase 13 series is complete; deployment and live UAT are next.
 
 ### Needs Reschedule Tab
 
@@ -967,20 +971,23 @@ Network/offline fallback:
 
 No critical backend blocker was found for frontend integration planning.
 
-## O. Next Implementation Phases
+## O. Historical Phase Order
 
-- 13B frontend foundation: Vite/React/TypeScript app structure, API client, environment config, shared types.
-- 13C auth/layout/role guards: login, refresh/logout, must-change-password flow, workspace shells, sidebar guards.
-- 13D dashboards: Admin, Staff, Doctor dashboard pages from role-specific endpoints.
-- 13E patients/profile: patient list, profile, role-aware actions, clinical history read models.
-- 13F appointments/reschedule: calendar views, Needs Reschedule tab, availability slot picker, Staff reschedule flow.
-- 13F.1 shifts/availability: completed Admin clinic defaults, Doctor/Staff schedules, versioned leave, apply/copy modes, and Doctor appointment-impact confirmation.
-- 13G visits/clinical notes: complete Doctor active visit workflow, own-note editing, explicit completion, and read-only history routes using existing backend APIs.
-- 13H X-rays/AI: complete saved-X-ray, authenticated Blob media, returned disclaimer/overlay, and Admin/Doctor external-workspace integration.
-- 13I billing: complete handoffs, invoice conversion/create/read/update/cancel, payments, and print-data integration.
-- Next phase: 13K.
-- 13K QA/regression/polish: role matrix tests, API error mapping, calendar edge cases, protected media rendering, accessibility, responsive QA.
+- 13B — frontend foundation: Vite/React/TypeScript app structure, API client, environment config, and shared types.
+- 13B.1 — design-system and responsive contract.
+- 13C — authentication, layout, and role guards: login, refresh/logout, required password change, and workspace shells.
+- 13D — role dashboards from role-specific endpoints.
+- 13D.1 — local QA account seeding.
+- 13E — patient list and profile integration.
+- 13E.1 — final patient schema and version contract.
+- 13F — appointments and rescheduling, including Needs Reschedule and availability flows.
+- 13F.1 — shifts and availability administration: clinic defaults, Doctor/Staff schedules, versioned leave, and appointment-impact confirmation.
+- 13G — visits and clinical notes: active visit workflow, own-note editing, explicit completion, and read-only history.
+- 13H — X-rays, protected media, AI, and external workspace.
+- 13I — billing handoffs, invoices, payments, and print data.
+- 13J — Admin users, clinic settings, and audit logs.
+- 13K — final regression, accessibility, route cleanup, documentation consistency, and release readiness. Backend runtime and migrations remained unchanged.
 
 ## Historical Phase 13A Completion Criterion
 
-Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 13J.
+Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 13K.

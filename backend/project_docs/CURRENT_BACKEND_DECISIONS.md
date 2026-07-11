@@ -154,7 +154,7 @@ After any payment exists:
 - Exclude `.env`, `.venv`, `media`, `test_media`, `__pycache__`, and `.pytest_cache` before GitHub upload or handoff packaging.
 - Do not commit real secrets.
 
-## Future Phase Order
+## Completed Phase Order And Next Step
 
 - Phase 13F.1 is complete. The accepted shift and availability rules are implemented through `ClinicDefaultShift`, `WorkingShift`, versioned leave operations, and explicit Doctor appointment-impact confirmation.
 - Phase 13G is complete: it integrates the existing active-visit, clinical-note, completion, and read-only visit-history contract in the frontend without a backend behavior change.
@@ -162,4 +162,4 @@ After any payment exists:
 - Phase 13I is complete: billing UI uses the existing role and invoice-lock contract, preserves backend financial authority, and adds no backend runtime changes.
 - Phase 13I verification recorded 405 backend tests and 49 frontend tests passing; migrations were unchanged and browser QA remains pending.
 - Phase 13J is complete: Admin uses existing user APIs for account creation, updates, temporary-password reset, and eligible deactivation. Self-deactivation and last-active-Admin protection remain backend-enforced. Full clinic settings are Admin-only; Staff and Doctor receive safe settings only. Audit logs are Admin-only and read-only. There is no public signup, email forgot-password, user hard delete, or permission matrix.
-- The next phase is 13K.
+- Phase 13K is complete: final automated regression, route/navigation cleanup, accessibility polish, and documentation consistency validation required no backend runtime or migration changes. The Phase 13 series is complete; the next step is deployment and live user acceptance testing.
