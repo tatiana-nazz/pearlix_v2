@@ -595,6 +595,7 @@ Hidden actions:
 - Phase 13G is complete and implements Doctor active visit/detail routes, own clinical-note editing, explicit completion confirmation, and role-scoped read-only visit history with existing APIs.
 - Phase 13H is complete: saved X-ray detail/upload, authenticated Blob requests with temporary object URLs, AI result/overlay presentation, and external workspace use the existing backend contract. Staff has no external workspace; only the owning Doctor may attach a temporary case. Browser QA remains pending.
 - Phase 13I is complete: role-aware billing handoffs, invoices, payments, and print data use existing backend APIs and backend-controlled financial values.
+- Phase 13I verification: backend runtime and migrations unchanged; 405 backend tests and 49 frontend tests passed; browser QA remains pending.
 - The next phase is 13J, followed by 13K.
 
 ### Needs Reschedule Tab
@@ -823,7 +824,7 @@ Availability and conflict handling:
 - Other-doctor notes should be displayed read-only in patient history.
 - Phase 13G routes: Doctor `/doctor/visits/active` and `/doctor/visits/:visitId`; Admin and Staff `/[role]/visits/:visitId` read-only.
 - When clinical notes are dirty, the frontend saves the accepted five-field payload before requesting completion; a completion failure retains successfully saved notes.
-- Billing handoff CTA remains deferred to Phase 13I.
+- Phase 13I now lets the owning Doctor create a billing handoff from a completed visit and review own handoff status.
 
 ## J. X-ray and AI Integration Plan
 
@@ -856,7 +857,7 @@ Availability and conflict handling:
   - Always display `disclaimer` and/or `disclaimer_ar` from the AI result near AI findings.
   - Do not label AI output as a diagnosis.
 
-## K. Billing Integration Plan
+## K. Billing Integration - Phase 13I Complete
 
 - Doctor handoff:
   - Available only for own completed visits.
@@ -883,6 +884,14 @@ Availability and conflict handling:
   - Doctor cannot access invoices/payments/global billing.
   - Admin can read billing and invoices/payments but cannot mutate operational billing records.
   - MVP has no online payment, tax, itemization, discount, or insurance workflow.
+
+Phase 13I frontend implementation:
+
+- Doctors create handoffs from own completed visits and read only own handoffs; they have no invoice or payment access.
+- Staff converts or dismisses pending handoffs, creates direct invoices, edits eligible invoices, cancels eligible invoices, records payments, and uses print data.
+- Admin has read-only handoff, invoice, payment, and print-data access.
+- Invoice numbers, totals, balances, and statuses are backend-generated or backend-controlled. The frontend uses no delete action or direct status PATCH.
+- Browser QA remains pending; backend runtime and migrations remain unchanged.
 
 ## L. Error-Handling Plan
 
@@ -972,4 +981,4 @@ No critical backend blocker was found for frontend integration planning.
 
 ## Historical Phase 13A Completion Criterion
 
-Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 13H.
+Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 13I.

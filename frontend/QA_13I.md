@@ -2,7 +2,7 @@
 
 ## Scope
 
-Phase 13I integrates existing billing handoff, invoice, payment, and print-data APIs. Backend runtime code and migrations are unchanged.
+Phase 13I is complete: it integrates existing billing handoff, invoice, payment, and print-data APIs. Backend runtime code and migrations are unchanged; browser QA remains pending.
 
 ## Role Contract
 

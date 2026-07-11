@@ -62,7 +62,7 @@ npm run build
 ## Browser QA
 
 Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Local QA accounts were successfully seeded; browser QA execution is still pending.
-Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, and `frontend/QA_13H.md` for X-rays and AI.
+Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, `frontend/QA_13H.md` for X-rays and AI, and `frontend/QA_13I.md` for billing handoffs, invoices, payments, and print-data QA.
 
 ## Local QA Accounts
 
@@ -108,7 +108,7 @@ Role behavior:
 - Optional profile fields include `date_of_birth`, `phone_number`, `email`, `national_id_or_passport`, `address`, `emergency_contact`, `blood_group`, `medical_conditions_history`, `insurance_info`, and `general_notes`.
 - Updates, archive, and unarchive send the current `version` for optimistic locking. `VERSION_CONFLICT` keeps local edits visible and offers a reload path.
 - Direct `is_archived` edits are not sent by frontend code; archive state uses backend action endpoints.
-- Patient profiles include Overview, Medical Summary, Visits, Appointments, X-rays & AI, and role-aware Billing/Handoff placeholder content.
+- Patient profiles include Overview, Medical Summary, Visits, Appointments, X-rays & AI, and role-aware Billing/Handoff content. Admin and Staff profiles expose real billing links and invoice data; Doctor profiles do not expose invoices or payments.
 
 Frontend tests use Vitest, jsdom, and Testing Library:
 
@@ -144,7 +144,7 @@ Phase 13G adds real visit and clinical note routes:
 - A Doctor starts a checked-in appointment from the existing appointment action, then enters the visit workspace.
 - The owning Doctor can save `symptoms`, `diagnosis`, `treatment`, `clinical_notes`, and `follow_up_notes` while active or after completion when the backend permits it.
 - Completing an active visit uses an explicit confirmation. When notes are dirty, the frontend saves notes first and completes only after that save succeeds.
-- Phase 13G originally deferred X-ray/AI integration. Phase 13H now provides saved X-rays, authenticated protected media, AI results and overlays, and external X-ray workflows. Billing handoff UI remains deferred to Phase 13I.
+- Phase 13G originally deferred X-ray/AI integration. Phase 13H now provides saved X-rays, authenticated protected media, AI results and overlays, and external X-ray workflows. Phase 13I now provides Doctor completed-visit handoff creation and role-aware handoff integration.
 
 ## Included Through Phase 13I
 
@@ -197,4 +197,5 @@ Future frontend phases must follow these files for the professional dental clini
 - Phase 13F.1 implements the accepted shift-aware scheduling contract.
 - Phase 13G completes active visits and clinical notes.
 - Phase 13H completes X-rays, protected media, AI results, and external X-ray workflows.
-- Accepted next sequence: Phase 13I, 13J, and 13K.
+- Phase 13I completes billing handoffs, invoices, payments, and print data.
+- Accepted next sequence: Phase 13J, then 13K.
