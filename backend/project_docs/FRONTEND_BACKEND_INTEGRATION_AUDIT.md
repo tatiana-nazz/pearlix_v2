@@ -1,9 +1,9 @@
 # Frontend/Backend Integration Audit
 
-Phase: Originally created for 13A; maintained through completed Phase 13I
+Phase: Originally created for 13A; capability audit through completed Phase 13J. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 13I frontend billing/invoice/payment/print integration complete; existing backend APIs unchanged
+Backend status: Phase 13J frontend Admin management/audit integration complete; existing backend APIs unchanged
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -267,7 +267,13 @@ Recommended React route structure:
 /admin/appointments/list
 /admin/appointments/needs-reschedule
 /admin/visits/:visitId
-/admin/xrays
+  /admin/users
+  /admin/users/new
+  /admin/users/:userId
+  /admin/clinic-settings
+  /admin/audit-logs
+  /admin/audit-logs/:auditLogId
+  /admin/xrays
 /admin/xrays/:xrayId
 /admin/external-xrays
 /admin/external-xrays/:caseId
@@ -596,7 +602,8 @@ Hidden actions:
 - Phase 13H is complete: saved X-ray detail/upload, authenticated Blob requests with temporary object URLs, AI result/overlay presentation, and external workspace use the existing backend contract. Staff has no external workspace; only the owning Doctor may attach a temporary case. Browser QA remains pending.
 - Phase 13I is complete: role-aware billing handoffs, invoices, payments, and print data use existing backend APIs and backend-controlled financial values.
 - Phase 13I verification: backend runtime and migrations unchanged; 405 backend tests and 49 frontend tests passed; browser QA remains pending.
-- The next phase is 13J, followed by 13K.
+- Phase 13J is complete: Admin routes implement user create/update/reset/deactivation, full clinic settings, and read-only audit logs. Reactivation is not exposed because no dedicated backend operation exists; DoctorProfile/StaffProfile CRUD is not implemented.
+- The next phase is 13K.
 
 ### Needs Reschedule Tab
 
@@ -976,9 +983,9 @@ No critical backend blocker was found for frontend integration planning.
 - 13G visits/clinical notes: complete Doctor active visit workflow, own-note editing, explicit completion, and read-only history routes using existing backend APIs.
 - 13H X-rays/AI: complete saved-X-ray, authenticated Blob media, returned disclaimer/overlay, and Admin/Doctor external-workspace integration.
 - 13I billing: complete handoffs, invoice conversion/create/read/update/cancel, payments, and print-data integration.
-- Next phase: 13J. Later Admin phases retain users, password reset, clinic settings, and audit work.
+- Next phase: 13K.
 - 13K QA/regression/polish: role matrix tests, API error mapping, calendar edge cases, protected media rendering, accessibility, responsive QA.
 
 ## Historical Phase 13A Completion Criterion
 
-Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 13I.
+Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 13J.

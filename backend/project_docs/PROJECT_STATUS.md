@@ -1,5 +1,7 @@
 # Project Status
 
+This is the canonical current-phase tracker. Other project documents summarize capabilities and defer current/next phase status here.
+
 Project: Dental Clinic Management System Website
 
 - Current completed phase: 13J

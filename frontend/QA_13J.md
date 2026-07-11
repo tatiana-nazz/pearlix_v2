@@ -2,7 +2,7 @@
 
 ## Scope
 
-Admin user management, full clinic settings, and read-only audit logs use existing backend APIs. Backend runtime code and migrations are unchanged.
+Phase 13J is complete: Admin user management, full clinic settings, and read-only audit logs use existing backend APIs. Backend runtime code and migrations are unchanged. Phase 13K has not started.
 
 ## Browser QA - Pending Execution
 

@@ -161,4 +161,5 @@ After any payment exists:
 - Phase 13H is complete: the frontend uses authenticated Blob/object-URL media presentation, preserves returned AI disclaimers, and implements the existing Admin/Doctor external-X-ray contract without backend runtime changes. Browser QA remains pending.
 - Phase 13I is complete: billing UI uses the existing role and invoice-lock contract, preserves backend financial authority, and adds no backend runtime changes.
 - Phase 13I verification recorded 405 backend tests and 49 frontend tests passing; migrations were unchanged and browser QA remains pending.
-- The next phase is 13J, followed by 13K.
+- Phase 13J is complete: Admin uses existing user APIs for account creation, updates, temporary-password reset, and eligible deactivation. Self-deactivation and last-active-Admin protection remain backend-enforced. Full clinic settings are Admin-only; Staff and Doctor receive safe settings only. Audit logs are Admin-only and read-only. There is no public signup, email forgot-password, user hard delete, or permission matrix.
+- The next phase is 13K.
