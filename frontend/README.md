@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phases through 13G make the React + Vite + TypeScript frontend operational for auth, role guards, workspace shell behavior, role dashboards, patient and appointment workflows, Admin-controlled Doctor/Staff schedules and leave, and active-visit clinical documentation backed by real APIs.
+Phases through 13H make the React + Vite + TypeScript frontend operational for auth, role guards, workspace shell behavior, role dashboards, patient and appointment workflows, schedules and leave, active-visit clinical documentation, protected X-rays, AI results, and external X-ray workflows backed by real APIs.
 
 ## Install
 
@@ -62,7 +62,7 @@ npm run build
 ## Browser QA
 
 Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Local QA accounts were successfully seeded; browser QA execution is still pending.
-Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, and `frontend/QA_13G.md` for active visits and clinical notes.
+Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, and `frontend/QA_13H.md` for X-rays and AI.
 
 ## Local QA Accounts
 
@@ -88,7 +88,7 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 - Staff dashboard uses `GET /dashboard/staff/`.
 - Doctor dashboard uses `GET /dashboard/doctor/`.
 - Dashboards render real backend data only; no permanent demo dashboard data is hardcoded.
-- Patient workflows are implemented through Phase 13E.1; appointment and rescheduling workflows through Phase 13F; shift and availability workflows through Phase 13F.1; and active visits and clinical notes through Phase 13G. X-ray/AI, billing, audit, and remaining Admin management workflows are pending, with Phase 13H next.
+- Patient workflows are implemented through Phase 13E.1; appointment and rescheduling workflows through Phase 13F; shift and availability workflows through Phase 13F.1; active visits and clinical notes through Phase 13G; and protected X-ray/AI workflows through Phase 13H. Billing, audit, and remaining Admin management workflows are pending, with Phase 13I next.
 - Browser QA is still pending execution with the seeded local QA accounts to verify live role data, 401 refresh behavior, and backend 403 handling.
 
 ## Patient Management
@@ -146,7 +146,7 @@ Phase 13G adds real visit and clinical note routes:
 - Completing an active visit uses an explicit confirmation. When notes are dirty, the frontend saves notes first and completes only after that save succeeds.
 - X-ray/AI and billing handoff controls are intentionally deferred to later phases.
 
-## Included Through Phase 13G
+## Included Through Phase 13H
 
 - Vite, React, TypeScript app structure.
 - TanStack Query provider.
@@ -168,6 +168,8 @@ Phase 13G adds real visit and clinical note routes:
 - Phase 13F.1 QA contract: `frontend/QA_13F1.md`.
 - Active visit details, own Doctor clinical note editing, confirmation-based completion, and role-scoped read-only visit history.
 - Phase 13G QA contract: `frontend/QA_13G.md`.
+- Saved X-ray list/detail routes, Doctor patient/own-visit upload, authenticated Blob media rendering, AI result/overlay presentation, and the Admin/Doctor external X-ray workspace.
+- Phase 13H QA contract: `frontend/QA_13H.md`.
 
 ## Design Contract
 
@@ -183,7 +185,7 @@ Future frontend phases must follow these files for the professional dental clini
 
 ## Intentionally Not Implemented Yet
 
-- Billing, X-ray, AI, audit, and admin management workflows.
+- Billing, audit, and remaining admin management workflows.
 - Protected media rendering screens.
 - X-ray upload, AI run, overlays, and external X-ray workspace flows.
 - Full billing, invoice, payment, itemization, tax, discount, insurance, and online payment workflows.
@@ -192,4 +194,5 @@ Future frontend phases must follow these files for the professional dental clini
 
 - Phase 13F.1 implements the accepted shift-aware scheduling contract.
 - Phase 13G completes active visits and clinical notes.
-- Accepted next sequence: Phase 13H, 13I, 13J, and 13K.
+- Phase 13H completes X-rays, protected media, AI results, and external X-ray workflows.
+- Accepted next sequence: Phase 13I, 13J, and 13K.
