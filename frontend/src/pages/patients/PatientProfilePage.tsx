@@ -170,6 +170,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
       {activeTab === "xrays" ? (
         <PatientXraySummary
           role={role}
+          patientId={patientId}
           xrays={xrays.data}
           aiResults={aiResults.data}
           isLoading={xrays.isLoading || aiResults.isLoading}

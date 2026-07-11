@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Card } from "../../../components/Card";
@@ -12,9 +13,13 @@ import type { UserRole } from "../../../types/auth";
 import type { XrayAttachment } from "../../../types/xrays";
 import { formatDateTime } from "../../../utils/dates";
 import { displayText } from "../../../utils/formatters";
+import { XrayUploadDialog } from "../../xrays/components/XrayUploadDialog";
+import { usePatientXrayUpload } from "../../xrays/hooks/useXrays";
+import { canUploadPatientXray } from "../../xrays/utils/xrayPermissions";
 
 interface PatientXraySummaryProps {
   role: UserRole;
+  patientId: number;
   xrays?: Page<XrayAttachment>;
   aiResults?: Page<AIResult>;
   isLoading: boolean;
@@ -22,7 +27,9 @@ interface PatientXraySummaryProps {
   onRetry: () => void;
 }
 
-export function PatientXraySummary({ role, xrays, aiResults, isLoading, error, onRetry }: PatientXraySummaryProps) {
+export function PatientXraySummary({ role, patientId, xrays, aiResults, isLoading, error, onRetry }: PatientXraySummaryProps) {
+  const upload = usePatientXrayUpload(patientId);
+  const [uploadOpen, setUploadOpen] = useState(false);
   if (isLoading) return <LoadingState title="Loading X-rays and AI results..." />;
   if (error) return <ErrorState error={error} onRetry={onRetry} title="Unable to load X-rays" />;
   const xrayRows = xrays?.results ?? [];
@@ -30,7 +37,8 @@ export function PatientXraySummary({ role, xrays, aiResults, isLoading, error, o
 
   return (
     <Card>
-      <SectionHeader title="X-rays & AI" description="Saved X-ray and AI result summary. Media viewing, upload, AI run, and overlays remain in Phase 13H." />
+      <SectionHeader title="X-rays & AI" description="Saved X-rays and existing AI results. Protected media is available only from authenticated detail screens." />
+      {canUploadPatientXray(role) ? <div className="schedule-actions"><button className="button secondary" type="button" onClick={() => { upload.reset(); setUploadOpen(true); }}>Upload patient X-ray</button></div> : null}
       {xrayRows.length ? (
         <ul className="summary-list-flat">
           {xrayRows.map((xray) => (
@@ -43,7 +51,7 @@ export function PatientXraySummary({ role, xrays, aiResults, isLoading, error, o
                 <span>{xray.has_ai_result ? "AI result available" : "No AI result saved"}</span>
               </div>
               <Link className="button secondary compact-button" to={`/${role.toLowerCase()}/xrays/${xray.id}`}>
-                Future Detail
+                Open X-ray
               </Link>
             </li>
           ))}
@@ -70,6 +78,7 @@ export function PatientXraySummary({ role, xrays, aiResults, isLoading, error, o
           <EmptyState title="No AI results have been saved for this patient." />
         )}
       </div>
+      {uploadOpen ? <XrayUploadDialog title="Upload patient X-ray" isSubmitting={upload.isPending} error={upload.error} onCancel={() => setUploadOpen(false)} onSubmit={(payload) => void upload.mutateAsync(payload).then(() => setUploadOpen(false))} /> : null}
     </Card>
   );
 }

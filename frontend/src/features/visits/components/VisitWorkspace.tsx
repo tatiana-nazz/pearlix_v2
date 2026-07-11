@@ -13,6 +13,7 @@ import { areClinicalNotesEqual, clinicalNotesValues, type ClinicalNotesValues } 
 import { getVisitPermissions } from "../utils/visitPermissions";
 import { ClinicalNotesForm } from "./ClinicalNotesForm";
 import { CompleteVisitDialog } from "./CompleteVisitDialog";
+import { VisitXraySection } from "../../xrays/components/VisitXraySection";
 
 interface VisitWorkspaceProps {
   role: UserRole;
@@ -118,6 +119,8 @@ export function VisitWorkspace({ role, visit }: VisitWorkspaceProps) {
           />
         ) : <ReadOnlyNotes values={values} />}
       </Card>
+
+      <VisitXraySection role={role} visit={visit} />
 
       <div className="visit-workspace-actions">
         <Link className="button secondary" to={`/${role.toLowerCase()}/patients/${visit.patient.id}`}>

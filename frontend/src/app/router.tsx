@@ -25,6 +25,9 @@ import { OwnSchedulePage } from "../pages/profile/OwnSchedulePage";
 import { OwnLeavePage } from "../pages/profile/OwnLeavePage";
 import { DoctorActiveVisitPage } from "../pages/visits/DoctorActiveVisitPage";
 import { VisitDetailPage } from "../pages/visits/VisitDetailPage";
+import { ExternalXrayDetailPage, ExternalXrayListPage } from "../pages/xrays/ExternalXrayPages";
+import { XrayDetailPage } from "../pages/xrays/XrayDetailPage";
+import { XrayListPage } from "../pages/xrays/XrayListPage";
 import type { UserRole } from "../types/auth";
 import { dashboardPathForRole } from "../utils/roles";
 
@@ -52,8 +55,6 @@ const staffRoutes: PlaceholderRoute[] = [
 ];
 
 const doctorRoutes: PlaceholderRoute[] = [
-  { path: "xrays", title: "X-rays & AI", role: "DOCTOR", plannedPhase: "Phase 13H" },
-  { path: "external-xrays", title: "External X-ray Workspace", role: "DOCTOR", plannedPhase: "Phase 13H" },
   { path: "billing/handoffs", title: "My Billing Handoffs", role: "DOCTOR", plannedPhase: "Phase 13I" },
   { path: "profile", title: "Profile", role: "DOCTOR", plannedPhase: "Phase 13C" },
 ];
@@ -123,6 +124,10 @@ export const router = createBrowserRouter([
               { path: "patients", element: <PatientsPage role="ADMIN" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="ADMIN" /> },
               { path: "visits/:visitId", element: <VisitDetailPage role="ADMIN" /> },
+              { path: "xrays", element: <XrayListPage role="ADMIN" /> },
+              { path: "xrays/:xrayId", element: <XrayDetailPage role="ADMIN" /> },
+              { path: "external-xrays", element: <ExternalXrayListPage role="ADMIN" /> },
+              { path: "external-xrays/:caseId", element: <ExternalXrayDetailPage role="ADMIN" /> },
               ...placeholderChildren(adminRoutes),
             ],
           },
@@ -149,6 +154,8 @@ export const router = createBrowserRouter([
               { path: "patients/new", element: <NewPatientPage role="STAFF" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="STAFF" /> },
               { path: "visits/:visitId", element: <VisitDetailPage role="STAFF" /> },
+              { path: "xrays", element: <XrayListPage role="STAFF" /> },
+              { path: "xrays/:xrayId", element: <XrayDetailPage role="STAFF" /> },
               ...placeholderChildren(staffRoutes),
             ],
           },
@@ -174,6 +181,10 @@ export const router = createBrowserRouter([
               { path: "patients/:patientId/clinical-history", element: <PatientProfilePage role="DOCTOR" defaultTab="visits" /> },
               { path: "visits/active", element: <DoctorActiveVisitPage /> },
               { path: "visits/:visitId", element: <VisitDetailPage role="DOCTOR" /> },
+              { path: "xrays", element: <XrayListPage role="DOCTOR" /> },
+              { path: "xrays/:xrayId", element: <XrayDetailPage role="DOCTOR" /> },
+              { path: "external-xrays", element: <ExternalXrayListPage role="DOCTOR" /> },
+              { path: "external-xrays/:caseId", element: <ExternalXrayDetailPage role="DOCTOR" /> },
               ...placeholderChildren(doctorRoutes),
             ],
           },
