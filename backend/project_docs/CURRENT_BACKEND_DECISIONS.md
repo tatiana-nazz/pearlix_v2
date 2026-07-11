@@ -159,4 +159,6 @@ After any payment exists:
 - Phase 13F.1 is complete. The accepted shift and availability rules are implemented through `ClinicDefaultShift`, `WorkingShift`, versioned leave operations, and explicit Doctor appointment-impact confirmation.
 - Phase 13G is complete: it integrates the existing active-visit, clinical-note, completion, and read-only visit-history contract in the frontend without a backend behavior change.
 - Phase 13H is complete: the frontend uses authenticated Blob/object-URL media presentation, preserves returned AI disclaimers, and implements the existing Admin/Doctor external-X-ray contract without backend runtime changes. Browser QA remains pending.
-- The next phase is 13I, followed by 13J and 13K.
+- Phase 13I is complete: billing UI uses the existing role and invoice-lock contract, preserves backend financial authority, and adds no backend runtime changes.
+- Phase 13I verification recorded 405 backend tests and 49 frontend tests passing; migrations were unchanged and browser QA remains pending.
+- The next phase is 13J, followed by 13K.

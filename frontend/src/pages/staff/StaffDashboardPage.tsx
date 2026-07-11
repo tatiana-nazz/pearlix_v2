@@ -121,9 +121,7 @@ export function StaffDashboardPage() {
         title="Front desk operations"
         description="Queue-focused work from the backend staff dashboard endpoint."
         actions={
-          <Link className="button secondary" to="/staff/appointments/needs-reschedule">
-            Needs Reschedule
-          </Link>
+          <div className="page-header-actions"><Link className="button secondary" to="/staff/appointments/needs-reschedule">Needs Reschedule</Link><Link className="button secondary" to="/staff/billing/handoffs">Billing handoffs</Link></div>
         }
       />
 

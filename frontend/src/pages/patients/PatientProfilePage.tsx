@@ -181,7 +181,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
           }}
         />
       ) : null}
-      {activeTab === "billing" && permissions.canViewBillingTab ? <PatientBillingSummary role={role} /> : null}
+      {activeTab === "billing" && permissions.canViewBillingTab ? <PatientBillingSummary role={role} patientId={patientId} /> : null}
       {activeTab === "billing" && !permissions.canViewBillingTab ? (
         <Card>
           <EmptyState title="Billing and invoices are not available in the Doctor workspace." />

@@ -6,9 +6,10 @@ import type { UserRole } from "../../../types/auth";
 
 interface PatientBillingSummaryProps {
   role: UserRole;
+  patientId?: number;
 }
 
-export function PatientBillingSummary({ role }: PatientBillingSummaryProps) {
+export function PatientBillingSummary({ role, patientId }: PatientBillingSummaryProps) {
   if (role === "DOCTOR") {
     return (
       <Card>
@@ -22,10 +23,9 @@ export function PatientBillingSummary({ role }: PatientBillingSummaryProps) {
 
   return (
     <Card>
-      <SectionHeader title="Billing/Handoff" description="Patient-specific billing details are planned for Phase 13I." />
-      <p className="panel-note">This profile tab is read-only in Phase 13E and does not invent invoice data.</p>
-      <Link className="button secondary inline-action" to={role === "STAFF" ? "/staff/billing/handoffs" : "/admin/billing"}>
-        Billing workspace
+      <SectionHeader title="Billing/Handoff" description="Open the real billing workspace to review this patient's invoices and handoffs." />
+      <Link className="button secondary inline-action" to={`/${role.toLowerCase()}/billing/invoices${patientId ? `?patient_id=${patientId}` : ""}`}>
+        Patient invoices
       </Link>
     </Card>
   );

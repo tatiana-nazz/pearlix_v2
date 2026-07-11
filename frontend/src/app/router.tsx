@@ -28,6 +28,7 @@ import { VisitDetailPage } from "../pages/visits/VisitDetailPage";
 import { ExternalXrayDetailPage, ExternalXrayListPage } from "../pages/xrays/ExternalXrayPages";
 import { XrayDetailPage } from "../pages/xrays/XrayDetailPage";
 import { XrayListPage } from "../pages/xrays/XrayListPage";
+import { BillingHandoffDetailPage, BillingHandoffListPage, InvoiceDetailPage, InvoiceListPage, InvoicePrintPage, NewInvoicePage } from "../pages/billing/BillingPages";
 import type { UserRole } from "../types/auth";
 import { dashboardPathForRole } from "../utils/roles";
 
@@ -42,20 +43,15 @@ const adminRoutes: PlaceholderRoute[] = [
   { path: "users", title: "Users", role: "ADMIN", plannedPhase: "Phase 13J" },
   { path: "clinic-settings", title: "Clinic Settings", role: "ADMIN", plannedPhase: "Phase 13J" },
   { path: "doctors", title: "Doctors & Staff", role: "ADMIN", plannedPhase: "Phase 13F.1" },
-  { path: "billing", title: "Billing", role: "ADMIN", plannedPhase: "Phase 13I" },
   { path: "audit-logs", title: "Audit Logs", role: "ADMIN", plannedPhase: "Phase 13J" },
   { path: "profile", title: "Profile", role: "ADMIN", plannedPhase: "Phase 13C" },
 ];
 
 const staffRoutes: PlaceholderRoute[] = [
-  { path: "billing/handoffs", title: "Billing Handoffs", role: "STAFF", plannedPhase: "Phase 13I" },
-  { path: "billing/invoices", title: "Invoices", role: "STAFF", plannedPhase: "Phase 13I" },
-  { path: "billing/payments", title: "Payments", role: "STAFF", plannedPhase: "Phase 13I" },
   { path: "profile", title: "Profile", role: "STAFF", plannedPhase: "Phase 13C" },
 ];
 
 const doctorRoutes: PlaceholderRoute[] = [
-  { path: "billing/handoffs", title: "My Billing Handoffs", role: "DOCTOR", plannedPhase: "Phase 13I" },
   { path: "profile", title: "Profile", role: "DOCTOR", plannedPhase: "Phase 13C" },
 ];
 
@@ -128,6 +124,12 @@ export const router = createBrowserRouter([
               { path: "xrays/:xrayId", element: <XrayDetailPage role="ADMIN" /> },
               { path: "external-xrays", element: <ExternalXrayListPage role="ADMIN" /> },
               { path: "external-xrays/:caseId", element: <ExternalXrayDetailPage role="ADMIN" /> },
+              { path: "billing", element: <Navigate to="/admin/billing/handoffs" replace /> },
+              { path: "billing/handoffs", element: <BillingHandoffListPage role="ADMIN" /> },
+              { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="ADMIN" /> },
+              { path: "billing/invoices", element: <InvoiceListPage role="ADMIN" /> },
+              { path: "billing/invoices/:invoiceId", element: <InvoiceDetailPage role="ADMIN" /> },
+              { path: "billing/invoices/:invoiceId/print", element: <InvoicePrintPage role="ADMIN" /> },
               ...placeholderChildren(adminRoutes),
             ],
           },
@@ -156,6 +158,13 @@ export const router = createBrowserRouter([
               { path: "visits/:visitId", element: <VisitDetailPage role="STAFF" /> },
               { path: "xrays", element: <XrayListPage role="STAFF" /> },
               { path: "xrays/:xrayId", element: <XrayDetailPage role="STAFF" /> },
+              { path: "billing/handoffs", element: <BillingHandoffListPage role="STAFF" /> },
+              { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="STAFF" /> },
+              { path: "billing/invoices", element: <InvoiceListPage role="STAFF" /> },
+              { path: "billing/invoices/new", element: <NewInvoicePage /> },
+              { path: "billing/invoices/:invoiceId", element: <InvoiceDetailPage role="STAFF" /> },
+              { path: "billing/invoices/:invoiceId/payments", element: <InvoiceDetailPage role="STAFF" /> },
+              { path: "billing/invoices/:invoiceId/print", element: <InvoicePrintPage role="STAFF" /> },
               ...placeholderChildren(staffRoutes),
             ],
           },
@@ -185,6 +194,8 @@ export const router = createBrowserRouter([
               { path: "xrays/:xrayId", element: <XrayDetailPage role="DOCTOR" /> },
               { path: "external-xrays", element: <ExternalXrayListPage role="DOCTOR" /> },
               { path: "external-xrays/:caseId", element: <ExternalXrayDetailPage role="DOCTOR" /> },
+              { path: "billing/handoffs", element: <BillingHandoffListPage role="DOCTOR" /> },
+              { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="DOCTOR" /> },
               ...placeholderChildren(doctorRoutes),
             ],
           },
