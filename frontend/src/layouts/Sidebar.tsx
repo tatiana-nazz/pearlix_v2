@@ -9,11 +9,10 @@ type NavItem = {
   compactLabel: string;
 };
 
-const navItems: Record<UserRole, NavItem[]> = {
+export const navigationByRole: Record<UserRole, NavItem[]> = {
   ADMIN: [
     { label: "Dashboard", path: "/admin/dashboard", compactLabel: "D" },
     { label: "Users", path: "/admin/users", compactLabel: "U" },
-    { label: "Doctors & Staff", path: "/admin/doctors", compactLabel: "DS" },
     { label: "Schedules", path: "/admin/doctors", compactLabel: "S" },
     { label: "Leave", path: "/admin/leave", compactLabel: "L" },
     { label: "Appointments", path: "/admin/appointments", compactLabel: "A" },
@@ -23,7 +22,6 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "Billing", path: "/admin/billing", compactLabel: "B" },
     { label: "Clinic Settings", path: "/admin/clinic-settings", compactLabel: "CS" },
     { label: "Audit Logs", path: "/admin/audit-logs", compactLabel: "AL" },
-    { label: "Profile", path: "/admin/profile", compactLabel: "PR" },
   ],
   STAFF: [
     { label: "Dashboard", path: "/staff/dashboard", compactLabel: "D" },
@@ -33,10 +31,8 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "X-rays & AI", path: "/staff/xrays", compactLabel: "XA" },
     { label: "Billing Handoffs", path: "/staff/billing/handoffs", compactLabel: "BH" },
     { label: "Invoices", path: "/staff/billing/invoices", compactLabel: "I" },
-    { label: "Payments", path: "/staff/billing/payments", compactLabel: "PY" },
     { label: "Schedules View", path: "/staff/profile/schedule", compactLabel: "SV" },
     { label: "My Leave", path: "/staff/profile/leave", compactLabel: "ML" },
-    { label: "Profile", path: "/staff/profile", compactLabel: "PR" },
   ],
   DOCTOR: [
     { label: "Dashboard", path: "/doctor/dashboard", compactLabel: "D" },
@@ -48,7 +44,6 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "My Billing Handoffs", path: "/doctor/billing/handoffs", compactLabel: "BH" },
     { label: "My Schedule", path: "/doctor/profile/schedule", compactLabel: "MS" },
     { label: "My Leave", path: "/doctor/profile/leave", compactLabel: "ML" },
-    { label: "Profile", path: "/doctor/profile", compactLabel: "PR" },
   ],
 };
 
@@ -58,7 +53,7 @@ interface SidebarProps {
 
 export function Sidebar({ role }: SidebarProps) {
   return (
-    <aside className="sidebar" aria-label={`${roleLabel(role)} navigation`}>
+    <aside className="sidebar">
       <div className="sidebar-brand">
         <div className="brand-mark">P</div>
         <div>
@@ -66,8 +61,8 @@ export function Sidebar({ role }: SidebarProps) {
           <span>{roleLabel(role)} workspace</span>
         </div>
       </div>
-      <nav className="sidebar-nav">
-        {navItems[role].map((item) => (
+      <nav className="sidebar-nav" aria-label={`${roleLabel(role)} navigation`}>
+        {navigationByRole[role].map((item) => (
           <NavLink
             key={item.path}
             to={item.path}

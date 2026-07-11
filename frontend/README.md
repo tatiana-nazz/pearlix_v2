@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, and billing workflows; plus Admin user management, full clinic settings, and read-only audit logs. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
+The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, billing, Admin management, clinic-settings, and audit-log workflows, with Phase 13K regression and release-readiness polish complete. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
 
 ## Install
 
@@ -61,7 +61,7 @@ npm run build
 
 ## Browser QA
 
-Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Local QA accounts were successfully seeded; browser QA execution is still pending.
+Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Use `frontend/QA_13K.md` for the final regression and browser UAT checklist. Local QA accounts were successfully seeded; browser QA execution is still pending.
 Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, `frontend/QA_13H.md` for X-rays and AI, and `frontend/QA_13I.md` for billing handoffs, invoices, payments, and print-data QA.
 
 ## Local QA Accounts
@@ -88,7 +88,7 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 - Staff dashboard uses `GET /dashboard/staff/`.
 - Doctor dashboard uses `GET /dashboard/doctor/`.
 - Dashboards render real backend data only; no permanent demo dashboard data is hardcoded.
-- Patient workflows are implemented through Phase 13E.1; appointment/rescheduling through 13F; shift/availability through 13F.1; active visits through 13G; X-ray/AI through 13H; billing through 13I; and Admin user management, clinic settings, and audit logs through 13J. See `backend/project_docs/PROJECT_STATUS.md` for canonical current/next phase status.
+- Patient workflows are implemented through Phase 13E.1; appointment/rescheduling through 13F; shift/availability through 13F.1; active visits through 13G; X-ray/AI through 13H; billing through 13I; Admin user management, clinic settings, and audit logs through 13J; and final regression/release-readiness polish through 13K. See `backend/project_docs/PROJECT_STATUS.md` for canonical current/next phase status.
 - Browser QA is still pending execution with the seeded local QA accounts to verify live role data, 401 refresh behavior, and backend 403 handling.
 
 ## Patient Management
@@ -146,13 +146,13 @@ Phase 13G adds real visit and clinical note routes:
 - Completing an active visit uses an explicit confirmation. When notes are dirty, the frontend saves notes first and completes only after that save succeeds.
 - Phase 13G originally deferred X-ray/AI integration. Phase 13H now provides saved X-rays, authenticated protected media, AI results and overlays, and external X-ray workflows. Phase 13I now provides Doctor completed-visit handoff creation and role-aware handoff integration.
 
-## Included Through Phase 13J
+## Included Through Phase 13K
 
 - Vite, React, TypeScript app structure.
 - TanStack Query provider.
 - Typed API client and endpoint wrappers.
 - Hardened auth store, route guards, login, and change-password forms.
-- Role-aware route skeletons and placeholder pages.
+- Role-aware guarded routes with reachable sidebar navigation and Not Found handling.
 - Workspace layout with sidebar, topbar, and medical SaaS styling tokens.
 - Shared TypeScript contracts based on the Phase 13A integration audit.
 - Real-data Admin, Staff, and Doctor dashboard pages.
@@ -174,6 +174,7 @@ Phase 13G adds real visit and clinical note routes:
 - Phase 13I QA contract: `frontend/QA_13I.md`.
 - Admin user creation/update/temporary-password reset/deactivation, Admin full clinic settings, and Admin-only read-only audit logs.
 - Phase 13J QA contract: `frontend/QA_13J.md`.
+- Phase 13K final QA/release-readiness contract: `frontend/QA_13K.md`.
 
 ## Design Contract
 
@@ -185,7 +186,7 @@ Phase 13B.1 adds strict design documentation under `frontend/design/`:
 - `SCREEN_BLUEPRINTS.md`
 - `INTERACTION_STATES.md`
 
-Future frontend phases must follow these files for the professional dental clinic SaaS visual direction, responsive behavior, component contracts, screen blueprints, and interaction states.
+Ongoing product work must follow these files for the professional dental clinic SaaS visual direction, responsive behavior, component contracts, screen blueprints, and interaction states.
 
 ## Intentionally Not Implemented Yet
 
@@ -196,4 +197,4 @@ Future frontend phases must follow these files for the professional dental clini
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 13J is complete and Phase 13K is next.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. The Phase 13 series is complete; deployment and live user acceptance testing are next.

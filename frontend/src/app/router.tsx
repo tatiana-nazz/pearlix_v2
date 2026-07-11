@@ -10,7 +10,6 @@ import { AccessDeniedPage } from "../pages/AccessDeniedPage";
 import { ChangePasswordPage } from "../pages/ChangePasswordPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
-import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { AdminDashboardPage } from "../pages/admin/AdminDashboardPage";
 import { ScheduleManagementPage } from "../pages/admin/ScheduleManagementPage";
 import { LeaveManagementPage } from "../pages/admin/LeaveManagementPage";
@@ -32,33 +31,6 @@ import { AdminAuditLogDetailPage, AdminAuditLogListPage, AdminClinicSettingsPage
 import { BillingHandoffDetailPage, BillingHandoffListPage, InvoiceDetailPage, InvoiceListPage, InvoicePrintPage, NewInvoicePage } from "../pages/billing/BillingPages";
 import type { UserRole } from "../types/auth";
 import { dashboardPathForRole } from "../utils/roles";
-
-type PlaceholderRoute = {
-  path: string;
-  title: string;
-  role: UserRole;
-  plannedPhase?: string;
-};
-
-const adminRoutes: PlaceholderRoute[] = [
-  { path: "doctors", title: "Doctors & Staff", role: "ADMIN", plannedPhase: "Phase 13F.1" },
-  { path: "profile", title: "Profile", role: "ADMIN", plannedPhase: "Phase 13C" },
-];
-
-const staffRoutes: PlaceholderRoute[] = [
-  { path: "profile", title: "Profile", role: "STAFF", plannedPhase: "Phase 13C" },
-];
-
-const doctorRoutes: PlaceholderRoute[] = [
-  { path: "profile", title: "Profile", role: "DOCTOR", plannedPhase: "Phase 13C" },
-];
-
-function placeholderChildren(routes: PlaceholderRoute[]) {
-  return routes.map((route) => ({
-    path: route.path,
-    element: <PlaceholderPage title={route.title} role={route.role} plannedPhase={route.plannedPhase} />,
-  }));
-}
 
 function HomeRedirect() {
   const role = useAuthStore((state) => state.role);
@@ -109,6 +81,7 @@ export const router = createBrowserRouter([
               { path: "dashboard", element: <AdminDashboardPage /> },
               { path: "doctors", element: <ScheduleManagementPage /> },
               { path: "leave", element: <LeaveManagementPage /> },
+              { path: "leave/:exceptionId", element: <LeaveManagementPage /> },
               { path: "appointments", element: <Navigate to="/admin/appointments/day" replace /> },
               { path: "appointments/day", element: <AppointmentsPage role="ADMIN" view="day" /> },
               { path: "appointments/week", element: <AppointmentsPage role="ADMIN" view="week" /> },
@@ -134,7 +107,6 @@ export const router = createBrowserRouter([
               { path: "billing/invoices", element: <InvoiceListPage role="ADMIN" /> },
               { path: "billing/invoices/:invoiceId", element: <InvoiceDetailPage role="ADMIN" /> },
               { path: "billing/invoices/:invoiceId/print", element: <InvoicePrintPage role="ADMIN" /> },
-              ...placeholderChildren(adminRoutes),
             ],
           },
           {
@@ -169,7 +141,6 @@ export const router = createBrowserRouter([
               { path: "billing/invoices/:invoiceId", element: <InvoiceDetailPage role="STAFF" /> },
               { path: "billing/invoices/:invoiceId/payments", element: <InvoiceDetailPage role="STAFF" /> },
               { path: "billing/invoices/:invoiceId/print", element: <InvoicePrintPage role="STAFF" /> },
-              ...placeholderChildren(staffRoutes),
             ],
           },
           {
@@ -200,7 +171,6 @@ export const router = createBrowserRouter([
               { path: "external-xrays/:caseId", element: <ExternalXrayDetailPage role="DOCTOR" /> },
               { path: "billing/handoffs", element: <BillingHandoffListPage role="DOCTOR" /> },
               { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="DOCTOR" /> },
-              ...placeholderChildren(doctorRoutes),
             ],
           },
         ],
