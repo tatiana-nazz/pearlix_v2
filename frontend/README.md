@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, billing, Admin management, clinic-settings, and audit-log workflows, with Phase 13K regression and release-readiness polish complete. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
+The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, billing, Admin management, clinic-settings, and audit-log workflows. Phase 14A adds a deterministic development-only integrated demo story for all implemented views. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
 
 ## Install
 
@@ -61,7 +61,7 @@ npm run build
 
 ## Browser QA
 
-Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Use `frontend/QA_13K.md` for the final regression and browser UAT checklist. Local QA accounts were successfully seeded; browser QA execution is still pending.
+Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Use `frontend/QA_13K.md` for the final regression and browser UAT checklist, and `frontend/QA_14A.md` for the integrated demo-story checklist. Browser QA execution is still pending.
 Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, `frontend/QA_13H.md` for X-rays and AI, and `frontend/QA_13I.md` for billing handoffs, invoices, payments, and print-data QA.
 
 ## Local QA Accounts
@@ -197,4 +197,4 @@ Ongoing product work must follow these files for the professional dental clinic 
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. The Phase 13 series is complete; deployment and live user acceptance testing are next.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14A is complete; Phase 14B Visual Audit and Design Freeze is next. Deployment remains paused pending the visual audit and browser QA.

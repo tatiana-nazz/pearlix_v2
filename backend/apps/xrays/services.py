@@ -91,9 +91,9 @@ def validate_xray_file(uploaded_file):
     }
 
 
-def create_xray_attachment(*, patient, visit, uploaded_by, uploaded_file, title="", notes="", source=None):
+def create_xray_attachment(*, patient, visit, uploaded_by, uploaded_file, title="", notes="", source=None, stored_file_name=None):
     metadata = validate_xray_file(uploaded_file)
-    stored_file_name = f"{uuid4().hex}{metadata['extension']}"
+    stored_file_name = stored_file_name or f"{uuid4().hex}{metadata['extension']}"
     xray = XrayAttachment(
         patient=patient,
         visit=visit,
@@ -112,9 +112,9 @@ def create_xray_attachment(*, patient, visit, uploaded_by, uploaded_file, title=
     return xray
 
 
-def create_external_xray_case(*, uploaded_by, uploaded_file, title="", notes=""):
+def create_external_xray_case(*, uploaded_by, uploaded_file, title="", notes="", stored_file_name=None):
     metadata = validate_xray_file(uploaded_file)
-    stored_file_name = f"{uuid4().hex}{metadata['extension']}"
+    stored_file_name = stored_file_name or f"{uuid4().hex}{metadata['extension']}"
     external = ExternalXrayCase(
         uploaded_by=uploaded_by,
         original_file=uploaded_file,
@@ -162,7 +162,12 @@ def discard_external_case(*, external_case, user):
 
 def _copy_external_file_to_saved_xray(*, external_case, patient, visit, uploaded_by, title, notes):
     extension = Path(external_case.stored_file_name).suffix.lower()
-    stored_file_name = f"{uuid4().hex}{extension}"
+    source_stem = Path(external_case.stored_file_name).stem
+    stored_file_name = (
+        f"{source_stem}-attached-{uuid4().hex}{extension}"
+        if source_stem.startswith("demo")
+        else f"{uuid4().hex}{extension}"
+    )
     external_case.original_file.open("rb")
     try:
         content = external_case.original_file.read()
@@ -209,7 +214,7 @@ def _copy_external_ai_result(*, external_case, xray_attachment):
 def attach_external_case_to_patient(*, external_case, patient, visit, user, title="", notes=""):
     with transaction.atomic():
         external_case = (
-            ExternalXrayCase.objects.select_for_update()
+            ExternalXrayCase.objects.select_for_update(of=("self",))
             .select_related("uploaded_by", "ai_result")
             .get(pk=external_case.pk)
         )

@@ -2,7 +2,7 @@
 
 Project: Dental Clinic Management System Website
 
-Current phase/status: 13K final regression, release-readiness QA, route/navigation cleanup, and documentation consistency validation complete; backend contract unchanged
+Current phase/status: 14A integrated development-only demo story complete; production backend contract unchanged
 
 Backend stack: Django, Django REST Framework, PostgreSQL
 
@@ -125,14 +125,20 @@ pg_dump "$DATABASE_URL" --file ../_local_backups/pearlix_before_13f1_schedules.s
 
 Scheduling migration `0005_admin_shifts_availability` is applied locally; `migrate --plan` reports no planned operations.
 
-Latest full regression:
+## Current Verification (Phase 14A)
+
+Latest full backend regression:
 
 ```text
 python -m pytest -q
-405 passed
+407 passed
 ```
 
-Phase 13K verification: 405 backend tests and 51 frontend tests passed. Backend runtime and migrations were unchanged; browser QA/UAT remains pending.
+Phase 14A focused seed tests: 2 passed.
+
+Phase 14A added only a development-only seed command and focused tests. Production backend API behavior and migrations remain unchanged. Browser QA remains pending; deployment remains paused.
+
+Historical Phase 13K verification (superseded): 405 backend tests and 51 frontend tests passed.
 
 Django check:
 
@@ -166,4 +172,4 @@ Before handoff or upload, exclude:
 
 ## Next Step
 
-Recommended next step: deployment and live user acceptance testing.
+Recommended next step: Phase 14B Visual Audit and Design Freeze. Deployment remains paused.

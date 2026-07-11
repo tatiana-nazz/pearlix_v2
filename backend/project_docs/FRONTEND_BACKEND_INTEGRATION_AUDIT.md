@@ -1,9 +1,9 @@
 # Frontend/Backend Integration Audit
 
-Phase: Originally created for 13A; capability audit through completed Phase 13K. See `PROJECT_STATUS.md` for canonical current/next phase status.
+Phase: Originally created for 13A; capability audit through completed Phase 14A. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 13K final regression and release-readiness polish complete; existing backend APIs unchanged
+Backend status: Phase 14A integrated development demo story complete; existing production APIs unchanged
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -593,16 +593,18 @@ Hidden actions:
 - Status values: `UPCOMING`, `CHECKED_IN`, `ACTIVE`, `COMPLETED`, `CANCELLED`, `NO_SHOW`, `NEEDS_RESCHEDULE`.
 - Admin/Staff can list all; Doctor list is limited to own appointments.
 
-### Current Phase Order
+### Current Capability and Status Summary
 
 - Phase 13E.1 is the accepted patient schema/frontend contract upgrade.
 - Phase 13F.1 is complete and implements shift-aware scheduling and availability administration.
 - Phase 13G is complete and implements Doctor active visit/detail routes, own clinical-note editing, explicit completion confirmation, and role-scoped read-only visit history with existing APIs.
 - Phase 13H is complete: saved X-ray detail/upload, authenticated Blob requests with temporary object URLs, AI result/overlay presentation, and external workspace use the existing backend contract. Staff has no external workspace; only the owning Doctor may attach a temporary case. Browser QA remains pending.
 - Phase 13I is complete: role-aware billing handoffs, invoices, payments, and print data use existing backend APIs and backend-controlled financial values.
-- Phase 13I verification: backend runtime and migrations unchanged; 405 backend tests and 49 frontend tests passed; browser QA remains pending.
+- Historical Phase 13I verification: backend runtime and migrations unchanged; 405 backend tests and 49 frontend tests passed; browser QA remained pending.
 - Phase 13J is complete: Admin routes implement user create/update/reset/deactivation, full clinic settings, and read-only audit logs. Reactivation is not exposed because no dedicated backend operation exists; DoctorProfile/StaffProfile CRUD is not implemented.
-- Phase 13K is complete: final regression, route/navigation cleanup, accessibility polish, and documentation consistency validation required no backend runtime or migration changes. The Phase 13 series is complete; deployment and live UAT are next.
+- Phase 13K completed the functional frontend: final regression, route/navigation cleanup, accessibility polish, and documentation consistency validation required no backend runtime or migration changes.
+- Phase 14A completed the deterministic, development-only integrated demo story across the implemented frontend views. Browser QA remains pending.
+- Next is Phase 14B Visual Audit and Design Freeze; deployment remains paused.
 
 ### Needs Reschedule Tab
 
@@ -987,7 +989,8 @@ No critical backend blocker was found for frontend integration planning.
 - 13I — billing handoffs, invoices, payments, and print data.
 - 13J — Admin users, clinic settings, and audit logs.
 - 13K — final regression, accessibility, route cleanup, documentation consistency, and release readiness. Backend runtime and migrations remained unchanged.
+- 14A — deterministic, development-only integrated demo story across the implemented frontend views. Production API behavior and migrations remain unchanged.
 
 ## Historical Phase 13A Completion Criterion
 
-Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 13K.
+Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 14A.
