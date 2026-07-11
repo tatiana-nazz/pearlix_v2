@@ -27,7 +27,7 @@ export function PatientVisitsSummary({ role, visits, isLoading, error, onRetry }
 
   return (
     <Card>
-      <SectionHeader title="Visits" description="Read-only clinical history summary. Editing clinical notes belongs to the Visits phase." />
+      <SectionHeader title="Visits" description="Clinical history for this patient. Access is read-only unless you are the doctor who owns the visit." />
       {rows.length ? (
         <ul className="summary-list-flat">
           {rows.map((visit) => (

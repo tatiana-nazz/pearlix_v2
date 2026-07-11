@@ -157,4 +157,5 @@ After any payment exists:
 ## Future Phase Order
 
 - Phase 13F.1 is complete. The accepted shift and availability rules are implemented through `ClinicDefaultShift`, `WorkingShift`, versioned leave operations, and explicit Doctor appointment-impact confirmation.
-- The next phase is 13G, followed by 13H, 13I, 13J, and 13K.
+- Phase 13G is complete: it integrates the existing active-visit, clinical-note, completion, and read-only visit-history contract in the frontend without a backend behavior change.
+- The next phase is 13H, followed by 13I, 13J, and 13K.

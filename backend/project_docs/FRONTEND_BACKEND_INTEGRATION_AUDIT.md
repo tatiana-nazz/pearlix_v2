@@ -1,9 +1,9 @@
 # Frontend/Backend Integration Audit
 
-Phase: Originally created for 13A; maintained through completed Phase 13F.1
+Phase: Originally created for 13A; maintained through completed Phase 13G
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 13F.1 shift and availability API upgrade complete
+Backend status: Phase 13G frontend active-visit and clinical-note integration complete; existing backend visit APIs unchanged
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -405,7 +405,7 @@ Allowed actions:
 
 Read-only pages:
 
-- Visits and clinical notes.
+- Visit details and clinical notes for Admin, Staff, and non-owning Doctors.
 - Saved X-rays and AI results.
 - Own leave/profile schedule.
 - Doctor working hours and availability exceptions.
@@ -592,7 +592,8 @@ Hidden actions:
 
 - Phase 13E.1 is the accepted patient schema/frontend contract upgrade.
 - Phase 13F.1 is complete and implements shift-aware scheduling and availability administration.
-- The next phase is 13G, followed by 13H, 13I, 13J, and 13K.
+- Phase 13G is complete and implements Doctor active visit/detail routes, own clinical-note editing, explicit completion confirmation, and role-scoped read-only visit history with existing APIs.
+- The next phase is 13H, followed by 13I, 13J, and 13K.
 
 ### Needs Reschedule Tab
 
@@ -809,7 +810,7 @@ Availability and conflict handling:
   - Not accessible to Doctors.
   - Cannot be archived if blocking appointment statuses exist: `UPCOMING`, `CHECKED_IN`, `ACTIVE`, `NEEDS_RESCHEDULE`.
 
-## I. Visit and Clinical Notes Integration Plan
+## I. Visit and Clinical Notes Integration (Phase 13G Complete)
 
 - Staff checks in appointment.
 - Doctor starts own checked-in appointment with `POST /api/appointments/{id}/start-visit/`.
@@ -818,7 +819,9 @@ Availability and conflict handling:
 - Doctor completes visit with `POST /api/visits/{id}/complete/`; appointment status becomes `COMPLETED`.
 - Only the owning Doctor can edit a visit's clinical notes, complete it, upload visit X-rays, or create billing handoff.
 - Other-doctor notes should be displayed read-only in patient history.
-- Billing handoff CTA appears only after own visit is `COMPLETED`.
+- Phase 13G routes: Doctor `/doctor/visits/active` and `/doctor/visits/:visitId`; Admin and Staff `/[role]/visits/:visitId` read-only.
+- When clinical notes are dirty, the frontend saves the accepted five-field payload before requesting completion; a completion failure retains successfully saved notes.
+- Billing handoff CTA remains deferred to Phase 13I.
 
 ## J. X-ray and AI Integration Plan
 
@@ -959,12 +962,12 @@ No critical backend blocker was found for frontend integration planning.
 - 13E patients/profile: patient list, profile, role-aware actions, clinical history read models.
 - 13F appointments/reschedule: calendar views, Needs Reschedule tab, availability slot picker, Staff reschedule flow.
 - 13F.1 shifts/availability: completed Admin clinic defaults, Doctor/Staff schedules, versioned leave, apply/copy modes, and Doctor appointment-impact confirmation.
-- 13G visits/clinical notes: Doctor active visit workflow, own-note editing, completion, read-only history.
+- 13G visits/clinical notes: complete Doctor active visit workflow, own-note editing, explicit completion, and read-only history routes using existing backend APIs.
 - 13H X-rays/AI: saved X-rays, protected media blob handling, AI results, external workspace.
 - 13I billing: handoffs, invoice conversion, invoice CRUD, payments, print-data view.
-- Next phase: 13G. Later Admin phases retain users, password reset, clinic settings, and audit work.
+- Next phase: 13H. Later Admin phases retain users, password reset, clinic settings, and audit work.
 - 13K QA/regression/polish: role matrix tests, API error mapping, calendar edge cases, protected media rendering, accessibility, responsive QA.
 
 ## Historical Phase 13A Completion Criterion
 
-Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 13F.1.
+Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 13G.
