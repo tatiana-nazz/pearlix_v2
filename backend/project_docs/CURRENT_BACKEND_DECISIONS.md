@@ -133,7 +133,7 @@ After any payment exists:
 - A prior appointment or visit relationship is not required for patient-profile attachment.
 - Visit linking is stricter: the visit must belong to the selected patient and to the requesting Doctor.
 - Staff external X-ray workspace access remains denied.
-- Admin external workspace behavior is unchanged.
+- Admin can manage readable temporary external cases but cannot attach them to patients; attach-to-patient is limited to the owning Doctor.
 
 ## Invoice Numbers
 
@@ -158,5 +158,5 @@ After any payment exists:
 
 - Phase 13F.1 is complete. The accepted shift and availability rules are implemented through `ClinicDefaultShift`, `WorkingShift`, versioned leave operations, and explicit Doctor appointment-impact confirmation.
 - Phase 13G is complete: it integrates the existing active-visit, clinical-note, completion, and read-only visit-history contract in the frontend without a backend behavior change.
-- Phase 13H is complete: the frontend uses authenticated Blob/object-URL media presentation, preserves returned AI disclaimers, and implements the existing Admin/Doctor external-X-ray contract without backend runtime changes.
+- Phase 13H is complete: the frontend uses authenticated Blob/object-URL media presentation, preserves returned AI disclaimers, and implements the existing Admin/Doctor external-X-ray contract without backend runtime changes. Browser QA remains pending.
 - The next phase is 13I, followed by 13J and 13K.

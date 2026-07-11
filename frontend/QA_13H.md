@@ -2,7 +2,7 @@
 
 ## Scope
 
-Phase 13H integrates saved X-rays, AI results, protected media, and the external X-ray workspace with existing backend APIs. Backend runtime code and migrations are unchanged.
+Phase 13H is complete: it integrates saved X-rays, AI results, protected media, and the external X-ray workspace with existing backend APIs. Backend runtime code and migrations are unchanged; browser QA remains pending.
 
 ## Routes And Roles
 

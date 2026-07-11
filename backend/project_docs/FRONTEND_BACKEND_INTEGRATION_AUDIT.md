@@ -593,7 +593,7 @@ Hidden actions:
 - Phase 13E.1 is the accepted patient schema/frontend contract upgrade.
 - Phase 13F.1 is complete and implements shift-aware scheduling and availability administration.
 - Phase 13G is complete and implements Doctor active visit/detail routes, own clinical-note editing, explicit completion confirmation, and role-scoped read-only visit history with existing APIs.
-- Phase 13H is complete: saved X-ray detail/upload, protected Blob media, AI result/overlay presentation, and external workspace use the existing backend contract.
+- Phase 13H is complete: saved X-ray detail/upload, authenticated Blob requests with temporary object URLs, AI result/overlay presentation, and external workspace use the existing backend contract. Staff has no external workspace; only the owning Doctor may attach a temporary case. Browser QA remains pending.
 - The next phase is 13I, followed by 13J and 13K.
 
 ### Needs Reschedule Tab

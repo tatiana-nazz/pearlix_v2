@@ -144,7 +144,7 @@ Phase 13G adds real visit and clinical note routes:
 - A Doctor starts a checked-in appointment from the existing appointment action, then enters the visit workspace.
 - The owning Doctor can save `symptoms`, `diagnosis`, `treatment`, `clinical_notes`, and `follow_up_notes` while active or after completion when the backend permits it.
 - Completing an active visit uses an explicit confirmation. When notes are dirty, the frontend saves notes first and completes only after that save succeeds.
-- X-ray/AI and billing handoff controls are intentionally deferred to later phases.
+- Phase 13G originally deferred X-ray/AI integration. Phase 13H now provides saved X-rays, authenticated protected media, AI results and overlays, and external X-ray workflows. Billing handoff UI remains deferred to Phase 13I.
 
 ## Included Through Phase 13H
 
@@ -185,10 +185,11 @@ Future frontend phases must follow these files for the professional dental clini
 
 ## Intentionally Not Implemented Yet
 
-- Billing, audit, and remaining admin management workflows.
-- Protected media rendering screens.
-- X-ray upload, AI run, overlays, and external X-ray workspace flows.
-- Full billing, invoice, payment, itemization, tax, discount, insurance, and online payment workflows.
+- Billing handoffs and invoice/payment workflows.
+- Audit-log frontend and remaining Admin management workflows.
+- Real AI integration beyond the MVP `MOCK_ADAPTER`.
+- Online payments, invoice itemization, tax, discount, and insurance workflows.
+- Browser QA execution for completed frontend phases remains pending.
 
 ## Future Phase Order
 
