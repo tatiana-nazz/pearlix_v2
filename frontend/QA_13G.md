@@ -37,4 +37,4 @@ Browser QA remains pending execution with the seeded local QA accounts. Credenti
 - The frontend sends only the five accepted clinical-note fields to `PATCH /api/visits/{id}/clinical-notes/`.
 - The completion workflow uses `POST /api/visits/{id}/complete/` only after a successful dirty-note save.
 - Query invalidation is limited to visit, active visit, appointment, patient visit history, and doctor dashboard contexts.
-- Protected media, X-ray upload/AI, and billing handoff actions are deferred to Phase 13H/13I.
+- Historical Phase 13G note: protected media, X-ray upload/AI, and billing handoff actions were deferred to Phases 13H/13I and are now implemented.

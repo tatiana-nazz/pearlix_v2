@@ -68,7 +68,7 @@ VITE_API_BASE_URL=http://127.0.0.1:8000/api
 - Visits shows a lightweight real-data history summary.
 - Appointments shows a lightweight real-data appointment summary.
 - X-rays & AI shows saved X-ray and AI result summaries only.
-- Billing/Handoff is visible to Staff/Admin as Phase 13I placeholder content.
+- Historical Phase 13E note: Billing/Handoff was placeholder content at that phase; Phase 13I now provides the real billing workflow.
 - Doctor does not see invoice/payment/global billing UI.
 
 ## Responsive Targets

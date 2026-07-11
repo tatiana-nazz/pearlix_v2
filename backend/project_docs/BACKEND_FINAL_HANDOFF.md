@@ -2,7 +2,7 @@
 
 Project: Dental Clinic Management System Website
 
-Current phase/status: 13I billing handoffs, invoices, payments, and print-data frontend integration complete; backend contract unchanged
+Current phase/status: 13J Admin user management, clinic settings, and audit-log frontend integration complete; backend contract unchanged
 
 Backend stack: Django, Django REST Framework, PostgreSQL
 
@@ -132,7 +132,7 @@ python -m pytest -q
 405 passed
 ```
 
-Phase 13I frontend verification: 49 tests passed. Backend runtime and migrations were unchanged; browser QA remains pending.
+Phase 13J frontend verification: 49 tests passed. Backend runtime and migrations were unchanged; browser QA remains pending.
 
 Django check:
 
@@ -166,4 +166,4 @@ Before handoff or upload, exclude:
 
 ## Next Step
 
-Recommended next step: Phase 13J, then 13K.
+Recommended next step: Phase 13K.
