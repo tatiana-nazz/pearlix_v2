@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phases through 13I make the React + Vite + TypeScript frontend operational for auth, clinical workflows, protected X-rays/AI, and role-aware billing handoffs, invoices, payments, and print data backed by real APIs.
+The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, and billing workflows; plus Admin user management, full clinic settings, and read-only audit logs. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
 
 ## Install
 

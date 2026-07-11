@@ -267,13 +267,7 @@ Recommended React route structure:
 /admin/appointments/list
 /admin/appointments/needs-reschedule
 /admin/visits/:visitId
-  /admin/users
-  /admin/users/new
-  /admin/users/:userId
-  /admin/clinic-settings
-  /admin/audit-logs
-  /admin/audit-logs/:auditLogId
-  /admin/xrays
+/admin/xrays
 /admin/xrays/:xrayId
 /admin/external-xrays
 /admin/external-xrays/:caseId
@@ -281,6 +275,7 @@ Recommended React route structure:
 /admin/billing/invoices
 /admin/billing/invoices/:invoiceId
 /admin/audit-logs
+/admin/audit-logs/:auditLogId
 
 /staff
 /staff/dashboard
