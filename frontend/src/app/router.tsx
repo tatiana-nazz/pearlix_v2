@@ -28,6 +28,7 @@ import { VisitDetailPage } from "../pages/visits/VisitDetailPage";
 import { ExternalXrayDetailPage, ExternalXrayListPage } from "../pages/xrays/ExternalXrayPages";
 import { XrayDetailPage } from "../pages/xrays/XrayDetailPage";
 import { XrayListPage } from "../pages/xrays/XrayListPage";
+import { AdminAuditLogDetailPage, AdminAuditLogListPage, AdminClinicSettingsPage, AdminNewUserPage, AdminUserDetailPage, AdminUserListPage } from "../pages/admin/AdminManagementPages";
 import { BillingHandoffDetailPage, BillingHandoffListPage, InvoiceDetailPage, InvoiceListPage, InvoicePrintPage, NewInvoicePage } from "../pages/billing/BillingPages";
 import type { UserRole } from "../types/auth";
 import { dashboardPathForRole } from "../utils/roles";
@@ -40,10 +41,7 @@ type PlaceholderRoute = {
 };
 
 const adminRoutes: PlaceholderRoute[] = [
-  { path: "users", title: "Users", role: "ADMIN", plannedPhase: "Phase 13J" },
-  { path: "clinic-settings", title: "Clinic Settings", role: "ADMIN", plannedPhase: "Phase 13J" },
   { path: "doctors", title: "Doctors & Staff", role: "ADMIN", plannedPhase: "Phase 13F.1" },
-  { path: "audit-logs", title: "Audit Logs", role: "ADMIN", plannedPhase: "Phase 13J" },
   { path: "profile", title: "Profile", role: "ADMIN", plannedPhase: "Phase 13C" },
 ];
 
@@ -124,6 +122,12 @@ export const router = createBrowserRouter([
               { path: "xrays/:xrayId", element: <XrayDetailPage role="ADMIN" /> },
               { path: "external-xrays", element: <ExternalXrayListPage role="ADMIN" /> },
               { path: "external-xrays/:caseId", element: <ExternalXrayDetailPage role="ADMIN" /> },
+              { path: "users", element: <AdminUserListPage /> },
+              { path: "users/new", element: <AdminNewUserPage /> },
+              { path: "users/:userId", element: <AdminUserDetailPage /> },
+              { path: "clinic-settings", element: <AdminClinicSettingsPage /> },
+              { path: "audit-logs", element: <AdminAuditLogListPage /> },
+              { path: "audit-logs/:auditLogId", element: <AdminAuditLogDetailPage /> },
               { path: "billing", element: <Navigate to="/admin/billing/handoffs" replace /> },
               { path: "billing/handoffs", element: <BillingHandoffListPage role="ADMIN" /> },
               { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="ADMIN" /> },
