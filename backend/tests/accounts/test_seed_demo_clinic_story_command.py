@@ -38,8 +38,15 @@ def test_demo_story_is_idempotent_and_reset_preserves_non_demo_data(tmp_path):
         assert "already exists" in seed()
         assert list(Patient.objects.filter(national_id_or_passport__startswith=PREFIX).values_list("id", flat=True)) == patient_ids
         non_demo = Patient.objects.create(first_name="Independent", last_name="Record", gender="Female", national_id_or_passport="NON-DEMO-14A")
+        legacy_qa_user = User.objects.create_user(
+            email="legacy.qa@pearlix.local",
+            password=PASSWORD,
+            full_name="Legacy QA",
+            role=User.Role.STAFF,
+        )
         seed("--reset-demo", "--reference-date", "2026-01-15")
         assert Patient.objects.filter(pk=non_demo.pk).exists()
+        assert User.objects.filter(pk=legacy_qa_user.pk, email="legacy.qa@pearlix.local").exists()
         assert Patient.objects.filter(national_id_or_passport__startswith=PREFIX).count() == 24
 
 

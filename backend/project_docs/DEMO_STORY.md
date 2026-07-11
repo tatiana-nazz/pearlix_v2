@@ -11,7 +11,9 @@ python manage.py seed_demo_clinic_story --password "PearlixDemo123!" --reset-dem
 
 `--password` accepts a local QA password and defaults to `PearlixDemo123!`. Do not commit or reuse it outside local development. The command refuses to run unless `DEBUG=true`. `--reference-date YYYY-MM-DD` makes the relative story dates deterministic for automated tests.
 
-Without `--reset-demo`, an existing Phase 14A story is left untouched. With it, only records tagged by the `phase-14a-integrated-demo-story` marker are removed: `.local` demo accounts, patients whose identity begins `DEMO14A-`, their transitively owned workflow records, tagged audit rows, and `demo14a-` media. It never deletes arbitrary accounts, patients, settings, or unrelated media.
+Without `--reset-demo`, an existing Phase 14A story is left untouched. With it, only accounts whose email ends with `@pearlix-demo.local` are removed, together with patients whose identity begins `DEMO14A-`, their transitively owned workflow records, audit rows tagged by the `phase-14a-integrated-demo-story` marker, and `demo14a-` media. It never deletes unrelated users, patients, workflow records, audit rows, settings, or media.
+
+Phase 14A demo accounts use `@pearlix-demo.local`. Older development QA accounts use `@pearlix.local`; `--reset-demo` does not remove those older QA accounts.
 
 ## QA accounts
 

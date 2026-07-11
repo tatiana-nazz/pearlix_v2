@@ -14,6 +14,7 @@ QA_13K = ROOT / "frontend" / "QA_13K.md"
 QA_14A = ROOT / "frontend" / "QA_14A.md"
 DEMO_STORY = ROOT / "backend" / "project_docs" / "DEMO_STORY.md"
 AUDIT = ROOT / "backend" / "project_docs" / "FRONTEND_BACKEND_INTEGRATION_AUDIT.md"
+HANDOFF = ROOT / "backend" / "project_docs" / "BACKEND_FINAL_HANDOFF.md"
 CURRENT_DOCS = [
     PROJECT_STATUS,
     README,
@@ -21,7 +22,7 @@ CURRENT_DOCS = [
     QA_14A,
     DEMO_STORY,
     AUDIT,
-    ROOT / "backend" / "project_docs" / "BACKEND_FINAL_HANDOFF.md",
+    HANDOFF,
     ROOT / "backend" / "project_docs" / "CURRENT_BACKEND_DECISIONS.md",
 ]
 
@@ -130,6 +131,36 @@ def main() -> int:
                 errors.append(f"Stale phase wording in {path.relative_to(ROOT)}: '{pattern}'.")
 
     audit = AUDIT.read_text(encoding="utf-8")
+    handoff = HANDOFF.read_text(encoding="utf-8")
+    for expected in (
+        "Latest full backend regression:",
+        "407 passed",
+        "Phase 14A focused seed tests: 2 passed",
+        "Phase 14B Visual Audit and Design Freeze",
+        "deployment remains paused",
+    ):
+        if expected not in handoff:
+            errors.append(f"BACKEND_FINAL_HANDOFF is missing '{expected}'.")
+    if re.search(r"Latest full (backend )?regression:.{0,100}405 passed", handoff, re.IGNORECASE | re.DOTALL):
+        errors.append("BACKEND_FINAL_HANDOFF presents 405 passed as the latest regression.")
+    for pattern in (
+        r"(?:deployment|live UAT) (?:is|are) (?:the )?(?:immediate )?next",
+        r"Recommended next step:\s*(?:deployment|live UAT)",
+    ):
+        if re.search(pattern, handoff, re.IGNORECASE):
+            errors.append("BACKEND_FINAL_HANDOFF presents deployment or live UAT as the immediate next step.")
+    for match in re.finditer(r"405 passed", handoff):
+        context = handoff[max(0, match.start() - 100):match.end()]
+        if not re.search(r"Historical Phase 13K verification", context, re.IGNORECASE):
+            errors.append("BACKEND_FINAL_HANDOFF must label any 405 passed reference as historical Phase 13K verification.")
+
+    for pattern in (
+        r"deployment and live UAT are next",
+        r"Phase 13K is the current completed phase",
+        r"Phase 14A (?:is unstarted|has not started|is next)",
+    ):
+        if re.search(pattern, audit, re.IGNORECASE):
+            errors.append(f"Integration audit has stale current-status wording: '{pattern}'.")
     phase_history = historical_phase_order(audit)
     if phase_history is None:
         errors.append("Integration audit is missing the '## O. Historical Phase Order' section.")
@@ -163,7 +194,7 @@ def main() -> int:
         if expected not in qa:
             errors.append(f"QA_14A is missing '{expected}'.")
     demo_story = DEMO_STORY.read_text(encoding="utf-8")
-    for expected in ("--reset-demo", "--reference-date", "pearlix-demo.local", "demo14a-"):
+    for expected in ("--reset-demo", "--reference-date", "@pearlix-demo.local", "@pearlix.local", "demo14a-"):
         if expected not in demo_story:
             errors.append(f"DEMO_STORY is missing '{expected}'.")
 
