@@ -35,6 +35,13 @@ export function LeaveManagementPage() {
     onSuccess: () => { setStart(""); setEnd(""); setReason(""); refresh(); },
   });
   const cancel = useMutation({ mutationFn: ({ id, version }: { id: number; version: number }) => scheduleApi.cancelAvailabilityException(id, version), onSuccess: refresh });
+  const editReason = async (id: number, version: number, currentReason: string) => {
+    const nextReason = window.prompt("Leave reason", currentReason);
+    if (nextReason !== null && nextReason !== currentReason) {
+      await scheduleApi.updateAvailabilityException(id, { reason: nextReason, version });
+      refresh();
+    }
+  };
 
   return (
     <div className="schedule-page">
@@ -48,7 +55,7 @@ export function LeaveManagementPage() {
           <button className="button primary" disabled={create.isPending || !selected}>Create unavailable period</button>
         </form>
       </Card>
-      {leave.isLoading ? <LoadingState title="Loading leave records..." /> : leave.isError ? <ErrorState error={leave.error} onRetry={() => void leave.refetch()} /> : !leave.data?.results.length ? <EmptyState title="No leave or availability exceptions were returned." /> : <ul className="schedule-list">{leave.data.results.map((item) => <li key={item.id}><div><strong>{item.doctor?.full_name ?? item.staff?.full_name}</strong><span>{formatDateRange(item.start_datetime, item.end_datetime)}</span><span>{displayText(item.reason, "No reason recorded")}</span></div><div><StatusPill status={item.is_cancelled ? "CANCELLED" : item.type} tone={item.is_cancelled ? "default" : "attention"} />{!item.is_cancelled && <button className="button ghost" disabled={cancel.isPending} onClick={() => cancel.mutate({ id: item.id, version: item.version })}>Cancel leave</button>}</div></li>)}</ul>}
+      {leave.isLoading ? <LoadingState title="Loading leave records..." /> : leave.isError ? <ErrorState error={leave.error} onRetry={() => void leave.refetch()} /> : !leave.data?.results.length ? <EmptyState title="No leave or availability exceptions were returned." /> : <ul className="schedule-list">{leave.data.results.map((item) => <li key={item.id}><div><strong>{item.doctor?.full_name ?? item.staff?.full_name}</strong><span>{formatDateRange(item.start_datetime, item.end_datetime)}</span><span>{displayText(item.reason, "No reason recorded")}</span></div><div className="schedule-actions"><StatusPill status={item.is_cancelled ? "CANCELLED" : item.type} tone={item.is_cancelled ? "default" : "attention"} />{!item.is_cancelled && <button className="button ghost" onClick={() => void editReason(item.id, item.version, item.reason)}>Edit</button>}{!item.is_cancelled && <button className="button ghost" disabled={cancel.isPending} onClick={() => cancel.mutate({ id: item.id, version: item.version })}>Cancel leave</button>}</div></li>)}</ul>}
     </div>
   );
 }
