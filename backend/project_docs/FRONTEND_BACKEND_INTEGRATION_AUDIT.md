@@ -1,9 +1,9 @@
 # Frontend/Backend Integration Audit
 
-Phase: Originally created for 13A; maintained through completed Phase 13H
+Phase: Originally created for 13A; maintained through completed Phase 13I
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 13H frontend X-ray/AI/external-workspace integration complete; existing backend APIs unchanged
+Backend status: Phase 13I frontend billing/invoice/payment/print integration complete; existing backend APIs unchanged
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -594,7 +594,8 @@ Hidden actions:
 - Phase 13F.1 is complete and implements shift-aware scheduling and availability administration.
 - Phase 13G is complete and implements Doctor active visit/detail routes, own clinical-note editing, explicit completion confirmation, and role-scoped read-only visit history with existing APIs.
 - Phase 13H is complete: saved X-ray detail/upload, authenticated Blob requests with temporary object URLs, AI result/overlay presentation, and external workspace use the existing backend contract. Staff has no external workspace; only the owning Doctor may attach a temporary case. Browser QA remains pending.
-- The next phase is 13I, followed by 13J and 13K.
+- Phase 13I is complete: role-aware billing handoffs, invoices, payments, and print data use existing backend APIs and backend-controlled financial values.
+- The next phase is 13J, followed by 13K.
 
 ### Needs Reschedule Tab
 
@@ -965,8 +966,8 @@ No critical backend blocker was found for frontend integration planning.
 - 13F.1 shifts/availability: completed Admin clinic defaults, Doctor/Staff schedules, versioned leave, apply/copy modes, and Doctor appointment-impact confirmation.
 - 13G visits/clinical notes: complete Doctor active visit workflow, own-note editing, explicit completion, and read-only history routes using existing backend APIs.
 - 13H X-rays/AI: complete saved-X-ray, authenticated Blob media, returned disclaimer/overlay, and Admin/Doctor external-workspace integration.
-- 13I billing: handoffs, invoice conversion, invoice CRUD, payments, print-data view.
-- Next phase: 13I. Later Admin phases retain users, password reset, clinic settings, and audit work.
+- 13I billing: complete handoffs, invoice conversion/create/read/update/cancel, payments, and print-data integration.
+- Next phase: 13J. Later Admin phases retain users, password reset, clinic settings, and audit work.
 - 13K QA/regression/polish: role matrix tests, API error mapping, calendar edge cases, protected media rendering, accessibility, responsive QA.
 
 ## Historical Phase 13A Completion Criterion

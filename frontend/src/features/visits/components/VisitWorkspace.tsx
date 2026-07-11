@@ -14,6 +14,7 @@ import { getVisitPermissions } from "../utils/visitPermissions";
 import { ClinicalNotesForm } from "./ClinicalNotesForm";
 import { CompleteVisitDialog } from "./CompleteVisitDialog";
 import { VisitXraySection } from "../../xrays/components/VisitXraySection";
+import { VisitBillingSection } from "../../billing/components/VisitBillingSection";
 
 interface VisitWorkspaceProps {
   role: UserRole;
@@ -121,6 +122,7 @@ export function VisitWorkspace({ role, visit }: VisitWorkspaceProps) {
       </Card>
 
       <VisitXraySection role={role} visit={visit} />
+      <VisitBillingSection role={role} visit={visit} />
 
       <div className="visit-workspace-actions">
         <Link className="button secondary" to={`/${role.toLowerCase()}/patients/${visit.patient.id}`}>

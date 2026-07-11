@@ -2,7 +2,7 @@
 
 Project: Dental Clinic Management System Website
 
-Current phase/status: 13H X-ray, protected media, AI, and external-workspace frontend integration complete; backend contract unchanged
+Current phase/status: 13I billing handoffs, invoices, payments, and print-data frontend integration complete; backend contract unchanged
 
 Backend stack: Django, Django REST Framework, PostgreSQL
 
@@ -164,4 +164,4 @@ Before handoff or upload, exclude:
 
 ## Next Step
 
-Recommended next step: Phase 13I, then 13J and 13K.
+Recommended next step: Phase 13J, then 13K.

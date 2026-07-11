@@ -62,9 +62,7 @@ export function AdminDashboardPage() {
         title="Clinic operations overview"
         description="Read-only operational status from the backend admin dashboard endpoint."
         actions={
-          <Link className="button secondary" to="/admin/clinic-settings">
-            Clinic settings
-          </Link>
+          <div className="page-header-actions"><Link className="button secondary" to="/admin/clinic-settings">Clinic settings</Link><Link className="button secondary" to="/admin/billing/invoices">Invoices</Link></div>
         }
       />
 

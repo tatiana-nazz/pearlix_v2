@@ -108,9 +108,7 @@ export function DoctorDashboardPage() {
         title="Clinical workspace"
         description="Own appointments, visits, schedule, and handoff visibility from the backend doctor dashboard endpoint."
         actions={
-          <Link className="button secondary" to="/doctor/visits/active">
-            Active visit
-          </Link>
+          <div className="page-header-actions"><Link className="button secondary" to="/doctor/visits/active">Active visit</Link><Link className="button secondary" to="/doctor/billing/handoffs">My handoffs</Link></div>
         }
       />
 

@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phases through 13H make the React + Vite + TypeScript frontend operational for auth, role guards, workspace shell behavior, role dashboards, patient and appointment workflows, schedules and leave, active-visit clinical documentation, protected X-rays, AI results, and external X-ray workflows backed by real APIs.
+Phases through 13I make the React + Vite + TypeScript frontend operational for auth, clinical workflows, protected X-rays/AI, and role-aware billing handoffs, invoices, payments, and print data backed by real APIs.
 
 ## Install
 
@@ -88,7 +88,7 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 - Staff dashboard uses `GET /dashboard/staff/`.
 - Doctor dashboard uses `GET /dashboard/doctor/`.
 - Dashboards render real backend data only; no permanent demo dashboard data is hardcoded.
-- Patient workflows are implemented through Phase 13E.1; appointment and rescheduling workflows through Phase 13F; shift and availability workflows through Phase 13F.1; active visits and clinical notes through Phase 13G; and protected X-ray/AI workflows through Phase 13H. Billing, audit, and remaining Admin management workflows are pending, with Phase 13I next.
+- Patient workflows are implemented through Phase 13E.1; appointment/rescheduling through 13F; shift/availability through 13F.1; active visits through 13G; X-ray/AI through 13H; and billing handoffs, invoices, payments, and print data through 13I. Audit and remaining Admin management are pending, with Phase 13J next.
 - Browser QA is still pending execution with the seeded local QA accounts to verify live role data, 401 refresh behavior, and backend 403 handling.
 
 ## Patient Management
@@ -146,7 +146,7 @@ Phase 13G adds real visit and clinical note routes:
 - Completing an active visit uses an explicit confirmation. When notes are dirty, the frontend saves notes first and completes only after that save succeeds.
 - Phase 13G originally deferred X-ray/AI integration. Phase 13H now provides saved X-rays, authenticated protected media, AI results and overlays, and external X-ray workflows. Billing handoff UI remains deferred to Phase 13I.
 
-## Included Through Phase 13H
+## Included Through Phase 13I
 
 - Vite, React, TypeScript app structure.
 - TanStack Query provider.
@@ -170,6 +170,8 @@ Phase 13G adds real visit and clinical note routes:
 - Phase 13G QA contract: `frontend/QA_13G.md`.
 - Saved X-ray list/detail routes, Doctor patient/own-visit upload, authenticated Blob media rendering, AI result/overlay presentation, and the Admin/Doctor external X-ray workspace.
 - Phase 13H QA contract: `frontend/QA_13H.md`.
+- Doctor own-visit handoffs; Staff billing operations; Admin read-only billing; backend-controlled invoices, payments, balances, and print data.
+- Phase 13I QA contract: `frontend/QA_13I.md`.
 
 ## Design Contract
 
@@ -185,7 +187,6 @@ Future frontend phases must follow these files for the professional dental clini
 
 ## Intentionally Not Implemented Yet
 
-- Billing handoffs and invoice/payment workflows.
 - Audit-log frontend and remaining Admin management workflows.
 - Real AI integration beyond the MVP `MOCK_ADAPTER`.
 - Online payments, invoice itemization, tax, discount, and insurance workflows.
