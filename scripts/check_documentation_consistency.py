@@ -52,6 +52,11 @@ REQUIRED_ROUTES = {
     },
 }
 
+REQUIRED_PHASE_HISTORY = [
+    "13B", "13B.1", "13C", "13D", "13D.1", "13E", "13E.1", "13F", "13F.1",
+    "13G", "13H", "13I", "13J", "13K",
+]
+
 
 def route_blocks(text: str) -> dict[str, list[str]]:
     text = text.replace("\r\n", "\n")
@@ -63,6 +68,15 @@ def route_blocks(text: str) -> dict[str, list[str]]:
             continue
         blocks[role] = re.findall(rf"^/{role}(?:/[\w:.-]+)*$", match.group(0), re.MULTILINE)
     return blocks
+
+
+def historical_phase_order(text: str) -> list[str] | None:
+    text = text.replace("\r\n", "\n")
+    match = re.search(r"(?ms)^## O\. Historical Phase Order\s*$\n(.*?)(?=^## |\Z)", text)
+    if not match:
+        return None
+    labels = "|".join(re.escape(phase) for phase in REQUIRED_PHASE_HISTORY)
+    return re.findall(rf"(?m)^-\s+({labels})\s+—", match.group(1))
 
 
 def main() -> int:
@@ -104,11 +118,28 @@ def main() -> int:
     )
     for path in CURRENT_DOCS:
         text = path.read_text(encoding="utf-8")
+        if "## Future Phase Order" in text:
+            errors.append(f"Obsolete '## Future Phase Order' heading in {path.relative_to(ROOT)}.")
         for pattern in stale_patterns:
             if re.search(pattern, text, re.IGNORECASE):
                 errors.append(f"Stale phase wording in {path.relative_to(ROOT)}: '{pattern}'.")
 
     audit = AUDIT.read_text(encoding="utf-8")
+    phase_history = historical_phase_order(audit)
+    if phase_history is None:
+        errors.append("Integration audit is missing the '## O. Historical Phase Order' section.")
+    else:
+        for phase in REQUIRED_PHASE_HISTORY:
+            count = phase_history.count(phase)
+            if count == 0:
+                errors.append(f"Historical Phase Order is missing {phase}.")
+            elif count > 1:
+                errors.append(f"Historical Phase Order duplicates {phase} ({count} entries).")
+        if phase_history != REQUIRED_PHASE_HISTORY:
+            errors.append(
+                "Historical Phase Order is out of order: expected "
+                f"{', '.join(REQUIRED_PHASE_HISTORY)}; found {', '.join(phase_history)}."
+            )
     blocks = route_blocks(audit)
     for role, required in REQUIRED_ROUTES.items():
         routes = blocks.get(role, [])

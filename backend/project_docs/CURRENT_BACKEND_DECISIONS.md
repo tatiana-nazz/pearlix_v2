@@ -154,7 +154,7 @@ After any payment exists:
 - Exclude `.env`, `.venv`, `media`, `test_media`, `__pycache__`, and `.pytest_cache` before GitHub upload or handoff packaging.
 - Do not commit real secrets.
 
-## Future Phase Order
+## Completed Phase Order And Next Step
 
 - Phase 13F.1 is complete. The accepted shift and availability rules are implemented through `ClinicDefaultShift`, `WorkingShift`, versioned leave operations, and explicit Doctor appointment-impact confirmation.
 - Phase 13G is complete: it integrates the existing active-visit, clinical-note, completion, and read-only visit-history contract in the frontend without a backend behavior change.

@@ -973,16 +973,20 @@ No critical backend blocker was found for frontend integration planning.
 
 ## O. Historical Phase Order
 
-- 13B frontend foundation: Vite/React/TypeScript app structure, API client, environment config, shared types.
-- 13C auth/layout/role guards: login, refresh/logout, must-change-password flow, workspace shells, sidebar guards.
-- 13D dashboards: Admin, Staff, Doctor dashboard pages from role-specific endpoints.
-- 13E patients/profile: patient list, profile, role-aware actions, clinical history read models.
-- 13F appointments/reschedule: calendar views, Needs Reschedule tab, availability slot picker, Staff reschedule flow.
-- 13F.1 shifts/availability: completed Admin clinic defaults, Doctor/Staff schedules, versioned leave, apply/copy modes, and Doctor appointment-impact confirmation.
-- 13G visits/clinical notes: complete Doctor active visit workflow, own-note editing, explicit completion, and read-only history routes using existing backend APIs.
-- 13H X-rays/AI: complete saved-X-ray, authenticated Blob media, returned disclaimer/overlay, and Admin/Doctor external-workspace integration.
-- 13I billing: complete handoffs, invoice conversion/create/read/update/cancel, payments, and print-data integration.
-- 13K final QA/regression/polish: completed role-route and sidebar checks, protected-media object-URL lifecycle regression coverage, accessibility navigation improvement, responsive CSS review, and documentation consistency validation. Backend runtime and migrations remained unchanged.
+- 13B — frontend foundation: Vite/React/TypeScript app structure, API client, environment config, and shared types.
+- 13B.1 — design-system and responsive contract.
+- 13C — authentication, layout, and role guards: login, refresh/logout, required password change, and workspace shells.
+- 13D — role dashboards from role-specific endpoints.
+- 13D.1 — local QA account seeding.
+- 13E — patient list and profile integration.
+- 13E.1 — final patient schema and version contract.
+- 13F — appointments and rescheduling, including Needs Reschedule and availability flows.
+- 13F.1 — shifts and availability administration: clinic defaults, Doctor/Staff schedules, versioned leave, and appointment-impact confirmation.
+- 13G — visits and clinical notes: active visit workflow, own-note editing, explicit completion, and read-only history.
+- 13H — X-rays, protected media, AI, and external workspace.
+- 13I — billing handoffs, invoices, payments, and print data.
+- 13J — Admin users, clinic settings, and audit logs.
+- 13K — final regression, accessibility, route cleanup, documentation consistency, and release readiness. Backend runtime and migrations remained unchanged.
 
 ## Historical Phase 13A Completion Criterion
 
