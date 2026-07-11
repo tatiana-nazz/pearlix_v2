@@ -88,7 +88,7 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 - Staff dashboard uses `GET /dashboard/staff/`.
 - Doctor dashboard uses `GET /dashboard/doctor/`.
 - Dashboards render real backend data only; no permanent demo dashboard data is hardcoded.
-- Full patient, appointment, billing, visit, X-ray, AI, audit, and admin management workflows remain later phases.
+- Patient workflows are implemented through Phase 13E.1; appointment and rescheduling workflows through Phase 13F; shift and availability workflows through Phase 13F.1; and active visits and clinical notes through Phase 13G. X-ray/AI, billing, audit, and remaining Admin management workflows are pending, with Phase 13H next.
 - Browser QA is still pending execution with the seeded local QA accounts to verify live role data, 401 refresh behavior, and backend 403 handling.
 
 ## Patient Management
