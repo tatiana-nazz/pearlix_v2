@@ -3,10 +3,12 @@
 ## Current branch implementation
 
 - `pages/admin/TeamPages.tsx` implements the Admin Team directory/detail/onboarding/profile-status surface using the existing Team API only.
-- `pages/dashboard/DashboardV2.tsx` provides v2 dashboard KPI and bounded-preview composition helpers used by all three dashboard pages.
+- `styles/v2/colors.css` now makes the accepted light and dark semantic palette authoritative and maps existing v2 aliases through it.
+- `pages/dashboard/DashboardV2.tsx` provides non-underlined, focusable KPI/preview/action helpers with semantic KPI variants; number, label, helper, and action are separate elements.
+- `pages/staff/StaffDashboardPage.tsx` now has the approved four-card Staff Dashboard composition, current-data operational queues, and only supported Staff routes/actions.
 - Router and Admin navigation expose `/admin/team` distinctly from `/admin/users` and `/admin/doctors`.
 - `AdminManagementPages.tsx` now separates Users & Access account/security/role/Team concerns and uses the signed Team role-transition API.
-- `PatientTable` uses `ClickableRow`; profile edit/archive uses v2 overlays. `AppointmentsPage.tsx` owns v2 appointment Drawers/ConfirmDialogs directly.
+- `PatientTable` uses `ClickableRow`; profile edit/archive uses v2 overlays. Appointment centered-modal conversion remains the next Phase 14D unit.
 
 ## Endpoint and role boundaries
 
@@ -16,4 +18,4 @@ Supported professional fields remain Doctor specialty/phone/bio and Staff positi
 
 ## Completion status
 
-This is an in-progress implementation record, not a Phase 14D completion record. Remaining EN/AR, acceptance, browser, and documentation closure work is recorded in `frontend/QA_14D.md`; Phase 14E has not started.
+This is an in-progress implementation record, not a Phase 14D completion record. Palette correction, dark token implementation, Staff Dashboard visual correction, the underlined-card defect removal, and count/label collision removal are complete. Browser visual QA remains pending. Remaining appointment centered-modal conversion, EN/AR, acceptance, browser, and documentation closure work is recorded in `frontend/QA_14D.md`; Phase 14E has not started.

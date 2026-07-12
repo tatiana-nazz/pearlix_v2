@@ -8,7 +8,7 @@ Page order is breadcrumb/context, 32/40 title, one user-facing sentence, one pri
 
 ## Color and depth
 
-Foundation is navy/teal, with blue reserved for links/active selection and violet only for AI. The palette has contrast-tested text, border, hover, focus, and semantic pairs in `TOKENS_V2.md`; status always has an icon/text label in addition to color. No neon, pure black/white extremes, rainbow status grids, or color-only information. Active navigation is visibly stronger than hover; KPI icon tiles use controlled tinted surfaces.
+Foundation is a cool blue-gray canvas with primary blue controls; secondary blue is an accent only, and violet is reserved for AI provenance. The palette has contrast-tested text, border, hover, focus, and semantic pairs in `TOKENS_V2.md`; status always has an icon/text label in addition to color. No teal primary controls, neon, pure black/white extremes, rainbow status grids, or color-only information. Active navigation is visibly stronger than hover; KPI icon tiles use controlled semantic tints.
 
 ## Density rules
 
