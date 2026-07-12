@@ -178,7 +178,7 @@ Phase 13G adds real visit and clinical note routes:
 - Phase 14A added the deterministic development-only integrated demo data story.
 - Phase 14B froze the replacement UI/UX design; runtime visual redesign has not started.
 - Phase 14C.0 added Team APIs, transactional Doctor/Staff onboarding, linked-profile states, protected role transitions, reactivation, and frontend contract wrappers only; no runtime Team page was added.
-- Phase 14C added the v2 token layer, fixed/retractable role shell, centralized Lucide navigation, LIGHT/DARK/SYSTEM and EN/AR preference foundations, shared primitives, and 14 focused foundation tests. Shell/common copy is EN/AR; feature copy remains Phase 14D–14E work.
+- Phase 14C added the v2 token layer, fixed/retractable role shell, centralized Lucide navigation, LIGHT/DARK/SYSTEM and EN/AR preference foundations, shared primitives, and 23 focused Phase 14C tests, for 75 total frontend tests. Shell/common copy is EN/AR; feature copy remains Phase 14D–14E work.
 
 ## Design Contract
 

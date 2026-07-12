@@ -1019,4 +1019,4 @@ No critical backend blocker was found for frontend integration planning.
 
 ## Historical Phase 13A Completion Criterion
 
-Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production contract through completed Phase 14C.0.
+Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production contract through completed Phase 14C.
