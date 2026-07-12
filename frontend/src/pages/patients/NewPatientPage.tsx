@@ -6,12 +6,14 @@ import { useCreatePatient } from "../../features/patients/hooks/usePatientMutati
 import { patientListPath, patientProfilePath } from "../../features/patients/utils/patientPermissions";
 import type { UserRole } from "../../types/auth";
 import type { PatientFormValues } from "../../features/patients/utils/patientFormMapping";
+import { useFeatureT } from "../../layouts/i18n";
 
 interface NewPatientPageProps {
   role: UserRole;
 }
 
 export function NewPatientPage({ role }: NewPatientPageProps) {
+  const t = useFeatureT();
   const navigate = useNavigate();
   const createPatient = useCreatePatient();
 
@@ -24,12 +26,12 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
 
   return (
     <div className="patient-page narrow">
-      <PageHeaderV2 title="Add Patient" description="Create a patient record using the clinic patient API." />
+      <PageHeaderV2 title={t("addPatient")} description="Create a patient record using the clinic patient API." />
       <SurfaceCard major>
         <PatientForm
           mode="create"
           role={role}
-          submitLabel="Create patient"
+          submitLabel={t("createPatient")}
           isSubmitting={createPatient.isPending}
           error={createPatient.error}
           onSubmit={handleSubmit}

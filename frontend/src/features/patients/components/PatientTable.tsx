@@ -7,7 +7,8 @@ import { formatDateTime } from "../../../utils/dates";
 import { displayText } from "../../../utils/formatters";
 import { getPatientPermissions, patientProfilePath } from "../utils/patientPermissions";
 import { PatientStatusBadge } from "./PatientStatusBadge";
-import { ClickableRow, StatusBadge } from "../../../components/v2";
+import { ClickableRow } from "../../../components/v2";
+import { useFeatureT } from "../../../layouts/i18n";
 
 interface PatientTableProps {
   role: UserRole;
@@ -19,21 +20,22 @@ interface PatientTableProps {
 
 export function PatientTable({ role, patients, showArchivedStatus, onArchive, onUnarchive }: PatientTableProps) {
   const navigate = useNavigate();
+  const t = useFeatureT();
 
-  if (!patients.length) return <EmptyState title="No patients found for this filter." />;
+  if (!patients.length) return <EmptyState title={t("noPatients")} />;
 
   return (
     <div className="table-scroll">
       <table className="patient-table">
         <thead>
           <tr>
-            <th>Patient</th>
-            <th>Contact</th>
-            <th>Gender / age</th>
-            {showArchivedStatus ? <th>Status</th> : null}
-            {role === "DOCTOR" ? <th>Last Visit With Me</th> : null}
-            <th>Actions</th>
-            <th aria-label="Open profile" />
+            <th>{t("patient")}</th>
+            <th>{t("contactIdentifiers")}</th>
+            <th>{t("gender")} / age</th>
+            {showArchivedStatus ? <th>{t("status")}</th> : null}
+            {role === "DOCTOR" ? <th>{t("lastVisitWithMe")}</th> : null}
+            <th>{t("editPatient")}</th>
+            <th aria-label={t("patientProfile")} />
           </tr>
         </thead>
         <tbody>
@@ -45,7 +47,7 @@ export function PatientTable({ role, patients, showArchivedStatus, onArchive, on
                 <td>
                   <strong>{patient.full_name}</strong>
                 </td>
-                <td>{displayText(patient.phone_number || patient.email)}</td>
+                <td className="bidi-isolate">{displayText(patient.phone_number || patient.email)}</td>
                 <td>{patient.gender} · {patient.age ?? "Not recorded"}</td>
                 {showArchivedStatus ? (
                   <td>
@@ -57,17 +59,17 @@ export function PatientTable({ role, patients, showArchivedStatus, onArchive, on
                   <div className="row-actions" onClick={(event) => event.stopPropagation()}>
                     {permissions.canEdit ? (
                       <Link className="button secondary compact-button" to={`${profilePath}?edit=1`}>
-                        Edit
+                        {t("editPatient")}
                       </Link>
                     ) : null}
                     {permissions.canArchive ? (
                       <button className="button secondary compact-button" type="button" onClick={() => onArchive(patient)}>
-                        Archive
+                        {t("archivePatient")}
                       </button>
                     ) : null}
                     {permissions.canUnarchive ? (
                       <button className="button secondary compact-button" type="button" onClick={() => onUnarchive(patient)}>
-                        Unarchive
+                        {t("unarchivePatient")}
                       </button>
                     ) : null}
                   </div>

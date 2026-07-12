@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 
 import type { UserRole } from "../../../types/auth";
 import type { PatientBloodGroup, PatientDetail, PatientGender } from "../../../types/patients";
+import { useFeatureT } from "../../../layouts/i18n";
 import {
   PatientFormErrors,
   PatientFormValues,
@@ -44,6 +45,7 @@ export function PatientForm({
   onReloadLatest,
   onContinueReviewing,
 }: PatientFormProps) {
+  const t = useFeatureT();
   const [values, setValues] = useState<PatientFormValues>(() => (mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues));
   const [errors, setErrors] = useState<PatientFormErrors>({});
 
@@ -90,10 +92,10 @@ export function PatientForm({
       ) : null}
 
       <section className="patient-form-section v2-form-section">
-        <h4>Identity</h4>
+        <h4>{t("identity")}</h4>
         <div className="patient-form-grid">
           <label>
-            First name <span aria-hidden="true">*</span>
+            {t("firstName")} <span aria-hidden="true">*</span>
             <input
               id={`${fieldPrefix}-first-name`}
               value={values.first_name}
@@ -105,7 +107,7 @@ export function PatientForm({
           </label>
 
           <label>
-            Last name <span aria-hidden="true">*</span>
+            {t("lastName")} <span aria-hidden="true">*</span>
             <input
               id={`${fieldPrefix}-last-name`}
               value={values.last_name}
@@ -117,7 +119,7 @@ export function PatientForm({
           </label>
 
           <label>
-            Gender <span aria-hidden="true">*</span>
+            {t("gender")} <span aria-hidden="true">*</span>
             <select value={values.gender} onChange={(event) => updateField("gender", event.target.value as PatientGender)}>
               <option value="Female">Female</option>
               <option value="Male">Male</option>
@@ -125,7 +127,7 @@ export function PatientForm({
           </label>
 
           <label>
-            Date of birth
+            {t("dateOfBirth")}
             <input
               type="date"
               value={values.date_of_birth}
@@ -138,40 +140,40 @@ export function PatientForm({
       </section>
 
       <section className="patient-form-section v2-form-section">
-        <h4>Contact and identifiers</h4>
+        <h4>{t("contactIdentifiers")}</h4>
         <div className="patient-form-grid">
           <label>
-            Phone
+            {t("phone")}
             <input id={`${fieldPrefix}-phone-number`} value={values.phone_number} onChange={(event) => updateField("phone_number", event.target.value)} />
             {errors.phone_number ? <span className="field-error">{errors.phone_number}</span> : null}
           </label>
           <label>
-            Email
+            {t("email")}
             <input type="email" value={values.email} onChange={(event) => updateField("email", event.target.value)} />
             {errors.email ? <span className="field-error">{errors.email}</span> : null}
           </label>
           <label>
-            National ID or passport
+            {t("nationalId")}
             <input value={values.national_id_or_passport} onChange={(event) => updateField("national_id_or_passport", event.target.value)} />
             {errors.national_id_or_passport ? <span className="field-error">{errors.national_id_or_passport}</span> : null}
           </label>
           <label>
-            Emergency contact
+            {t("emergencyContact")}
             <input value={values.emergency_contact} onChange={(event) => updateField("emergency_contact", event.target.value)} />
             {errors.emergency_contact ? <span className="field-error">{errors.emergency_contact}</span> : null}
           </label>
         </div>
         <label>
-          Address
+          {t("address")}
           <textarea value={values.address} onChange={(event) => updateField("address", event.target.value)} rows={3} />
         </label>
       </section>
 
       <section className="patient-form-section v2-form-section">
-        <h4>Clinical profile</h4>
+        <h4>{t("clinicalProfile")}</h4>
         <div className="patient-form-grid">
           <label>
-            Blood group
+            {t("bloodGroup")}
             <select value={values.blood_group} onChange={(event) => updateField("blood_group", event.target.value as PatientBloodGroup)}>
               {bloodGroups.map((group) => (
                 <option key={group || "none"} value={group}>
@@ -183,15 +185,15 @@ export function PatientForm({
           </label>
         </div>
         <label>
-          Medical conditions history
+          {t("medicalHistory")}
           <textarea value={values.medical_conditions_history} onChange={(event) => updateField("medical_conditions_history", event.target.value)} rows={5} />
         </label>
         <label>
-          Insurance information
+          {t("insuranceInfo")}
           <textarea value={values.insurance_info} onChange={(event) => updateField("insurance_info", event.target.value)} rows={4} />
         </label>
         <label>
-          General notes
+          {t("generalNotes")}
           <textarea value={values.general_notes} onChange={(event) => updateField("general_notes", event.target.value)} rows={5} />
         </label>
       </section>
@@ -201,11 +203,11 @@ export function PatientForm({
       <div className="v2-sticky-actions">
         {onCancel ? (
           <button className="button secondary" type="button" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            {t("cancel")}
           </button>
         ) : null}
         <button className="button primary" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : submitLabel ?? "Save patient"}
+          {isSubmitting ? `${t("save")}...` : submitLabel ?? t("save")}
         </button>
       </div>
     </form>

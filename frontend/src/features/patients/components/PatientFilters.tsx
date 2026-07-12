@@ -1,4 +1,5 @@
 import type { UserRole } from "../../../types/auth";
+import { useFeatureT } from "../../../layouts/i18n";
 
 export type ArchiveFilter = "active" | "archived";
 export type DoctorWorkflowFilter = "all" | "my_patients" | "upcoming_with_me" | "last_visit_with_me";
@@ -22,36 +23,37 @@ export function PatientFilters({
   onArchiveFilterChange,
   onDoctorFilterChange,
 }: PatientFiltersProps) {
+  const t = useFeatureT();
   return (
-    <section className="patient-filters" aria-label="Patient filters">
+    <section className="patient-filters" aria-label={t("patientFilters")}>
       <label>
-        Search
+        {t("search")}
         <input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search by name, phone, email, or ID"
-          aria-label="Search patients"
+          placeholder={t("searchPatientHelp")}
+          aria-label={t("searchPatients")}
         />
       </label>
 
       {role !== "DOCTOR" ? (
         <label>
-          Archive state
+          {t("archiveState")}
           <select value={archiveFilter} onChange={(event) => onArchiveFilterChange(event.target.value as ArchiveFilter)}>
-            <option value="active">Active</option>
-            <option value="archived">Archived</option>
+            <option value="active">{t("active")}</option>
+            <option value="archived">{t("archived")}</option>
           </select>
         </label>
       ) : null}
 
       {role === "DOCTOR" ? (
         <label>
-          Patient scope
+          {t("patientScope")}
           <select value={doctorFilter} onChange={(event) => onDoctorFilterChange(event.target.value as DoctorWorkflowFilter)}>
-            <option value="all">All Patients</option>
-            <option value="my_patients">My Patients</option>
-            <option value="upcoming_with_me">Upcoming With Me</option>
-            <option value="last_visit_with_me">Last Visit With Me</option>
+            <option value="all">{t("allPatients")}</option>
+            <option value="my_patients">{t("myPatients")}</option>
+            <option value="upcoming_with_me">{t("upcomingWithMe")}</option>
+            <option value="last_visit_with_me">{t("lastVisitWithMe")}</option>
           </select>
         </label>
       ) : null}

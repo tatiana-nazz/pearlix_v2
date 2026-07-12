@@ -3,6 +3,7 @@ import type { PatientDetail } from "../../../types/patients";
 import { displayText } from "../../../utils/formatters";
 import { getPatientPermissions } from "../utils/patientPermissions";
 import { PatientStatusBadge } from "./PatientStatusBadge";
+import { useFeatureT } from "../../../layouts/i18n";
 
 interface PatientProfileHeaderProps {
   role: UserRole;
@@ -13,33 +14,34 @@ interface PatientProfileHeaderProps {
 }
 
 export function PatientProfileHeader({ role, patient, onEdit, onArchive, onUnarchive }: PatientProfileHeaderProps) {
+  const t = useFeatureT();
   const permissions = getPatientPermissions(role, patient);
   const canShowStatus = role !== "DOCTOR";
 
   return (
     <section className="profile-header">
       <div>
-        <p className="eyebrow">Patient profile</p>
+        <p className="eyebrow">{t("patientProfile")}</p>
         <h2>{patient.full_name}</h2>
         <p>
-          {displayText(patient.phone_number)} - {patient.age ? `${patient.age} years old` : "Age not recorded"} - {patient.gender}
+          <span className="bidi-isolate">{displayText(patient.phone_number)}</span> - <span className="bidi-isolate">{patient.age ? `${patient.age} ${t("yearsOld")}` : t("ageNotRecorded")}</span> - {patient.gender}
         </p>
       </div>
       <div className="profile-actions">
         {canShowStatus ? <PatientStatusBadge patient={patient} /> : null}
         {permissions.canEdit ? (
           <button className="button secondary" type="button" onClick={onEdit}>
-            Edit
+            {t("editPatient")}
           </button>
         ) : null}
         {permissions.canArchive ? (
           <button className="button secondary" type="button" onClick={onArchive}>
-            Archive Patient
+            {t("archivePatient")}
           </button>
         ) : null}
         {permissions.canUnarchive ? (
           <button className="button secondary" type="button" onClick={onUnarchive}>
-            Unarchive Patient
+            {t("unarchivePatient")}
           </button>
         ) : null}
       </div>

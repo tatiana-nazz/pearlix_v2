@@ -10,7 +10,7 @@ describe("PatientForm", () => {
     const onSubmit = vi.fn();
     render(<PatientForm mode="create" role="STAFF" onSubmit={onSubmit} />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Save patient" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText("First name is required.")).toBeInTheDocument();
     expect(screen.getByText("Last name is required.")).toBeInTheDocument();

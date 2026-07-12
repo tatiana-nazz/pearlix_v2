@@ -32,19 +32,19 @@ const patient: PatientDetail = {
 describe("PatientProfileHeader", () => {
   it("keeps Admin read-only", () => {
     render(<PatientProfileHeader role="ADMIN" patient={patient} onEdit={vi.fn()} onArchive={vi.fn()} onUnarchive={vi.fn()} />);
-    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Archive Patient" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit Patient" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archive patient" })).not.toBeInTheDocument();
   });
 
   it("shows Staff actions", () => {
     render(<PatientProfileHeader role="STAFF" patient={patient} onEdit={vi.fn()} onArchive={vi.fn()} onUnarchive={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Archive Patient" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit Patient" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Archive patient" })).toBeInTheDocument();
   });
 
   it("does not show Doctor archive controls", () => {
     render(<PatientProfileHeader role="DOCTOR" patient={patient} onEdit={vi.fn()} onArchive={vi.fn()} onUnarchive={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Archive Patient" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit Patient" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archive patient" })).not.toBeInTheDocument();
   });
 });
