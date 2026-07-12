@@ -1,9 +1,9 @@
 # Frontend/Backend Integration Audit
 
-Phase: Originally created for 13A; capability audit through completed Phase 14A. See `PROJECT_STATUS.md` for canonical current/next phase status.
+Phase: Originally created for 13A; capability audit through completed Phase 14B design freeze. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 14A integrated development demo story complete; existing production APIs unchanged
+Backend status: Phase 14A integrated development demo story complete; Phase 14B design documentation complete; existing production APIs unchanged. The verified DoctorProfile/StaffProfile CRUD and linkage gap makes Phase 14C.0 the next phase; deployment remains paused.
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
