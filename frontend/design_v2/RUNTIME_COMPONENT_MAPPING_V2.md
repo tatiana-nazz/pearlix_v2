@@ -27,3 +27,7 @@ No v2 primitive may coexist indefinitely with one-off CSS. Each old component is
 | `globals.css`, `tokens.css` | Replace/split | v2 token layers and component modules 14C/14F | establish linted ownership; high cascade risk; visual regression at four widths/themes/RTL; delete legacy selectors once no import/usage remains. |
 
 14F removes compatibility selectors only after the visual acceptance matrix passes; no feature may add new old-style one-off CSS after 14C starts.
+
+## Phase 14C implementation note
+
+`AppShell` is implemented by `src/layouts/WorkspaceLayout.tsx`; `SidebarNav` is implemented by `src/layouts/Sidebar.tsx`; and `WorkspaceHeader` is implemented by `src/layouts/Topbar.tsx`. The legacy `Card`, `PageHeader`, `StatusPill`, and state components are Phase 14C compatibility adapters over `src/components/v2.tsx`; Phase 14F owns their removal after feature consumers complete their 14D–14E migrations.

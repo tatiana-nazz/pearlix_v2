@@ -1,0 +1,4 @@
+:root { --v2-font: Inter, ui-sans-serif, system-ui, sans-serif; --v2-space-1:4px; --v2-space-2:8px; --v2-space-3:12px; --v2-space-4:16px; --v2-space-5:20px; --v2-space-6:24px; --v2-space-7:32px; --v2-space-8:40px; --v2-space-9:48px; --v2-radius-control:8px; --v2-radius-small:12px; --v2-radius-card:16px; --v2-radius-dialog:20px; --v2-control:44px; --v2-control-compact:36px; }
+:root[lang="ar"] { --v2-font: "Noto Sans Arabic", Tahoma, Arial, sans-serif; }
+:root[lang="ar"] body { line-height: 1.75; }
+:root[lang="ar"] button, :root[lang="ar"] input, :root[lang="ar"] select { line-height: 1.55; }

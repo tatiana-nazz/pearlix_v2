@@ -1,5 +1,9 @@
 # Frontend/Backend Integration Audit
 
+## Phase 14C shell foundation
+
+Phase 14C changes frontend shell and shared UI foundations only. Backend runtime changed: no; migrations: none. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract. Team and Users & Access runtime UI remains assigned to Phase 14D; no `/admin/team` runtime route is introduced in Phase 14C.
+
 Phase: Originally created for 13A; capability audit through completed Phase 14C.0 Team/account-linkage foundation. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  

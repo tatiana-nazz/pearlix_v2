@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PageHeaderV2 } from "./v2";
 
 interface PageHeaderProps {
   eyebrow?: string;
@@ -8,14 +9,5 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ eyebrow, title, description, actions }: PageHeaderProps) {
-  return (
-    <div className="page-header">
-      <div>
-        {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-        <h2>{title}</h2>
-        {description ? <p>{description}</p> : null}
-      </div>
-      {actions ? <div className="page-header-actions">{actions}</div> : null}
-    </div>
-  );
+  return <PageHeaderV2 title={title} description={description ?? eyebrow} action={actions} />;
 }

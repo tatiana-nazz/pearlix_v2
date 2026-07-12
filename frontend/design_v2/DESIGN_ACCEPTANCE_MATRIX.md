@@ -1,5 +1,9 @@
 # Route-Level Design Acceptance Matrix
 
+## Phase 14C foundation result
+
+Phase 14C delivers the v2 shell, token layer, Lucide map, EN/AR direction foundation, and shared-component adapters. Browser visual acceptance remains pending and is explicitly recorded in `frontend/QA_14C.md`; feature compositions remain Phase 14D–14E and final visual acceptance is Phase 14F.
+
 Pass means seeded populated, loading, empty, error, permission/read-only/locked as applicable all meet the exact expectation; route opening alone fails. Browser evidence is a named screenshot/video at 1440/1280/1024/768 in light/dark and EN/AR where relevant. Automated expectation means add/update test in the implementation phase.
 
 | ID | Route/component and seeded scenario | Exact expectation / automated expectation | Browser evidence / pass criterion | Phase |
