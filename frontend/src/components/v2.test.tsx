@@ -13,10 +13,10 @@ describe("Phase 14C shared primitives", () => {
 
   it("renders semantic status text, an icon, and a safe unknown fallback", () => {
     const { rerender } = render(<StatusBadge status="PAID" />);
-    expect(screen.getByLabelText("Status: PAID")).toHaveTextContent("PAID");
-    expect(screen.getByLabelText("Status: PAID").querySelector("svg")).toBeTruthy();
+    expect(screen.getByLabelText("Status: Paid")).toHaveTextContent("Paid");
+    expect(screen.getByLabelText("Status: Paid").querySelector("svg")).toBeTruthy();
     rerender(<StatusBadge status="FUTURE_STATUS" />);
-    expect(screen.getByLabelText("Status: FUTURE STATUS")).toBeInTheDocument();
+    expect(screen.getByLabelText("Status: Not recorded")).toBeInTheDocument();
   });
 
   it("supports tab selection and arrow-key navigation", () => {
@@ -40,7 +40,7 @@ describe("Phase 14C shared primitives", () => {
     expect(screen.queryByText("3")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name:/Show more/ }));
     expect(screen.getByText("3")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name:"Show less" }));
+    fireEvent.click(screen.getByRole("button", { name:"Collapse" }));
     expect(screen.getByRole("link", { name:"View all" })).toBeInTheDocument();
   });
 
