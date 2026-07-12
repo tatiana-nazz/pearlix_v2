@@ -20,7 +20,7 @@ describe("Phase 14C shell, language, and Lucide navigation contracts", () => {
     const patients = screen.getByRole("link", { name:"Patients" });
     expect(patients).toHaveClass("active");
     expect(patients.querySelector("svg")).toBeTruthy();
-    expect(screen.getByRole("button", { name:"Expand navigation" })).toHaveAttribute("data-tooltip", "Expand navigation");
+    expect(screen.getByRole("button", { name:"Expand sidebar" })).toHaveAttribute("data-tooltip", "Expand sidebar");
     expect(screen.queryByRole("link", { name:/Team/ })).not.toBeInTheDocument();
   });
 

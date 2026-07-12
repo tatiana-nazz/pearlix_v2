@@ -1,0 +1,9 @@
+/* Phase 14C compatibility ownership: shared legacy feature surfaces inherit v2 tokens. */
+input, select, textarea, button { color-scheme: light dark; }
+.form-stack input,.patient-form input,.patient-form select,.patient-form textarea,.patient-filters input,.patient-filters select,.appointment-form input,.appointment-form select,.appointment-form textarea,.appointment-filters input,.appointment-filters select,.reschedule-grid input,.reschedule-grid select,.dialog-field input,.dialog-field textarea,.dialog-panel select,.clinical-notes-form textarea { background:var(--v2-surface); color:var(--v2-text); border-color:var(--v2-border); }
+.stat-card.attention,.stat-card.success,.patient-table tbody tr:hover,.appointment-table tbody tr:hover,.appointment-calendar-column,.appointment-month-cell.muted,.detail-grid div,.empty-state,.protected-xray-image img,.xray-upload-preview,.ai-disclaimer { background:var(--v2-surface-subtle); color:var(--v2-text); }
+.stat-card.attention { border-color:color-mix(in srgb,var(--v2-warning) 45%,var(--v2-border)); }.stat-card.success { border-color:color-mix(in srgb,var(--v2-success) 45%,var(--v2-border)); }
+.patient-table tbody tr:has(input:checked),.appointment-table tbody tr:has(input:checked),.patient-table tbody tr.selected,.appointment-table tbody tr.selected { background:var(--v2-hover); }
+.status-pill.attention,.status-pill.success,.status-pill.danger { background:var(--v2-surface-subtle); }
+input::placeholder,textarea::placeholder { color:var(--v2-muted); opacity:1; } input:disabled,select:disabled,textarea:disabled { background:var(--v2-surface-subtle); color:var(--v2-muted); }
+@media (prefers-color-scheme: dark) { [data-theme="dark"] ::-webkit-scrollbar { background:var(--v2-canvas); } [data-theme="dark"] ::-webkit-scrollbar-thumb { background:var(--v2-border); } }

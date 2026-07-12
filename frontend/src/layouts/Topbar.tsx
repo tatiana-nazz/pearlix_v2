@@ -6,6 +6,7 @@ import { useAuthStore } from "../auth/authStore";
 import { roleLabel } from "../utils/roles";
 import type { LanguagePreference, ThemePreference } from "../types/auth";
 import { t } from "./i18n";
+import { pageTitle } from "./pageMetadata";
 
 export function Topbar({ onMenu }: { onMenu: (trigger: HTMLElement) => void }) {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ export function Topbar({ onMenu }: { onMenu: (trigger: HTMLElement) => void }) {
   const preference = user?.theme_preference ?? "SYSTEM";
   const [systemDark, setSystemDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
   const effectiveTheme = preference === "SYSTEM" ? (systemDark ? "dark" : "light") : preference.toLowerCase();
-  const pageName = useMemo(() => { const parts = location.pathname.split("/").filter(Boolean); return (parts[parts.length - 1] || "Pearlix").split("-").join(" "); }, [location.pathname]);
+  const pageName = useMemo(() => pageTitle(location.pathname, language), [location.pathname, language]);
 
   useEffect(() => { const query = window.matchMedia("(prefers-color-scheme: dark)"); const listener = () => setSystemDark(query.matches); query.addEventListener("change", listener); return () => query.removeEventListener("change", listener); }, []);
   useEffect(() => { document.documentElement.dataset.theme = effectiveTheme; document.documentElement.lang = language === "AR" ? "ar" : "en"; document.documentElement.dir = language === "AR" ? "rtl" : "ltr"; }, [effectiveTheme, language]);
@@ -36,8 +37,8 @@ export function Topbar({ onMenu }: { onMenu: (trigger: HTMLElement) => void }) {
         <h1>{pageName}</h1>
       </div>
       <div className="workspace-header-utilities">
-        <div className="shell-segment" aria-label={t(language, "theme")}><button type="button" aria-pressed={preference === "LIGHT"} onClick={() => setTheme("LIGHT")}><Sun size={16} aria-hidden="true" /> {t(language, "light")}</button><button type="button" aria-pressed={preference === "DARK"} onClick={() => setTheme("DARK")}><Moon size={16} aria-hidden="true" /> {t(language, "dark")}</button></div>
-        <div className="shell-segment" aria-label={t(language, "language")}><button type="button" aria-pressed={language === "EN"} onClick={() => setLanguage("EN")}>EN</button><button type="button" aria-pressed={language === "AR"} onClick={() => setLanguage("AR")}><Languages size={16} aria-hidden="true" /> AR</button></div>
+        <button className="v2-icon-button theme-toggle" type="button" aria-label={effectiveTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"} data-tooltip={preference === "SYSTEM" ? `System: ${effectiveTheme}` : effectiveTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"} aria-pressed={effectiveTheme === "dark"} onClick={() => setTheme(effectiveTheme === "dark" ? "LIGHT" : "DARK")}>{effectiveTheme === "dark" ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}</button>
+        <div className="shell-segment language-toggle" role="group" aria-label={t(language, "language")}><button type="button" aria-pressed={language === "EN"} onClick={() => setLanguage("EN")}>EN</button><button type="button" aria-pressed={language === "AR"} onClick={() => setLanguage("AR")}><Languages size={16} aria-hidden="true" /> AR</button></div>
         <details className="user-menu"><summary><span className="user-avatar" aria-hidden="true">{user?.full_name?.slice(0, 2).toUpperCase() ?? "P"}</span><span>{user?.full_name ?? "Pearlix"}</span></summary><div className="user-menu-panel"><span>{role ? roleLabel(role) : ""}</span>{role === "STAFF" || role === "DOCTOR" ? <><a href={`/${role.toLowerCase()}/profile/schedule`}>{t(language, "schedule")}</a><a href={`/${role.toLowerCase()}/profile/leave`}>{t(language, "leave")}</a></> : null}<button type="button" onClick={handleLogout}>{t(language, "logout")}</button><button type="button" onClick={() => setTheme("SYSTEM")}>{t(language, "system")}</button></div></details>
       </div>
     </header>

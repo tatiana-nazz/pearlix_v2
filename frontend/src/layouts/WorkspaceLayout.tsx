@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 
 import type { UserRole } from "../types/auth";
 import { Sidebar } from "./Sidebar";
@@ -11,6 +11,8 @@ interface WorkspaceLayoutProps {
 }
 
 export function WorkspaceLayout({ role }: WorkspaceLayoutProps) {
+  const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
   const userId = useAuthStore((state) => state.user?.id);
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -30,7 +32,7 @@ export function WorkspaceLayout({ role }: WorkspaceLayoutProps) {
 
   return (
     <div className="app-shell" data-collapsed={collapsed} data-drawer-open={drawerOpen} dir={language === "AR" ? "rtl" : "ltr"}>
-      <Sidebar role={role} collapsed={collapsed} onCollapse={() => setCollapsed((value) => !value)} onNavigate={() => setDrawerOpen(false)} />
+      <Sidebar role={role} collapsed={collapsed} onCollapse={() => setCollapsed((value) => !value)} onNavigate={() => setDrawerOpen(false)} onLogout={() => void logout().then(() => navigate("/login", { replace: true }))} />
       <button aria-label="Close navigation" className="drawer-backdrop" type="button" onClick={() => setDrawerOpen(false)} />
       <div className="app-workspace">
         <Topbar onMenu={(trigger) => { drawerTrigger.current = trigger; setDrawerOpen(true); }} />
