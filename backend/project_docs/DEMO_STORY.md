@@ -37,3 +37,5 @@ The seeded Admin, Staff, and Doctor dashboards are non-empty and their related r
 Focused command coverage is in `tests/accounts/test_seed_demo_clinic_story_command.py`. It verifies first seed, idempotency, reset preservation, deterministic reference dates, account/profile creation, scheduling/reschedule relationships, visits, imaging/external states, billing reconciliation, audit sanitization, role dashboards, and demo media naming.
 
 Phase 14A verification recorded 2 focused seed tests and 407 backend tests passing. Frontend source and packages are unchanged, so frontend tests/build were not rerun. Browser QA remains pending.
+
+Phase 14C.0 subsequently updated the seeded Team linkage and recorded 40 focused Team/account-linkage tests, 414 full backend tests, and 52 frontend contract tests. It adds no runtime Team UI; Phase 14C is next and deployment remains paused.

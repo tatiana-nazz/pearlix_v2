@@ -137,6 +137,8 @@ python -m pytest -q
 
 Phase 14C.0 focused Team/account-linkage tests: 40 passed during development. The complete suite passed after stabilization. Phase 14A focused seed tests remain covered by the full suite.
 
+Frontend Phase 14C.0 contract verification: 52 passed; typecheck and production build passed. No runtime Team/Users UI exists yet.
+
 `accounts.0005_doctorprofile_version_staffprofile_version_and_more` is the only Phase 14C.0 migration. Browser QA remains pending; deployment remains paused.
 
 Historical Phase 13K verification (superseded): 405 backend tests and 51 frontend tests passed.

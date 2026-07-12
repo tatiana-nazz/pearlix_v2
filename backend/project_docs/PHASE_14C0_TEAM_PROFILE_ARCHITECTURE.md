@@ -33,3 +33,7 @@ The confirmation token is Django-signed, expires after ten minutes, and is bound
 Reactivation is Admin-only and rejects active or inconsistent professional accounts. It changes login activity only; it does not reactivate a professional profile. Audit events are `team_member_created`, `team_member_updated`, `professional_status_changed`, `user_role_transitioned`, and `user_reactivated`; metadata excludes passwords, confirmation tokens, and secrets.
 
 Runtime Team/User interface work, Lucide, shell/token work, and visual redesign are intentionally not part of this phase.
+
+## Closure record
+
+Phase 14C.0 is complete. Focused Team/account-linkage tests recorded 40 passed; full backend regression recorded 414 passed; frontend contract regression recorded 52 passed. Migration `accounts.0005_doctorprofile_version_staffprofile_version_and_more` is applied. Deployment and browser QA remain paused/pending; Phase 14C is next.

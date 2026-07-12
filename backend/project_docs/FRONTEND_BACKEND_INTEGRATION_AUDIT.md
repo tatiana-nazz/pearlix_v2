@@ -1,6 +1,6 @@
 # Frontend/Backend Integration Audit
 
-Phase: Originally created for 13A; capability audit through completed Phase 14B design freeze. See `PROJECT_STATUS.md` for canonical current/next phase status.
+Phase: Originally created for 13A; capability audit through completed Phase 14C.0 Team/account-linkage foundation. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
 Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, and Phase 14C.0 Team/account-linkage API foundation are complete. Runtime Team/Users UI is deferred to Phase 14D; deployment remains paused.
@@ -58,13 +58,26 @@ type ApiError = {
 - `GET /api/me/` - current user.
 - `PATCH /api/me/preferences/` - body `{ theme_preference?, language_preference? }`. Returns auth user.
 - `GET /api/users/` - Admin only, paged users.
-- `POST /api/users/` - Admin only create user. Body includes `{ email, full_name, role, is_active?, theme_preference?, language_preference?, password|temporary_password }`.
+- `POST /api/users/` - Admin only creates Admin accounts. Doctor/Staff creation returns `PROFILE_REQUIRED` and uses `POST /api/team-members/`.
 - `GET /api/users/{id}/` - Admin only.
-- `PATCH /api/users/{id}/` - Admin only. Can update user fields and reset temp password.
+- `PATCH /api/users/{id}/` - Admin only for account fields; protected role changes cannot bypass `transition-role`.
 - `POST /api/users/{id}/reset-password/` - Admin only. Body `{ temporary_password }`.
 - `POST /api/users/{id}/deactivate/` - Admin only. Self-deactivation and last-active-admin deactivation are blocked.
+- `POST /api/users/{id}/transition-role/` - Admin-only signed preview/confirm role transition.
+- `POST /api/users/{id}/reactivate/` - Admin-only reactivation for inactive, profile-consistent accounts.
+- User list/detail includes safe `linked_profile_state` and a valid `team_member_id` when a professional profile is linked.
 
 Effective methods: no frontend `DELETE` for users. `UserViewSet` is limited to `GET`, `POST`, and `PATCH`.
+
+### Team API
+
+- `GET /api/team-members/` - Admin-only paged directory with `q`, `role`, `professional_status`, `availability`, and `page` filters.
+- `POST /api/team-members/` - Admin-only transactional Doctor/Staff onboarding with matching profile payload.
+- `GET /api/team-members/{id}/` - Admin-only profile, linked-account, schedule, leave, and bounded workload detail.
+- `PATCH /api/team-members/{id}/` - Admin-only professional field update; current profile `version` is required.
+- `POST /api/team-members/{id}/set-professional-status/` - Admin-only professional status update; current profile `version` is required and login status is unchanged.
+
+User ID is the Team identifier. Team excludes Admin accounts and legacy unlinked professional accounts. Supported fields are Doctor `specialty`, `phone`, `bio` and Staff `position`, `phone`; no unsupported professional fields are fabricated.
 
 ### Clinic Settings
 
@@ -75,14 +88,19 @@ Full settings fields: `clinic_name`, `address`, `phone`, `email`, `timezone`, `c
 
 Safe settings omit `ai_mode` and `ai_service_url`.
 
-### Users / Doctors / Staff
+### Team / Users / Doctors / Staff
 
-- `GET /api/users/` - Admin source for all user accounts, including Staff and Doctor users.
+- `GET /api/users/` - Admin source for all accounts, with linked-profile state and Team identifier where valid.
+- `GET /api/team-members/` - Admin-only paged Team directory; filters `q`, `role`, `professional_status`, `availability`, and `page`.
+- `POST /api/team-members/` - Admin-only transactional Doctor/Staff onboarding. User ID is the Team identifier.
+- `GET /api/team-members/{id}/` - Admin-only professional profile, linked account, shifts, leave, and bounded workload detail.
+- `PATCH /api/team-members/{id}/` - Admin-only professional fields with required profile `version`.
+- `POST /api/team-members/{id}/set-professional-status/` - Admin-only professional status with required profile `version`; it does not change login status.
 - `GET /api/doctors/` - authenticated active doctors list with `doctor_profile` summary.
 - `GET /api/doctors/{doctor_id}/working-hours/` - compatibility route backed by `WorkingShift`; Admin/Staff can read any Doctor and Doctor can read own only.
 - `PUT /api/doctors/{doctor_id}/working-hours/` - Admin-only compatibility replacement backed by `WorkingShift`, with explicit confirmation when future appointments are affected.
 
-There is no dedicated Staff profile CRUD endpoint and no dedicated Doctor profile update endpoint in the exposed API. Frontend must use `users` for account administration and `doctors` for active doctor selection.
+Team onboarding and professional-profile update/status APIs are implemented. Supported fields are Doctor `specialty`, `phone`, `bio` and Staff `position`, `phone`; gender, qualifications, license, profile photo, Staff biography, and activity notes are absent. Legacy unlinked professional accounts remain visible in Users & Access as `PROFILE_SETUP_REQUIRED` but are excluded from Team.
 
 ### Patients
 
@@ -250,6 +268,8 @@ Recommended React route structure:
 
 /admin
 /admin/dashboard
+/admin/team (planned Phase 14D; not exposed by the runtime router)
+/admin/team/:memberId (planned Phase 14D; not exposed by the runtime router)
 /admin/users
 /admin/users/new
 /admin/users/:userId
@@ -338,6 +358,7 @@ Needs Reschedule must be a tab/view inside appointment pages, not a side panel.
 Visible sidebar items:
 
 - Dashboard
+- Team (planned Phase 14D; API foundation is ready)
 - Users
 - Doctors and schedules
 - Clinic settings
@@ -543,23 +564,25 @@ Hidden actions:
 
 ### Users
 
-- Endpoints: `GET/POST /api/users/`, `GET/PATCH /api/users/{id}/`, `POST /api/users/{id}/reset-password/`, `POST /api/users/{id}/deactivate/`
-- Create payload: `{ email, full_name, role, password|temporary_password, is_active?, theme_preference?, language_preference? }`
-- Update payload: any editable user fields plus optional `password|temporary_password`.
+- Endpoints: `GET/POST /api/users/`, `GET/PATCH /api/users/{id}/`, `POST /api/users/{id}/reset-password/`, `POST /api/users/{id}/deactivate/`, `POST /api/users/{id}/transition-role/`, `POST /api/users/{id}/reactivate/`.
+- Create payload: generic users create Admin accounts only. Doctor/Staff account creation returns `PROFILE_REQUIRED` and is handled by Team onboarding.
+- Update payload: editable account fields plus optional `password|temporary_password`; protected role changes are rejected and require transition preview/confirmation.
 - Reset payload: `{ temporary_password }`
-- Response: user management shape with `must_change_password`, `password_changed_at`, timestamps.
-- Errors: password validation, duplicate email, self-deactivation `INVALID_OPERATION` 400, last admin deactivation `INVALID_OPERATION` 409.
+- Response: user management shape with `must_change_password`, `password_changed_at`, timestamps, `version`, `linked_profile_state`, and valid `team_member_id`.
+- Errors: password validation, duplicate email, `PROFILE_REQUIRED`, protected-role error, self/last-active-Admin safeguards, and stable reactivation errors.
 
 ### Doctors / Staff Management
 
 - Doctors selector: `GET /api/doctors/`
-- User management: `GET/POST/PATCH /api/users/`
+- Team directory: Admin-only `GET/POST /api/team-members/`, `GET/PATCH /api/team-members/{id}/`, and `POST /api/team-members/{id}/set-professional-status/`.
+- Team create is transactional and accepts matching Doctor `{ specialty?, phone?, bio? }` or Staff `{ position?, phone? }` profile payloads only. Team update/status requires the current profile `version`.
+- User management: generic `/api/users/` creates Admin accounts only and cannot change professional role state directly.
 - Clinic defaults: current Admin-only `/api/clinic-default-shifts/` contract. Records are versioned templates and never propagate automatically.
 - Generic employee schedules: current `/api/working-shifts/` contract supports Doctor and Staff. Admin manages rows; Staff and Doctor list/read only their own rows.
 - Schedule actions: `POST /api/working-shifts/apply-default/` and `POST /api/working-shifts/copy-schedule/`, supporting `MISSING_ONLY` and `REPLACE_ALL`.
 - Doctor compatibility route: `GET/PUT /api/doctors/{doctorId}/working-hours/`, backed by `WorkingShift`. Staff may read Doctor hours for appointment scheduling; Admin alone may use compatibility replacement.
 - Shift/default/leave mutations require versions. Errors include `VERSION_REQUIRED`, `VERSION_CONFLICT`, `SHIFT_OVERLAP`, `INVALID_SHIFT_TIME`, and `SHIFT_CHANGE_REQUIRES_CONFIRMATION`.
-- Gap: profile fields `specialty`, `phone`, `bio`, and Staff `position` are not exposed through Admin CRUD except read-only `doctor_profile` on doctor list.
+- Professional/login status is intentionally separate. Team excludes legacy unlinked professional users; generic user detail represents them as `PROFILE_SETUP_REQUIRED`.
 
 ### Clinic Settings
 
@@ -601,10 +624,12 @@ Hidden actions:
 - Phase 13H is complete: saved X-ray detail/upload, authenticated Blob requests with temporary object URLs, AI result/overlay presentation, and external workspace use the existing backend contract. Staff has no external workspace; only the owning Doctor may attach a temporary case. Browser QA remains pending.
 - Phase 13I is complete: role-aware billing handoffs, invoices, payments, and print data use existing backend APIs and backend-controlled financial values.
 - Historical Phase 13I verification: backend runtime and migrations unchanged; 405 backend tests and 49 frontend tests passed; browser QA remained pending.
-- Phase 13J is complete: Admin routes implement user create/update/reset/deactivation, full clinic settings, and read-only audit logs. Reactivation is not exposed because no dedicated backend operation exists; DoctorProfile/StaffProfile CRUD is not implemented.
+- Phase 13J is complete: Admin routes implement user create/update/reset/deactivation, full clinic settings, and read-only audit logs.
 - Phase 13K completed the functional frontend: final regression, route/navigation cleanup, accessibility polish, and documentation consistency validation required no backend runtime or migration changes.
 - Phase 14A completed the deterministic, development-only integrated demo story across the implemented frontend views. Browser QA remains pending.
-- Next is Phase 14B Visual Audit and Design Freeze; deployment remains paused.
+- Phase 14B completed the UI refocus design freeze.
+- Phase 14C.0 completed the Admin-only Team/account-linkage API foundation: transactional onboarding, linked-profile states, protected role transitions, reactivation, and frontend contract wrappers. Runtime Team and Users & Access pages remain Phase 14D.
+- Next is Phase 14C shell, tokens, Lucide icons, and shared components; deployment remains paused.
 
 ### Needs Reschedule Tab
 
@@ -958,31 +983,13 @@ Network/offline fallback:
 
 ## N. Backend Gaps or Frontend Risks
 
-- `DoctorProfile` and `StaffProfile` models exist, but there is no dedicated profile CRUD API. Doctor list exposes `doctor_profile` read-only summary; Staff profile fields are not exposed.
-- User list has no backend query filtering by role/search. Admin user management may need client-side filters or a future backend filter endpoint if user volume grows.
-- Schedule availability is no longer a backend gap: Doctor and Staff own schedules return real `WorkingShift` rows through dashboards and role-scoped generic APIs.
-- External X-ray routes are Admin/Doctor only; Staff X-ray work must use saved patient X-rays, not external workspace.
-- Protected media cannot be rendered directly in `<img src="/api/...">` unless the app can attach auth headers through a blob fetch.
-- The router can appear to expose update/delete routes for some DRF viewsets, but `http_method_names` blocks them. Use only the effective methods documented here.
-- Availability exceptions expose `DELETE` but intentionally reject hard deletion. Frontend must only use `cancel`.
-- Doctor can read full clinical history for all active/non-archived patients, but can edit only own visit notes. UI must distinguish "readable" from "editable".
-- Doctor can create billing handoffs and read own handoffs, but cannot access invoices/payments. Do not link doctors into invoice pages after handoff creation.
-- AI disclaimer Arabic text is returned by the serializer; frontend should display returned value rather than hardcoding translated copy.
-- No automatic notifications exist for leave or reschedule. Staff workflow must manually monitor the Needs Reschedule tab.
-- Billing MVP has no online payment, itemization, tax, discount, or insurance. Do not design forms for these fields without a backend phase.
+- Final Team and Users & Access runtime UI is not yet built; it remains Phase 14D work.
+- Unsupported professional fields remain absent: gender, qualifications, license, profile photo, Staff biography, and activity notes.
+- Browser QA remains pending.
 
 No critical backend blocker was found for frontend integration planning.
 
 ## O. Historical Phase Order
-
-## Phase 14C.0 Team/API Contract
-
-- `GET`/`POST /api/team-members/`, detail/update, and professional-status actions are Admin-only. User ID is the stable Team identifier.
-- Team list excludes Admin and legacy unlinked professional accounts. User list/detail exposes `linked_profile_state` and valid `team_member_id` without embedding schedules or workload.
-- Doctor/Staff onboarding is transactional through Team. Generic `/api/users/` rejects Doctor/Staff creation with `PROFILE_REQUIRED`; generic role PATCH is rejected and callers must use `transition-role` preview/confirmation.
-- Profile fields are limited to Doctor specialty/phone/bio and Staff position/phone. No gender, qualification, license, photo, Staff biography, or activity fields exist.
-- Profile `version` is required for Team update/status. Login status and professional status are separate. Reactivation changes login status only.
-- Frontend contains types/wrappers/query keys only (`src/types/team.ts`, `src/api/endpoints/team.ts`); no `/admin/team` runtime route was added.
 
 - 13B — frontend foundation: Vite/React/TypeScript app structure, API client, environment config, and shared types.
 - 13B.1 — design-system and responsive contract.
@@ -1000,6 +1007,9 @@ No critical backend blocker was found for frontend integration planning.
 - 13K — final regression, accessibility, route cleanup, documentation consistency, and release readiness. Backend runtime and migrations remained unchanged.
 - 14A — deterministic, development-only integrated demo story across the implemented frontend views. Production API behavior and migrations remain unchanged.
 
+- 14B — UI refocus design freeze; runtime implementation unchanged.
+- 14C.0 — Team/account-linkage API foundation: Team endpoints, transactional onboarding, profile integrity/versioning, protected transitions, reactivation, documentation, and frontend contract wrappers; no runtime Team page.
+
 ## Historical Phase 13A Completion Criterion
 
-Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production API contract through completed Phase 14A.
+Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production contract through completed Phase 14C.0.

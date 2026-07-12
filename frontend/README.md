@@ -146,7 +146,7 @@ Phase 13G adds real visit and clinical note routes:
 - Completing an active visit uses an explicit confirmation. When notes are dirty, the frontend saves notes first and completes only after that save succeeds.
 - Phase 13G originally deferred X-ray/AI integration. Phase 13H now provides saved X-rays, authenticated protected media, AI results and overlays, and external X-ray workflows. Phase 13I now provides Doctor completed-visit handoff creation and role-aware handoff integration.
 
-## Runtime Implementation Through Phase 13K; Phase 14A/14B Design Closure
+## Runtime Functional Implementation Through Phase 13K; Phase 14A–14C.0 Foundations
 
 - Vite, React, TypeScript app structure.
 - TanStack Query provider.
@@ -177,6 +177,7 @@ Phase 13G adds real visit and clinical note routes:
 - Phase 13K final QA/release-readiness contract: `frontend/QA_13K.md`.
 - Phase 14A added the deterministic development-only integrated demo data story.
 - Phase 14B froze the replacement UI/UX design; runtime visual redesign has not started.
+- Phase 14C.0 added Team APIs, transactional Doctor/Staff onboarding, linked-profile states, protected role transitions, reactivation, and frontend contract wrappers only; no runtime Team page was added.
 
 ## Design Contract
 
@@ -189,7 +190,7 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 ## Intentionally Not Implemented Yet
 
 - Real AI integration beyond the MVP `MOCK_ADAPTER`.
-- Email forgot-password and runtime Team/Users & Access redesign (the Phase 14C.0 API contract is implemented; final screens are Phase 14D).
+- Email forgot-password and runtime Team/Users & Access redesign (the Phase 14C.0 professional-profile API is implemented; final screens are Phase 14D). Gender, qualifications, license, profile photo, Staff biography, and activity notes remain intentionally unsupported professional fields.
 - Online payments, invoice itemization, tax, discount, and insurance workflows.
 - Browser QA execution for completed frontend phases remains pending.
 
