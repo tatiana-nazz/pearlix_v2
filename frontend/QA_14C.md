@@ -1,20 +1,26 @@
 # Phase 14C QA — Shell, Tokens, Icons, and Shared Components
 
-## Automated verification
+## Runtime scope
 
-- Frontend typecheck: passed.
-- Frontend regression: **52 passed** in 24 files.
-- Frontend production build: passed.
-- Django check: passed. Migration drift: none (`makemigrations --check --dry-run`).
-- Documentation consistency checker: passed. `git diff --check`: passed.
+Phase 14C delivers the v2 shell, tokens, Lucide map, authenticated preference persistence, EN/AR shell foundation, and reusable primitives. It does not add `/admin/team` or redesign dashboards, appointments, patients, visits, X-rays, billing, settings, audit, Team, or Users & Access.
+
+## Focused automated coverage
+
+- `src/layouts/foundation.test.tsx`: role-safe destinations, no Team route, active/compact navigation, accessible tooltips, and EN/AR shell dictionary.
+- `src/auth/authStore.preferences.test.ts`: authenticated preference PATCH success and rollback without session corruption.
+- `src/components/v2.test.tsx`: buttons, statuses, tabs, clickable rows, previews, table states, fields/selects/comboboxes, and modal close/dirty/focus/pending behavior.
+- `src/styles/v2/tokens.contract.test.ts`: light/dark semantic tokens, 272/84/72 shell contract, and Lucide-only navigation source.
+
+Focused Phase 14C result: **14 passed**. Full frontend regression: **66 passed** in 28 files. Typecheck and production build: passed.
+
+## Backend and repository verification
+
+- Django check: passed.
+- Migration drift: none (`makemigrations --check --dry-run`).
+- Documentation consistency checker: passed.
+- `git diff --check`: passed.
+- Backend runtime changed: no. Migrations: none.
 
 ## Browser QA status
 
-Browser QA is pending: the desktop browser session and Phase 14A demo accounts were not available in this implementation environment. Before visual acceptance, check Admin at 1440 expanded, Staff at 1024 rail, Doctor at 768 drawer, LIGHT/DARK, EN/AR, preference persistence, and feature-page overflow. This is an honest pending visual acceptance item for Phase 14F; no browser result is claimed.
-
-## Exact foundation checks
-
-- Shell is fixed/retractable at 272 px expanded, 84 px compact, and 72 px desktop header.
-- Navigation has no `/admin/team` item or runtime route.
-- Theme preference uses `/api/me/preferences/` with optimistic update and restoration on failure.
-- Language preference sets `lang` and `dir`; shell copy is translated, while feature copy remains scheduled for 14D–14E.
+Browser QA is pending; no browser visual acceptance is claimed. The manual matrix is Admin at 1440 expanded; Staff at 1024 compact rail; Doctor at 768 drawer; LIGHT/DARK/SYSTEM; EN/AR and RTL; preference persistence; role navigation; and feature-page clipping/overflow. Final visual acceptance remains Phase 14F.

@@ -1,17 +1,19 @@
 # Phase 14C Implementation Record
 
-Phase 14C adds the visible v2 foundation without changing backend runtime, APIs, permissions, routes, or migrations.
+Phase 14C is complete. Backend runtime changed: no. Migrations: none.
 
-## Delivered
+## Implementation paths
 
-- CSS custom-property v2 token layers in `src/styles/v2/` for complete light/dark semantic colors, typography, spacing, radii, elevation, motion, utilities, and components.
-- `AppShell` runtime composition via `WorkspaceLayout`, fixed 272/84 sidebar and 72 header, per-user local collapse key, responsive drawer, and role-safe grouped navigation.
-- Lucide React named imports through the centralized `layouts/navigation.tsx` map. There is no `/admin/team` navigation destination.
-- Auth-store preference persistence for LIGHT/DARK/SYSTEM and EN/AR through `PATCH /api/me/preferences/`; failures restore prior state. System theme follows media changes.
-- Common v2 primitives in `src/components/v2.tsx`, plus legacy compatibility adapters for Card, PageHeader, StatusPill, and state components. Their removal owner is Phase 14F after feature composition migration.
+- Tokens: `src/styles/v2/`.
+- Shell and navigation: `src/layouts/WorkspaceLayout.tsx`, `Sidebar.tsx`, `Topbar.tsx`, `Shell.css`, `navigation.tsx`, and `i18n.ts`.
+- Preferences: `src/auth/authStore.ts` using the existing `/api/me/preferences/` contract.
+- Primitives and overlay foundation: `src/components/v2.tsx`.
+- Compatibility adapters: `Card`, `PageHeader`, `StatusPill`, `LoadingState`, `EmptyState`, and `ErrorState`; Phase 14F owns their removal after 14D–14E consumer migrations.
 
-## Scope boundaries
+## Verification
 
-Shell/common copy is translated EN/AR and RTL-safe using logical CSS and bidi isolation utility. Feature page copy and feature-specific dashboard/table/form compositions remain Phase 14D–14E work. Browser visual acceptance remains Phase 14F.
+Four focused Phase 14C test files add 14 behavioral tests. Full frontend regression is 66 passed; typecheck, build, Django check, migration drift, documentation consistency, and diff checks pass.
 
-Backend runtime changed: no. Migrations: none. Next phase: 14D.
+The shared Modal/Drawer/ConfirmDialog foundation is complete and tested for outside click, Escape, focus, dirty discard, and pending locks. Named feature-consumer migrations remain: appointment dialogs (`features/appointments/components/*Dialog.tsx`, owner 14D); patient archive/edit dialogs (`features/patients/components/ArchivePatientDialog.tsx`, `pages/patients/PatientProfilePage.tsx`, owner 14D); billing dialogs (`features/billing/components/BillingDialogs.tsx`, `pages/billing/BillingPages.tsx`, owner 14E); visit dialogs (`features/visits/components/CompleteVisitDialog.tsx`, owner 14E); X-ray dialogs (`features/xrays/components/*Dialog*.tsx`, owner 14E); and Admin account dialogs (`pages/admin/AdminManagementPages.tsx`, owner 14D).
+
+No `/admin/team` runtime route exists. Browser QA remains pending. Next phase: Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access.

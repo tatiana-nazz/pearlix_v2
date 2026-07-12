@@ -1,60 +1,40 @@
-"""Validate the Phase 14C documentation handoff without third-party packages."""
-
-from __future__ import annotations
-
+"""Fail fast on Phase 14C closure documentation drift (standard library only)."""
 from pathlib import Path
 import sys
 
-
 ROOT = Path(__file__).resolve().parents[1]
 FILES = {
-    "status": ROOT / "backend/project_docs/PROJECT_STATUS.md",
-    "audit": ROOT / "backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md",
-    "readme": ROOT / "frontend/README.md",
-    "qa": ROOT / "frontend/QA_14C.md",
-    "record": ROOT / "frontend/design_v2/PHASE_14C_IMPLEMENTATION_RECORD.md",
-    "mapping": ROOT / "frontend/design_v2/RUNTIME_COMPONENT_MAPPING_V2.md",
-    "matrix": ROOT / "frontend/design_v2/DESIGN_ACCEPTANCE_MATRIX.md",
-    "team": ROOT / "frontend/design_v2/TEAM_USERS_ACCESS_SPEC_V2.md",
+    "status": "backend/project_docs/PROJECT_STATUS.md", "audit": "backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md",
+    "readme": "frontend/README.md", "qa": "frontend/QA_14C.md", "record": "frontend/design_v2/PHASE_14C_IMPLEMENTATION_RECORD.md",
+    "mapping": "frontend/design_v2/RUNTIME_COMPONENT_MAPPING_V2.md", "matrix": "frontend/design_v2/DESIGN_ACCEPTANCE_MATRIX.md",
 }
-
+SCOPE = "phase 14d — priority workflows: dashboards, appointments, patients, team, and users & access"
 
 def main() -> int:
-    errors: list[str] = []
-    text: dict[str, str] = {}
-    for name, path in FILES.items():
-        if not path.exists():
-            errors.append(f"Missing required document: {path.relative_to(ROOT)}")
-        else:
-            text[name] = path.read_text(encoding="utf-8").lower()
-    if errors:
-        print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
-        return 1
-
-    required = {
-        "status": ("current completed phase: 14c", "next phase: 14d", "414 passed", "52 passed", "deployment paused"),
-        "qa": ("272 px", "84 px", "72 px", "browser qa is pending", "/admin/team"),
-        "record": ("lucide", "light/dark/system", "en/ar", "backend runtime changed: no", "migrations: none", "next phase: 14d"),
-        "mapping": ("appshell", "sidebarnav", "workspaceheader"),
-        "matrix": ("14c",),
-        "audit": ("backend runtime",),
+    errors, text = [], {}
+    for key, relative in FILES.items():
+        path = ROOT / relative
+        if not path.is_file(): errors.append(f"missing {relative}")
+        else: text[key] = path.read_text(encoding="utf-8").lower()
+    checks = {
+        "status": ("current completed phase: 14c", SCOPE, "66 passed", "backend runtime changes in phase 14c: no", "migrations in phase 14c: none", "implement phases 14d–14f"),
+        "audit": ("completed phase 14c shell", SCOPE, "14c — shell", "no `/admin/team` runtime route"),
+        "readme": ("phase 14c added", "66 frontend tests", SCOPE, "design_v2/` is the authoritative"),
+        "qa": ("focused automated coverage", "14 passed", "66 passed", "browser qa is pending"),
+        "record": ("phase 14c is complete", "shared modal/drawer/confirmdialog foundation is complete", SCOPE, "browser qa remains pending"),
+        "mapping": ("shared v2 overlay foundation is complete", "appointmentconfirmdialog.tsx", "14d, remove"),
+        "matrix": ("phase 14c",),
     }
-    for source, phrases in required.items():
+    for key, phrases in checks.items():
         for phrase in phrases:
-            if phrase not in text[source]:
-                errors.append(f"{source} is missing required phrase: {phrase!r}")
-    if "14c shell, tokens, lucide icons, and shared components" in text["status"] and "next phase: 14c shell" in text["status"]:
-        errors.append("PROJECT_STATUS still presents Phase 14C as next.")
-    if "supported reactivation after api support" in text["team"]:
-        errors.append("TEAM_USERS_ACCESS_SPEC_V2 contains stale reactivation wording.")
-    if "post-mvp limitations" in text["status"] and "final team and users & access runtime ui" in text["status"]:
-        errors.append("PROJECT_STATUS presents Phase 14D Team/Users UI as post-MVP.")
+            if phrase not in text.get(key, ""): errors.append(f"{key} missing {phrase!r}")
+    joined = "\n".join(text.values())
+    for stale in ("next is phase 14c", "phase 14c shell/token/shared-component work is next", "final team and users & access runtime ui (phase 14d)"):
+        if stale in joined: errors.append(f"stale current-phase wording: {stale!r}")
+    if "52 passed" in text.get("status", "") or "52 passed" in text.get("qa", ""): errors.append("frontend total remains the pre-14C baseline")
+    if "browser qa: complete" in joined or "browser acceptance complete" in joined: errors.append("browser QA is falsely complete")
     if errors:
-        print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
-        return 1
-    print("Documentation consistency check passed.")
-    return 0
+        print("Documentation consistency check failed:\n- " + "\n- ".join(errors)); return 1
+    print("Documentation consistency check passed."); return 0
 
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+if __name__ == "__main__": raise SystemExit(main())

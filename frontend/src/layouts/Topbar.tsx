@@ -7,7 +7,7 @@ import { roleLabel } from "../utils/roles";
 import type { LanguagePreference, ThemePreference } from "../types/auth";
 import { t } from "./i18n";
 
-export function Topbar({ onMenu }: { onMenu: () => void }) {
+export function Topbar({ onMenu }: { onMenu: (trigger: HTMLElement) => void }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, role, logout, updatePreferences } = useAuthStore();
@@ -31,7 +31,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   return (
     <header className="workspace-header">
       <div>
-        <button className="v2-icon-button mobile-nav-trigger" type="button" aria-label={t(language, "menu")} data-tooltip={t(language, "menu")} onClick={onMenu}><Menu size={20} /></button>
+        <button className="v2-icon-button mobile-nav-trigger" type="button" aria-label={t(language, "menu")} data-tooltip={t(language, "menu")} onClick={(event) => onMenu(event.currentTarget)}><Menu size={20} /></button>
         <p>{roleLabel(role)} workspace</p>
         <h1>{pageName}</h1>
       </div>
