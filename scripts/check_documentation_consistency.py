@@ -17,10 +17,10 @@ def main() -> int:
         if not path.is_file(): errors.append(f"missing {relative}")
         else: text[key] = path.read_text(encoding="utf-8").lower()
     checks = {
-        "status": ("current completed phase: 14c", SCOPE, "66 passed", "backend runtime changes in phase 14c: no", "migrations in phase 14c: none", "implement phases 14d–14f"),
+        "status": ("current completed phase: 14c", SCOPE, "75 passed", "backend runtime changes in phase 14c: no", "migrations in phase 14c: none", "implement phases 14d–14f"),
         "audit": ("completed phase 14c shell", SCOPE, "14c — shell", "no `/admin/team` runtime route"),
-        "readme": ("phase 14c added", "66 frontend tests", SCOPE, "design_v2/` is the authoritative"),
-        "qa": ("focused automated coverage", "14 passed", "66 passed", "browser qa is pending"),
+        "readme": ("phase 14c added", "75 frontend tests", SCOPE, "design_v2/` is the authoritative"),
+        "qa": ("focused automated coverage", "23 passed", "75 passed", "collapse persistence", "browser qa is pending"),
         "record": ("phase 14c is complete", "shared modal/drawer/confirmdialog foundation is complete", SCOPE, "browser qa remains pending"),
         "mapping": ("shared v2 overlay foundation is complete", "appointmentconfirmdialog.tsx", "14d, remove"),
         "matrix": ("phase 14c",),
@@ -31,7 +31,7 @@ def main() -> int:
     joined = "\n".join(text.values())
     for stale in ("next is phase 14c", "phase 14c shell/token/shared-component work is next", "final team and users & access runtime ui (phase 14d)"):
         if stale in joined: errors.append(f"stale current-phase wording: {stale!r}")
-    if "52 passed" in text.get("status", "") or "52 passed" in text.get("qa", ""): errors.append("frontend total remains the pre-14C baseline")
+    if "66 passed" in text.get("status", "") or "66 passed" in text.get("qa", ""): errors.append("frontend total remains the pre-final Phase 14C baseline")
     if "browser qa: complete" in joined or "browser acceptance complete" in joined: errors.append("browser QA is falsely complete")
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors)); return 1

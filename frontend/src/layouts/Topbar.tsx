@@ -14,11 +14,11 @@ export function Topbar({ onMenu }: { onMenu: (trigger: HTMLElement) => void }) {
   const { user, role, logout, updatePreferences } = useAuthStore();
   const language = user?.language_preference ?? "EN";
   const preference = user?.theme_preference ?? "SYSTEM";
-  const [systemDark, setSystemDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const [systemDark, setSystemDark] = useState(() => typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   const effectiveTheme = preference === "SYSTEM" ? (systemDark ? "dark" : "light") : preference.toLowerCase();
   const pageName = useMemo(() => pageTitle(location.pathname, language), [location.pathname, language]);
 
-  useEffect(() => { const query = window.matchMedia("(prefers-color-scheme: dark)"); const listener = () => setSystemDark(query.matches); query.addEventListener("change", listener); return () => query.removeEventListener("change", listener); }, []);
+  useEffect(() => { if (typeof window.matchMedia !== "function") return; const query = window.matchMedia("(prefers-color-scheme: dark)"); const listener = (event: MediaQueryListEvent) => setSystemDark(event.matches); query.addEventListener?.("change", listener); return () => query.removeEventListener?.("change", listener); }, []);
   useEffect(() => { document.documentElement.dataset.theme = effectiveTheme; document.documentElement.lang = language === "AR" ? "ar" : "en"; document.documentElement.dir = language === "AR" ? "rtl" : "ltr"; }, [effectiveTheme, language]);
 
   async function setTheme(theme: ThemePreference) { try { await updatePreferences({ theme_preference: theme }); } catch { /* state restores in the store; server errors must not corrupt auth. */ } }

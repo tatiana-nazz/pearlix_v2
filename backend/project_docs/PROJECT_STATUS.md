@@ -9,7 +9,7 @@ Project: Dental Clinic Management System Website
 - Next phase: Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access
 - Next step: implement the complete approved Phase 14D priority-workflow scope
 - Final backend full regression: 414 passed
-- Final frontend regression: 66 passed
+- Final frontend regression: 75 passed
 - Backend runtime changes in Phase 14C: no
 - Migrations in Phase 14C: none
 - Backend runtime changes in Phase 14C.0: yes

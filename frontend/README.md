@@ -197,4 +197,4 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14C is complete with 66 frontend tests. Next is Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access. Deployment remains paused pending Phase 14D–14F and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14C.md`.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14C is complete with 75 frontend tests. Next is Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access. Deployment remains paused pending Phase 14D–14F and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14C.md`.

@@ -32,7 +32,7 @@ export function WorkspaceLayout({ role }: WorkspaceLayoutProps) {
 
   return (
     <div className="app-shell" data-collapsed={collapsed} data-drawer-open={drawerOpen} dir={language === "AR" ? "rtl" : "ltr"}>
-      <Sidebar role={role} collapsed={collapsed} onCollapse={() => setCollapsed((value) => !value)} onNavigate={() => setDrawerOpen(false)} onLogout={() => void logout().then(() => navigate("/login", { replace: true }))} />
+      <Sidebar role={role} collapsed={collapsed} drawerOpen={drawerOpen} onDrawerClose={() => setDrawerOpen(false)} onCollapse={() => setCollapsed((value) => !value)} onNavigate={() => setDrawerOpen(false)} onLogout={() => void logout().then(() => navigate("/login", { replace: true }))} />
       <button aria-label="Close navigation" className="drawer-backdrop" type="button" onClick={() => setDrawerOpen(false)} />
       <div className="app-workspace">
         <Topbar onMenu={(trigger) => { drawerTrigger.current = trigger; setDrawerOpen(true); }} />

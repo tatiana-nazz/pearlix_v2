@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LogOut, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 
 import type { UserRole } from "../types/auth";
 import { roleLabel } from "../utils/roles";
@@ -14,9 +14,11 @@ interface SidebarProps {
   onCollapse?: () => void;
   onNavigate?: () => void;
   onLogout?: () => void;
+  drawerOpen?: boolean;
+  onDrawerClose?: () => void;
 }
 
-export function Sidebar({ role, collapsed = false, onCollapse = () => undefined, onNavigate = () => undefined, onLogout = () => undefined }: SidebarProps) {
+export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerClose = () => undefined, onCollapse = () => undefined, onNavigate = () => undefined, onLogout = () => undefined }: SidebarProps) {
   const groups: NavigationGroup[] = ["workspace", "clinical", "administration", "personal"];
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   return (
@@ -26,7 +28,7 @@ export function Sidebar({ role, collapsed = false, onCollapse = () => undefined,
         <div className="app-sidebar-brand-copy">
           <strong>Pearlix</strong>
           <span>{roleLabel(role)} workspace</span>
-        </div><button className="v2-icon-button sidebar-toggle" type="button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} data-tooltip={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={onCollapse}>{collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}</button>
+        </div>{drawerOpen ? <button className="v2-icon-button drawer-close" type="button" aria-label={t(language, "close")} onClick={onDrawerClose}><X size={20} /></button> : null}<button className="v2-icon-button sidebar-toggle" type="button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} data-tooltip={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={onCollapse}>{collapsed ? <PanelLeftOpen className="directional-icon" size={20} /> : <PanelLeftClose className="directional-icon" size={20} />}</button>
       </div>
       <nav className="app-sidebar-nav" aria-label={`${roleLabel(role)} navigation`}>
         {groups.map((group) => {
