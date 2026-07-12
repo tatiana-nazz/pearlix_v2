@@ -37,9 +37,10 @@ describe("PatientTable", () => {
     expect(screen.getByText("No patients found for this filter.")).toBeInTheDocument();
   });
 
-  it("renders Admin row with View only", () => {
+  it("opens the Admin row without a routine View control", () => {
     renderTable("ADMIN");
-    expect(screen.getByRole("link", { name: "View" })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /QA Patient/ })).toHaveAttribute("tabindex", "0");
+    expect(screen.queryByRole("link", { name: "View" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Archive" })).not.toBeInTheDocument();
   });

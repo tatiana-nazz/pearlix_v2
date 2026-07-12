@@ -7,6 +7,7 @@ import { formatDateTime } from "../../../utils/dates";
 import { displayText } from "../../../utils/formatters";
 import { getPatientPermissions, patientProfilePath } from "../utils/patientPermissions";
 import { PatientStatusBadge } from "./PatientStatusBadge";
+import { ClickableRow, StatusBadge } from "../../../components/v2";
 
 interface PatientTableProps {
   role: UserRole;
@@ -28,11 +29,11 @@ export function PatientTable({ role, patients, showArchivedStatus, onArchive, on
           <tr>
             <th>Patient</th>
             <th>Contact</th>
-            <th>Gender</th>
-            <th>Age</th>
+            <th>Gender / age</th>
             {showArchivedStatus ? <th>Status</th> : null}
             {role === "DOCTOR" ? <th>Last Visit With Me</th> : null}
             <th>Actions</th>
+            <th aria-label="Open profile" />
           </tr>
         </thead>
         <tbody>
@@ -40,24 +41,20 @@ export function PatientTable({ role, patients, showArchivedStatus, onArchive, on
             const permissions = getPatientPermissions(role, patient);
             const profilePath = patientProfilePath(role, patient.id);
             return (
-              <tr key={patient.id} onClick={() => navigate(profilePath)}>
+              <ClickableRow key={patient.id} onOpen={() => navigate(profilePath)}>
                 <td>
                   <strong>{patient.full_name}</strong>
                 </td>
                 <td>{displayText(patient.phone_number || patient.email)}</td>
-                <td>{patient.gender}</td>
-                <td>{patient.age ?? "Not recorded"}</td>
+                <td>{patient.gender} · {patient.age ?? "Not recorded"}</td>
                 {showArchivedStatus ? (
                   <td>
                     <PatientStatusBadge patient={patient} />
                   </td>
                 ) : null}
                 {role === "DOCTOR" ? <td>{patient.last_visit_with_me_at ? formatDateTime(patient.last_visit_with_me_at) : "Not recorded"}</td> : null}
-                <td>
+                <td data-row-action>
                   <div className="row-actions" onClick={(event) => event.stopPropagation()}>
-                    <Link className="button secondary compact-button" to={profilePath}>
-                      View
-                    </Link>
                     {permissions.canEdit ? (
                       <Link className="button secondary compact-button" to={`${profilePath}?edit=1`}>
                         Edit
@@ -75,7 +72,7 @@ export function PatientTable({ role, patients, showArchivedStatus, onArchive, on
                     ) : null}
                   </div>
                 </td>
-              </tr>
+              </ClickableRow>
             );
           })}
         </tbody>

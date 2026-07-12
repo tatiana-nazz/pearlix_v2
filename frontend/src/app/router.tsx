@@ -11,6 +11,7 @@ import { ChangePasswordPage } from "../pages/ChangePasswordPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { AdminDashboardPage } from "../pages/admin/AdminDashboardPage";
+import { AdminTeamDetailPage, AdminTeamListPage } from "../pages/admin/TeamPages";
 import { ScheduleManagementPage } from "../pages/admin/ScheduleManagementPage";
 import { LeaveManagementPage } from "../pages/admin/LeaveManagementPage";
 import { AppointmentsPage } from "../pages/appointments/AppointmentsPage";
@@ -79,6 +80,8 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/admin/dashboard" replace /> },
               { path: "dashboard", element: <AdminDashboardPage /> },
+              { path: "team", element: <AdminTeamListPage /> },
+              { path: "team/:memberId", element: <AdminTeamDetailPage /> },
               { path: "doctors", element: <ScheduleManagementPage /> },
               { path: "leave", element: <LeaveManagementPage /> },
               { path: "leave/:exceptionId", element: <LeaveManagementPage /> },

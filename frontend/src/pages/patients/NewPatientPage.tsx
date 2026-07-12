@@ -1,7 +1,6 @@
 import { Navigate, useNavigate } from "react-router-dom";
 
-import { Card } from "../../components/Card";
-import { PageHeader } from "../../components/PageHeader";
+import { PageHeaderV2, SurfaceCard } from "../../components/v2";
 import { PatientForm, createPayloadFromForm } from "../../features/patients/components/PatientForm";
 import { useCreatePatient } from "../../features/patients/hooks/usePatientMutations";
 import { patientListPath, patientProfilePath } from "../../features/patients/utils/patientPermissions";
@@ -25,8 +24,8 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
 
   return (
     <div className="patient-page narrow">
-      <PageHeader eyebrow="Staff workspace" title="Add Patient" description="Create a patient record using the backend patient API." />
-      <Card>
+      <PageHeaderV2 title="Add Patient" description="Create a patient record using the clinic patient API." />
+      <SurfaceCard major>
         <PatientForm
           mode="create"
           role={role}
@@ -36,7 +35,7 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
           onSubmit={handleSubmit}
           onCancel={() => navigate(patientListPath(role))}
         />
-      </Card>
+      </SurfaceCard>
     </div>
   );
 }

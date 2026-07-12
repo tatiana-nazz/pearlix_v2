@@ -6,6 +6,7 @@ import type { UserRole } from "../../../types/auth";
 import { formatDateTime } from "../../../utils/dates";
 import { displayText } from "../../../utils/formatters";
 import { AppointmentStatusBadge } from "./AppointmentStatusBadge";
+import { ClickableRow } from "../../../components/v2";
 import { appointmentReschedulePath, getAppointmentPermissions } from "../utils/appointmentPermissions";
 
 interface AppointmentTableProps {
@@ -29,14 +30,14 @@ export function AppointmentTable({ role, appointments, onEdit, onDetails, onStat
             <th>Doctor</th>
             <th>Reason</th>
             <th>Status</th>
-            <th>Actions</th>
+            <th>Actions</th><th aria-label="Open appointment" />
           </tr>
         </thead>
         <tbody>
           {appointments.map((appointment) => {
             const permissions = getAppointmentPermissions(role, appointment);
             return (
-              <tr key={appointment.id}>
+              <ClickableRow key={appointment.id} onOpen={() => onDetails?.(appointment)}>
                 <td>
                   <strong>{formatDateTime(appointment.start_datetime)}</strong>
                   <span>{appointment.duration_minutes} min</span>
@@ -47,18 +48,15 @@ export function AppointmentTable({ role, appointments, onEdit, onDetails, onStat
                 <td>
                   <AppointmentStatusBadge status={appointment.status} />
                 </td>
-                <td>
+                <td data-row-action>
                   <div className="row-actions">
-                    <button className="button secondary compact-button" type="button" onClick={() => onDetails?.(appointment)}>
-                      Details
-                    </button>
                     {permissions.canEdit ? (
                       <button className="button secondary compact-button" type="button" onClick={() => onEdit?.(appointment)}>
                         Edit
                       </button>
                     ) : null}
                     {permissions.canReschedule ? (
-                      <Link className="button secondary compact-button" to={appointmentReschedulePath(appointment.id)}>
+                      <Link data-row-action className="button secondary compact-button" to={appointmentReschedulePath(appointment.id)}>
                         Reschedule
                       </Link>
                     ) : null}
@@ -84,7 +82,7 @@ export function AppointmentTable({ role, appointments, onEdit, onDetails, onStat
                     ) : null}
                   </div>
                 </td>
-              </tr>
+              </ClickableRow>
             );
           })}
         </tbody>

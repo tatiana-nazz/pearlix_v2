@@ -73,7 +73,7 @@ export function PatientForm({
   const fieldPrefix = mode === "create" ? "create-patient" : "edit-patient";
 
   return (
-    <form className="patient-form" onSubmit={handleSubmit} noValidate>
+    <form className="patient-form v2-form" onSubmit={handleSubmit} noValidate>
       {errors.form ? <div className="form-error">{errors.form}</div> : null}
       {errors.conflict ? (
         <div className="form-error conflict-banner">
@@ -89,7 +89,7 @@ export function PatientForm({
         </div>
       ) : null}
 
-      <section className="patient-form-section">
+      <section className="patient-form-section v2-form-section">
         <h4>Identity</h4>
         <div className="patient-form-grid">
           <label>
@@ -137,7 +137,7 @@ export function PatientForm({
         </div>
       </section>
 
-      <section className="patient-form-section">
+      <section className="patient-form-section v2-form-section">
         <h4>Contact and identifiers</h4>
         <div className="patient-form-grid">
           <label>
@@ -167,7 +167,7 @@ export function PatientForm({
         </label>
       </section>
 
-      <section className="patient-form-section">
+      <section className="patient-form-section v2-form-section">
         <h4>Clinical profile</h4>
         <div className="patient-form-grid">
           <label>
@@ -198,7 +198,7 @@ export function PatientForm({
 
       {role === "DOCTOR" ? <p className="form-note">Doctors can update patient profile fields for active patients only. Archive controls are hidden.</p> : null}
 
-      <div className="form-actions">
+      <div className="v2-sticky-actions">
         {onCancel ? (
           <button className="button secondary" type="button" onClick={onCancel} disabled={isSubmitting}>
             Cancel

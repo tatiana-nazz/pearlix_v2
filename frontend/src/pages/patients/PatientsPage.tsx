@@ -5,7 +5,7 @@ import { Card } from "../../components/Card";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
-import { ArchivePatientDialog } from "../../features/patients/components/ArchivePatientDialog";
+import { ConfirmDialog } from "../../components/v2";
 import { ArchiveFilter, DoctorWorkflowFilter, PatientFilters } from "../../features/patients/components/PatientFilters";
 import { PatientTable } from "../../features/patients/components/PatientTable";
 import { useArchivePatient, useUnarchivePatient } from "../../features/patients/hooks/usePatientMutations";
@@ -169,14 +169,7 @@ export function PatientsPage({ role }: PatientsPageProps) {
         ) : null}
       </Card>
 
-      <ArchivePatientDialog
-        patient={dialogPatient}
-        mode={dialogMode}
-        isSubmitting={isMutating}
-        error={dialogError}
-        onCancel={() => setDialogPatient(null)}
-        onConfirm={() => void confirmArchiveChange()}
-      />
+      <ConfirmDialog open={Boolean(dialogPatient)} title={dialogMode === "archive" ? "Archive patient" : "Unarchive patient"} description={dialogPatient ? `${dialogMode === "archive" ? "Archive" : "Restore"} ${dialogPatient.full_name}.` : undefined} onClose={() => setDialogPatient(null)} pending={isMutating}><button className={dialogMode === "archive" ? "v2-button danger" : "v2-button"} type="button" disabled={isMutating} onClick={() => void confirmArchiveChange()}>{dialogMode === "archive" ? "Archive patient" : "Unarchive patient"}</button>{dialogError ? <ErrorState error={dialogError} title="Unable to update archive state" /> : null}</ConfirmDialog>
     </div>
   );
 }

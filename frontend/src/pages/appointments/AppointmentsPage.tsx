@@ -5,9 +5,8 @@ import { Card } from "../../components/Card";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
-import { AppointmentConfirmDialog } from "../../features/appointments/components/AppointmentConfirmDialog";
+import { Button, ConfirmDialog, Drawer, StatePanel, StatusBadge } from "../../components/v2";
 import { AppointmentDayView } from "../../features/appointments/components/AppointmentDayView";
-import { AppointmentDetailsDialog } from "../../features/appointments/components/AppointmentDetailsDialog";
 import { AppointmentFilters, type AppointmentStatusFilter } from "../../features/appointments/components/AppointmentFilters";
 import { AppointmentForm } from "../../features/appointments/components/AppointmentForm";
 import { AppointmentMonthView } from "../../features/appointments/components/AppointmentMonthView";
@@ -196,10 +195,7 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
         ) : null}
       </Card>
 
-      {isCreateOpen ? (
-        <div className="dialog-backdrop" role="presentation">
-          <section className="dialog-panel wide" role="dialog" aria-modal="true" aria-labelledby="new-appointment-title">
-            <h3 id="new-appointment-title">Add Appointment</h3>
+      <Drawer open={isCreateOpen} title="Add Appointment" description="Choose a valid backend availability slot." onClose={() => setCreateOpen(false)} pending={createAppointment.isPending} dirty>
             <AppointmentForm
               mode="create"
               doctors={doctors.data ?? []}
@@ -210,14 +206,10 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
               onCancel={() => setCreateOpen(false)}
               onSubmit={submitCreate}
             />
-          </section>
-        </div>
-      ) : null}
+      </Drawer>
 
-      {formAppointment ? (
-        <div className="dialog-backdrop" role="presentation">
-          <section className="dialog-panel wide" role="dialog" aria-modal="true" aria-labelledby="edit-appointment-title">
-            <h3 id="edit-appointment-title">Edit Appointment</h3>
+      <Drawer open={Boolean(formAppointment)} title={formAppointment?.status === "NEEDS_RESCHEDULE" ? "Reschedule Appointment" : "Edit Appointment"} onClose={() => setFormAppointment(null)} pending={updateAppointment.isPending} dirty>
+        {formAppointment ? (
             <AppointmentForm
               mode={formAppointment.status === "NEEDS_RESCHEDULE" ? "reschedule" : "edit"}
               doctors={doctors.data ?? []}
@@ -227,19 +219,15 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
               onCancel={() => setFormAppointment(null)}
               onSubmit={submitUpdate}
             />
-          </section>
-        </div>
-      ) : null}
+        ) : null}
+      </Drawer>
 
-      <AppointmentDetailsDialog appointment={detailsAppointment} onClose={() => setDetailsAppointment(null)} />
-      <AppointmentConfirmDialog
-        appointment={actionAppointment}
-        action={action}
-        error={currentMutationError}
-        isSubmitting={isActionSubmitting}
-        onCancel={() => setActionAppointment(null)}
-        onConfirm={() => void confirmStatusAction()}
-      />
+      <Drawer open={Boolean(detailsAppointment)} title={detailsAppointment?.patient.full_name ?? "Appointment"} description="Appointment details" onClose={() => setDetailsAppointment(null)}>
+        {detailsAppointment ? <dl className="detail-grid"><div><dt>Doctor</dt><dd>{detailsAppointment.doctor.full_name}</dd></div><div><dt>Status</dt><dd><StatusBadge status={detailsAppointment.status} /></dd></div><div><dt>Duration</dt><dd>{detailsAppointment.duration_minutes} minutes</dd></div><div><dt>Reason</dt><dd>{detailsAppointment.reason || "Not recorded"}</dd></div></dl> : null}
+      </Drawer>
+      <ConfirmDialog open={Boolean(actionAppointment && action)} title="Confirm appointment action" description={actionAppointment && action ? `Confirm ${action.replace("-", " ")} for ${actionAppointment.patient.full_name}.` : undefined} onClose={() => setActionAppointment(null)} pending={isActionSubmitting}>
+        {currentMutationError ? <StatePanel state="error" title="Unable to complete action" description={String(currentMutationError)} /> : null}<Button variant="secondary" onClick={() => setActionAppointment(null)}>Keep appointment</Button><Button loading={isActionSubmitting} onClick={() => void confirmStatusAction()}>Confirm</Button>
+      </ConfirmDialog>
     </div>
   );
 }

@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { Card } from "../../components/Card";
+import { ConfirmDialog, Modal } from "../../components/v2";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
-import { ArchivePatientDialog } from "../../features/patients/components/ArchivePatientDialog";
 import { PatientAppointmentsSummary } from "../../features/patients/components/PatientAppointmentsSummary";
 import { PatientBillingSummary } from "../../features/patients/components/PatientBillingSummary";
 import { PatientForm, updatePayloadFromForm } from "../../features/patients/components/PatientForm";
@@ -131,10 +131,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
         }}
       />
 
-      {isEditing && permissions.canEdit ? (
-        <div className="dialog-backdrop" role="presentation">
-          <section className="dialog-panel wide" role="dialog" aria-modal="true" aria-labelledby="edit-patient-title">
-            <h3 id="edit-patient-title">Edit Patient</h3>
+      <Modal open={isEditing && permissions.canEdit} title="Edit Patient" onClose={closeEdit} pending={updatePatient.isPending} dirty>
+        {permissions.canEdit ? (
             <PatientForm
               mode="edit"
               role={role}
@@ -147,9 +145,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
               onReloadLatest={() => void handleReloadLatestPatient()}
               onContinueReviewing={() => updatePatient.reset()}
             />
-          </section>
-        </div>
-      ) : null}
+        ) : null}
+      </Modal>
 
       <PatientProfileTabs role={role} activeTab={activeTab === "billing" && !permissions.canViewBillingTab ? "overview" : activeTab} onTabChange={setTab} />
 
@@ -188,14 +185,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
         </Card>
       ) : null}
 
-      <ArchivePatientDialog
-        patient={archiveMode ? patient.data : null}
-        mode={archiveMode ?? "archive"}
-        isSubmitting={isArchiveSubmitting}
-        error={archiveError}
-        onCancel={() => setArchiveMode(null)}
-        onConfirm={() => void handleArchiveChange()}
-      />
+      <ConfirmDialog open={Boolean(archiveMode)} title={archiveMode === "archive" ? "Archive patient" : "Unarchive patient"} description={archiveMode === "archive" ? "Archived records are retained and can be restored." : "Restore this patient to active records."} onClose={() => setArchiveMode(null)} pending={isArchiveSubmitting}><button className={archiveMode === "archive" ? "v2-button danger" : "v2-button"} type="button" onClick={() => void handleArchiveChange()} disabled={isArchiveSubmitting}>{archiveMode === "archive" ? "Archive patient" : "Unarchive patient"}</button>{archiveError ? <ErrorState error={archiveError} title="Unable to update patient archive state" /> : null}</ConfirmDialog>
     </div>
   );
 }
