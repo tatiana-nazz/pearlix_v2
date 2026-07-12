@@ -1,9 +1,15 @@
 # Frontend/Backend Integration Audit
 
-Phase: Originally created for 13A; capability audit through completed Phase 14C.0 Team/account-linkage foundation. See `PROJECT_STATUS.md` for canonical current/next phase status.
+## Phase 14C shell foundation
+
+Phase 14C changes frontend shell and shared UI foundations only. Backend runtime changed: no; migrations: none. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract. Team and Users & Access runtime UI remains assigned to Phase 14D; no `/admin/team` runtime route is introduced in Phase 14C.
+
+The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Browser QA remains pending.
+
+Phase: Originally created for 13A; capability audit through completed Phase 14C shell/token/icon/shared-component foundation. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, and Phase 14C.0 Team/account-linkage API foundation are complete. Runtime Team/Users UI is deferred to Phase 14D; deployment remains paused.
+Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, Phase 14C.0 Team/account-linkage API foundation, and Phase 14C shell/token/icon/shared-component foundation are complete. The next phase is Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access; deployment remains paused.
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -629,7 +635,7 @@ Hidden actions:
 - Phase 14A completed the deterministic, development-only integrated demo story across the implemented frontend views. Browser QA remains pending.
 - Phase 14B completed the UI refocus design freeze.
 - Phase 14C.0 completed the Admin-only Team/account-linkage API foundation: transactional onboarding, linked-profile states, protected role transitions, reactivation, and frontend contract wrappers. Runtime Team and Users & Access pages remain Phase 14D.
-- Next is Phase 14C shell, tokens, Lucide icons, and shared components; deployment remains paused.
+- Next is Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access; deployment remains paused.
 
 ### Needs Reschedule Tab
 
@@ -1009,7 +1015,8 @@ No critical backend blocker was found for frontend integration planning.
 
 - 14B — UI refocus design freeze; runtime implementation unchanged.
 - 14C.0 — Team/account-linkage API foundation: Team endpoints, transactional onboarding, profile integrity/versioning, protected transitions, reactivation, documentation, and frontend contract wrappers; no runtime Team page.
+- 14C — Shell, tokens, Lucide icons, and shared components: frontend-only v2 token layers, fixed/retractable role shell, preference persistence, centralized icon map, shared primitives, and focused automated verification; no backend contract change and no runtime Team page.
 
 ## Historical Phase 13A Completion Criterion
 
-Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production contract through completed Phase 14C.0.
+Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production contract through completed Phase 14C.

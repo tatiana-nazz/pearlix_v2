@@ -4,6 +4,8 @@ import ReactDOM from "react-dom/client";
 import { App } from "./app/App";
 import "./styles/tokens.css";
 import "./styles/globals.css";
+import "./styles/v2/index.css";
+import "./layouts/Shell.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

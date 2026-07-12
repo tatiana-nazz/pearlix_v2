@@ -3,10 +3,6 @@ interface LoadingStateProps {
 }
 
 export function LoadingState({ title = "Loading dashboard data..." }: LoadingStateProps) {
-  return (
-    <div className="state-panel loading-state" role="status">
-      <span />
-      <p>{title}</p>
-    </div>
-  );
+  return <StatePanel state="loading" title={title} action={<Skeleton height={12} />} />;
 }
+import { Skeleton, StatePanel } from "./v2";

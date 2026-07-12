@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 
 import { authApi } from "../api/endpoints/auth";
 import { configureAuthAccessors } from "../api/http";
-import type { AuthStatus, AuthUser, ChangePasswordPayload, LoginPayload, UserRole } from "../types/auth";
+import type { AuthStatus, AuthUser, ChangePasswordPayload, LanguagePreference, LoginPayload, ThemePreference, UserRole } from "../types/auth";
 
 interface AuthState {
   accessToken: string | null;
@@ -17,6 +17,7 @@ interface AuthState {
   logout: () => Promise<void>;
   loadMe: () => Promise<AuthUser | null>;
   changePassword: (payload: ChangePasswordPayload) => Promise<AuthUser>;
+  updatePreferences: (preferences: Partial<Pick<AuthUser, "theme_preference" | "language_preference">>) => Promise<AuthUser>;
   setTokens: (accessToken: string, refreshToken?: string | null) => void;
   clearAuth: () => void;
 }
@@ -79,6 +80,20 @@ export const useAuthStore = create<AuthState>()(
         const user = await authApi.changePassword(payload);
         set({ ...deriveAuth(user, get().accessToken) });
         return user;
+      },
+      async updatePreferences(preferences) {
+        const previous = get().user;
+        if (!previous) throw new Error("You must be signed in to update preferences.");
+        const optimistic = { ...previous, ...preferences };
+        set({ user: optimistic, role: optimistic.role });
+        try {
+          const user = await authApi.updatePreferences(preferences);
+          set({ ...deriveAuth(user, get().accessToken) });
+          return user;
+        } catch (error) {
+          set({ user: previous, role: previous.role });
+          throw error;
+        }
       },
       setTokens(accessToken, refreshToken) {
         set((state) => ({

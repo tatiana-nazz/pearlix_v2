@@ -1,80 +1,43 @@
 import { NavLink } from "react-router-dom";
+import { LogOut, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 
 import type { UserRole } from "../types/auth";
 import { roleLabel } from "../utils/roles";
-
-type NavItem = {
-  label: string;
-  path: string;
-  compactLabel: string;
-};
-
-export const navigationByRole: Record<UserRole, NavItem[]> = {
-  ADMIN: [
-    { label: "Dashboard", path: "/admin/dashboard", compactLabel: "D" },
-    { label: "Users", path: "/admin/users", compactLabel: "U" },
-    { label: "Schedules", path: "/admin/doctors", compactLabel: "S" },
-    { label: "Leave", path: "/admin/leave", compactLabel: "L" },
-    { label: "Appointments", path: "/admin/appointments", compactLabel: "A" },
-    { label: "Patients", path: "/admin/patients", compactLabel: "P" },
-    { label: "X-rays & AI", path: "/admin/xrays", compactLabel: "XA" },
-    { label: "External X-rays", path: "/admin/external-xrays", compactLabel: "EX" },
-    { label: "Billing", path: "/admin/billing", compactLabel: "B" },
-    { label: "Clinic Settings", path: "/admin/clinic-settings", compactLabel: "CS" },
-    { label: "Audit Logs", path: "/admin/audit-logs", compactLabel: "AL" },
-  ],
-  STAFF: [
-    { label: "Dashboard", path: "/staff/dashboard", compactLabel: "D" },
-    { label: "Appointments", path: "/staff/appointments", compactLabel: "A" },
-    { label: "Needs Reschedule", path: "/staff/appointments/needs-reschedule", compactLabel: "NR" },
-    { label: "Patients", path: "/staff/patients", compactLabel: "P" },
-    { label: "X-rays & AI", path: "/staff/xrays", compactLabel: "XA" },
-    { label: "Billing Handoffs", path: "/staff/billing/handoffs", compactLabel: "BH" },
-    { label: "Invoices", path: "/staff/billing/invoices", compactLabel: "I" },
-    { label: "Schedules View", path: "/staff/profile/schedule", compactLabel: "SV" },
-    { label: "My Leave", path: "/staff/profile/leave", compactLabel: "ML" },
-  ],
-  DOCTOR: [
-    { label: "Dashboard", path: "/doctor/dashboard", compactLabel: "D" },
-    { label: "My Appointments", path: "/doctor/appointments", compactLabel: "MA" },
-    { label: "Active Visit", path: "/doctor/visits/active", compactLabel: "AV" },
-    { label: "Patients", path: "/doctor/patients", compactLabel: "P" },
-    { label: "X-rays & AI", path: "/doctor/xrays", compactLabel: "XA" },
-    { label: "External X-ray Workspace", path: "/doctor/external-xrays", compactLabel: "EX" },
-    { label: "My Billing Handoffs", path: "/doctor/billing/handoffs", compactLabel: "BH" },
-    { label: "My Schedule", path: "/doctor/profile/schedule", compactLabel: "MS" },
-    { label: "My Leave", path: "/doctor/profile/leave", compactLabel: "ML" },
-  ],
-};
+import { useAuthStore } from "../auth/authStore";
+import { navigationByRole, type NavigationGroup } from "./navigation";
+import { t } from "./i18n";
+export { navigationByRole } from "./navigation";
 
 interface SidebarProps {
   role: UserRole;
+  collapsed?: boolean;
+  onCollapse?: () => void;
+  onNavigate?: () => void;
+  onLogout?: () => void;
+  drawerOpen?: boolean;
+  onDrawerClose?: () => void;
 }
 
-export function Sidebar({ role }: SidebarProps) {
+export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerClose = () => undefined, onCollapse = () => undefined, onNavigate = () => undefined, onLogout = () => undefined }: SidebarProps) {
+  const groups: NavigationGroup[] = ["workspace", "clinical", "administration", "personal"];
+  const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   return (
-    <aside className="sidebar">
-      <div className="sidebar-brand">
-        <div className="brand-mark">P</div>
-        <div>
+    <aside className="app-sidebar">
+      <div className="app-sidebar-brand">
+        <div className="app-sidebar-brand-mark">P</div>
+        <div className="app-sidebar-brand-copy">
           <strong>Pearlix</strong>
           <span>{roleLabel(role)} workspace</span>
-        </div>
+        </div>{drawerOpen ? <button className="v2-icon-button drawer-close" type="button" aria-label={t(language, "close")} onClick={onDrawerClose}><X size={20} /></button> : null}<button className="v2-icon-button sidebar-toggle" type="button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} data-tooltip={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={onCollapse}>{collapsed ? <PanelLeftOpen className="directional-icon" size={20} /> : <PanelLeftClose className="directional-icon" size={20} />}</button>
       </div>
-      <nav className="sidebar-nav" aria-label={`${roleLabel(role)} navigation`}>
-        {navigationByRole[role].map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            title={item.label}
-            aria-label={item.label}
-            data-compact-label={item.compactLabel}
-            className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
-          >
-            {item.label}
-          </NavLink>
-        ))}
+      <nav className="app-sidebar-nav" aria-label={`${roleLabel(role)} navigation`}>
+        {groups.map((group) => {
+          const items = navigationByRole[role].filter((item) => item.group === group);
+          if (!items.length) return null;
+          return <section className="nav-group" key={group}><h2 className="nav-group-label">{t(language, group)}</h2>{items.map((item) => { const Icon = item.icon; return <NavLink key={item.path} to={item.path} onClick={onNavigate} aria-label={item.label} className={({ isActive }) => isActive ? "v2-nav-link active" : "v2-nav-link"}><Icon aria-hidden="true" size={collapsed ? 22 : 20} strokeWidth={1.75} /><span className="nav-label">{item.label}</span></NavLink>; })}</section>;
+        })}
       </nav>
+      <footer className="app-sidebar-footer"><button className="sidebar-logout" type="button" aria-label={t(language, "logout")} data-tooltip={t(language, "logout")} onClick={onLogout}><LogOut size={20} aria-hidden="true" /><span className="nav-label">{t(language, "logout")}</span></button></footer>
     </aside>
   );
 }

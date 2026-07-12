@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../utils/apiErrors";
+import { Button, StatePanel } from "./v2";
 
 interface ErrorStateProps {
   error: unknown;
@@ -7,17 +8,5 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({ error, onRetry, title = "Unable to load dashboard" }: ErrorStateProps) {
-  return (
-    <div className="state-panel error-state" role="alert">
-      <div>
-        <h3>{title}</h3>
-        <p>{getErrorMessage(error)}</p>
-      </div>
-      {onRetry ? (
-        <button className="button secondary" type="button" onClick={onRetry}>
-          Retry
-        </button>
-      ) : null}
-    </div>
-  );
+  return <StatePanel state="error" title={title} description={getErrorMessage(error)} action={onRetry ? <Button variant="secondary" type="button" onClick={onRetry}>Retry</Button> : null} />;
 }

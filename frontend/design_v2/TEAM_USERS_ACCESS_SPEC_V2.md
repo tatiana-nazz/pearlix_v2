@@ -12,7 +12,7 @@ Detail has profile summary, General Info, Working Hours/Shifts, Leave Exceptions
 
 ### Users & Access
 
-`/admin/users` remains account management. List: initials/full name, login email, role, login status (`is_active`), must-change-password, `created_at`/`updated_at`/`password_changed_at`, and explicit linked professional-profile state. Whole row opens account detail. Detail separates Account identity, Security, Role, and Linked Team profile. Actions: role change with confirmation, reset temporary password, deactivate, supported reactivation after API support, and open linked Team profile. No hard delete and no permission matrix. New User creates only account access and temporary password.
+`/admin/users` remains account management. List: initials/full name, login email, role, login status (`is_active`), must-change-password, `created_at`/`updated_at`/`password_changed_at`, and explicit linked professional-profile state. Whole row opens account detail. Detail separates Account identity, Security, Role, and Linked Team profile. Actions: role change with confirmation, reset temporary password, deactivate, supported reactivation, and open linked Team profile. No hard delete and no permission matrix. New User creates only account access and temporary password.
 
 ## Historical pre-14C.0 backend audit and gap
 

@@ -3,5 +3,6 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ title = "No records found." }: EmptyStateProps) {
-  return <p className="empty-state">{title}</p>;
+  return <StatePanel state="empty" title={title} />;
 }
+import { StatePanel } from "./v2";

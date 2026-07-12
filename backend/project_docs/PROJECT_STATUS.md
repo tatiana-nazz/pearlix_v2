@@ -4,19 +4,21 @@ This is the canonical current-phase tracker. Other project documents describe ca
 
 Project: Dental Clinic Management System Website
 
-- Current completed phase: 14C.0 Team Profile API and Account Linkage Foundation
+- Current completed phase: 14C Shell, Tokens, Lucide Icons, and Shared Components
 - Phase 13 series: complete
-- Next phase: 14C Shell, tokens, Lucide icons, and shared components
-- Next step: implement the approved Phase 14C visual foundation; Team and Users & Access runtime pages remain Phase 14D
+- Next phase: Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access
+- Next step: implement the complete approved Phase 14D priority-workflow scope
 - Final backend full regression: 414 passed
-- Final frontend regression: 52 passed
+- Final frontend regression: 75 passed
+- Backend runtime changes in Phase 14C: no
+- Migrations in Phase 14C: none
 - Backend runtime changes in Phase 14C.0: yes
-- Frontend visible UI changes in Phase 14C.0: no
+- Frontend visible UI changes in Phase 14C: shell/token/shared-component foundation
 - Frontend contract types, wrappers, and tests changed in Phase 14C.0: yes
 - Migrations in Phase 14C.0: accounts.0005 adds User/DoctorProfile/StaffProfile optimistic-lock versions
 - Browser QA/UAT: pending execution with seeded local QA accounts
-- Release recommendation: deployment paused; implement the approved Phase 14C–14F refocus sequence and complete visual browser QA before controlled deployment
+- Release recommendation: deployment paused; implement Phases 14D–14F, then complete visual browser QA before controlled deployment
 
 Completed capability summary: authenticated role workspaces; patient, scheduling, visit, X-ray/AI, and billing workflows; Admin account management, clinic settings, and audit-log visibility; deterministic development-only integrated demo story; the Phase 14B UI refocus design freeze; and Phase 14C.0 Team APIs. Team uses the User ID as its stable member ID, has transactional Doctor/Staff onboarding, profile optimistic locking, professional/login status separation, linkage-state reporting, protected role transitions, reactivation, and sanitized audit events. Phase 14A seed story remains available.
 
-Remaining post-MVP limitations: real AI integration, email forgot-password, final Team and Users & Access runtime UI (Phase 14D), unsupported professional fields (gender, qualifications, license, profile photo, Staff biography, and activity notes), online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.
+Remaining post-MVP limitations: real AI integration, email forgot-password, unsupported professional fields (gender, qualifications, license, profile photo, Staff biography, and activity notes), online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization. Team and Users & Access runtime UI is remaining in-scope Phase 14D redesign work.
