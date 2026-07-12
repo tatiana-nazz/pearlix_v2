@@ -61,7 +61,7 @@ npm run build
 
 ## Browser QA
 
-Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Use `frontend/QA_13K.md` for the final regression and browser UAT checklist, `frontend/QA_14A.md` for the integrated demo-story checklist, and `frontend/QA_14B.md` for the completed UI refocus design-freeze review. Browser QA execution is still pending.
+Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Use `frontend/QA_13K.md` for the final regression and browser UAT checklist, `frontend/QA_14A.md` for the integrated demo-story checklist, `frontend/QA_14B.md` for the design-freeze review, and `frontend/QA_14C0.md` for Team API contract verification. Browser QA execution is still pending.
 Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, `frontend/QA_13H.md` for X-rays and AI, and `frontend/QA_13I.md` for billing handoffs, invoices, payments, and print-data QA.
 
 ## Local QA Accounts
@@ -146,7 +146,7 @@ Phase 13G adds real visit and clinical note routes:
 - Completing an active visit uses an explicit confirmation. When notes are dirty, the frontend saves notes first and completes only after that save succeeds.
 - Phase 13G originally deferred X-ray/AI integration. Phase 13H now provides saved X-rays, authenticated protected media, AI results and overlays, and external X-ray workflows. Phase 13I now provides Doctor completed-visit handoff creation and role-aware handoff integration.
 
-## Runtime Implementation Through Phase 13K; Phase 14A/14B Design Closure
+## Runtime Functional Implementation Through Phase 13K; Phase 14A–14C.0 Foundations
 
 - Vite, React, TypeScript app structure.
 - TanStack Query provider.
@@ -177,6 +177,7 @@ Phase 13G adds real visit and clinical note routes:
 - Phase 13K final QA/release-readiness contract: `frontend/QA_13K.md`.
 - Phase 14A added the deterministic development-only integrated demo data story.
 - Phase 14B froze the replacement UI/UX design; runtime visual redesign has not started.
+- Phase 14C.0 added Team APIs, transactional Doctor/Staff onboarding, linked-profile states, protected role transitions, reactivation, and frontend contract wrappers only; no runtime Team page was added.
 
 ## Design Contract
 
@@ -189,10 +190,10 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 ## Intentionally Not Implemented Yet
 
 - Real AI integration beyond the MVP `MOCK_ADAPTER`.
-- Email forgot-password and unsupported DoctorProfile/StaffProfile CRUD.
+- Email forgot-password and runtime Team/Users & Access redesign (the Phase 14C.0 professional-profile API is implemented; final screens are Phase 14D). Gender, qualifications, license, profile photo, Staff biography, and activity notes remain intentionally unsupported professional fields.
 - Online payments, invoice itemization, tax, discount, and insurance workflows.
 - Browser QA execution for completed frontend phases remains pending.
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14B Complete UI Refocus Design Freeze is complete. The runtime frontend remains unchanged; Phase 14C.0 professional-profile API/account linkage is next because the audited backend gap is confirmed. Deployment remains paused pending the implementation sequence and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14B.md`.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14C.0 professional-profile API/account linkage is complete. The runtime frontend remains unchanged; Phase 14C shell/token/shared-component work is next and Team/Users runtime screens remain Phase 14D. Deployment remains paused pending the implementation sequence and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14C0.md`.

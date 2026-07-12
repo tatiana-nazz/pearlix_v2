@@ -26,6 +26,17 @@ This document summarizes the current accepted backend decisions for human develo
 - Admin cannot deactivate the last active `ADMIN`.
 - Tests cover both protections.
 
+## Team Profiles and Account Linkage (Phase 14C.0)
+
+- Team is a professional directory; Users & Access remains login/role administration.
+- `User.id` is the Team member identifier. A Doctor/Staff has one matching profile; an Admin has no active professional profile.
+- New Doctor/Staff accounts must use transactional `POST /api/team-members/`; generic `/api/users/` creates Admin accounts only.
+- Generic role PATCH is protected. `POST /api/users/{id}/transition-role/` uses a signed, expiring preview/confirm token and User version.
+- Role transitions with direct shifts, leave, appointments, or visits are blocked with `ROLE_TRANSITION_BLOCKED_BY_HISTORY`; no operational history is deleted or rewritten.
+- Profile versions protect professional edits and professional-status changes. Login deactivation/reactivation and professional active state remain separate.
+- Users report a safe linked-profile state. Legacy unlinked professional accounts are `PROFILE_SETUP_REQUIRED`, visible in Users & Access but excluded from Team.
+- `manage.py check_profile_integrity --strict` detects dual profiles, mismatches, and active Admin professional profiles without changing data.
+
 ## Rate Limiting
 
 - No broad rate limiting for normal clinic workflows now.
@@ -163,4 +174,5 @@ After any payment exists:
 - Phase 13I verification recorded 405 backend tests and 49 frontend tests passing; migrations were unchanged and browser QA remains pending.
 - Phase 13J is complete: Admin uses existing user APIs for account creation, updates, temporary-password reset, and eligible deactivation. Self-deactivation and last-active-Admin protection remain backend-enforced. Full clinic settings are Admin-only; Staff and Doctor receive safe settings only. Audit logs are Admin-only and read-only. There is no public signup, email forgot-password, user hard delete, or permission matrix.
 - Phase 13K is complete: final automated regression, route/navigation cleanup, accessibility polish, and documentation consistency validation required no backend runtime or migration changes. The Phase 13 series is complete.
-- Phase 14A is complete: a development-only, reset-safe integrated demo clinic story seeds coherent scheduling, visits, X-rays/AI, external cases, billing, audit, and dashboard data without changing production API behavior or migrations. The next phase is 14B Visual Audit and Design Freeze; deployment remains paused.
+- Phase 14A is complete: a development-only, reset-safe integrated demo clinic story seeds coherent scheduling, visits, X-rays/AI, external cases, billing, audit, and dashboard data. Phase 14B design freeze and Phase 14C.0 Team/account-linkage foundation are complete. Next is Phase 14C shell, tokens, Lucide icons, and shared components; deployment remains paused.
+- Phase 14C.0 verification recorded 40 focused Team/account-linkage tests, 414 full backend tests, 52 frontend contract tests, and migration `accounts.0005_doctorprofile_version_staffprofile_version_and_more`. Reactivation is implemented; no runtime Team UI exists yet and browser QA remains pending.

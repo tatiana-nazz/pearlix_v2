@@ -3,6 +3,9 @@ import type { AuthUser, UserRole } from "./auth";
 export interface UserManagementRecord extends AuthUser {
   created_at: string;
   updated_at: string;
+  version: number;
+  linked_profile_state: "NONE" | "DOCTOR" | "STAFF" | "PROFILE_SETUP_REQUIRED" | "INCONSISTENT";
+  team_member_id: number | null;
 }
 
 export interface UserCreatePayload {

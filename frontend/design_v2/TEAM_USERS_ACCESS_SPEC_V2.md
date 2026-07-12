@@ -6,7 +6,7 @@
 
 ### Team
 
-Admin destination: `/admin/team` and detail `/admin/team/:memberId` (new routes are Phase 14C.0+ and must not be displayed before API readiness). Tabs: All, Doctors, Staff; search by supported name/email and role filter. Rich row/card includes initials avatar, name, professional role, and only API-backed specialty (Doctor) or position (Staff), professional contact, current operational profile state, leave/unavailable indicator, and today workload/appointments where supported. Whole item opens detail, no routine View.
+Admin destination: `/admin/team` and detail `/admin/team/:memberId` are contractually ready for Phase 14D runtime implementation; the API is ready but these routes are not yet exposed by the runtime router. Tabs: All, Doctors, Staff; search by supported name/email and role filter. Rich row/card includes initials avatar, name, professional role, and only API-backed specialty (Doctor) or position (Staff), professional contact, current operational profile state, leave/unavailable indicator, and today workload/appointments where supported. Whole item opens detail, no routine View.
 
 Detail has profile summary, General Info, Working Hours/Shifts, Leave Exceptions, Today’s Appointments/workload, and linked website account. Activity/Notes appears only if a specific backed endpoint exists; it is not currently specified. Authorized `Edit profile` is a top action after 14C.0. Schedule/leave are navigation links. Role/deactivation controls belong in linked Users & Access, never dominate professional profile.
 
@@ -14,13 +14,13 @@ Detail has profile summary, General Info, Working Hours/Shifts, Leave Exceptions
 
 `/admin/users` remains account management. List: initials/full name, login email, role, login status (`is_active`), must-change-password, `created_at`/`updated_at`/`password_changed_at`, and explicit linked professional-profile state. Whole row opens account detail. Detail separates Account identity, Security, Role, and Linked Team profile. Actions: role change with confirmation, reset temporary password, deactivate, supported reactivation after API support, and open linked Team profile. No hard delete and no permission matrix. New User creates only account access and temporary password.
 
-## Verified backend capability and gap
+## Historical pre-14C.0 backend audit and gap
 
 `User` is current login/role authority: `email`, `full_name`, `role`, `is_active`, preferences, `must_change_password`, `password_changed_at`, timestamps. `/api/users/` returns these fields but no `doctor_profile`/`staff_profile` linkage; it supports GET/POST/PATCH, reset password, and deactivate—no reactivation action. `DoctorProfile` model stores one-to-one `user`, `specialty`, `phone`, `bio`, `is_active`; `StaffProfile` stores one-to-one `user`, `phone`, `position`, `is_active`. Model `clean()` only validates its own role; there is no cross-profile exclusion or profile CRUD endpoint. `/api/doctors/` read-only returns Doctor profile summary (`specialty`, `phone`, `bio`, `is_active`), but no Staff equivalent and no professional detail/list endpoint. Working shifts and availability endpoints provide operational schedule/leave, not Team-profile CRUD.
 
-Therefore **Phase 14C.0 is mandatory**. Inspiration fields: specialty (stored/returned to doctors only), position (stored but not returned via API), phone (stored; doctor only returned), biography (doctor stored/returned), gender/qualifications/license/profile photo/activity notes (unsupported: do not show). Current generic user API does not safely prove Team linkage.
+This pre-14C.0 audit justified the now-completed API foundation. Inspiration fields: specialty, position, phone, and Doctor biography; gender, qualifications, license, profile photo, Staff biography, and activity notes remain unsupported.
 
-## Phase 14C.0 dependency specification
+## Historical Phase 14C.0 dependency specification
 
 1. Add Admin-only paged Team list/detail APIs and serializers exposing only stored profile fields, linkage state, supported working/leave/workload summaries, and no invented fields.
 2. Add transactional create/update/link profile commands; enforce database/application constraint that a User has at most one of DoctorProfile/StaffProfile and profile role matches User; Admin has neither; reject orphan/duplicate profile states.
@@ -30,7 +30,11 @@ Therefore **Phase 14C.0 is mandatory**. Inspiration fields: specialty (stored/re
 
 No runtime work occurs in 14B.
 
-## Preferred Phase 14C.0 API contract (frozen target, not implemented)
+## Historical Phase 14C.0 Frozen Target
+
+## Implemented Phase 14C.0 resolution
+
+The Team API foundation is implemented and ready; final `/admin/team` and Users & Access runtime screens remain Phase 14D. User ID is the Team member ID. `User`, `DoctorProfile`, and `StaffProfile` each carry an optimistic version where required. Generic `/api/users/` is intentionally restricted to Admin account creation; Doctor/Staff requests return `PROFILE_REQUIRED` and must use transactional Team onboarding. Generic role PATCH returns a protected-role error and callers use the signed `transition-role` preview/confirm workflow. The actual safe transition matrix is documented in `backend/project_docs/PHASE_14C0_TEAM_PROFILE_ARCHITECTURE.md`: direct operational history blocks role changes rather than deleting, detaching, or retyping records. Reactivation is implemented for inactive, profile-consistent accounts and never changes professional status.
 
 | Endpoint | Permission | Contract |
 | --- | --- | --- |
@@ -40,7 +44,7 @@ No runtime work occurs in 14B.
 | `PATCH /api/team-members/{id}/` | Admin | professional fields only; required optimistic `version`. |
 | `POST /api/team-members/{id}/set-professional-status/` | Admin | `{is_active,version,reason?}`; professional status distinct from login. |
 | `POST /api/users/{id}/transition-role/` | Admin | explicit preview/confirmation; generic role PATCH rejects Doctor/Staff changes. |
-| `POST /api/users/{id}/reactivate/` | Admin | preferred `{version}` contract; UI hides it until implemented. |
+| `POST /api/users/{id}/reactivate/` | Admin | implemented; current endpoint requires no request payload and returns the user summary. It rejects already-active or profile-inconsistent accounts. |
 
 List summary is `{id,role,full_name,professional_status,specialty?,position?,phone?,account:{id,email,is_active,must_change_password,created_at,updated_at},availability:{on_leave,next_exception},today_workload:{appointment_count,active_visit_count},version}`. Doctor detail permits `specialty`, `phone`, `bio`, `is_active`; Staff permits `position`, `phone`, `is_active`; both include linked account, shifts, leave, bounded workload, timestamps/version. Gender, qualification, license, photo, activity note, and Staff biography are explicitly unsupported.
 

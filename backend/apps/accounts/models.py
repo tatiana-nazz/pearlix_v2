@@ -64,6 +64,9 @@ class User(AbstractBaseUser, TimeStampedModel):
     )
     must_change_password = models.BooleanField(default=False)
     password_changed_at = models.DateTimeField(null=True, blank=True)
+    # Used by explicit account-linkage transitions.  It deliberately lives on
+    # the account because a role transition can change the linked profile.
+    version = models.PositiveIntegerField(default=1)
 
     objects = UserManager()
 
@@ -98,12 +101,15 @@ class DoctorProfile(TimeStampedModel):
     phone = models.CharField(max_length=50, blank=True)
     bio = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    version = models.PositiveIntegerField(default=1)
 
     def clean(self):
         from django.core.exceptions import ValidationError
 
         if self.user_id and self.user.role != User.Role.DOCTOR:
             raise ValidationError({"user": "DoctorProfile requires a DOCTOR user."})
+        if self.user_id and StaffProfile.objects.filter(user_id=self.user_id).exclude(pk=self.pk).exists():
+            raise ValidationError({"user": "A user cannot have both professional profiles."})
 
     def __str__(self) -> str:
         return self.user.full_name
@@ -114,12 +120,15 @@ class StaffProfile(TimeStampedModel):
     phone = models.CharField(max_length=50, blank=True)
     position = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
+    version = models.PositiveIntegerField(default=1)
 
     def clean(self):
         from django.core.exceptions import ValidationError
 
         if self.user_id and self.user.role != User.Role.STAFF:
             raise ValidationError({"user": "StaffProfile requires a STAFF user."})
+        if self.user_id and DoctorProfile.objects.filter(user_id=self.user_id).exclude(pk=self.pk).exists():
+            raise ValidationError({"user": "A user cannot have both professional profiles."})
 
     def __str__(self) -> str:
         return self.user.full_name
