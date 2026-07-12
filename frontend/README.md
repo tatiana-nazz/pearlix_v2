@@ -197,4 +197,4 @@ Ongoing product work must follow these files for the professional dental clinic 
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14A is complete; Phase 14B Visual Audit and Design Freeze is next. Deployment remains paused pending the visual audit and browser QA.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14B Complete UI Refocus Design Freeze is complete. The runtime frontend remains unchanged; Phase 14C.0 professional-profile API/account linkage is next because the audited backend gap is confirmed. Deployment remains paused pending the implementation sequence and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14B.md`.

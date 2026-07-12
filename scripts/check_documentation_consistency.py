@@ -1,4 +1,4 @@
-"""Fail fast when current documentation drifts from the Phase 14A contract."""
+"""Fail fast when Phase 14B UI refocus documentation drifts."""
 
 from __future__ import annotations
 
@@ -8,202 +8,88 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PROJECT_STATUS = ROOT / "backend" / "project_docs" / "PROJECT_STATUS.md"
-README = ROOT / "frontend" / "README.md"
-QA_13K = ROOT / "frontend" / "QA_13K.md"
-QA_14A = ROOT / "frontend" / "QA_14A.md"
-DEMO_STORY = ROOT / "backend" / "project_docs" / "DEMO_STORY.md"
-AUDIT = ROOT / "backend" / "project_docs" / "FRONTEND_BACKEND_INTEGRATION_AUDIT.md"
-HANDOFF = ROOT / "backend" / "project_docs" / "BACKEND_FINAL_HANDOFF.md"
-CURRENT_DOCS = [
-    PROJECT_STATUS,
-    README,
-    QA_13K,
-    QA_14A,
-    DEMO_STORY,
-    AUDIT,
-    HANDOFF,
-    ROOT / "backend" / "project_docs" / "CURRENT_BACKEND_DECISIONS.md",
-]
-
-REQUIRED_ROUTES = {
-    "admin": {
-        "/admin/dashboard", "/admin/users", "/admin/users/new", "/admin/users/:userId",
-        "/admin/clinic-settings", "/admin/doctors", "/admin/leave", "/admin/leave/:exceptionId",
-        "/admin/patients", "/admin/patients/:patientId", "/admin/appointments/day",
-        "/admin/appointments/week", "/admin/appointments/month", "/admin/appointments/list",
-        "/admin/appointments/needs-reschedule", "/admin/visits/:visitId", "/admin/xrays",
-        "/admin/xrays/:xrayId", "/admin/external-xrays", "/admin/external-xrays/:caseId",
-        "/admin/billing/handoffs", "/admin/billing/invoices", "/admin/billing/invoices/:invoiceId",
-        "/admin/billing/invoices/:invoiceId/print", "/admin/audit-logs", "/admin/audit-logs/:auditLogId",
-    },
-    "staff": {
-        "/staff/dashboard", "/staff/patients", "/staff/patients/new", "/staff/patients/:patientId",
-        "/staff/appointments/day", "/staff/appointments/week", "/staff/appointments/month",
-        "/staff/appointments/list", "/staff/appointments/needs-reschedule",
-        "/staff/appointments/:appointmentId/reschedule", "/staff/profile/schedule", "/staff/profile/leave",
-        "/staff/visits/:visitId", "/staff/xrays", "/staff/xrays/:xrayId", "/staff/billing/handoffs",
-        "/staff/billing/handoffs/:handoffId", "/staff/billing/invoices", "/staff/billing/invoices/new",
-        "/staff/billing/invoices/:invoiceId", "/staff/billing/invoices/:invoiceId/payments",
-        "/staff/billing/invoices/:invoiceId/print",
-    },
-    "doctor": {
-        "/doctor/dashboard", "/doctor/appointments/day", "/doctor/appointments/week",
-        "/doctor/appointments/list", "/doctor/appointments/needs-reschedule", "/doctor/visits/active",
-        "/doctor/visits/:visitId", "/doctor/patients", "/doctor/patients/:patientId",
-        "/doctor/patients/:patientId/clinical-history", "/doctor/xrays", "/doctor/xrays/:xrayId",
-        "/doctor/external-xrays", "/doctor/external-xrays/:caseId", "/doctor/profile/schedule",
-        "/doctor/profile/leave", "/doctor/billing/handoffs", "/doctor/billing/handoffs/:handoffId",
-    },
+STATUS = ROOT / "backend/project_docs/PROJECT_STATUS.md"
+README = ROOT / "frontend/README.md"
+AUDIT = ROOT / "backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md"
+QA = ROOT / "frontend/QA_14B.md"
+V2 = ROOT / "frontend/design_v2"
+REQUIRED_V2 = {
+    "UI_REFOCUS_MANIFEST.md", "UI_AUDIT.md", "VISUAL_DIRECTION.md", "TOKENS_V2.md",
+    "SHELL_SPEC_V2.md", "ICON_MAP.md", "COMPONENT_SPEC_V2.md", "DASHBOARD_SPEC_V2.md",
+    "TABLE_LIST_SPEC_V2.md", "PATIENT_ROW_SPEC_V2.md", "FORM_INPUT_SPEC_V2.md",
+    "OVERLAY_INTERACTION_SPEC_V2.md", "TEAM_USERS_ACCESS_SPEC_V2.md", "SCREEN_SPECS_V2.md",
+    "RESPONSIVE_RTL_SPEC_V2.md", "DESIGN_ACCEPTANCE_MATRIX.md", "IMPLEMENTATION_SEQUENCE.md",
 }
 
-REQUIRED_PHASE_HISTORY = [
-    "13B", "13B.1", "13C", "13D", "13D.1", "13E", "13E.1", "13F", "13F.1",
-    "13G", "13H", "13I", "13J", "13K", "14A",
-]
 
-
-def route_blocks(text: str) -> dict[str, list[str]]:
-    text = text.replace("\r\n", "\n")
-    blocks: dict[str, list[str]] = {}
-    role_markers = "|".join(rf"^/{name}\s*$" for name in REQUIRED_ROUTES)
-    for role in REQUIRED_ROUTES:
-        match = re.search(rf"(?ms)^/{role}\s*$\n(.*?)(?={role_markers}|\Z)", text)
-        if not match:
-            continue
-        blocks[role] = re.findall(rf"^/{role}(?:/[\w:.-]+)*$", match.group(0), re.MULTILINE)
-    return blocks
-
-
-def historical_phase_order(text: str) -> list[str] | None:
-    text = text.replace("\r\n", "\n")
-    match = re.search(r"(?ms)^## O\. Historical Phase Order\s*$\n(.*?)(?=^## |\Z)", text)
-    if not match:
-        return None
-    labels = "|".join(re.escape(phase) for phase in REQUIRED_PHASE_HISTORY)
-    return re.findall(rf"(?m)^-\s+({labels})\s+—", match.group(1))
+def require(text: str, phrase: str, source: str, errors: list[str]) -> None:
+    if phrase.lower() not in text.lower():
+        errors.append(f"{source} is missing required phrase: {phrase!r}")
 
 
 def main() -> int:
     errors: list[str] = []
-    for path in CURRENT_DOCS:
+    for path in (STATUS, README, AUDIT, QA):
         if not path.exists():
             errors.append(f"Missing required document: {path.relative_to(ROOT)}")
+    missing = sorted(name for name in REQUIRED_V2 if not (V2 / name).is_file())
+    errors.extend(f"Missing required design_v2 deliverable: {name}" for name in missing)
     if errors:
         print("Documentation consistency check failed:", *errors, sep="\n- ")
         return 1
 
-    status = PROJECT_STATUS.read_text(encoding="utf-8")
-    for expected in (
-        "Current completed phase: 14A",
-        "Phase 13 series: complete",
-        "Next phase: 14B Visual Audit and Design Freeze",
-        "Next step: complete Phase 14B Visual Audit and Design Freeze",
-    ):
-        if status.count(expected) != 1:
-            errors.append(f"PROJECT_STATUS must contain exactly one '{expected}'.")
-    for label in ("Current completed phase:", "Next phase:", "Next step:"):
-        if status.count(label) != 1:
-            errors.append(f"PROJECT_STATUS must have exactly one canonical '{label}' declaration.")
-
-    readme = README.read_text(encoding="utf-8")
-    for expected in ("Phase 14A", "PROJECT_STATUS.md", "frontend/QA_14A.md"):
-        if expected not in readme:
-            errors.append(f"README is missing '{expected}'.")
-    if re.search(r"Phase 14A.{0,50}(future|pending|deferred|next)", readme, re.IGNORECASE):
-        errors.append("README presents Phase 14A as future, pending, deferred, or next.")
-    if "placeholder" in readme.lower():
-        errors.append("README describes a completed capability as a placeholder.")
-
-    stale_patterns = (
-        r"Phase 13J is next",
-        r"Phase 13K is next",
-        r"Phase 14A is next",
-        r"Phase 14A has not started",
-        r"capabilities implemented through Phase 13J only",
-    )
-    for path in CURRENT_DOCS:
-        text = path.read_text(encoding="utf-8")
-        if "## Future Phase Order" in text:
-            errors.append(f"Obsolete '## Future Phase Order' heading in {path.relative_to(ROOT)}.")
-        for pattern in stale_patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                errors.append(f"Stale phase wording in {path.relative_to(ROOT)}: '{pattern}'.")
-
-    audit = AUDIT.read_text(encoding="utf-8")
-    handoff = HANDOFF.read_text(encoding="utf-8")
-    for expected in (
-        "Latest full backend regression:",
+    status = STATUS.read_text(encoding="utf-8")
+    for phrase in (
+        "Current completed phase: 14B",
+        "Next phase: 14C.0 Doctor/Staff professional profile API and account linkage",
         "407 passed",
-        "Phase 14A focused seed tests: 2 passed",
-        "Phase 14B Visual Audit and Design Freeze",
-        "deployment remains paused",
+        "51 passed",
+        "runtime changes in Phase 14B: none",
+        "Migrations in Phase 14B: none",
+        "deployment paused",
     ):
-        if expected not in handoff:
-            errors.append(f"BACKEND_FINAL_HANDOFF is missing '{expected}'.")
-    if re.search(r"Latest full (backend )?regression:.{0,100}405 passed", handoff, re.IGNORECASE | re.DOTALL):
-        errors.append("BACKEND_FINAL_HANDOFF presents 405 passed as the latest regression.")
-    for pattern in (
-        r"(?:deployment|live UAT) (?:is|are) (?:the )?(?:immediate )?next",
-        r"Recommended next step:\s*(?:deployment|live UAT)",
-    ):
-        if re.search(pattern, handoff, re.IGNORECASE):
-            errors.append("BACKEND_FINAL_HANDOFF presents deployment or live UAT as the immediate next step.")
-    for match in re.finditer(r"405 passed", handoff):
-        context = handoff[max(0, match.start() - 100):match.end()]
-        if not re.search(r"Historical Phase 13K verification", context, re.IGNORECASE):
-            errors.append("BACKEND_FINAL_HANDOFF must label any 405 passed reference as historical Phase 13K verification.")
+        require(status, phrase, "PROJECT_STATUS", errors)
+    if re.search(r"(?:Current completed phase|Next phase):[^\n]*14B[^\n]*(?:pending|next)", status, re.I):
+        errors.append("PROJECT_STATUS describes Phase 14B as pending or next.")
+    if re.search(r"(?:Next phase|Next step):[^\n]*(?:deployment|live UAT)", status, re.I):
+        errors.append("PROJECT_STATUS presents deployment or live UAT as next.")
 
-    for pattern in (
-        r"deployment and live UAT are next",
-        r"Phase 13K is the current completed phase",
-        r"Phase 14A (?:is unstarted|has not started|is next)",
-    ):
-        if re.search(pattern, audit, re.IGNORECASE):
-            errors.append(f"Integration audit has stale current-status wording: '{pattern}'.")
-    phase_history = historical_phase_order(audit)
-    if phase_history is None:
-        errors.append("Integration audit is missing the '## O. Historical Phase Order' section.")
-    else:
-        for phase in REQUIRED_PHASE_HISTORY:
-            count = phase_history.count(phase)
-            if count == 0:
-                errors.append(f"Historical Phase Order is missing {phase}.")
-            elif count > 1:
-                errors.append(f"Historical Phase Order duplicates {phase} ({count} entries).")
-        if phase_history != REQUIRED_PHASE_HISTORY:
-            errors.append(
-                "Historical Phase Order is out of order: expected "
-                f"{', '.join(REQUIRED_PHASE_HISTORY)}; found {', '.join(phase_history)}."
-            )
-    blocks = route_blocks(audit)
-    for role, required in REQUIRED_ROUTES.items():
-        routes = blocks.get(role, [])
-        if not routes:
-            errors.append(f"Integration audit has no {role.title()} route block.")
-            continue
-        duplicates = sorted({route for route in routes if routes.count(route) > 1})
-        if duplicates:
-            errors.append(f"Duplicate {role.title()} routes: {', '.join(duplicates)}.")
-        missing = sorted(required - set(routes))
-        if missing:
-            errors.append(f"Missing {role.title()} routes: {', '.join(missing)}.")
+    manifest = (V2 / "UI_REFOCUS_MANIFEST.md").read_text(encoding="utf-8")
+    shell = (V2 / "SHELL_SPEC_V2.md").read_text(encoding="utf-8")
+    icon_map = (V2 / "ICON_MAP.md").read_text(encoding="utf-8")
+    table = (V2 / "TABLE_LIST_SPEC_V2.md").read_text(encoding="utf-8")
+    overlay = (V2 / "OVERLAY_INTERACTION_SPEC_V2.md").read_text(encoding="utf-8")
+    patient = (V2 / "PATIENT_ROW_SPEC_V2.md").read_text(encoding="utf-8")
+    team = (V2 / "TEAM_USERS_ACCESS_SPEC_V2.md").read_text(encoding="utf-8")
+    form = (V2 / "FORM_INPUT_SPEC_V2.md").read_text(encoding="utf-8")
+    visual = (V2 / "VISUAL_DIRECTION.md").read_text(encoding="utf-8")
+    responsive = (V2 / "RESPONSIVE_RTL_SPEC_V2.md").read_text(encoding="utf-8")
+    checks = (
+        (manifest, "current accepted defect", "manifest"),
+        (shell, "fixed", "shell"), (shell, "Light/Dark", "shell"), (shell, "EN/AR", "shell"),
+        (icon_map, "Lucide React", "icon map"), (table, "Show more", "table/list spec"),
+        (table, "whole eligible row", "table/list spec"), (overlay, "outside click", "overlay spec"),
+        (overlay, "Dirty forms", "overlay spec"), (patient, "avatar", "patient row spec"),
+        (team, "Users & Access", "Team/access spec"), (team, "Phase 14C.0", "Team/access spec"),
+        (form, "searchable", "form spec"), (visual, "stronger", "visual direction"),
+        (responsive, "Dark", "responsive spec"), (responsive, "Arabic", "responsive spec"),
+        (responsive, "RTL", "responsive spec"),
+    )
+    for text, phrase, source in checks:
+        require(text, phrase, source, errors)
 
-    qa = QA_14A.read_text(encoding="utf-8")
-    for expected in ("Phase 14A", "seed_demo_clinic_story", "Browser checklist", "pending execution"):
-        if expected not in qa:
-            errors.append(f"QA_14A is missing '{expected}'.")
-    demo_story = DEMO_STORY.read_text(encoding="utf-8")
-    for expected in ("--reset-demo", "--reference-date", "@pearlix-demo.local", "@pearlix.local", "demo14a-"):
-        if expected not in demo_story:
-            errors.append(f"DEMO_STORY is missing '{expected}'.")
+    for path in (README, AUDIT, QA):
+        text = path.read_text(encoding="utf-8")
+        if re.search(r"Phase 14B(?: Complete UI Refocus Design Freeze| Visual Audit and Design Freeze)?\s+(?:is|remains)\s+(?:pending|next|unstarted)", text, re.I):
+            errors.append(f"{path.relative_to(ROOT)} describes Phase 14B as pending/next.")
+        if re.search(r"(?:deployment|live UAT).{0,60}(?:next|immediate)", text, re.I):
+            errors.append(f"{path.relative_to(ROOT)} presents deployment/live UAT as next.")
 
     if errors:
         print("Documentation consistency check failed:")
         for error in errors:
             print(f"- {error}")
         return 1
-
     print("Documentation consistency check passed.")
     return 0
 

@@ -1,0 +1,9 @@
+# Table and List Specification v2
+
+Primary datasets use backend pagination/filtering and display count, current page, Previous/Next (disabled truthfully), loading skeleton, empty explanation/action, error/retry, and read-only boundary. Dashboard previews alone may Show more/Collapse. Current floating borderless lists and permanently visible `View` buttons are defects.
+
+Row behavior: the **whole eligible row/card opens detail** via pointer, Enter, and Space; it has `tabIndex`, descriptive accessible name, 2 px selected/3 px focus state, hover surface, and subtle logical-direction chevron. Controls inside stop propagation. Remove routine `View`; keep rare secondary action in overflow. No permanent action column unless status mutation is required in-table (appointment check-in/cancel/no-show and staff billing queue), and those controls remain labelled.
+
+At 1440/1280 render tables in a 16 px shell with header surface. At 1024 hide lower-value columns only after preserving identity/status/date, otherwise use contained horizontal scroll. At 768 transform approved record tables into 16 px structured card-rows: identity/primary status, two metadata lines, and chevron; no global horizontal page overflow. Header, row separators, hover, focus, selected, loading, empty, error, and disabled state have both themes and RTL logical alignment.
+
+Apply to patient, appointment, invoice, user, Team member, audit, X-ray, handoff, schedule, and leave records. Detail actions: patient edit/archive in profile; appointment mutations in detail/drawer; invoice/payment actions in invoice detail; Users & Access role/reset/deactivate in account detail; Team schedule/leave links in Team detail; audit strictly read-only; X-ray/AI actions in detail; handoff conversion/dismissal in detail; schedule/leave edit/cancel in record detail.
