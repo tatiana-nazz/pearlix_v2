@@ -24,6 +24,8 @@ Phase 14A demo accounts use `@pearlix-demo.local`. Older development QA accounts
 
 All use the supplied password. The clinic is configured for Damascus, `Asia/Damascus`, English/Arabic, SYP/USD, 30-minute default appointments, capacity 3, and `MOCK_ADAPTER` AI.
 
+Phase 14C.0 gives the four Doctors distinct stored specialties, phones, and biographies, and the two Staff distinct positions and phones. Their login and professional statuses are independently represented through valid profile linkage.
+
 ## Anchor story
 
 The 24 synthetic patients include today’s confirmed and checked-in appointments, one active visit, completed clinical history with all five note fields, saved X-rays with and without mock AI, temporary/attached/discarded external X-rays, leave- and shift-change reschedules, cancelled/no-show/future appointments, archived history, and pending/converted/dismissed handoffs with unpaid/partial/paid/cancelled invoices. Doctors have schedules; Doctor Four has daily split shifts.

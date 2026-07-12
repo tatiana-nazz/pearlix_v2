@@ -3,7 +3,7 @@
 Phase: Originally created for 13A; capability audit through completed Phase 14B design freeze. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 14A integrated development demo story complete; Phase 14B design documentation complete; existing production APIs unchanged. The verified DoctorProfile/StaffProfile CRUD and linkage gap makes Phase 14C.0 the next phase; deployment remains paused.
+Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, and Phase 14C.0 Team/account-linkage API foundation are complete. Runtime Team/Users UI is deferred to Phase 14D; deployment remains paused.
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -974,6 +974,15 @@ Network/offline fallback:
 No critical backend blocker was found for frontend integration planning.
 
 ## O. Historical Phase Order
+
+## Phase 14C.0 Team/API Contract
+
+- `GET`/`POST /api/team-members/`, detail/update, and professional-status actions are Admin-only. User ID is the stable Team identifier.
+- Team list excludes Admin and legacy unlinked professional accounts. User list/detail exposes `linked_profile_state` and valid `team_member_id` without embedding schedules or workload.
+- Doctor/Staff onboarding is transactional through Team. Generic `/api/users/` rejects Doctor/Staff creation with `PROFILE_REQUIRED`; generic role PATCH is rejected and callers must use `transition-role` preview/confirmation.
+- Profile fields are limited to Doctor specialty/phone/bio and Staff position/phone. No gender, qualification, license, photo, Staff biography, or activity fields exist.
+- Profile `version` is required for Team update/status. Login status and professional status are separate. Reactivation changes login status only.
+- Frontend contains types/wrappers/query keys only (`src/types/team.ts`, `src/api/endpoints/team.ts`); no `/admin/team` runtime route was added.
 
 - 13B — frontend foundation: Vite/React/TypeScript app structure, API client, environment config, and shared types.
 - 13B.1 — design-system and responsive contract.

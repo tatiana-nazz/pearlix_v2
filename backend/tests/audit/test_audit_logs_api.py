@@ -93,7 +93,7 @@ def test_important_actions_create_safe_audit_logs(
 
     user_create = admin_client.post(
         "/api/users/",
-        {"email": "audit-new@example.com", "password": "secret-password", "full_name": "Audit User", "role": User.Role.STAFF},
+        {"email": "audit-new@example.com", "password": "secret-password", "full_name": "Audit User", "role": User.Role.ADMIN},
         format="json",
     )
     new_user_id = user_create.data["id"]

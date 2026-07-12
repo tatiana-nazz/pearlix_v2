@@ -17,7 +17,7 @@ def test_admin_can_list_users(admin_client, admin_user, staff_user):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("role", [User.Role.STAFF, User.Role.DOCTOR, User.Role.ADMIN])
+@pytest.mark.parametrize("role", [User.Role.ADMIN])
 def test_admin_can_create_users_by_role(admin_client, role):
     response = admin_client.post(
         "/api/users/",
@@ -115,13 +115,13 @@ def test_admin_can_create_user_with_temporary_password_alias(admin_client):
             "email": "temporary-alias@example.com",
             "temporary_password": "AliasTemp!4567",
             "full_name": "Temporary Alias",
-            "role": User.Role.STAFF,
+            "role": User.Role.ADMIN,
         },
         format="json",
     )
 
     assert response.status_code == 201
-    created_user = User.objects.get(email="temporary-alias@example.com")
+    created_user = User.objects.get(email="temporary-alias@example.com", role=User.Role.ADMIN)
     assert created_user.check_password("AliasTemp!4567")
     assert created_user.must_change_password is True
     assert "password" not in response.data
@@ -136,7 +136,7 @@ def test_admin_create_user_rejects_weak_password(admin_client):
             "email": "weak-password@example.com",
             "password": "password",
             "full_name": "Weak Password",
-            "role": User.Role.STAFF,
+            "role": User.Role.ADMIN,
         },
         format="json",
     )

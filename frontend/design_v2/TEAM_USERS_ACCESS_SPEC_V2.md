@@ -32,6 +32,10 @@ No runtime work occurs in 14B.
 
 ## Preferred Phase 14C.0 API contract (frozen target, not implemented)
 
+## Implemented Phase 14C.0 resolution
+
+The API foundation is now implemented while runtime Team/Users screens remain deferred. User ID is the Team member ID. `User`, `DoctorProfile`, and `StaffProfile` each carry an optimistic version where required. Generic `/api/users/` is intentionally restricted to Admin account creation; Doctor/Staff requests return `PROFILE_REQUIRED` and must use transactional Team onboarding. Generic role PATCH returns a protected-role error and callers use the signed `transition-role` preview/confirm workflow. The actual safe transition matrix is documented in `backend/project_docs/PHASE_14C0_TEAM_PROFILE_ARCHITECTURE.md`: direct operational history blocks role changes rather than deleting, detaching, or retyping records. Reactivation is supported only for inactive accounts with a consistent linkage and never changes professional status.
+
 | Endpoint | Permission | Contract |
 | --- | --- | --- |
 | `GET /api/team-members/` | Admin | paged `count,next,previous,results`; filters `q`, `role`, `professional_status`, `availability`, `page`; no Admin accounts. |

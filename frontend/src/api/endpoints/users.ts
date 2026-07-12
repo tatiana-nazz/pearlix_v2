@@ -10,4 +10,5 @@ export const usersApi = {
   resetPassword: (id: number, payload: ResetPasswordPayload) =>
     api.post<UserManagementRecord, ResetPasswordPayload>(`/users/${id}/reset-password/`, payload),
   deactivate: (id: number) => api.post<UserManagementRecord>(`/users/${id}/deactivate/`),
+  reactivate: (id: number) => api.post<UserManagementRecord>(`/users/${id}/reactivate/`),
 };

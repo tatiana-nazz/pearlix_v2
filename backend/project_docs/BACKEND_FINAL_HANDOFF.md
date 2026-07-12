@@ -2,7 +2,7 @@
 
 Project: Dental Clinic Management System Website
 
-Current phase/status: 14A integrated development-only demo story complete; production backend contract unchanged
+Current phase/status: Phase 14C.0 Team Profile API and Account Linkage Foundation complete; deployment remains paused
 
 Backend stack: Django, Django REST Framework, PostgreSQL
 
@@ -29,7 +29,8 @@ Run backend commands from `backend` with the virtualenv active.
 
 ## Capabilities
 
-- Accounts: no public signup, Admin-created users, temporary-password flow, required password change support, authenticated change-password, Admin reset-password, self/last-admin deactivation safeguards.
+- Accounts: no public signup, Admin-created accounts, temporary-password flow, required password change support, authenticated change-password, Admin reset-password, self/last-admin deactivation safeguards, supported reactivation, and protected role transitions.
+- Team profiles: Admin-only paged `/api/team-members/` list/detail/create/update/status APIs; User ID Team identifiers; transactional Doctor/Staff onboarding; profile/user optimistic versions; linkage-state summaries; profile-integrity command; and history-preserving transition blocks.
 - Patients: final Phase 13E.1 patient schema, `Male`/`Female` gender contract, optional profile fields, nullable unique national ID/passport, computed `full_name`/`age`, versioned updates, no hard delete, Staff archive/unarchive, archived patients hidden by default, archive blocked by `UPCOMING`, `CHECKED_IN`, `ACTIVE`, and `NEEDS_RESCHEDULE` appointments.
 - Scheduling: clinic default shift templates, independent Doctor and Staff working shifts, split-shift availability, versioned availability exceptions, explicit Doctor appointment-impact confirmation, appointment capacity/conflict validation, `NEEDS_RESCHEDULE` leave/shift source tracking, and no hard deletion.
 - Visits and clinical records: Doctors start/complete own visits and edit own clinical notes; completed own notes remain editable where supported by the current service. The Phase 13G frontend provides Doctor active/detail routes and Admin/Staff read-only visit detail routes without changing backend behavior.
@@ -125,18 +126,18 @@ pg_dump "$DATABASE_URL" --file ../_local_backups/pearlix_before_13f1_schedules.s
 
 Scheduling migration `0005_admin_shifts_availability` is applied locally; `migrate --plan` reports no planned operations.
 
-## Current Verification (Phase 14A)
+## Current Verification (Phase 14C.0)
 
 Latest full backend regression:
 
 ```text
 python -m pytest -q
-407 passed
+414 passed
 ```
 
-Phase 14A focused seed tests: 2 passed.
+Phase 14C.0 focused Team/account-linkage tests: 40 passed during development. The complete suite passed after stabilization. Phase 14A focused seed tests remain covered by the full suite.
 
-Phase 14A added only a development-only seed command and focused tests. Production backend API behavior and migrations remain unchanged. Browser QA remains pending; deployment remains paused.
+`accounts.0005_doctorprofile_version_staffprofile_version_and_more` is the only Phase 14C.0 migration. Browser QA remains pending; deployment remains paused.
 
 Historical Phase 13K verification (superseded): 405 backend tests and 51 frontend tests passed.
 
@@ -172,4 +173,4 @@ Before handoff or upload, exclude:
 
 ## Next Step
 
-Recommended next step: Phase 14B Visual Audit and Design Freeze. Deployment remains paused.
+Recommended next step: Phase 14C shell, tokens, Lucide icons, and shared components. Runtime Team and Users & Access screens remain Phase 14D. Deployment remains paused.

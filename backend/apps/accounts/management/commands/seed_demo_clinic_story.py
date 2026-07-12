@@ -60,6 +60,17 @@ USER_SPECS = (
     ("doctor.four", "Dr. Yasmin Barakat", User.Role.DOCTOR, False),
 )
 MUST_CHANGE_SPEC = ("doctor.mustchange", "Dr. Fadi Saad", User.Role.DOCTOR, True)
+DOCTOR_PROFILE_SPECS = {
+    "doctor.one": ("Endodontics", "+963-11-410-1001", "Root-canal and restorative care."),
+    "doctor.two": ("Orthodontics", "+963-11-410-1002", "Orthodontic planning and follow-up."),
+    "doctor.three": ("Periodontics", "+963-11-410-1003", "Gum-health and periodontal treatment."),
+    "doctor.four": ("Prosthodontics", "+963-11-410-1004", "Restorative and prosthetic treatment."),
+    "doctor.mustchange": ("General Dentistry", "+963-11-410-1005", "General dental care."),
+}
+STAFF_PROFILE_SPECS = {
+    "staff.one": ("Clinic Coordinator", "+963-11-420-1001"),
+    "staff.two": ("Reception", "+963-11-420-1002"),
+}
 
 PATIENT_NAMES = (
     ("Amina", "Khalil", "Female"), ("Karim", "Azzam", "Male"),
@@ -134,9 +145,11 @@ class Command(BaseCommand):
                 must_change_password=must_change,
             )
             if role == User.Role.DOCTOR:
-                DoctorProfile.objects.create(user=user, specialty="General Dentistry", phone="+963-11-000-0000", bio="Synthetic Phase 14A demo profile.", is_active=True)
+                specialty, phone, bio = DOCTOR_PROFILE_SPECS[slug]
+                DoctorProfile.objects.create(user=user, specialty=specialty, phone=phone, bio=bio, is_active=True)
             elif role == User.Role.STAFF:
-                StaffProfile.objects.create(user=user, position="Clinic Coordinator", phone="+963-11-000-0000", is_active=True)
+                position, phone = STAFF_PROFILE_SPECS[slug]
+                StaffProfile.objects.create(user=user, position=position, phone=phone, is_active=True)
             accounts[slug] = user
             log_activity(actor=user, action="demo_user_created", entity_type="user", entity_id=user.id, metadata={"demo_story": DEMO_TAG, "role": role})
         return accounts

@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import (
     RefreshView,
+    TeamMemberViewSet,
     UserViewSet,
     change_password_view,
     login_view,
@@ -14,6 +15,7 @@ from apps.accounts.views import (
 
 router = DefaultRouter()
 router.register("users", UserViewSet, basename="user")
+router.register("team-members", TeamMemberViewSet, basename="team-member")
 
 urlpatterns = [
     path("auth/login/", login_view, name="auth-login"),
