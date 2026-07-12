@@ -20,3 +20,5 @@ Foundation is navy/teal, with blue reserved for links/active selection and viole
 ## Theme and language
 
 Dark is a tokenized surface system, not inversion. EN/AR changes translation dictionary, document language/direction, persistent preference, shell placement, directional icons, truncation, numeric/date/currency alignment, and mixed-script isolation. Static UI must be translated; backend text remains as returned unless an approved mapping exists.
+
+Arabic uses `"Noto Sans Arabic", Tahoma, Arial, sans-serif` without requiring a bundled font; its body/label/heading line heights are 1.75/1.55/1.35. English uses Inter/system UI. Emails, phones, IDs, invoice numbers, dates, and money are isolated LTR values inside Arabic content. Use logical start/end alignment. Only directional arrows, chevrons, drawer origin, and calendar navigation mirror; Close, brand, scan/X-ray, status icons, and product marks do not.

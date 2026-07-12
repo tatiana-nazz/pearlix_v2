@@ -19,6 +19,7 @@ REQUIRED_V2 = {
     "TABLE_LIST_SPEC_V2.md", "PATIENT_ROW_SPEC_V2.md", "FORM_INPUT_SPEC_V2.md",
     "OVERLAY_INTERACTION_SPEC_V2.md", "TEAM_USERS_ACCESS_SPEC_V2.md", "SCREEN_SPECS_V2.md",
     "RESPONSIVE_RTL_SPEC_V2.md", "DESIGN_ACCEPTANCE_MATRIX.md", "IMPLEMENTATION_SEQUENCE.md",
+    "SCREEN_BLUEPRINTS_V2.md", "RUNTIME_COMPONENT_MAPPING_V2.md",
 }
 
 
@@ -39,6 +40,7 @@ def main() -> int:
         return 1
 
     status = STATUS.read_text(encoding="utf-8")
+    readme = README.read_text(encoding="utf-8")
     for phrase in (
         "Current completed phase: 14B",
         "Next phase: 14C.0 Doctor/Staff professional profile API and account linkage",
@@ -64,6 +66,8 @@ def main() -> int:
     form = (V2 / "FORM_INPUT_SPEC_V2.md").read_text(encoding="utf-8")
     visual = (V2 / "VISUAL_DIRECTION.md").read_text(encoding="utf-8")
     responsive = (V2 / "RESPONSIVE_RTL_SPEC_V2.md").read_text(encoding="utf-8")
+    blueprints = (V2 / "SCREEN_BLUEPRINTS_V2.md").read_text(encoding="utf-8")
+    matrix = (V2 / "DESIGN_ACCEPTANCE_MATRIX.md").read_text(encoding="utf-8")
     checks = (
         (manifest, "current accepted defect", "manifest"),
         (shell, "fixed", "shell"), (shell, "Light/Dark", "shell"), (shell, "EN/AR", "shell"),
@@ -74,6 +78,22 @@ def main() -> int:
         (form, "searchable", "form spec"), (visual, "stronger", "visual direction"),
         (responsive, "Dark", "responsive spec"), (responsive, "Arabic", "responsive spec"),
         (responsive, "RTL", "responsive spec"),
+        (blueprints, "/admin/dashboard", "route blueprints"),
+        (blueprints, "/admin/team", "route blueprints"),
+        (blueprints, "/admin/users", "route blueprints"),
+        (blueprints, "/staff/patients", "route blueprints"),
+        (blueprints, "appointments/day", "route blueprints"),
+        (blueprints, "Doctor active visit", "route blueprints"),
+        (blueprints, "saved X-ray", "route blueprints"),
+        (blueprints, "invoice list/new/detail", "route blueprints"),
+        (blueprints, "clinic settings", "route blueprints"),
+        (blueprints, "audit list/detail", "route blueprints"),
+        (matrix, "DB-ADM", "acceptance matrix"), (matrix, "TEAM-L", "acceptance matrix"),
+        (matrix, "AP-D", "acceptance matrix"), (matrix, "WIDTH-01", "acceptance matrix"),
+        (team, "GET /api/team-members/", "Team API contract"),
+        (team, "POST /api/users/{id}/transition-role/", "Team API contract"),
+        (visual, "Noto Sans Arabic", "Arabic typography"),
+        (responsive, "unicode-bidi:isolate", "Arabic bidi rules"),
     )
     for text, phrase, source in checks:
         require(text, phrase, source, errors)
@@ -84,6 +104,11 @@ def main() -> int:
             errors.append(f"{path.relative_to(ROOT)} describes Phase 14B as pending/next.")
         if re.search(r"(?:deployment|live UAT).{0,60}(?:next|immediate)", text, re.I):
             errors.append(f"{path.relative_to(ROOT)} presents deployment/live UAT as next.")
+
+    if "QA_14B.md" not in readme or "authoritative UI refocus" not in readme:
+        errors.append("README must reference QA_14B and designate design_v2 as authoritative.")
+    if re.search(r"Ongoing product work must follow.*frontend/design/", readme, re.I | re.S):
+        errors.append("README still presents old frontend/design as the ongoing authoritative contract.")
 
     if errors:
         print("Documentation consistency check failed:")
