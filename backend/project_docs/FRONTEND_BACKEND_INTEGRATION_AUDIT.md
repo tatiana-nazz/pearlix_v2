@@ -1,15 +1,15 @@
 # Frontend/Backend Integration Audit
 
-## Current Phase 14D acceptance corrections
+## Current Phase 14D final acceptance
 
-Phase 14D acceptance corrections are in progress. The frontend retains the approved dashboard, Team, Users & Access, appointment, and patient workflows while focus, navigation, security-input, and route-level acceptance evidence is completed. Backend runtime changed in Phase 14D: no; migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate. Phase 14E has not started.
+Phase 14D final acceptance is complete. The frontend retains the approved dashboard, Team, Users & Access, appointment, and patient workflows with focus, navigation, security-input, and route-level acceptance evidence completed. Frontend verification: 38 files, 104 tests. Backend verification: 414 passed. Backend runtime changed in Phase 14D: no; migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate. Phase 14E has not started.
 
-The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Phase 14D closure records 97 frontend tests across 35 files, while browser QA remains pending for Phase 14F.
+The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Phase 14D closure records 38 files, 104 tests, while browser QA remains pending for Phase 14F.
 
 Phase: Originally created for 13A; capability audit through completed Phase 14C shell/token/icon/shared-component foundation. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `tatiana-nazz/pearlix_v2`, branch `phase-14d-priority-workflows`
 API base URL: `/api/`  
-Backend status: Phase 14D Priority Workflows is complete. Phase 14E is next; deployment remains paused pending Phase 14F browser evidence.
+Backend status: Phase 14D final acceptance is complete. Phase 14E is next; deployment remains paused pending Phase 14F browser evidence.
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 

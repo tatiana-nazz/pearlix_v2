@@ -2,7 +2,7 @@
 
 ## Closure status
 
-Phase 14D acceptance corrections are in progress. Phase 14E has not started. Backend runtime changed: no. Migrations: none.
+Phase 14D final acceptance is complete. Phase 14E has not started. Backend runtime changed: no. Migrations: none.
 
 - Dashboards, Team, Users & Access, appointments, and patient workflows use the Phase 14D v2 surfaces.
 - Feature copy is typed EN/AR, with localized role, status, and availability labels; the Team and Users & Access pages do not present raw display enums.
@@ -12,10 +12,12 @@ Phase 14D acceptance corrections are in progress. Phase 14E has not started. Bac
 
 ## Automated verification
 
-- Frontend: `npm.cmd run typecheck` passed; `npm.cmd run test:run` passed (35 files, 97 tests); `npm.cmd run build` passed.
+- Frontend: `npm.cmd run typecheck` passed; `npm.cmd run test:run` passed (38 files, 104 tests); `npm.cmd run build` passed.
 - Backend: `manage.py check` reported `System check identified no issues (0 silenced).` Migration drift check reported `No changes detected`.
+- Full backend suite: `python -m pytest` passed (414 tests).
 - Focused backend suites: Team/account and Users/role transition 35 passed; appointments 39 passed; patients and IDOR/security 25 passed (99 focused tests total).
 - Repository checks: `git diff --check` passed and no TypeScript/test suppressions are present in `frontend/src`.
+- The documentation consistency checker is not a substitute for typecheck, tests, build, or backend verification.
 
 ## Browser QA
 
