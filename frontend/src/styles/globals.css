@@ -731,7 +731,7 @@ p {
 .appointment-table td {
   border-bottom: 1px solid var(--color-border);
   padding: var(--space-3);
-  text-align: left;
+  text-align: start;
   vertical-align: middle;
 }
 
@@ -748,7 +748,7 @@ p {
 
 .patient-table tbody tr:hover,
 .appointment-table tbody tr:hover {
-  background: #fbfdfe;
+  background: var(--v2-surface-raised, var(--color-surface));
 }
 
 .appointment-table td span {
@@ -852,7 +852,7 @@ p {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: var(--space-3);
-  background: #fbfdfe;
+  background: var(--v2-surface-raised, var(--color-surface));
 }
 
 .appointment-calendar-column h3,
@@ -873,7 +873,7 @@ p {
   color: var(--color-text);
   cursor: pointer;
   padding: var(--space-3);
-  text-align: left;
+  text-align: start;
 }
 
 .appointment-calendar-item:hover,
@@ -881,7 +881,7 @@ p {
 .availability-grid button:hover,
 .availability-grid button.active {
   border-color: var(--color-primary);
-  background: #f3fbfd;
+  background: var(--v2-surface-raised, var(--color-surface));
 }
 
 .appointment-calendar-item span,
@@ -909,7 +909,7 @@ p {
 }
 
 .appointment-month-cell.muted {
-  background: #f7fafc;
+  background: var(--v2-surface-raised, var(--color-surface));
   color: var(--color-muted);
 }
 

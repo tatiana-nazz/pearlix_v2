@@ -45,7 +45,7 @@ describe("AppointmentTable", () => {
     );
 
     expect(screen.getByRole("button", { name: "Check in" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel appointment" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /status/i })).not.toBeInTheDocument();
   });
 

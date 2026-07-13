@@ -22,8 +22,8 @@ export function AppointmentWeekView({ date, appointments, onDetails }: Appointme
           <h3>{formatDate(`${day}T00:00:00`)}</h3>
           {appointments.filter((appointment) => dateFromAppointment(appointment.start_datetime) === day).map((appointment) => (
             <button key={appointment.id} type="button" className="appointment-calendar-item" onClick={() => onDetails(appointment)}>
-              <strong>{formatTime(appointment.start_datetime)}</strong>
-              <span>{appointment.patient.full_name}</span>
+              <strong className="bidi-isolate">{formatTime(appointment.start_datetime)}</strong>
+              <span className="bidi-isolate">{appointment.patient.full_name}</span>
               <AppointmentStatusBadge status={appointment.status} />
             </button>
           ))}

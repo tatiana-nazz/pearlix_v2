@@ -13,6 +13,9 @@ describe("Phase 14D feature localization", () => {
     expect(featureT("AR", "usersAccess")).not.toBe(featureT("EN", "usersAccess"));
     expect(featureT("AR", "archivePatient")).not.toBe(featureT("EN", "archivePatient"));
     expect(featureT("AR", "needsReschedule")).not.toBe(featureT("EN", "needsReschedule"));
+    expect(featureT("AR", "dayAppointments")).not.toBe(featureT("EN", "dayAppointments"));
+    expect(featureT("AR", "saveReschedule")).not.toBe(featureT("EN", "saveReschedule"));
+    expect(featureT("AR", "discardChanges")).not.toBe(featureT("EN", "discardChanges"));
   });
 
   it("maps known backend status codes to localized labels rather than exposing raw enums", () => {

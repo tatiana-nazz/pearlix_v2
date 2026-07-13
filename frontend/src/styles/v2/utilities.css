@@ -1,2 +1,2 @@
 :root { --color-canvas:var(--v2-canvas); --font-sans:var(--v2-font); --radius:var(--v2-radius-card); --radius-md:var(--v2-radius-small); --radius-lg:var(--v2-radius-dialog); }
-.bidi-ltr { direction:ltr; unicode-bidi:isolate; }.v2-sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+.bidi-ltr,.bidi-isolate { direction:ltr; unicode-bidi:isolate; }.v2-sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }

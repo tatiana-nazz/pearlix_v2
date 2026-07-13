@@ -7,6 +7,7 @@ import { formatDateRange } from "../../../utils/dates";
 import { useAppointmentAvailability } from "../hooks/useAppointments";
 import { appointmentToFormValues, formValuesToUpdatePayload } from "../utils/appointmentFormMapping";
 import { AvailabilityPicker } from "./AvailabilityPicker";
+import { useFeatureT } from "../../../layouts/i18n";
 
 interface RescheduleAppointmentPanelProps {
   appointment: AppointmentDetail;
@@ -17,6 +18,7 @@ interface RescheduleAppointmentPanelProps {
 }
 
 export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting, error, onSubmit }: RescheduleAppointmentPanelProps) {
+  const t = useFeatureT();
   const initial = appointmentToFormValues(appointment);
   const [doctorId, setDoctorId] = useState(initial.doctorId);
   const [date, setDate] = useState(initial.date);
@@ -46,16 +48,15 @@ export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting,
   return (
     <div className="reschedule-grid">
       <Card>
-        <p className="eyebrow">Current appointment</p>
+        <p className="eyebrow">{t("currentAppointment")}</p>
         <h3>{appointment.patient.full_name}</h3>
         <p>{formatDateRange(appointment.start_datetime, appointment.end_datetime)}</p>
-        <p className="panel-note">Saving a new slot returns a NEEDS_RESCHEDULE appointment to UPCOMING through the backend update service.</p>
       </Card>
       <Card>
-        {error ? <p className="form-error">Unable to save reschedule. Review the slot and try again.</p> : null}
+        {error ? <p className="form-error">{t("unableToSaveAppointment")}</p> : null}
         <div className="appointment-form-grid">
           <label>
-            Doctor
+            {t("doctor")}
             <select value={doctorId} onChange={(event) => setDoctorId(event.target.value)}>
               {doctors.map((doctor) => (
                 <option key={doctor.id} value={doctor.id}>
@@ -65,11 +66,11 @@ export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting,
             </select>
           </label>
           <label>
-            Date
+            {t("date")}
             <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
           </label>
           <label>
-            Duration
+            {t("duration")}
             <input value={durationMinutes} inputMode="numeric" onChange={(event) => setDurationMinutes(event.target.value)} />
           </label>
         </div>
@@ -83,7 +84,7 @@ export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting,
         />
         <div className="form-actions">
           <button className="button primary" type="button" disabled={isSubmitting || !selectedSlot} onClick={() => void submit()}>
-            Save reschedule
+            {t("saveReschedule")}
           </button>
         </div>
       </Card>

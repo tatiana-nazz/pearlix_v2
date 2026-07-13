@@ -8,7 +8,7 @@
 - `pages/staff/StaffDashboardPage.tsx` now has the approved four-card Staff Dashboard composition, current-data operational queues, and only supported Staff routes/actions.
 - Router and Admin navigation expose `/admin/team` distinctly from `/admin/users` and `/admin/doctors`.
 - `AdminManagementPages.tsx` now separates Users & Access account/security/role/Team concerns and uses the signed Team role-transition API.
-- `PatientTable` uses `ClickableRow`; profile edit/archive uses v2 overlays. Appointment centered-modal conversion remains the next Phase 14D unit.
+- `PatientTable` uses `ClickableRow`; profile edit/archive uses v2 overlays. `AppointmentsPage.tsx` now uses centered details, create/edit/reschedule, and status-confirmation overlays with actual dirty tracking, pending close protection, focus trap/return, localized EN/AR content, and bidi-safe patient/doctor/time values.
 
 ## Endpoint and role boundaries
 
@@ -18,4 +18,4 @@ Supported professional fields remain Doctor specialty/phone/bio and Staff positi
 
 ## Completion status
 
-This is an in-progress implementation record, not a Phase 14D completion record. Palette correction, dark token implementation, Staff Dashboard visual correction, the underlined-card defect removal, and count/label collision removal are complete. Browser visual QA remains pending. Remaining appointment centered-modal conversion, EN/AR, acceptance, browser, and documentation closure work is recorded in `frontend/QA_14D.md`; Phase 14E has not started.
+This is an in-progress implementation record, not a Phase 14D completion record. Palette correction, dark token implementation, Staff Dashboard visual correction, and the appointment modal/localization/RTL/interaction unit are complete. Automated frontend verification passed (88 tests); focused appointment backend checks passed (40 tests); browser QA is pending because the local app was unavailable, and the bounded migration-drift command timed out. Patient localization, RTL/bidi, visual acceptance, and final Phase 14D closure remain; Phase 14E has not started.

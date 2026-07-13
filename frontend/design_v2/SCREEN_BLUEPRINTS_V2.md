@@ -60,7 +60,7 @@ Purpose: patient context/history. Order: back, identity header/avatar/contact/la
 Purpose: day operations. Order: title/Staff `New appointment`, tabs, Today/previous/next/date, doctor/status filters, vertical timeline, selected detail drawer. 1440 timeline 9/3 detail; 1280 8/4; 1024 one doctor timeline with drawer; 768 single column timeline. Blocks show time, patient, doctor, status text/icon. Staff state actions are inside detail; Admin read-only, Doctor own/start-visit only.
 
 ### `*/appointments/week`
-Purpose: weekly capacity. Same toolbar order; seven-day time grid with contained horizontal scroll at 1024/768, never tiny cards. 1440/1280 grid takes full shell; selected block opens drawer. Doctor own data only; Staff mutation remains in drawer.
+Purpose: weekly capacity. Same toolbar order; seven-day time grid with contained horizontal scroll at 1024/768, never tiny cards. 1440/1280 grid takes full shell; selected block opens a centered details modal. Doctor own data only; Staff mutation remains in centered modals.
 
 ### `*/appointments/month`
 Purpose: low-density monthly overview (Admin/Staff only when route exists). Toolbar then calendar; cells show count/status summary, selecting date moves to Day. 1440/1280 7 columns; 1024/768 controlled horizontal calendar, no dense event prose.
@@ -71,8 +71,8 @@ Purpose: filtered paginated appointments. Toolbar order tabs, date controls, doc
 ### `*/appointments/needs-reschedule`, `/staff/appointments/:appointmentId/reschedule`
 Purpose: resolve affected appointments. Toolbar has tabs, source/date/doctor filters. Desktop is 5/7 queue/availability detail; 1024 stack; 768 queue then sheet. Queue shows patient, original time, doctor, source, status; 4 preview only on dashboard, full route paginates. Staff chooses same-doctor slots first then alternatives, confirms one record; Admin/Doctor read-only own visibility. Create/reschedule form uses patient/doctor/date/duration controlled selectors and availability response.
 
-### `Appointment detail`, `Create Appointment`
-Purpose: inspect/create state. Detail order identity/status, time/doctor/patient, reason, allowed actions, audit/context. Create form is 720 px drawer/modal, fields patient, doctor, date/time/duration, availability, reason, submit; desktop adjacent availability panel, tablet stack. Safe close rules apply; submitting/status/destructive confirmation cannot dismiss by backdrop.
+### `Appointment detail`, `Create/Edit/Reschedule Appointment`
+Purpose: inspect/create state. Detail order identity/status, time/doctor/patient, reason, allowed actions, audit/context. Details, forms, and status confirmation are centered modals; forms are 720 px wide, use a readable patient combobox, and retain the selected numeric ID only internally. Safe close rules apply; only changed forms prompt for discard, and submitting/status/destructive confirmation cannot dismiss by backdrop.
 
 ## Scheduling and leave
 
