@@ -197,6 +197,6 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-Phase 14D automated acceptance is complete. Phase 14E is in progress, with Schedules and Leave, Visits, X-rays/AI, and Billing complete. The frontend regression total is 50 files, 166 tests; focused schedule/leave backend verification is 83 passed; focused visit backend verification is 248 passed; focused X-ray/AI backend verification is 131 passed; focused Billing backend verification is 71 passed; Django check passed and migration drift reported no changes. Backend runtime changed: no. Migrations: none. Clinic Settings and Audit have not started. Browser QA remains pending as the Phase 14F visual/UAT gate.
+Phase 14D automated acceptance is complete. Phase 14E is in progress, with Schedules and Leave, Visits, and X-rays/AI complete. Billing runtime improvements are preserved; Billing automated acceptance corrections are in progress. Clinic Settings and Audit have not started. Browser QA remains pending as the Phase 14F visual/UAT gate.
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D automated acceptance is complete; Phase 14E is in progress and Clinic Settings and Audit are its next tasks. Deployment remains paused pending remaining Phase 14E work and Phase 14F browser visual/UAT evidence. See `frontend/design_v2/PHASE_14E_IMPLEMENTATION_RECORD.md`.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D automated acceptance is complete; Phase 14E is in progress and Billing automated acceptance corrections are its current task. Deployment remains paused pending remaining Phase 14E work and Phase 14F browser visual/UAT evidence. See `frontend/design_v2/PHASE_14E_IMPLEMENTATION_RECORD.md`.
