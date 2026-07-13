@@ -1,19 +1,16 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-import { Card } from "../../../components/Card";
-import { EmptyState } from "../../../components/EmptyState";
-import { StatusPill } from "../../../components/StatusPill";
+import { DataTableShell, StatusBadge } from "../../../components/v2";
+import { useFeatureT } from "../../../layouts/i18n";
 import type { UserRole } from "../../../types/auth";
 import type { XrayAttachment } from "../../../types/xrays";
 import { formatDateTime } from "../../../utils/dates";
 import { displayText } from "../../../utils/formatters";
 import { formatFileSize } from "../utils/xrayValidation";
 
-interface XrayListProps { role: UserRole; xrays: XrayAttachment[]; }
-
-export function XrayList({ role, xrays }: XrayListProps) {
-  if (!xrays.length) return <EmptyState title="No saved X-rays found." />;
-  return <Card><div className="table-scroll"><table className="xray-table"><thead><tr><th>X-ray</th><th>Patient</th><th>Visit</th><th>Source</th><th>Uploaded</th><th>AI</th><th /></tr></thead><tbody>
-    {xrays.map((xray) => <tr key={xray.id}><td><strong>{displayText(xray.title, xray.original_file_name)}</strong><span>{xray.content_type} · {formatFileSize(xray.size_bytes)}</span></td><td>{xray.patient.full_name}</td><td>{xray.visit ? `Visit #${xray.visit.id}` : "Patient profile"}</td><td>{xray.source.replace(/_/g, " ")}</td><td>{xray.uploaded_by.full_name}<span>{formatDateTime(xray.created_at)}</span></td><td><StatusPill status={xray.has_ai_result ? "AVAILABLE" : "NOT_RUN"} /></td><td><Link className="button secondary compact-button" to={`/${role.toLowerCase()}/xrays/${xray.id}`}>Open</Link></td></tr>)}
-  </tbody></table></div></Card>;
+export function XrayList({ role, xrays }: { role: UserRole; xrays: XrayAttachment[] }) {
+  const t = useFeatureT(); const navigate = useNavigate();
+  if (!xrays.length) return <DataTableShell title={t("savedXrays")} state={<p>{t("noSavedXrays")}</p>} />;
+  function open(xray: XrayAttachment) { navigate(`/${role.toLowerCase()}/xrays/${xray.id}`); }
+  return <DataTableShell title={t("savedXrays")}><table className="xray-table"><thead><tr><th>{t("savedXrays")}</th><th>{t("patient")}</th><th>{t("visitContext")}</th><th>{t("source")}</th><th>{t("uploaded")}</th><th>AI</th></tr></thead><tbody>{xrays.map((xray) => <tr className="v2-clickable-row" key={xray.id} tabIndex={0} onClick={() => open(xray)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(xray); } }}><td><strong className="bidi-isolate">{displayText(xray.title, xray.original_file_name)}</strong><span className="bidi-isolate">{xray.content_type} · {formatFileSize(xray.size_bytes)}</span></td><td className="bidi-isolate">{xray.patient.full_name}</td><td className="bidi-isolate">{xray.visit ? `${formatDateTime(xray.visit.started_at)}` : t("patientProfileSource")}</td><td>{xray.source === "ACTIVE_VISIT" ? t("activeVisit") : xray.source === "PATIENT_PROFILE" ? t("patientProfileSource") : t("externalWorkspace")}</td><td><span>{xray.uploaded_by.full_name}</span><span className="bidi-isolate">{formatDateTime(xray.created_at)}</span></td><td><span>{xray.has_ai_result ? t("aiAvailable") : t("aiNotRun")}</span></td></tr>)}</tbody></table></DataTableShell>;
 }

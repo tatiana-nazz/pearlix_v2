@@ -54,6 +54,14 @@ const visitMessages = {
     activeVisit: "الزيارة النشطة", visitDetails: "تفاصيل الزيارة", activeVisitDescription: "وثّق المعاينة السريرية الحالية وأكملها عند انتهاء الرعاية.", visitDetailsDescription: "راجع سياق الموعد والتوثيق السريري لهذه الزيارة.", loadingVisit: "جارٍ تحميل الزيارة", visitUnavailable: "معلومات الزيارة غير متاحة", noActiveVisit: "لا توجد زيارة نشطة", noActiveVisitDescription: "ابدأ موعداً تم تسجيل حضوره لبدء توثيق الزيارة.", openDayAppointments: "فتح مواعيد اليوم", patient: "المريض", doctor: "الطبيب", appointment: "الموعد", reason: "السبب", started: "بدأت", completed: "اكتملت", clinicalNotes: "الملاحظات السريرية", clinicalNotesDescription: "وثّق المعاينة السريرية. تبقى الزيارات المكتملة قابلة للتعديل للطبيب المالك.", clinicalNotesReadOnly: "الملاحظات السريرية للقراءة فقط لدورك وهذه الزيارة.", symptoms: "الأعراض", diagnosis: "التشخيص", treatment: "العلاج", followUpNotes: "ملاحظات المتابعة", saveNotes: "حفظ الملاحظات", savingNotes: "جارٍ حفظ الملاحظات", unableToSaveNotes: "تعذر حفظ الملاحظات السريرية. راجع الإدخالات وحاول مجدداً.", patientProfile: "ملف المريض", completeVisit: "إكمال الزيارة", completingVisit: "جارٍ إكمال الزيارة", saveAndComplete: "حفظ وإكمال", completeVisitDescription: "ضع علامة على الزيارة النشطة كمكتملة. سيُكمل الموعد المرتبط أيضاً.", dirtyNotesComplete: "سيتم حفظ الملاحظات السريرية غير المحفوظة قبل إكمال الزيارة.", keepVisitActive: "إبقاء الزيارة نشطة", unableToCompleteVisit: "تعذر إكمال الزيارة. تبقى مساحة العمل النشطة متاحة.", discardVisitChanges: "تجاهل الملاحظات السريرية غير المحفوظة؟", visitAccessDenied: "هذه الزيارة غير متاحة لدورك.", visitNotFound: "لم يتم العثور على الزيارة المطلوبة.", visitNotRecorded: "غير مسجل",
   },
 } as const;
+const xrayMessages = {
+  EN: {
+    savedXrays: "Saved X-rays", savedXraysDescription: "Review protected saved dental X-rays and AI results.", loadingXrays: "Loading X-rays", xrayUnavailable: "X-ray information is unavailable", noSavedXrays: "No saved X-rays found.", xrayDetails: "X-ray details", protectedXray: "Protected X-ray", originalXray: "Original X-ray", aiOverlay: "AI overlay", source: "Source", visitContext: "Visit", patientProfileSource: "Patient profile", uploadedBy: "Uploaded by", uploaded: "Uploaded", file: "File", aiAvailable: "AI result available", aiNotRun: "AI not run", runAi: "Run AI", runningAi: "Running AI", aiUnavailable: "AI information is unavailable", aiResult: "AI result", noAiResult: "No AI result has been saved for this X-ray.", confidence: "Confidence", tooth: "Tooth", finding: "Finding", notSpecified: "Not specified", notReported: "Not reported", noSummary: "No summary returned.", researchDisclaimer: "Educational AI support only. Review independently; it is not a clinical diagnosis.", uploadXray: "Upload X-ray", uploadExternalXray: "Upload external X-ray", xrayImageFile: "X-ray image file", fileHelp: "PNG, JPG, or JPEG only. Maximum size 10 MB.", selectedFile: "Selected file", title: "Title", upload: "Upload", uploading: "Uploading", uploadUnavailable: "Unable to upload the X-ray", externalWorkspace: "External X-ray workspace", externalDescriptionAdmin: "Temporary cases across the clinic.", externalDescriptionDoctor: "Your temporary external X-ray cases.", noExternalXrays: "No external X-ray cases found.", externalCase: "External X-ray case", temporary: "Temporary", attachedToPatient: "Attached to patient", discarded: "Discarded", attachToPatient: "Attach to patient", discardCase: "Discard case", keepCase: "Keep case", discardExplanation: "Discard does not create a patient X-ray.", searchPatients: "Search patients", searchPatientPlaceholder: "Search patient name or contact", optionalVisit: "Optional visit", noVisit: "No visit", titleOverride: "Title override", notesOverride: "Notes override", notAttached: "Not attached", openXray: "Open X-ray",
+  },
+  AR: {
+    savedXrays: "الأشعة المحفوظة", savedXraysDescription: "راجع صور الأشعة السنية المحفوظة المحمية ونتائج الذكاء الاصطناعي.", loadingXrays: "جارٍ تحميل الأشعة", xrayUnavailable: "معلومات الأشعة غير متاحة", noSavedXrays: "لا توجد صور أشعة محفوظة.", xrayDetails: "تفاصيل الأشعة", protectedXray: "أشعة محمية", originalXray: "الأشعة الأصلية", aiOverlay: "طبقة الذكاء الاصطناعي", source: "المصدر", visitContext: "الزيارة", patientProfileSource: "ملف المريض", uploadedBy: "رُفعت بواسطة", uploaded: "تاريخ الرفع", file: "الملف", aiAvailable: "نتيجة الذكاء الاصطناعي متاحة", aiNotRun: "لم يُشغّل الذكاء الاصطناعي", runAi: "تشغيل الذكاء الاصطناعي", runningAi: "جارٍ تشغيل الذكاء الاصطناعي", aiUnavailable: "معلومات الذكاء الاصطناعي غير متاحة", aiResult: "نتيجة الذكاء الاصطناعي", noAiResult: "لا توجد نتيجة ذكاء اصطناعي محفوظة لهذه الأشعة.", confidence: "الثقة", tooth: "السن", finding: "نتيجة", notSpecified: "غير محدد", notReported: "غير مُبلغ عنه", noSummary: "لم يُرجع ملخص.", researchDisclaimer: "دعم الذكاء الاصطناعي تعليمي فقط. راجعه بشكل مستقل؛ وليس تشخيصاً طبياً.", uploadXray: "رفع أشعة", uploadExternalXray: "رفع أشعة خارجية", xrayImageFile: "ملف صورة الأشعة", fileHelp: "PNG أو JPG أو JPEG فقط. الحجم الأقصى 10 ميغابايت.", selectedFile: "الملف المحدد", title: "العنوان", upload: "رفع", uploading: "جارٍ الرفع", uploadUnavailable: "تعذر رفع الأشعة", externalWorkspace: "مساحة الأشعة الخارجية", externalDescriptionAdmin: "حالات مؤقتة على مستوى العيادة.", externalDescriptionDoctor: "حالات الأشعة الخارجية المؤقتة الخاصة بك.", noExternalXrays: "لا توجد حالات أشعة خارجية.", externalCase: "حالة أشعة خارجية", temporary: "مؤقتة", attachedToPatient: "مرفقة بالمريض", discarded: "تم تجاهلها", attachToPatient: "إرفاق بالمريض", discardCase: "تجاهل الحالة", keepCase: "الاحتفاظ بالحالة", discardExplanation: "التجاهل لا ينشئ أشعة للمريض.", searchPatients: "بحث عن المرضى", searchPatientPlaceholder: "ابحث باسم المريض أو بيانات الاتصال", optionalVisit: "زيارة اختيارية", noVisit: "لا توجد زيارة", titleOverride: "تجاوز العنوان", notesOverride: "تجاوز الملاحظات", notAttached: "غير مرفقة", openXray: "فتح الأشعة",
+  },
+} as const;
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -67,6 +75,7 @@ const featureExtensionKeysMatch: SameKeys<typeof featureExtensions.EN, typeof fe
 const acceptanceMessageKeysMatch: SameKeys<typeof acceptanceMessages.EN, typeof acceptanceMessages.AR> = true;
 const scheduleMessageKeysMatch: SameKeys<typeof scheduleMessages.EN, typeof scheduleMessages.AR> = true;
 const visitMessageKeysMatch: SameKeys<typeof visitMessages.EN, typeof visitMessages.AR> = true;
+const xrayMessageKeysMatch: SameKeys<typeof xrayMessages.EN, typeof xrayMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
@@ -74,12 +83,13 @@ void featureExtensionKeysMatch;
 void acceptanceMessageKeysMatch;
 void scheduleMessageKeysMatch;
 void visitMessageKeysMatch;
+void xrayMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -96,6 +106,9 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
 
   const visitDictionary = visitMessages[language];
   if (hasOwnKey(visitDictionary, key)) return visitDictionary[key];
+
+  const xrayDictionary = xrayMessages[language];
+  if (hasOwnKey(xrayDictionary, key)) return xrayDictionary[key];
 
   throw new Error(`Missing translation for key: ${key}`);
 }
