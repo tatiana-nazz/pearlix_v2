@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { Card } from "../../components/Card";
-import { ConfirmDialog, Modal } from "../../components/v2";
+import { ConfirmDialog, InOverlayAlertDialog, Modal, StatePanel } from "../../components/v2";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
@@ -47,8 +47,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const [archiveMode, setArchiveMode] = useState<"archive" | "unarchive" | null>(null);
   const [editDirty, setEditDirty] = useState(false);
   const [reloadConfirm, setReloadConfirm] = useState(false);
+  const [reloadError, setReloadError] = useState<unknown>(null);
   const reloadLatestTrigger = useRef<HTMLButtonElement>(null);
-  const reloadCancel = useRef<HTMLButtonElement>(null);
   const t = useFeatureT();
   const activeTab = searchParams.get("tab") ? tabFromSearch(searchParams.get("tab")) : defaultTab;
   const patient = usePatient(patientId);
@@ -64,12 +64,6 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   useEffect(() => {
     setIsEditing(searchParams.get("edit") === "1");
   }, [searchParams]);
-
-  useEffect(() => {
-    if (!reloadConfirm) return;
-    const timer = window.setTimeout(() => reloadCancel.current?.focus(), 0);
-    return () => window.clearTimeout(timer);
-  }, [reloadConfirm]);
 
   const permissions = useMemo(() => getPatientPermissions(role, patient.data), [role, patient.data]);
 
@@ -116,11 +110,21 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
     setArchiveMode(null);
   }
 
+  function closeReloadConfirm() {
+    setReloadConfirm(false);
+    window.setTimeout(() => reloadLatestTrigger.current?.focus(), 0);
+  }
+
   async function handleReloadLatestPatient() {
-    await patient.refetch();
+    setReloadError(null);
+    const result = await patient.refetch();
+    if (result.error) {
+      setReloadError(result.error);
+      return;
+    }
     updatePatient.reset();
     setEditDirty(false);
-    setReloadConfirm(false);
+    closeReloadConfirm();
   }
 
   const archiveError = archiveMode === "archive" ? archivePatient.error : unarchivePatient.error;
@@ -156,12 +160,12 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
               error={updatePatient.error}
               onSubmit={handleUpdate}
               onDirtyChange={setEditDirty}
-              onReloadLatest={() => setReloadConfirm(true)}
+              onReloadLatest={() => { setReloadError(null); setReloadConfirm(true); }}
               reloadLatestRef={reloadLatestTrigger}
               onContinueReviewing={() => updatePatient.reset()}
             />
         ) : null}
-        {reloadConfirm ? <div className="v2-discard-dialog" role="alertdialog" aria-label={t("reloadLatest")} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setReloadConfirm(false); window.setTimeout(() => reloadLatestTrigger.current?.focus(), 0); } }}><p>{t("reloadPatientPrompt")}</p><button ref={reloadCancel} className="v2-button secondary" type="button" onClick={() => { setReloadConfirm(false); window.setTimeout(() => reloadLatestTrigger.current?.focus(), 0); }}>{t("continueReviewing")}</button><button className="v2-button danger" type="button" onClick={() => void handleReloadLatestPatient()}>{t("reloadLatest")}</button></div> : null}
+        <InOverlayAlertDialog open={reloadConfirm} title={t("reloadPatientPrompt")} onClose={closeReloadConfirm}><button className="v2-button secondary" type="button" onClick={closeReloadConfirm}>{t("continueReviewing")}</button><button className="v2-button danger" type="button" onClick={() => void handleReloadLatestPatient()}>{t("reloadLatest")}</button>{reloadError ? <StatePanel state="error" title={t("requestFailed")} description={reloadError instanceof Error ? reloadError.message : undefined} /> : null}</InOverlayAlertDialog>
       </Modal>
 
       <PatientProfileTabs role={role} activeTab={activeTab === "billing" && !permissions.canViewBillingTab ? "overview" : activeTab} onTabChange={setTab} />

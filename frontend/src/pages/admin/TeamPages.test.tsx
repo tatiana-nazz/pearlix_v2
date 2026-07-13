@@ -47,6 +47,6 @@ describe("Admin Team workflow", () => {
     await user.click(screen.getByRole("button", { name: "إغلاق" }));
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "متابعة التحرير" }));
-    expect(screen.getByLabelText("الاسم الكامل")).toHaveValue("ل");
+    expect(screen.getByLabelText("الاسم الكامل")).toHaveValue("ليلى");
   });
 });

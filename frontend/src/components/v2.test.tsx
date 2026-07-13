@@ -72,4 +72,17 @@ describe("Phase 14C shared primitives", () => {
     rerender(<Example dirty />); fireEvent.click(screen.getByRole("button", { name:"Open" })); fireEvent.click(screen.getByRole("button", { name:"Close" })); expect(screen.getByRole("alertdialog")).toBeInTheDocument(); fireEvent.click(screen.getByRole("button", { name:"Keep editing" })); expect(screen.getByRole("dialog")).toBeInTheDocument(); fireEvent.click(screen.getByRole("button", { name:"Close" })); fireEvent.click(screen.getByRole("button", { name:"Discard" })); expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     rerender(<Example pending />); fireEvent.click(screen.getByRole("button", { name:"Open" })); fireEvent.keyDown(document, { key:"Escape" }); expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
+
+  it("keeps the original trigger while dirty state changes inside an open overlay", async () => {
+    function Example() { const [open, setOpen] = useState(false); const [dirty, setDirty] = useState(false); return <><button onClick={() => setOpen(true)}>Open editor</button><Modal open={open} title="Editor" dirty={dirty} onClose={() => setOpen(false)}><button onClick={() => setDirty((value) => !value)}>Toggle dirty</button></Modal></>; }
+    render(<Example />);
+    const opener = screen.getByRole("button", { name: "Open editor" });
+    opener.focus(); fireEvent.click(opener);
+    const toggle = screen.getByRole("button", { name: "Toggle dirty" });
+    toggle.focus(); fireEvent.click(toggle);
+    expect(toggle).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+    await waitFor(() => expect(opener).toHaveFocus());
+  });
 });

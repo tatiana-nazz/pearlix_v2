@@ -28,11 +28,28 @@ function roleLabel(role: UserRole, t: ReturnType<typeof useFeatureT>) {
 }
 
 function transitionCopy(value: string, t: ReturnType<typeof useFeatureT>) {
-  if (value.includes("matching professional profile will be created")) return t("roleTransitionHelp");
-  if (value.includes("already has the requested role")) return t("blockedTransition");
-  if (value.includes("Operational history")) return t("blockedTransition");
-  if (value.includes("last active Admin")) return t("blockedTransition");
-  return t("roleTransitionHelp");
+  if (value.includes("matching professional profile will be created")) return t("transitionCreateOrReactivate");
+  if (value.includes("already has the requested role")) return t("transitionAlreadyRole");
+  if (value.includes("Operational history")) return t("transitionHistory");
+  if (value.includes("changed atomically")) return t("transitionAtomicChange");
+  if (value.includes("last active Admin")) return t("transitionLastAdmin");
+  return value.trim() ? value : t("blockedTransition");
+}
+
+function blockerCopy(code: string, t: ReturnType<typeof useFeatureT>) {
+  if (code === "NO_ROLE_CHANGE") return t("blockerNoRoleChange");
+  if (code === "ROLE_TRANSITION_BLOCKED_BY_HISTORY") return t("blockerHistory");
+  if (code === "LAST_ACTIVE_ADMIN") return t("blockerLastActiveAdmin");
+  return t("blockerUnknown");
+}
+
+function countCopy(key: string, t: ReturnType<typeof useFeatureT>) {
+  if (key === "working_shifts") return t("workingShifts");
+  if (key === "doctor_availability_exceptions") return t("doctorAvailabilityExceptions");
+  if (key === "staff_availability_exceptions") return t("staffAvailabilityExceptions");
+  if (key === "appointments") return t("appointmentCount");
+  if (key === "visits") return t("visitCount");
+  return t("transitionCounts");
 }
 
 function invalidateRoleData(client: ReturnType<typeof useQueryClient>, id: number) {
@@ -95,7 +112,7 @@ function RoleTransition({ user, onClose }: { user: UserManagementRecord; onClose
   return <Modal open title={t("changeRole")} description={t("roleTransitionHelp")} onClose={onClose} pending={pending} dirty={dirty}>
     <SelectField label={t("targetRole")} value={target} onChange={(event) => { setTarget(event.target.value as UserRole); setPreview(null); setProfile({}); }}><option value="ADMIN">{t("admin")}</option><option value="DOCTOR">{t("doctors")}</option><option value="STAFF">{t("staff")}</option></SelectField>
     {!preview ? <Button onClick={() => previewMutation.mutate()} loading={previewMutation.isPending}>{t("previewTransition")}</Button> : <>
-      <SurfaceCard><SectionHeading title={t("transitionConsequences")} />{preview.allowed ? <ul>{preview.consequences.map((item) => <li key={item}>{transitionCopy(item, t)}</li>)}</ul> : <p>{t("blockedTransition")}</p>}</SurfaceCard>
+      <SurfaceCard><SectionHeading title={t("transitionConsequences")} />{preview.allowed ? <ul>{preview.consequences.map((item) => <li key={item}>{transitionCopy(item, t)}</li>)}</ul> : <><p>{t("blockedTransition")}</p>{preview.blockers.map((blocker) => <div key={blocker.code}><p>{blockerCopy(blocker.code, t)}</p>{Object.entries(blocker.counts).filter(([, count]) => count > 0).length ? <ul aria-label={t("transitionCounts")}>{Object.entries(blocker.counts).filter(([, count]) => count > 0).map(([key, count]) => <li key={key}>{countCopy(key, t)}: <bdi>{count}</bdi></li>)}</ul> : null}</div>)}</>}</SurfaceCard>
       {profileShape === "doctor_profile" ? <><Field label={t("specialty")} value={profile.specialty ?? ""} onChange={(event) => setProfile({ ...profile, specialty: event.target.value })} /><Field label={t("phone")} value={profile.phone ?? ""} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /><Field label={t("biography")} value={profile.bio ?? ""} onChange={(event) => setProfile({ ...profile, bio: event.target.value })} /></> : null}
       {profileShape === "staff_profile" ? <><Field label={t("position")} value={profile.position ?? ""} onChange={(event) => setProfile({ ...profile, position: event.target.value })} /><Field label={t("phone")} value={profile.phone ?? ""} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /></> : null}
       {confirmMutation.error ? <StatePanel state="error" title={t("roleTransitionFailed")} description={getErrorMessage(confirmMutation.error)} /> : null}
@@ -126,7 +143,7 @@ export function AdminUserDetailPage() {
     <SurfaceCard><SectionHeading title={t("roleAccess")} /><p>{roleLabel(item.role, t)}</p><Button variant="secondary" onClick={() => setTransitionOpen(true)}><UserRoundCog size={16} />{t("changeRole")}</Button></SurfaceCard>
     <SurfaceCard><SectionHeading title={t("linkedTeamProfile")} />{item.team_member_id ? <Link className="v2-button secondary" to={`/admin/team/${item.team_member_id}`}>{t("openTeamProfile")}</Link> : <p>{profileState(item, t)}</p>}</SurfaceCard>
   </div><SurfaceCard><SectionHeading title={t("accountAccess")} />{item.is_active ? <Button variant="danger" onClick={() => setDeactivateOpen(true)}><ShieldCheck size={16} />{t("deactivate")}</Button> : <Button onClick={() => reactivate.mutate()} loading={reactivate.isPending}>{t("reactivate")}</Button>}{reactivate.error ? <StatePanel state="error" title={t("unableReactivate")} description={getErrorMessage(reactivate.error)} /> : null}</SurfaceCard>
-    <ConfirmDialog open={resetOpen} title={t("resetPassword")} description={t("resetPasswordHelp")} onClose={() => setResetOpen(false)} pending={reset.isPending} dirty={Boolean(password)}><Field label={t("temporaryPassword")} type="password" value={password} onChange={(event) => setPassword(event.target.value)} /><Button loading={reset.isPending} disabled={!password} onClick={() => reset.mutate()}>{t("resetPasswordAction")}</Button>{reset.error ? <StatePanel state="error" title={t("unableResetPassword")} description={getErrorMessage(reset.error)} /> : null}</ConfirmDialog>
+    <ConfirmDialog open={resetOpen} title={t("resetPassword")} description={t("resetPasswordHelp")} onClose={() => { setPassword(""); setResetOpen(false); }} pending={reset.isPending} dirty={Boolean(password)}><Field label={t("temporaryPassword")} type="password" value={password} onChange={(event) => setPassword(event.target.value)} /><Button loading={reset.isPending} disabled={!password} onClick={() => reset.mutate()}>{t("resetPasswordAction")}</Button>{reset.error ? <StatePanel state="error" title={t("unableResetPassword")} description={getErrorMessage(reset.error)} /> : null}</ConfirmDialog>
     <ConfirmDialog open={deactivateOpen} title={t("deactivate")} description={t("deactivateHelp")} onClose={() => setDeactivateOpen(false)} pending={deactivate.isPending}><Button variant="danger" loading={deactivate.isPending} onClick={() => deactivate.mutate()}>{t("deactivate")}</Button>{deactivate.error ? <StatePanel state="error" title={t("unableDeactivate")} description={getErrorMessage(deactivate.error)} /> : null}</ConfirmDialog>
     {transitionOpen ? <RoleTransition user={item} onClose={() => setTransitionOpen(false)} /> : null}
   </div>;

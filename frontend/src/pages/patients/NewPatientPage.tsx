@@ -21,7 +21,10 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const dirtyRef = useRef(false);
   const pendingRef = useRef(false);
-  const blocker = useBlocker(() => dirtyRef.current || pendingRef.current);
+  const approvedNavigation = useRef(false);
+  const navigatedAfterCreate = useRef(false);
+  pendingRef.current = createPatient.isPending;
+  const blocker = useBlocker(() => !approvedNavigation.current && (dirtyRef.current || pendingRef.current));
 
   function setFormDirty(next: boolean) {
     dirtyRef.current = next;
@@ -30,14 +33,15 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
 
   async function handleSubmit(values: PatientFormValues) {
     const patient = await createPatient.mutateAsync(createPayloadFromForm(values));
+    if (navigatedAfterCreate.current) return;
+    navigatedAfterCreate.current = true;
+    approvedNavigation.current = true;
     dirtyRef.current = false;
+    pendingRef.current = false;
     setDirty(false);
+    setConfirmLeave(false);
     navigate(patientProfilePath(role, patient.id));
   }
-
-  useEffect(() => {
-    pendingRef.current = createPatient.isPending;
-  }, [createPatient.isPending]);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
