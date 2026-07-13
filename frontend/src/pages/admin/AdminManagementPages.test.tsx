@@ -18,7 +18,7 @@ const account = {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/admin/users/12"]}><Routes><Route path="/admin/users/:userId" element={<AdminUserDetailPage />} /></Routes></MemoryRouter></QueryClientProvider>);
+  return { client, ...render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/admin/users/12"]}><Routes><Route path="/admin/users/:userId" element={<AdminUserDetailPage />} /></Routes></MemoryRouter></QueryClientProvider>) };
 }
 
 function renderUsersPage(entry: "/admin/users" | "/admin/users/new") {
@@ -102,5 +102,65 @@ describe("Users and access production workflow", () => {
     renderUsersPage("/admin/users/new");
     await user.selectOptions(screen.getByLabelText("System role"), "DOCTOR");
     expect(screen.getByRole("link", { name: "Add team member" })).toHaveAttribute("href", "/admin/team");
+  });
+
+  it("clears a successfully reset password and sends exact deactivate/reactivate calls", async () => {
+    mockAccount();
+    vi.mocked(usersApi.resetPassword).mockResolvedValue(account);
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Reset temporary password" }));
+    await user.type(screen.getByLabelText("Temporary password"), "Temporary123");
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+    await waitFor(() => expect(usersApi.resetPassword).toHaveBeenCalledWith(12, { temporary_password: "Temporary123" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Reset temporary password" })).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: "Deactivate account" }));
+    await user.click(screen.getAllByRole("button", { name: "Deactivate account" })[1]!);
+    await waitFor(() => expect(usersApi.deactivate).toHaveBeenCalledWith(12));
+    vi.mocked(usersApi.detail).mockResolvedValue({ ...account, is_active: false });
+    const second = renderPage();
+    await user.click(await screen.findByRole("button", { name: "Reactivate account" }));
+    await waitFor(() => expect(usersApi.reactivate).toHaveBeenCalledWith(12));
+    second.unmount();
+  });
+
+  it("locks the reset-password dialog while the request is pending", async () => {
+    let finishReset: (result: typeof account) => void = () => undefined;
+    vi.clearAllMocks();
+    mockAccount();
+    vi.mocked(usersApi.resetPassword).mockImplementation(() => new Promise((resolve) => { finishReset = resolve; }));
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "Reset temporary password" }));
+    await user.type(screen.getByLabelText("Temporary password"), "Temporary123");
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Close" })).toBeDisabled());
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog", { name: "Reset temporary password" })).toBeInTheDocument();
+    finishReset(account);
+    await waitFor(() => expect(usersApi.resetPassword).toHaveBeenCalledTimes(1));
+  });
+
+  it("confirms an allowed role transition with token, version, profile payload, and query invalidation", async () => {
+    mockAccount();
+    vi.mocked(teamApi.previewRoleTransition).mockResolvedValue({
+      current_role: "ADMIN", target_role: "DOCTOR", linked_profile_state: "NONE", operational_history: {}, required_target_profile: "doctor_profile", allowed: true, confirmation_token: "transition-token", consequences: ["A matching professional profile will be created"], blockers: [],
+    });
+    vi.mocked(teamApi.confirmRoleTransition).mockResolvedValue({ ...account, role: "DOCTOR", linked_profile_state: "DOCTOR" });
+    const { client } = renderPage();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const user = userEvent.setup();
+    const trigger = await screen.findByRole("button", { name: "Change role" }); trigger.focus();
+    await user.click(trigger);
+    await user.click(screen.getByRole("button", { name: "Preview transition" }));
+    await user.type(screen.getByLabelText("Specialty"), "Endodontics");
+    await user.type(screen.getByLabelText("Phone"), "+963 11");
+    await user.type(screen.getByLabelText("Biography"), "Profile text");
+    await user.click(screen.getByRole("button", { name: "Confirm role transition" }));
+    await waitFor(() => expect(teamApi.confirmRoleTransition).toHaveBeenCalledWith(12, { target_role: "DOCTOR", mode: "CONFIRM", confirmation_token: "transition-token", profile: { specialty: "Endodontics", phone: "+963 11", bio: "Profile text" }, version: 4 }));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["users"] }));
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 });

@@ -111,6 +111,29 @@ describe("Phase 14C shared primitives", () => {
     await waitFor(() => expect(opener).toHaveFocus());
   });
 
+  it("routes every dirty parent-close source through the one discard contract", () => {
+    function FormCancel() { const requestClose = useOverlayClose(); return <button type="button" onClick={requestClose}>Form cancel</button>; }
+    function Example() { const [open, setOpen] = useState(false); return <><button type="button" onClick={() => setOpen(true)}>Open dirty form</button><Modal open={open} title="Dirty form" dirty onClose={() => setOpen(false)}><FormCancel /></Modal></>; }
+    render(<Example />);
+    const opener = screen.getByRole("button", { name: "Open dirty form" });
+    fireEvent.click(opener);
+    const routes: Array<() => void> = [
+      () => fireEvent.click(screen.getByRole("button", { name: "Close" })),
+      () => fireEvent.keyDown(document, { key: "Escape" }),
+      () => fireEvent.mouseDown(screen.getByRole("dialog").parentElement!),
+      () => fireEvent.click(screen.getByRole("button", { name: "Form cancel" })),
+    ];
+    for (const route of routes) {
+      route();
+      expect(screen.getByRole("alertdialog", { name: "Discard unsaved changes?" })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+      expect(screen.getByRole("dialog", { name: "Dirty form" })).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Form cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(screen.queryByRole("dialog", { name: "Dirty form" })).not.toBeInTheDocument();
+  });
+
   it("contains a shared in-overlay alert dialog and restores its exact trigger on close", async () => {
     function Example() { const [open, setOpen] = useState(false); const [subdialog, setSubdialog] = useState(false); return <><button onClick={() => setOpen(true)}>Open nested editor</button><Modal open={open} title="Nested editor" onClose={() => setOpen(false)}><button onClick={() => setSubdialog(true)}>Open warning</button><button>Parent action</button><InOverlayAlertDialog open={subdialog} title="Nested warning" onClose={() => setSubdialog(false)}><button onClick={() => setSubdialog(false)}>Continue</button><button>Confirm warning</button></InOverlayAlertDialog></Modal></>; }
     render(<Example />);
