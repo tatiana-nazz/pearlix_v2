@@ -73,7 +73,7 @@ ACCEPTANCE_TESTS = {
     ),
     "frontend/src/pages/billing/BillingPages.test.tsx": (
         ("./BillingPages",),
-        ("Admin invoices read-only", "selected patient instead of a raw patient identifier", "structured print data", "Arabic root RTL direction", "controlled list filters", "dirty New Invoice navigation"),
+        ("Admin invoices read-only", "selected patient instead of a raw patient identifier", "structured A4 print data", "Arabic root RTL direction", "controlled list filters", "dirty New Invoice navigation"),
     ),
     "frontend/src/pages/billing/BillingInvoicePages.test.tsx": (
         ("./BillingPages",),
@@ -101,6 +101,7 @@ ACTUAL_INTERACTION_EVIDENCE = {
     ),
     "frontend/src/pages/billing/BillingPages.test.tsx": (
         'document.documentElement.dir = "rtl"', 'closest("[dir]")',
+        'article.a4-invoice', '.print-control',
         'fireEvent.change(handoff.getByLabelText("Created from")',
         'router.navigate("/staff/billing/invoices")',
     ),
