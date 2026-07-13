@@ -17,7 +17,7 @@ export function getPatientPermissions(role: UserRole, patient?: PatientDetail | 
     canCreate: role === "STAFF",
     canViewArchivedFilter: role === "STAFF" || role === "ADMIN",
     canViewDoctorWorkflowFilters: role === "DOCTOR",
-    canEdit: role === "STAFF" || (role === "DOCTOR" && !isArchived),
+    canEdit: (role === "STAFF" || role === "DOCTOR") && !isArchived,
     canArchive: role === "STAFF" && !isArchived,
     canUnarchive: role === "STAFF" && isArchived,
     canViewBillingTab: role === "STAFF" || role === "ADMIN",

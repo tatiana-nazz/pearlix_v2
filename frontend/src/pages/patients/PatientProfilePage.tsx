@@ -98,7 +98,11 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
 
   async function handleUpdate(values: PatientFormValues) {
     if (!patient.data) return;
-    await updatePatient.mutateAsync(updatePayloadFromForm(values, patient.data.version));
+    try {
+      await updatePatient.mutateAsync(updatePayloadFromForm(values, patient.data.version));
+    } catch {
+      return false;
+    }
     setEditDirty(false); closeEdit();
   }
 

@@ -100,4 +100,55 @@ describe("PatientsPage production list, filters, and archive workflow", () => {
     await user.click(within(screen.getByRole("dialog", { name: "Archive patient" })).getByRole("button", { name: "Archive patient" }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ id: 7, version: 4 }));
   });
+
+  it("opens rows with Space and isolates nested archive controls from row navigation", () => {
+    mockPatients();
+    renderPage("STAFF");
+    const row = screen.getByText("Nour Haddad").closest("tr")!;
+    fireEvent.keyDown(row, { key: " " });
+    expect(screen.getByTestId("location")).toHaveTextContent("/patients/7");
+
+    // A fresh list route proves the action opens its dialog instead of the row target.
+    renderPage("STAFF");
+    fireEvent.click(screen.getAllByRole("button", { name: "Archive patient" })[0]!);
+    expect(screen.getByRole("dialog", { name: "Archive patient" })).toBeInTheDocument();
+    expect(screen.getAllByTestId("location")[1]).toHaveTextContent("/staff/patients");
+  });
+
+  it("renders loading, refreshing, empty, retryable error, and pending archive states from production boundaries", () => {
+    mockPatients([], { isLoading: true, data: undefined });
+    const loading = renderPage("STAFF");
+    expect(screen.getByText("Loading patients…")).toBeInTheDocument();
+    loading.unmount();
+    mockPatients([], { isFetching: true });
+    const refreshing = renderPage("STAFF");
+    expect(screen.getByText("Refreshing patient results…")).toBeInTheDocument();
+    refreshing.unmount();
+    mockPatients([]);
+    const empty = renderPage("STAFF");
+    expect(screen.getByText("No patients found for this filter.")).toBeInTheDocument();
+    empty.unmount();
+    const retry = vi.fn();
+    mockPatients([], { data: undefined, isError: true, error: new Error("Unavailable"), refetch: retry });
+    const error = renderPage("STAFF");
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    error.unmount();
+    mockPatients();
+    vi.mocked(useArchivePatient).mockReturnValue({ mutateAsync, reset, isPending: true, error: null } as never);
+    renderPage("STAFF");
+    fireEvent.click(screen.getByRole("button", { name: "Archive patient" }));
+    expect(within(screen.getByRole("dialog", { name: "Archive patient" })).getByRole("button", { name: "Archive patient" })).toBeDisabled();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog", { name: "Archive patient" })).toBeInTheDocument();
+  });
+
+  it("uses localized root direction and bidi isolation for Arabic patient data", () => {
+    document.documentElement.lang = "ar";
+    document.documentElement.dir = "rtl";
+    mockPatients([{ ...activePatient, full_name: "ليلى Haddad" }]);
+    renderPage("STAFF");
+    expect(document.documentElement).toHaveAttribute("dir", "rtl");
+    expect(screen.getByText("ليلى Haddad").closest("td")).toHaveClass("bidi-isolate");
+  });
 });

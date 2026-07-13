@@ -22,7 +22,7 @@ interface PatientFormProps {
   submitLabel?: string;
   isSubmitting?: boolean;
   error?: unknown;
-  onSubmit: (values: PatientFormValues) => Promise<void> | void;
+  onSubmit: (values: PatientFormValues) => Promise<void | boolean> | void | boolean;
   onCancel?: () => void;
   onReloadLatest?: () => void;
   reloadLatestRef?: RefObject<HTMLButtonElement>;
@@ -99,7 +99,8 @@ export function PatientForm({
       setErrors(nextErrors);
       return;
     }
-    await onSubmit(values);
+    const completed = await onSubmit(values);
+    if (completed === false) return;
     initialSnapshot.current = JSON.stringify(values);
     onDirtyChange?.(false);
   }

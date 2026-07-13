@@ -8,6 +8,7 @@ import { useCreatePatient } from "../../features/patients/hooks/usePatientMutati
 import type { PatientFormValues } from "../../features/patients/utils/patientFormMapping";
 import { patientListPath, patientProfilePath } from "../../features/patients/utils/patientPermissions";
 import type { UserRole } from "../../types/auth";
+import type { PatientDetail } from "../../types/patients";
 
 interface NewPatientPageProps {
   role: UserRole;
@@ -32,7 +33,13 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
   }
 
   async function handleSubmit(values: PatientFormValues) {
-    const patient = await createPatient.mutateAsync(createPayloadFromForm(values));
+    let patient: PatientDetail;
+    try {
+      patient = await createPatient.mutateAsync(createPayloadFromForm(values));
+    } catch {
+      // The mutation state renders the accessible API error; keep the dirty form open.
+      return false;
+    }
     if (navigatedAfterCreate.current) return;
     navigatedAfterCreate.current = true;
     approvedNavigation.current = true;

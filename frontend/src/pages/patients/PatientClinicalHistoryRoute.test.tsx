@@ -56,4 +56,16 @@ describe("Doctor clinical-history production route", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Visits" }));
     await waitFor(() => expect(vi.mocked(patientHooks.usePatientVisits)).toHaveBeenCalled());
   });
+
+  it("keeps the clinical-history route on patient 9 and exposes a retryable Visits query failure", () => {
+    const retry = vi.fn();
+    mockRoute();
+    vi.mocked(patientHooks.usePatientVisits).mockReturnValue({ ...emptyQuery, isLoading: false, error: new Error("Visits unavailable"), refetch: retry } as never);
+    renderRoute();
+    expect(screen.getByText("Unable to load visits")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(patientHooks.usePatient)).toHaveBeenCalledWith(9);
+    expect(screen.getByRole("tab", { name: "Visits" })).toHaveAttribute("aria-selected", "true");
+  });
 });
