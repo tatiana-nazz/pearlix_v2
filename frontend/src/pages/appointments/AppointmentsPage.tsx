@@ -5,7 +5,7 @@ import { Card } from "../../components/Card";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
-import { Button, ConfirmDialog, Drawer, StatePanel, StatusBadge } from "../../components/v2";
+import { Button, ConfirmDialog, Modal, StatePanel, StatusBadge } from "../../components/v2";
 import { AppointmentDayView } from "../../features/appointments/components/AppointmentDayView";
 import { AppointmentFilters, type AppointmentStatusFilter } from "../../features/appointments/components/AppointmentFilters";
 import { AppointmentForm } from "../../features/appointments/components/AppointmentForm";
@@ -24,6 +24,7 @@ import {
 } from "../../features/appointments/hooks/useAppointmentMutations";
 import { useAppointments } from "../../features/appointments/hooks/useAppointments";
 import { useDoctors } from "../../features/appointments/hooks/useDoctors";
+import { usePatients } from "../../features/patients/hooks/usePatients";
 import { todayInputValue, viewLabel } from "../../features/appointments/utils/appointmentDates";
 import { buildAppointmentFilters } from "../../features/appointments/utils/appointmentFilters";
 import { getAppointmentPermissions } from "../../features/appointments/utils/appointmentPermissions";
@@ -75,6 +76,7 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   );
   const appointments = useAppointments(filters);
   const doctors = useDoctors();
+  const patients = usePatients({ page: 1, is_archived: false });
   const createAppointment = useCreateAppointment();
   const updateAppointment = useUpdateAppointment(formAppointment?.id ?? 0);
   const checkIn = useCheckInAppointment();
@@ -195,10 +197,11 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
         ) : null}
       </Card>
 
-      <Drawer open={isCreateOpen} title="Add Appointment" description="Choose a valid backend availability slot." onClose={() => setCreateOpen(false)} pending={createAppointment.isPending} dirty>
+      <Modal open={isCreateOpen} title="Add Appointment" description="Choose an available appointment time." onClose={() => setCreateOpen(false)} pending={createAppointment.isPending} dirty wide>
             <AppointmentForm
               mode="create"
               doctors={doctors.data ?? []}
+              patients={patients.data?.results ?? []}
               initialDate={date}
               initialDoctorId={Number(doctorId) || undefined}
               isSubmitting={createAppointment.isPending}
@@ -206,13 +209,14 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
               onCancel={() => setCreateOpen(false)}
               onSubmit={submitCreate}
             />
-      </Drawer>
+      </Modal>
 
-      <Drawer open={Boolean(formAppointment)} title={formAppointment?.status === "NEEDS_RESCHEDULE" ? "Reschedule Appointment" : "Edit Appointment"} onClose={() => setFormAppointment(null)} pending={updateAppointment.isPending} dirty>
+      <Modal open={Boolean(formAppointment)} title={formAppointment?.status === "NEEDS_RESCHEDULE" ? "Reschedule Appointment" : "Edit Appointment"} onClose={() => setFormAppointment(null)} pending={updateAppointment.isPending} dirty wide>
         {formAppointment ? (
             <AppointmentForm
               mode={formAppointment.status === "NEEDS_RESCHEDULE" ? "reschedule" : "edit"}
               doctors={doctors.data ?? []}
+              patients={patients.data?.results ?? []}
               appointment={formAppointment}
               isSubmitting={updateAppointment.isPending}
               error={updateAppointment.error}
@@ -220,11 +224,11 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
               onSubmit={submitUpdate}
             />
         ) : null}
-      </Drawer>
+      </Modal>
 
-      <Drawer open={Boolean(detailsAppointment)} title={detailsAppointment?.patient.full_name ?? "Appointment"} description="Appointment details" onClose={() => setDetailsAppointment(null)}>
+      <Modal open={Boolean(detailsAppointment)} title={detailsAppointment?.patient.full_name ?? "Appointment"} description="Appointment details" onClose={() => setDetailsAppointment(null)} wide>
         {detailsAppointment ? <dl className="detail-grid"><div><dt>Doctor</dt><dd>{detailsAppointment.doctor.full_name}</dd></div><div><dt>Status</dt><dd><StatusBadge status={detailsAppointment.status} /></dd></div><div><dt>Duration</dt><dd>{detailsAppointment.duration_minutes} minutes</dd></div><div><dt>Reason</dt><dd>{detailsAppointment.reason || "Not recorded"}</dd></div></dl> : null}
-      </Drawer>
+      </Modal>
       <ConfirmDialog open={Boolean(actionAppointment && action)} title="Confirm appointment action" description={actionAppointment && action ? `Confirm ${action.replace("-", " ")} for ${actionAppointment.patient.full_name}.` : undefined} onClose={() => setActionAppointment(null)} pending={isActionSubmitting}>
         {currentMutationError ? <StatePanel state="error" title="Unable to complete action" description={String(currentMutationError)} /> : null}<Button variant="secondary" onClick={() => setActionAppointment(null)}>Keep appointment</Button><Button loading={isActionSubmitting} onClick={() => void confirmStatusAction()}>Confirm</Button>
       </ConfirmDialog>

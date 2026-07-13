@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { AppointmentDetail, AppointmentListItem, CreateAppointmentPayload, UpdateAppointmentPayload } from "../../../types/appointments";
 import type { DoctorListItem } from "../../../types/schedule";
+import type { PatientListItem } from "../../../types/patients";
+import { Combobox } from "../../../components/v2";
 import {
   apiFieldErrors,
   appointmentToFormValues,
@@ -16,6 +18,7 @@ import {
 interface AppointmentFormProps {
   mode: "create" | "edit" | "reschedule";
   doctors: DoctorListItem[];
+  patients: PatientListItem[];
   appointment?: AppointmentDetail | AppointmentListItem | null;
   initialDate?: string;
   initialDoctorId?: number;
@@ -66,16 +69,8 @@ export function AppointmentForm(props: AppointmentFormProps) {
     <form className="appointment-form" onSubmit={(event) => void submit(event)}>
       {props.error ? <p className="form-error">Unable to save appointment. Review the highlighted fields and try again.</p> : null}
       <div className="appointment-form-grid">
-        <label>
-          Patient ID
-          <input
-            value={values.patientId}
-            onChange={(event) => setField("patientId", event.target.value)}
-            inputMode="numeric"
-            aria-invalid={Boolean(fieldError("patientId"))}
-          />
-          {fieldError("patientId") ? <span className="field-error">{fieldError("patientId")}</span> : null}
-        </label>
+        <Combobox label="Patient" value={values.patientId} onChange={(value) => setField("patientId", value)} placeholder="Select patient" options={props.patients.map((patient) => ({ value: String(patient.id), label: `${patient.full_name}${patient.phone_number ? ` · ${patient.phone_number}` : ""}` }))} />
+        {fieldError("patientId") ? <span className="field-error">{fieldError("patientId")}</span> : null}
         <label>
           Doctor
           <select value={values.doctorId} onChange={(event) => setField("doctorId", event.target.value)} aria-invalid={Boolean(fieldError("doctorId"))}>
@@ -117,7 +112,7 @@ export function AppointmentForm(props: AppointmentFormProps) {
         Notes
         <textarea value={values.notes} rows={4} onChange={(event) => setField("notes", event.target.value)} />
       </label>
-      <p className="form-note">Status is managed through appointment action endpoints, not the appointment form.</p>
+      <p className="form-note">Appointment status can be changed from the appointment details.</p>
       <div className="form-actions">
         {props.onCancel ? (
           <button className="button secondary" type="button" onClick={props.onCancel}>

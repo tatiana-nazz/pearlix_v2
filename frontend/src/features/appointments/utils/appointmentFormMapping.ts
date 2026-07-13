@@ -40,7 +40,7 @@ export function appointmentToFormValues(appointment?: AppointmentDetail | Appoin
 
 export function validateAppointmentForm(values: AppointmentFormValues): AppointmentFormErrors {
   const errors: AppointmentFormErrors = {};
-  if (!Number(values.patientId)) errors.patientId = "Patient ID is required.";
+  if (!Number(values.patientId)) errors.patientId = "Patient is required.";
   if (!Number(values.doctorId)) errors.doctorId = "Doctor is required.";
   if (!values.date) errors.date = "Date is required.";
   if (!values.time) errors.time = "Time is required.";
