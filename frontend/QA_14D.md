@@ -2,7 +2,7 @@
 
 ## Closure status
 
-Phase 14D is complete for automated implementation and regression verification. Phase 14E has not started. Backend runtime changed: no. Migrations: none.
+Phase 14D acceptance corrections are in progress. Phase 14E has not started. Backend runtime changed: no. Migrations: none.
 
 - Dashboards, Team, Users & Access, appointments, and patient workflows use the Phase 14D v2 surfaces.
 - Feature copy is typed EN/AR, with localized role, status, and availability labels; the Team and Users & Access pages do not present raw display enums.

@@ -27,11 +27,11 @@ def main() -> int:
             text[key] = path.read_text(encoding="utf-8").lower()
 
     expected = {
-        "status": ("current completed phase: phase 14d", "next phase: phase 14e", "97 passed", "backend runtime changes in phase 14d: no", "migrations in phase 14d: none", "phase 14f"),
-        "audit": ("phase 14d closure", "97 frontend tests", "phase 14f"),
-        "readme": ("phase 14d is complete", "97 frontend tests", "phase 14e"),
-        "qa": ("phase 14d is complete", "35 files, 97 tests", "browser qa", "phase 14f", "phase 14e"),
-        "record": ("phase 14d", "97 tests", "backend runtime changed: no", "migrations: none"),
+        "status": ("phase 14d acceptance corrections in progress", "next phase: phase 14e", "backend runtime changes in phase 14d: no", "migrations in phase 14d: none", "phase 14f"),
+        "audit": ("phase 14d acceptance corrections are in progress", "phase 14f"),
+        "readme": ("phase 14d acceptance corrections are in progress", "phase 14e"),
+        "qa": ("phase 14d acceptance corrections are in progress", "browser qa", "phase 14f", "phase 14e"),
+        "record": ("phase 14d acceptance corrections are in progress", "backend runtime changed: no", "migrations: none"),
         "mapping": ("phase 14d closure", "phase 14e is next"),
         "matrix": ("phase 14d automated closure", "phase 14f"),
         "blueprints": ("phase 14d closure note", "phase 14f"),
@@ -43,9 +43,8 @@ def main() -> int:
 
     joined = "\n".join(text.values())
     stale = (
-        "phase 14d remains in progress",
-        "phase 14d is not complete",
-        "phase 14d in progress",
+        "phase 14d is complete",
+        "current completed phase: phase 14d",
         "phase 14d is next",
         "92 frontend tests",
         "92 passed",
