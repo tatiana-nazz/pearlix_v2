@@ -51,6 +51,7 @@ export function PatientForm({
   const t = useFeatureT();
   const [values, setValues] = useState<PatientFormValues>(() => (mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues));
   const [errors, setErrors] = useState<PatientFormErrors>({});
+  const [apiErrors, setApiErrors] = useState<PatientFormErrors>({});
   const initialSnapshot = useRef(JSON.stringify(mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues));
   const requestClose = useOverlayClose();
 
@@ -63,21 +64,30 @@ export function PatientForm({
 
   useEffect(() => { onDirtyChange?.(JSON.stringify(values) !== initialSnapshot.current); }, [onDirtyChange, values]);
 
-  useEffect(() => {
-    if (error) setErrors(apiErrorToFormErrors(error));
-  }, [error]);
+  useEffect(() => { setApiErrors(error ? apiErrorToFormErrors(error) : {}); }, [error]);
 
   function updateField<K extends keyof PatientFormValues>(field: K, value: PatientFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+    setApiErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
   }
 
   function message(error: string | undefined) {
     if (!error) return error;
-    const known: Record<string, "firstNameRequired" | "lastNameRequired" | "genderRequired" | "dobFuture" | "requestFailed" | "patientChangedElsewhere"> = {
-      firstNameRequired: "firstNameRequired", lastNameRequired: "lastNameRequired", genderRequired: "genderRequired", dobFuture: "dobFuture", requestFailed: "requestFailed", patientChangedElsewhere: "patientChangedElsewhere",
+    const known: Record<string, "firstNameRequired" | "lastNameRequired" | "genderRequired" | "dobFuture" | "requestFailed" | "patientChangedElsewhere" | "duplicatePhone" | "duplicateEmail" | "duplicateNationalId" | "invalidPhone" | "invalidEmail" | "invalidNationalId" | "invalidGender" | "invalidDateOfBirth"> = {
+      firstNameRequired: "firstNameRequired", lastNameRequired: "lastNameRequired", genderRequired: "genderRequired", dobFuture: "dobFuture", requestFailed: "requestFailed", patientChangedElsewhere: "patientChangedElsewhere", duplicatePhone: "duplicatePhone", duplicateEmail: "duplicateEmail", duplicateNationalId: "duplicateNationalId", invalidPhone: "invalidPhone", invalidEmail: "invalidEmail", invalidNationalId: "invalidNationalId", invalidGender: "invalidGender", invalidDateOfBirth: "invalidDateOfBirth",
     };
-    return known[error] ? t(known[error]) : error;
+    if (known[error]) return t(known[error]);
+    const lower = error.toLowerCase();
+    if (lower.includes("phone") && (lower.includes("already") || lower.includes("unique") || lower.includes("exists"))) return t("duplicatePhone");
+    if (lower.includes("email") && (lower.includes("already") || lower.includes("unique") || lower.includes("exists"))) return t("duplicateEmail");
+    if ((lower.includes("national") || lower.includes("passport")) && (lower.includes("already") || lower.includes("unique") || lower.includes("exists"))) return t("duplicateNationalId");
+    if (lower.includes("phone") && (lower.includes("valid") || lower.includes("invalid"))) return t("invalidPhone");
+    if (lower.includes("email") && (lower.includes("valid") || lower.includes("invalid"))) return t("invalidEmail");
+    if (lower.includes("national") || lower.includes("passport")) return lower.includes("valid") || lower.includes("invalid") ? t("invalidNationalId") : error;
+    if (lower.includes("gender")) return t("invalidGender");
+    if (lower.includes("date") && lower.includes("birth")) return t("invalidDateOfBirth");
+    return error;
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -96,12 +106,12 @@ export function PatientForm({
 
   return (
     <form className="patient-form v2-form" onSubmit={handleSubmit} noValidate>
-      {errors.form ? <div className="form-error">{message(errors.form)}</div> : null}
-      {errors.conflict ? (
+      {errors.form || apiErrors.form ? <div className="form-error">{message(errors.form ?? apiErrors.form)}</div> : null}
+      {apiErrors.conflict ? (
         <div className="form-error conflict-banner">
-          <p>{message(errors.conflict)}</p>
+          <p>{message(apiErrors.conflict)}</p>
           <div className="form-actions">
-            <button className="button secondary compact-button" type="button" onClick={() => { setErrors((current) => ({ ...current, conflict: undefined, form: undefined })); onContinueReviewing?.(); }}>
+            <button className="button secondary compact-button" type="button" onClick={() => { setApiErrors((current) => ({ ...current, conflict: undefined, form: undefined })); onContinueReviewing?.(); }}>
               {t("continueReviewing")}
             </button>
             <button className="button primary compact-button" type="button" onClick={onReloadLatest}>
@@ -120,10 +130,10 @@ export function PatientForm({
               id={`${fieldPrefix}-first-name`}
               value={values.first_name}
               onChange={(event) => updateField("first_name", event.target.value)}
-              aria-invalid={Boolean(errors.first_name)}
-              aria-describedby={errors.first_name ? `${fieldPrefix}-first-name-error` : undefined}
+              aria-invalid={Boolean(errors.first_name ?? apiErrors.first_name)}
+              aria-describedby={errors.first_name ?? apiErrors.first_name ? `${fieldPrefix}-first-name-error` : undefined}
             />
-            {errors.first_name ? <span id={`${fieldPrefix}-first-name-error`} className="field-error">{message(errors.first_name)}</span> : null}
+            {errors.first_name || apiErrors.first_name ? <span id={`${fieldPrefix}-first-name-error`} className="field-error">{message(errors.first_name ?? apiErrors.first_name)}</span> : null}
           </label>
 
           <label>
@@ -132,10 +142,10 @@ export function PatientForm({
               id={`${fieldPrefix}-last-name`}
               value={values.last_name}
               onChange={(event) => updateField("last_name", event.target.value)}
-              aria-invalid={Boolean(errors.last_name)}
-              aria-describedby={errors.last_name ? `${fieldPrefix}-last-name-error` : undefined}
+              aria-invalid={Boolean(errors.last_name ?? apiErrors.last_name)}
+              aria-describedby={errors.last_name ?? apiErrors.last_name ? `${fieldPrefix}-last-name-error` : undefined}
             />
-            {errors.last_name ? <span id={`${fieldPrefix}-last-name-error`} className="field-error">{message(errors.last_name)}</span> : null}
+            {errors.last_name || apiErrors.last_name ? <span id={`${fieldPrefix}-last-name-error`} className="field-error">{message(errors.last_name ?? apiErrors.last_name)}</span> : null}
           </label>
 
           <label>
@@ -152,9 +162,9 @@ export function PatientForm({
               type="date"
               value={values.date_of_birth}
               onChange={(event) => updateField("date_of_birth", event.target.value)}
-              aria-invalid={Boolean(errors.date_of_birth)}
+              aria-invalid={Boolean(errors.date_of_birth ?? apiErrors.date_of_birth)}
             />
-            {errors.date_of_birth ? <span className="field-error">{message(errors.date_of_birth)}</span> : null}
+            {errors.date_of_birth || apiErrors.date_of_birth ? <span className="field-error">{message(errors.date_of_birth ?? apiErrors.date_of_birth)}</span> : null}
           </label>
         </div>
       </section>
@@ -165,17 +175,17 @@ export function PatientForm({
           <label>
             {t("phone")}
             <input id={`${fieldPrefix}-phone-number`} value={values.phone_number} onChange={(event) => updateField("phone_number", event.target.value)} />
-            {errors.phone_number ? <span className="field-error">{errors.phone_number}</span> : null}
+            {errors.phone_number || apiErrors.phone_number ? <span className="field-error">{message(errors.phone_number ?? apiErrors.phone_number)}</span> : null}
           </label>
           <label>
             {t("email")}
             <input type="email" value={values.email} onChange={(event) => updateField("email", event.target.value)} />
-            {errors.email ? <span className="field-error">{errors.email}</span> : null}
+            {errors.email || apiErrors.email ? <span className="field-error">{message(errors.email ?? apiErrors.email)}</span> : null}
           </label>
           <label>
             {t("nationalId")}
             <input value={values.national_id_or_passport} onChange={(event) => updateField("national_id_or_passport", event.target.value)} />
-            {errors.national_id_or_passport ? <span className="field-error">{errors.national_id_or_passport}</span> : null}
+            {errors.national_id_or_passport || apiErrors.national_id_or_passport ? <span className="field-error">{message(errors.national_id_or_passport ?? apiErrors.national_id_or_passport)}</span> : null}
           </label>
           <label>
             {t("emergencyContact")}
@@ -201,7 +211,7 @@ export function PatientForm({
                 </option>
               ))}
             </select>
-            {errors.blood_group ? <span className="field-error">{errors.blood_group}</span> : null}
+            {errors.blood_group || apiErrors.blood_group ? <span className="field-error">{message(errors.blood_group ?? apiErrors.blood_group)}</span> : null}
           </label>
         </div>
         <label>

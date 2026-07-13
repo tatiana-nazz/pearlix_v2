@@ -1,4 +1,4 @@
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useBlocker, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import { ConfirmDialog, PageHeaderV2, SurfaceCard } from "../../components/v2";
@@ -19,8 +19,7 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
   const createPatient = useCreatePatient();
   const [dirty, setDirty] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
-
-  if (role !== "STAFF") return <Navigate to="/access-denied" replace />;
+  const blocker = useBlocker(dirty && !createPatient.isPending);
 
   async function handleSubmit(values: PatientFormValues) {
     const patient = await createPatient.mutateAsync(createPayloadFromForm(values));
@@ -32,6 +31,10 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
     const onBeforeUnload = (event: BeforeUnloadEvent) => { if (dirty && !createPatient.isPending) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("beforeunload", onBeforeUnload); return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [createPatient.isPending, dirty]);
+
+  useEffect(() => { if (blocker.state === "blocked") setConfirmLeave(true); }, [blocker.state]);
+
+  if (role !== "STAFF") return <Navigate to="/access-denied" replace />;
 
   return (
     <div className="patient-page narrow">
@@ -48,7 +51,7 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
           onCancel={() => { if (createPatient.isPending) return; if (dirty) setConfirmLeave(true); else navigate(patientListPath(role)); }}
         />
       </SurfaceCard>
-      <ConfirmDialog open={confirmLeave} title={t("discardChanges")} description={t("discardChanges")} onClose={() => setConfirmLeave(false)} pending={createPatient.isPending}><button className="v2-button secondary" type="button" onClick={() => setConfirmLeave(false)}>{t("keepEditing")}</button><button className="v2-button danger" type="button" onClick={() => { setDirty(false); navigate(patientListPath(role)); }}>{t("discard")}</button></ConfirmDialog>
+      <ConfirmDialog open={confirmLeave} title={t("discardChanges")} description={t("discardChanges")} onClose={() => { if (blocker.state === "blocked") blocker.reset(); setConfirmLeave(false); }} pending={createPatient.isPending}><button className="v2-button secondary" type="button" onClick={() => { if (blocker.state === "blocked") blocker.reset(); setConfirmLeave(false); }}>{t("keepEditing")}</button><button className="v2-button danger" type="button" onClick={() => { setDirty(false); setConfirmLeave(false); if (blocker.state === "blocked") blocker.proceed(); else navigate(patientListPath(role)); }}>{t("discard")}</button></ConfirmDialog>
     </div>
   );
 }

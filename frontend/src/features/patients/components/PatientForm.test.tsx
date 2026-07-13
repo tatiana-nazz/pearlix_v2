@@ -27,7 +27,7 @@ describe("PatientForm", () => {
 
     render(<PatientForm mode="create" role="STAFF" error={error} onSubmit={vi.fn()} />);
 
-    expect(screen.getByText("Phone number is invalid.")).toBeInTheDocument();
+    expect(screen.getByText("Enter a valid phone number.")).toBeInTheDocument();
     expect(screen.getByLabelText(/First name/)).toHaveValue("");
   });
 
