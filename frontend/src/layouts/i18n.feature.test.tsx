@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { StatusBadge } from "../components/v2";
+import { Pagination, StatusBadge } from "../components/v2";
 import { featureT } from "./i18n";
+import { useAuthStore } from "../auth/authStore";
 
 describe("Phase 14D feature localization", () => {
   afterEach(() => { document.documentElement.lang = "en"; document.documentElement.dir = "ltr"; });
@@ -28,5 +29,17 @@ describe("Phase 14D feature localization", () => {
   it("retains bidi-safe utility support when rendering mixed-direction account identifiers", () => {
     render(<span className="bidi-isolate">admin@example.test</span>);
     expect(screen.getByText("admin@example.test")).toHaveClass("bidi-isolate");
+  });
+
+  it("localizes shared pagination labels and keeps the page number isolated", () => {
+    useAuthStore.setState({ user: { language_preference: "EN" } as never });
+    const { rerender } = render(<Pagination page={2} hasPrevious={false} hasNext onPrevious={() => undefined} onNext={() => undefined} />);
+    expect(screen.getByText("Page")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByText("2").tagName).toBe("BDI");
+    useAuthStore.setState({ user: { language_preference: "AR" } as never });
+    rerender(<Pagination page={2} hasPrevious hasNext={false} onPrevious={() => undefined} onNext={() => undefined} />);
+    expect(screen.getByText("الصفحة")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "التالي" })).toBeDisabled();
   });
 });

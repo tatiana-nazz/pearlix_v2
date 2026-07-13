@@ -15,7 +15,7 @@
 ## Automated verification
 
 - Focused palette, shared-interaction, and Staff Dashboard component tests cover light/dark token values, non-underlined interactive surfaces, four-card composition, semantic variants, primary actions, and API-derived KPI counts.
-- Frontend automated verification: `npm run typecheck` passed; `npm run test:run` passed (33 files, 92 tests); `npm run build` passed. Patient mutation errors now clear independently of local validation, known duplicate/format errors are localized, and the Staff create-patient route blocks dirty SPA navigation.
+- Frontend automated verification: `npm run typecheck` passed; `npm run test:run` passed (34 files, 94 tests); `npm run build` passed. Patient mutation errors now clear independently of local validation, known duplicate/format errors are localized, and the Staff create-patient route blocks dirty SPA navigation.
 - Backend verification: `manage.py check` passed; focused appointment API tests passed (38), and the focused patient API plus patient-field security suites passed (25). `makemigrations --check --dry-run --verbosity 2` passed with `No changes detected`.
 
 ## Browser QA
@@ -24,4 +24,4 @@ Not completed. Phase 14F browser matrix remains pending: Staff 1440 EN/light; Ad
 
 ## Scope status
 
-Phase 14D implementation is complete. Dashboards, Team, Users & Access, appointments, and patient workflows use the accepted v2 palette, EN/AR copy, RTL/bidi utilities, and safe centered overlays. Backend runtime changed: no. Migrations: none. Phase 14F remains the final browser visual/UAT gate; Phase 14E has not started.
+Phase 14D remains in progress. Admin Dashboard uses the approved four-card composition with pending handoffs retained in the secondary summary. Shared pagination is localized and covered for EN/AR. Patient route-level correctness, conflict focus, navigation blocking, and route-level tests remain the final Phase 14D unit. Browser QA remains pending; backend runtime changed: no; migrations: none; Phase 14E has not started.

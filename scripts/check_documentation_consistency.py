@@ -20,7 +20,7 @@ def main() -> int:
         "status": ("current completed phase: phase 14d", "next phase: phase 14e", "92 passed", "focused backend verification: appointment 38 passed; patient 25 passed", "backend runtime changes in phase 14d: no", "migrations in phase 14d: none", "phase 14f"),
         "audit": ("current status through phase 14d", "tatiana-nazz/pearlix_v2", "/admin/team", "phase 14e is next"),
         "readme": ("phase 14d is complete", "92 frontend tests", "qa_14d.md", "phase 14e"),
-        "qa": ("phase 14d implementation is complete", "browser qa", "phase 14f"),
+        "qa": ("phase 14d remains in progress", "browser qa", "phase 14f"),
         "record": ("phase 14d", "backend runtime changed: no", "migrations: none"),
         "mapping": ("centered appointment modal",),
         "matrix": ("approved four primary kpi cards",),
