@@ -2,11 +2,18 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { Pagination, StatusBadge } from "../components/v2";
-import { featureT } from "./i18n";
+import { featureT, t } from "./i18n";
 import { useAuthStore } from "../auth/authStore";
 
 describe("Phase 14D feature localization", () => {
   afterEach(() => { document.documentElement.lang = "en"; document.documentElement.dir = "ltr"; });
+
+  it("keeps base shell keys available alongside feature-extension keys", () => {
+    expect(t("EN", "menu")).toBe("Open navigation");
+    expect(t("AR", "menu")).not.toBe(t("EN", "menu"));
+    expect(featureT("EN", "professionalDirectory")).toBe("Professional clinic directory");
+    expect(featureT("AR", "professionalDirectory")).not.toBe(featureT("EN", "professionalDirectory"));
+  });
 
   it("provides Arabic copy for representative dashboard, Team, Users, patient, and appointment actions", () => {
     expect(featureT("AR", "clinicOperations")).not.toBe(featureT("EN", "clinicOperations"));
