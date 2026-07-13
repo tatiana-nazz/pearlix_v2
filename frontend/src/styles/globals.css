@@ -568,6 +568,7 @@ p {
 
 .xray-page { display: grid; gap: var(--space-6); }
 .billing-page, .print-invoice { display: grid; gap: var(--space-6); }
+.billing-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--space-4); align-items: end; }
 .a4-invoice { width: min(210mm, 100%); min-height: 297mm; margin: 0 auto; padding: 18mm; background: var(--surface, #fff); color: var(--text, #172033); display: grid; gap: 16px; }
 .a4-invoice header { border-bottom: 2px solid currentColor; padding-bottom: 12px; }
 .a4-invoice h1, .a4-invoice h2, .a4-invoice h3, .a4-invoice p { margin: 0 0 8px; }
