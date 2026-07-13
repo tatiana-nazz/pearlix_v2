@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { teamApi } from "../../api/endpoints/team";
 import { usersApi } from "../../api/endpoints/users";
-import { AdminUserDetailPage } from "./AdminManagementPages";
+import { AdminNewUserPage, AdminUserDetailPage, AdminUserListPage } from "./AdminManagementPages";
 
 vi.mock("../../api/endpoints/users", () => ({ usersApi: { detail: vi.fn(), resetPassword: vi.fn(), deactivate: vi.fn(), reactivate: vi.fn(), list: vi.fn(), create: vi.fn() } }));
 vi.mock("../../api/endpoints/team", () => ({ teamQueryKeys: { all: ["team-members"], detail: (id: number) => ["team-members", id] }, teamApi: { previewRoleTransition: vi.fn(), confirmRoleTransition: vi.fn() } }));
@@ -19,6 +19,11 @@ const account = {
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/admin/users/12"]}><Routes><Route path="/admin/users/:userId" element={<AdminUserDetailPage />} /></Routes></MemoryRouter></QueryClientProvider>);
+}
+
+function renderUsersPage(entry: "/admin/users" | "/admin/users/new") {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[entry]}><Routes><Route path="/admin/users" element={<AdminUserListPage />} /><Route path="/admin/users/new" element={<AdminNewUserPage />} /><Route path="/admin/users/:userId" element={<p>Account detail route</p>} /><Route path="/admin/team" element={<p>Team onboarding route</p>} /></Routes></MemoryRouter></QueryClientProvider>);
 }
 
 function mockAccount() {
@@ -69,5 +74,33 @@ describe("Users and access production workflow", () => {
     expect(await screen.findByText("Password service unavailable")).toBeInTheDocument();
     expect(screen.getByLabelText("Temporary password")).toHaveValue("Temporary123");
     await waitFor(() => expect(usersApi.resetPassword).toHaveBeenCalledWith(12, { temporary_password: "Temporary123" }));
+  });
+
+  it("renders localized account rows, preserves row action isolation, and supports keyboard account navigation", async () => {
+    vi.mocked(usersApi.list).mockResolvedValue({ count: 1, next: null, previous: null, results: [account] });
+    renderUsersPage("/admin/users");
+
+    const rowName = await screen.findByText("Nour Admin");
+    expect(rowName).toHaveClass("bidi-isolate");
+    expect(screen.getByText("Admin")).toBeInTheDocument();
+    fireEvent.keyDown(rowName.closest("tr")!, { key: "Enter" });
+    expect(await screen.findByText("Account detail route")).toBeInTheDocument();
+  });
+
+  it("creates an Admin with the exact production payload and routes Doctor onboarding to Team", async () => {
+    const user = userEvent.setup();
+    vi.mocked(usersApi.create).mockResolvedValue(account);
+    renderUsersPage("/admin/users/new");
+
+    await user.type(screen.getByLabelText("Full name"), "Nour Admin");
+    await user.type(screen.getByLabelText("Login email"), "admin@example.test");
+    await user.type(screen.getByLabelText("Temporary password"), "Temporary123");
+    await user.click(screen.getByRole("button", { name: "Create Admin account" }));
+    await waitFor(() => expect(usersApi.create).toHaveBeenCalledWith({ full_name: "Nour Admin", email: "admin@example.test", role: "ADMIN", temporary_password: "Temporary123" }));
+    expect(await screen.findByText("Account detail route")).toBeInTheDocument();
+
+    renderUsersPage("/admin/users/new");
+    await user.selectOptions(screen.getByLabelText("System role"), "DOCTOR");
+    expect(screen.getByRole("link", { name: "Add team member" })).toHaveAttribute("href", "/admin/team");
   });
 });

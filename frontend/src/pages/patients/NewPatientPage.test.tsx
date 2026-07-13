@@ -23,13 +23,9 @@ class JsdomRequest {
 // React Router creates browser Request objects for data-router navigation. jsdom
 // supplies DOM AbortSignals while Node's undici Request expects Node signals.
 // This browser-shaped test request keeps the route test on the production router.
-globalThis.Request = JsdomRequest as never;
+Object.defineProperty(globalThis, "Request", { configurable: true, value: JsdomRequest });
 
 vi.mock("../../features/patients/hooks/usePatientMutations", () => ({ useCreatePatient: vi.fn() }));
-vi.mock("../../features/patients/components/PatientForm", () => ({
-  createPayloadFromForm: (value: unknown) => value,
-  PatientForm: ({ onDirtyChange, onSubmit }: { onDirtyChange: (dirty: boolean) => void; onSubmit: (values: { first_name: string }) => Promise<void> }) => <><button type="button" onClick={() => onDirtyChange(true)}>Change patient</button><button type="button" onClick={() => void onSubmit({ first_name: "Nour" })}>Create patient</button></>,
-}));
 
 function renderPage() {
   const router = createMemoryRouter([
@@ -41,13 +37,35 @@ function renderPage() {
   return router;
 }
 
+function createMutationStub(mutateAsync: ReturnType<typeof vi.fn>) {
+  return {
+    context: undefined,
+    data: undefined,
+    error: null,
+    failureCount: 0,
+    failureReason: null,
+    isError: false,
+    isIdle: true,
+    isPaused: false,
+    isPending: false,
+    isSuccess: false,
+    mutate: vi.fn(),
+    mutateAsync,
+    reset: vi.fn(),
+    status: "idle" as const,
+    submittedAt: 0,
+    variables: undefined,
+  } satisfies ReturnType<typeof useCreatePatient>;
+}
+
 describe("New patient production route", () => {
   it("allows the successful create navigation through the blocker after a dirty form", async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ id: 42 });
-    vi.mocked(useCreatePatient).mockReturnValue({ mutateAsync, isPending: false, error: null } as never);
+    vi.mocked(useCreatePatient).mockReturnValue(createMutationStub(mutateAsync));
     const router = renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Change patient" }));
+    fireEvent.change(await screen.findByLabelText(/First name/), { target: { value: "Nour" } });
+    fireEvent.change(screen.getByLabelText(/Last name/), { target: { value: "Haddad" } });
     fireEvent.click(screen.getByRole("button", { name: "Create patient" }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe("/staff/patients/42"));
@@ -56,10 +74,10 @@ describe("New patient production route", () => {
   });
 
   it("blocks ordinary route navigation until the user discards the changed form", async () => {
-    vi.mocked(useCreatePatient).mockReturnValue({ mutateAsync: vi.fn(), isPending: false, error: null } as never);
+    vi.mocked(useCreatePatient).mockReturnValue(createMutationStub(vi.fn()));
     const router = renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Change patient" }));
+    fireEvent.change(await screen.findByLabelText(/First name/), { target: { value: "Nour" } });
     await act(async () => { await router.navigate("/staff/patients"); });
     expect(await screen.findByRole("dialog", { name: "Discard unsaved changes?" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Discard" }));
