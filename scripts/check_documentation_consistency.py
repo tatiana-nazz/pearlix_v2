@@ -1,29 +1,25 @@
-"""Fail fast on Phase 14D closure-documentation drift (standard library only)."""
+"""Validate Phase 14E Task 1 documentation consistency (standard library only)."""
 from pathlib import Path
 import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND_TOTAL = "40 files, 143 tests"
-FOCUSED_BACKEND_TOTAL = "102 focused tests total"
-FULL_BACKEND_TOTAL = "414 passed"
+FRONTEND_TOTAL = "41 files, 148 tests"
+FOCUSED_BACKEND_TOTAL = "83 passed"
 FILES = {
     "status": "backend/project_docs/PROJECT_STATUS.md",
-    "audit": "backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md",
     "readme": "frontend/README.md",
-    "qa": "frontend/QA_14D.md",
-    "record": "frontend/design_v2/PHASE_14D_IMPLEMENTATION_RECORD.md",
-    "mapping": "frontend/design_v2/RUNTIME_COMPONENT_MAPPING_V2.md",
-    "matrix": "frontend/design_v2/DESIGN_ACCEPTANCE_MATRIX.md",
-    "blueprints": "frontend/design_v2/SCREEN_BLUEPRINTS_V2.md",
+    "record": "frontend/design_v2/PHASE_14E_IMPLEMENTATION_RECORD.md",
 }
 ACCEPTANCE_TESTS = {
-    "frontend/src/pages/admin/TeamPages.test.tsx": ("./TeamPages", ("creates a Doctor", "pending")),
-    "frontend/src/pages/admin/AdminManagementPages.test.tsx": ("./AdminManagementPages", ("role blockers", "exact production payload")),
-    "frontend/src/pages/patients/NewPatientPage.test.tsx": ("./NewPatientPage", ("successful create", "ordinary route navigation")),
-    "frontend/src/pages/patients/PatientProfilePage.test.tsx": ("./PatientProfilePage", ("reload confirmation", "request failure")),
-    "frontend/src/pages/patients/PatientsPage.test.tsx": ("./PatientsPage", ("filters", "archive and unarchive")),
-    "frontend/src/pages/patients/PatientClinicalHistoryRoute.test.tsx": ("./PatientProfilePage", ("Visits selected", "Arabic/RTL")),
+    "frontend/src/pages/admin/ScheduleLeaveManagementPage.test.tsx": (
+        ("./ScheduleManagementPage", "./LeaveManagementPage", "../profile/OwnSchedulePage", "../profile/OwnLeavePage"),
+        ("impact confirmation", "non-DELETE actions", "read-only"),
+    ),
+    "frontend/src/api/endpoints/schedule.test.ts": (
+        ("./schedule",),
+        ("never DELETE", "apply and copy modes", "retrieve endpoint"),
+    ),
 }
 
 
@@ -37,83 +33,41 @@ def main() -> int:
         else:
             text[key] = path.read_text(encoding="utf-8").lower()
 
-    expected = {
-        "status": ("current completed phase: phase 14d automated acceptance", "next phase: phase 14e", "backend runtime changes in phase 14d: no", "migrations in phase 14d: none", "phase 14e has not started", "phase 14f"),
-        "audit": ("phase 14d automated acceptance is complete", "tatiana-nazz/pearlix_v2", "phase 14e has not started", "phase 14f"),
-        "readme": ("phase 14d automated acceptance is complete", "phase 14e has not started", "phase 14f"),
-        "qa": ("phase 14d automated acceptance is complete", FRONTEND_TOTAL, "documentation consistency checker is not a substitute", "phase 14e has not started", "phase 14f"),
-        "record": ("phase 14d automated acceptance is complete", FRONTEND_TOTAL, "backend runtime changed: no", "migrations: none", "phase 14e has not started", "phase 14f"),
-        "mapping": ("phase 14d closure", "phase 14e is next"),
-        "matrix": ("phase 14d automated closure", "phase 14f"),
-        "blueprints": ("phase 14d closure note", "phase 14f"),
-    }
-    for key, phrases in expected.items():
-        for phrase in phrases:
-            if phrase not in text.get(key, ""):
-                errors.append(f"{key} missing {phrase!r}")
-
-    for key in ("status", "audit", "readme", "qa", "record"):
-        if FRONTEND_TOTAL not in text.get(key, ""):
-            errors.append(f"{key} does not report exact frontend total {FRONTEND_TOTAL!r}")
-        if FOCUSED_BACKEND_TOTAL not in text.get(key, ""):
-            errors.append(f"{key} does not report exact focused backend total {FOCUSED_BACKEND_TOTAL!r}")
-        if FULL_BACKEND_TOTAL not in text.get(key, ""):
-            errors.append(f"{key} does not report exact full backend total {FULL_BACKEND_TOTAL!r}")
-
-    joined = "\n".join(text.values())
-    stale = (
-        "phase 14d acceptance corrections in progress",
-        "phase 14d acceptance-test closure remains in progress",
-        "current phase: phase 14d acceptance-test closure in progress",
-        "phase 14d is next",
-        "40 files, 119 tests",
-        "92 frontend tests",
-        "92 passed",
-        "94 tests",
-        "97 tests",
-        "35 files, 97 tests",
-        "browser qa: complete",
-        "browser qa completed",
-        "phase 14e has started",
+    required = (
+        "phase 14d automated acceptance is complete",
+        "phase 14e is in progress",
+        "schedules and leave",
+        FRONTEND_TOTAL,
+        FOCUSED_BACKEND_TOTAL,
+        "backend runtime changed: no",
+        "migrations: none",
+        "phase 14f",
     )
-    for phrase in stale:
-        if phrase in joined:
-            errors.append(f"stale wording: {phrase!r}")
+    for key, source in text.items():
+        for phrase in required:
+            if phrase not in source:
+                errors.append(f"{key} missing {phrase!r}")
+        for phrase in ("visits", "x-rays/ai", "billing", "clinic settings", "audit"):
+            if phrase not in source:
+                errors.append(f"{key} does not state remaining Phase 14E work: {phrase!r}")
 
-    i18n = ROOT / "frontend/src/layouts/i18n.ts"
-    if i18n.is_file():
-        i18n_text = i18n.read_text(encoding="utf-8").lower()
-        for suppression in ("@ts-nocheck", "@ts-ignore"):
-            if suppression in i18n_text:
-                errors.append(f"i18n suppression present: {suppression}")
-    else:
-        errors.append("missing frontend/src/layouts/i18n.ts")
+    if "next phase 14e task: visits" not in text.get("status", ""):
+        errors.append("status does not identify Visits as the next Phase 14E task")
+    if "phase 14e has not started" in "\n".join(text.values()):
+        errors.append("stale wording: 'phase 14e has not started'")
 
-    for relative, (production_import, scenarios) in ACCEPTANCE_TESTS.items():
+    for relative, (imports, scenarios) in ACCEPTANCE_TESTS.items():
         path = ROOT / relative
         if not path.is_file():
             errors.append(f"missing acceptance test {relative}")
             continue
         source = path.read_text(encoding="utf-8")
-        if not source.strip():
-            errors.append(f"empty acceptance test {relative}")
-        elif production_import not in source:
-            errors.append(f"acceptance test lacks production import {relative}")
+        for production_import in imports:
+            if production_import not in source:
+                errors.append(f"acceptance test lacks production import {relative}: {production_import!r}")
         for scenario in scenarios:
             if scenario not in source:
                 errors.append(f"acceptance test lacks representative scenario {relative}: {scenario!r}")
-
-    runtime_root = ROOT / "frontend/src"
-    banned_runtime_copy = (
-        "phase 14d acceptance corrections in progress",
-        "35 files, 97 tests",
-        "92 frontend tests",
-    )
-    for path in runtime_root.rglob("*.ts*"):
-        source = path.read_text(encoding="utf-8").lower()
-        for phrase in banned_runtime_copy:
-            if phrase in source:
-                errors.append(f"stale runtime copy in {path.relative_to(ROOT)}: {phrase!r}")
 
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))

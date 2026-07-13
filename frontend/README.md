@@ -197,6 +197,6 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-Phase 14D automated acceptance is complete. Backend runtime changes in Phase 14D: no. Migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate. Phase 14E has not started. The frontend regression total is 40 files, 143 tests; focused backend verification is Team/account and Users/role transition 35 passed, appointments 39 passed, and patients/IDOR/security 28 passed (102 focused tests total); the full backend suite is 414 passed.
+Phase 14D automated acceptance is complete. Phase 14E is in progress, with Schedules and Leave complete. The frontend regression total is 41 files, 148 tests; focused schedule/leave backend verification is 83 passed; Django check passed and migration drift reported no changes. Backend runtime changed: no. Migrations: none. Visits, X-rays/AI, Billing, Clinic Settings, and Audit have not started. Browser QA remains pending as the Phase 14F visual/UAT gate.
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D automated acceptance is complete; Phase 14E has not started. Deployment remains paused pending Phase 14E and Phase 14F browser visual/UAT evidence. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14D.md`.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D automated acceptance is complete; Phase 14E is in progress and Visits is its next task. Deployment remains paused pending remaining Phase 14E work and Phase 14F browser visual/UAT evidence. See `frontend/design_v2/PHASE_14E_IMPLEMENTATION_RECORD.md`.

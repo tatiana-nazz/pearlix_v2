@@ -3,16 +3,18 @@
 This is the canonical current-phase tracker for the Dental Clinic Management System Website.
 
 - Current completed phase: Phase 14D automated acceptance
-- Next phase: Phase 14E — Schedules and Leave, Visits, X-rays and AI, Billing, Clinic Settings, and Audit
-- Frontend regression baseline: 40 files, 143 tests
-- Focused backend verification: Team/account and Users/role transition 35 passed; appointments 39 passed; patients and IDOR/security 28 passed (102 focused tests total)
-- Full backend verification: 414 passed
-- Backend runtime changes in Phase 14D: no
-- Migrations in Phase 14D: none
+- Current phase: Phase 14E supporting operations (in progress)
+- Completed Phase 14E Task 1: Schedules and Leave
+- Next Phase 14E task: Visits
+- Frontend regression baseline: 41 files, 148 tests
+- Focused Phase 14E schedule/leave backend verification: 83 passed
+- Django check: passed; migration drift: no changes detected
+- Backend runtime changes in Phase 14E: no
+- Migrations in Phase 14E: none
 - Browser QA/UAT: pending for the Phase 14F visual acceptance gate
-- Release recommendation: deployment remains paused pending Phase 14E, Phase 14F, and browser visual/UAT evidence.
+- Release recommendation: deployment remains paused pending remaining Phase 14E work, Phase 14F, and browser visual/UAT evidence.
 
-Phase 14D automated acceptance is complete. Dashboards, Team, Users & Access, appointments, and patient priority workflows have production-route acceptance evidence, typed EN/AR and RTL/bidi coverage, and shared-overlay regression coverage. Phase 14E has not started. Browser QA remains the explicitly deferred Phase 14F visual/UAT gate. The backend API, permissions, serializers, models, and migrations remain unchanged; backend runtime changed: no; migrations: none.
+Phase 14D automated acceptance is complete. Phase 14E is in progress: its Schedules and Leave workflows are complete with 41 frontend files / 148 tests and 83 focused schedule/leave backend tests. Visits, X-rays/AI, Billing, Clinic Settings, and Audit have not started. Browser QA remains the explicitly deferred Phase 14F visual/UAT gate. The backend API, permissions, serializers, models, and migrations remain unchanged; backend runtime changed: no; migrations: none.
 
 Remaining post-MVP limitations include real AI integration, email forgot-password, unsupported professional fields, online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.
 
