@@ -2,7 +2,7 @@
 
 ## Closure status
 
-Phase 14D final acceptance is complete. Phase 14E has not started. Backend runtime changed: no. Migrations: none.
+Phase 14D acceptance-test closure is in progress. Phase 14E has not started. Browser QA remains the Phase 14F visual/UAT gate. Backend runtime changed: no. Migrations: none.
 
 - Dashboards, Team, Users & Access, appointments, and patient workflows use the Phase 14D v2 surfaces.
 - Feature copy is typed EN/AR, with localized role, status, and availability labels; the Team and Users & Access pages do not present raw display enums.

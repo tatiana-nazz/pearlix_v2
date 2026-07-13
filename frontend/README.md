@@ -197,6 +197,6 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-Phase 14D final acceptance is complete. Frontend verification: 38 files, 104 tests. Backend runtime changes in Phase 14D: no. Migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate. Phase 14E has not started.
+Phase 14D acceptance-test closure is in progress. Backend runtime changes in Phase 14D: no. Migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate. Phase 14E has not started.
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D final acceptance is complete; Phase 14E has not started. Deployment remains paused pending Phase 14F browser visual/UAT evidence. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14D.md`.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D acceptance-test closure is in progress; Phase 14E has not started. Deployment remains paused pending Phase 14F browser visual/UAT evidence. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14D.md`.

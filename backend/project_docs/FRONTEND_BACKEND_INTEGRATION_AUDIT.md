@@ -1,8 +1,8 @@
 # Frontend/Backend Integration Audit
 
-## Current Phase 14D final acceptance
+## Current Phase 14D acceptance-test closure
 
-Phase 14D final acceptance is complete. The frontend retains the approved dashboard, Team, Users & Access, appointment, and patient workflows with focus, navigation, security-input, and route-level acceptance evidence completed. Frontend verification: 38 files, 104 tests. Backend verification: 414 passed. Backend runtime changed in Phase 14D: no; migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate. Phase 14E has not started.
+Phase 14D acceptance-test closure is in progress. The frontend retains the approved dashboard, Team, Users & Access, appointment, and patient workflows while shared-overlay, route, and page acceptance coverage is completed. Backend runtime changed in Phase 14D: no; migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate. Phase 14E has not started.
 
 The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Phase 14D closure records 38 files, 104 tests, while browser QA remains pending for Phase 14F.
 
