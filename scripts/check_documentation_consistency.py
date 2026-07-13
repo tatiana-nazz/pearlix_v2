@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_TOTAL = "43 files, 157 tests"
 SCHEDULE_BACKEND_TOTAL = "83 passed"
 VISIT_BACKEND_TOTAL = "248 passed"
+XRAY_BACKEND_TOTAL = "131 passed"
 FILES = {
     "status": "backend/project_docs/PROJECT_STATUS.md",
     "readme": "frontend/README.md",
@@ -54,6 +55,7 @@ def main() -> int:
         FRONTEND_TOTAL,
         SCHEDULE_BACKEND_TOTAL,
         VISIT_BACKEND_TOTAL,
+        XRAY_BACKEND_TOTAL,
         "backend runtime changed: no",
         "migrations: none",
         "phase 14f",
@@ -67,8 +69,8 @@ def main() -> int:
                 errors.append(f"{key} does not state remaining Phase 14E work: {phrase!r}")
 
     status = text.get("status", "")
-    if "next phase 14e task: x-rays and ai" not in status:
-        errors.append("status does not identify X-rays and AI as the next Phase 14E task")
+    if "next phase 14e task: billing" not in status:
+        errors.append("status does not identify Billing as the next Phase 14E task")
     if "phase 14e has not started" in "\n".join(text.values()):
         errors.append("stale wording: 'phase 14e has not started'")
 
