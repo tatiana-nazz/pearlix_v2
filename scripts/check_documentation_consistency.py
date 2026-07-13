@@ -4,7 +4,9 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND_TOTAL = "40 files, 119 tests"
+FRONTEND_TOTAL = "40 files, 143 tests"
+FOCUSED_BACKEND_TOTAL = "102 focused tests total"
+FULL_BACKEND_TOTAL = "414 passed"
 FILES = {
     "status": "backend/project_docs/PROJECT_STATUS.md",
     "audit": "backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md",
@@ -36,11 +38,11 @@ def main() -> int:
             text[key] = path.read_text(encoding="utf-8").lower()
 
     expected = {
-        "status": ("current phase: phase 14d acceptance-test closure in progress", "next phase: phase 14e", "backend runtime changes in phase 14d: no", "migrations in phase 14d: none", "phase 14f"),
-        "audit": ("phase 14d acceptance-test closure remains in progress", "tatiana-nazz/pearlix_v2", "phase 14f"),
-        "readme": ("phase 14d acceptance-test closure remains in progress", "phase 14e", "phase 14f"),
-        "qa": ("phase 14d acceptance-test closure remains in progress", FRONTEND_TOTAL, "documentation consistency checker is not a substitute", "phase 14f"),
-        "record": ("phase 14d acceptance-test closure remains in progress", FRONTEND_TOTAL, "backend runtime changed: no", "migrations: none"),
+        "status": ("current completed phase: phase 14d automated acceptance", "next phase: phase 14e", "backend runtime changes in phase 14d: no", "migrations in phase 14d: none", "phase 14e has not started", "phase 14f"),
+        "audit": ("phase 14d automated acceptance is complete", "tatiana-nazz/pearlix_v2", "phase 14e has not started", "phase 14f"),
+        "readme": ("phase 14d automated acceptance is complete", "phase 14e has not started", "phase 14f"),
+        "qa": ("phase 14d automated acceptance is complete", FRONTEND_TOTAL, "documentation consistency checker is not a substitute", "phase 14e has not started", "phase 14f"),
+        "record": ("phase 14d automated acceptance is complete", FRONTEND_TOTAL, "backend runtime changed: no", "migrations: none", "phase 14e has not started", "phase 14f"),
         "mapping": ("phase 14d closure", "phase 14e is next"),
         "matrix": ("phase 14d automated closure", "phase 14f"),
         "blueprints": ("phase 14d closure note", "phase 14f"),
@@ -53,13 +55,18 @@ def main() -> int:
     for key in ("status", "audit", "readme", "qa", "record"):
         if FRONTEND_TOTAL not in text.get(key, ""):
             errors.append(f"{key} does not report exact frontend total {FRONTEND_TOTAL!r}")
+        if FOCUSED_BACKEND_TOTAL not in text.get(key, ""):
+            errors.append(f"{key} does not report exact focused backend total {FOCUSED_BACKEND_TOTAL!r}")
+        if FULL_BACKEND_TOTAL not in text.get(key, ""):
+            errors.append(f"{key} does not report exact full backend total {FULL_BACKEND_TOTAL!r}")
 
     joined = "\n".join(text.values())
     stale = (
         "phase 14d acceptance corrections in progress",
-        "phase 14d is complete",
-        "current completed phase: phase 14d",
+        "phase 14d acceptance-test closure remains in progress",
+        "current phase: phase 14d acceptance-test closure in progress",
         "phase 14d is next",
+        "40 files, 119 tests",
         "92 frontend tests",
         "92 passed",
         "94 tests",
