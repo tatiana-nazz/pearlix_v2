@@ -1,10 +1,10 @@
-"""Validate Phase 14E Tasks 1 and 2 documentation consistency (standard library only)."""
+"""Validate Phase 14E supporting-operations documentation and acceptance evidence."""
 from pathlib import Path
 import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND_TOTAL = "43 files, 157 tests"
+FRONTEND_TOTAL = "48 files, 163 tests"
 SCHEDULE_BACKEND_TOTAL = "83 passed"
 VISIT_BACKEND_TOTAL = "248 passed"
 XRAY_BACKEND_TOTAL = "131 passed"
@@ -33,6 +33,30 @@ ACCEPTANCE_TESTS = {
     "frontend/src/features/appointments/utils/appointmentPermissions.test.ts": (
         ("./appointmentPermissions",),
         ("never exposes Start Visit",),
+    ),
+    "frontend/src/features/xrays/hooks/useProtectedMedia.test.tsx": (
+        ("./useProtectedMedia",),
+        ("creates temporary object URLs", "revokes replaced and unmounted URLs"),
+    ),
+    "frontend/src/features/xrays/components/ProtectedXrayImage.test.tsx": (
+        ("./ProtectedXrayImage",),
+        ("authenticated-media failures", "decode failures"),
+    ),
+    "frontend/src/features/xrays/components/XrayUploadDialog.test.tsx": (
+        ("./XrayUploadDialog",),
+        ("supported multipart-ready payload", "blocks every close action"),
+    ),
+    "frontend/src/features/xrays/components/ExternalXrayDialogs.test.tsx": (
+        ("./ExternalXrayDialogs",),
+        ("exact attach payload", "pending destructive confirmation"),
+    ),
+    "frontend/src/features/xrays/components/ExternalXrayDetail.test.tsx": (
+        ("./ExternalXrayDetail",),
+        ("Admin upload-case management", "another Doctor"),
+    ),
+    "frontend/src/api/endpoints/xrays.test.ts": (
+        ("./xrays",),
+        ("never DELETE", "discard/"),
     ),
 }
 
