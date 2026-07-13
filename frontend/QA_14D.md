@@ -15,12 +15,12 @@
 ## Automated verification
 
 - Focused palette, shared-interaction, and Staff Dashboard component tests cover light/dark token values, non-underlined interactive surfaces, four-card composition, semantic variants, primary actions, and API-derived KPI counts.
-- Frontend automated verification: `npm run typecheck` passed; `npm run test:run` passed (33 files, 92 tests); `npm run build` passed.
-- Backend verification: `manage.py check` passed; focused appointment tests passed (40), `tests/patients/test_patients_api.py` passed (22), and `tests/security/test_idor_frontend_fields_security.py` passed (3). `makemigrations --check --dry-run --verbosity 2` passed with `No changes detected` (a database-history timeout warning did not change the exit result).
+- Frontend automated verification: `npm run typecheck` passed; `npm run test:run` passed (33 files, 92 tests); `npm run build` passed. Patient mutation errors now clear independently of local validation, known duplicate/format errors are localized, and the Staff create-patient route blocks dirty SPA navigation.
+- Backend verification: `manage.py check` passed; focused appointment API tests passed (38), and the focused patient API plus patient-field security suites passed (25). `makemigrations --check --dry-run --verbosity 2` passed with `No changes detected`.
 
 ## Browser QA
 
-Not completed. The available browser could not connect to `http://localhost:5173` (`ERR_CONNECTION_REFUSED`). Pending: Staff patient 1440 EN/light list/create/profile/edit/archive; Admin patient 1024 EN/dark read-only list/profile; Doctor patient 768 AR/light filters/profile/clinical history/edit with no archive or billing; appointment modal matrix remains pending.
+Not completed. Phase 14F browser matrix remains pending: Staff 1440 EN/light; Admin 1024 EN/dark; Doctor 768 AR/light; dashboards, Team, Users & Access, appointments, patients, focus return, dirty close, route blocking, filter preservation, RTL/bidi, dark surfaces, overflow, and clinic-local date. Do not treat automated verification as browser acceptance.
 
 ## Scope status
 

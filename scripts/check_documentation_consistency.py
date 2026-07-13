@@ -17,7 +17,7 @@ def main() -> int:
         if not path.is_file(): errors.append(f"missing {relative}")
         else: text[key] = path.read_text(encoding="utf-8").lower()
     expected = {
-        "status": ("current completed phase: phase 14d", "next phase: phase 14e", "92 passed", "focused backend verification: appointment 40 passed; patient 25 passed", "backend runtime changes in phase 14d: no", "migrations in phase 14d: none", "phase 14f"),
+        "status": ("current completed phase: phase 14d", "next phase: phase 14e", "92 passed", "focused backend verification: appointment 38 passed; patient 25 passed", "backend runtime changes in phase 14d: no", "migrations in phase 14d: none", "phase 14f"),
         "audit": ("current status through phase 14d", "tatiana-nazz/pearlix_v2", "/admin/team", "phase 14e is next"),
         "readme": ("phase 14d is complete", "92 frontend tests", "qa_14d.md", "phase 14e"),
         "qa": ("phase 14d implementation is complete", "browser qa", "phase 14f"),
@@ -30,7 +30,7 @@ def main() -> int:
         for phrase in phrases:
             if phrase not in text.get(key, ""): errors.append(f"{key} missing {phrase!r}")
     joined = "\n".join(text.values())
-    stale = ("current completed phase: 14c", "next phase: phase 14d", "next step: implement the complete approved phase 14d", "phase 14d is next", "final screens are phase 14d", "team and users & access runtime ui is remaining", "no `/admin/team` runtime route", "appointment drawer", "selected detail drawer", "phase 14d is not complete", "browser qa: complete", "tatiana-tay/pearlix_v2")
+    stale = ("current completed phase: 14c", "next phase: phase 14d", "next step: implement the complete approved phase 14d", "phase 14d is next", "final screens are phase 14d", "team and users & access runtime ui is remaining", "no `/admin/team` runtime route", "appointment drawer", "selected detail drawer", "patient dialog/drawer", "archivepatientdialog.tsx", "team phase 14d migration described as remaining", "users phase 14d migration described as remaining", "phase 14d is not complete", "phase 14d in progress", "browser qa: complete", "browser qa completed", "tatiana-tay/pearlix_v2", "five kpi cards", "5-up", "3+2 dashboard")
     for phrase in stale:
         if phrase in joined: errors.append(f"stale wording: {phrase!r}")
     if errors:

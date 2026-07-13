@@ -34,7 +34,7 @@ No v2 primitive may coexist indefinitely with one-off CSS. Each old component is
 
 ## Remaining feature-specific overlays
 
-The shared v2 overlay foundation is complete in 14C. Legacy feature consumers remain only to avoid feature redesign: `features/patients/components/ArchivePatientDialog.tsx` and `pages/patients/PatientProfilePage.tsx` (14D, remove after patient detail/form migration); `pages/admin/AdminManagementPages.tsx` (14D, remove after Users & Access migration); `features/billing/components/BillingDialogs.tsx` and `pages/billing/BillingPages.tsx` (14E, remove after billing workflow migration); `features/visits/components/CompleteVisitDialog.tsx` (14E, remove after visit workspace migration); and `features/xrays/components/XrayUploadDialog.tsx` plus `ExternalXrayDialogs.tsx` (14E, remove after imaging workflow migration).
+The shared v2 overlay foundation is complete in 14C. Completed Phase 14D consumers are now centered Modal/ConfirmDialog workflows: patient edit/archive, appointment details/forms/status confirmation, Team, and Users & Access. Remaining feature migrations are billing dialogs (`features/billing/components/BillingDialogs.tsx`, `pages/billing/BillingPages.tsx`), visit completion (`features/visits/components/CompleteVisitDialog.tsx`), and imaging dialogs (`features/xrays/components/XrayUploadDialog.tsx`, `ExternalXrayDialogs.tsx`) in Phase 14E.
 
 ## Phase 14D completed migration note
 
