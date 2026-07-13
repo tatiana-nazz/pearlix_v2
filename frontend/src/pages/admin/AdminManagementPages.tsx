@@ -1,53 +1,134 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, ShieldCheck, UserRoundCog } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+
 import { auditApi } from "../../api/endpoints/audit";
 import { clinicApi } from "../../api/endpoints/clinic";
 import { teamApi, teamQueryKeys } from "../../api/endpoints/team";
 import { usersApi } from "../../api/endpoints/users";
-import { Button, ClickableRow, Combobox, ConfirmDialog, DataTableShell, Field, FormSection, Modal, PageHeaderV2, Pagination, SectionHeading, SelectField, StatePanel, StatusBadge, SurfaceCard } from "../../components/v2";
+import { Button, ClickableRow, ConfirmDialog, DataTableShell, Field, FormSection, Modal, PageHeaderV2, Pagination, SectionHeading, SelectField, StatePanel, StatusBadge, SurfaceCard } from "../../components/v2";
+import { useFeatureT } from "../../layouts/i18n";
 import type { UserRole } from "../../types/auth";
 import type { UserCreatePayload, UserManagementRecord } from "../../types/users";
 import { getErrorMessage } from "../../utils/apiErrors";
 import { formatDateTime } from "../../utils/dates";
-import { useFeatureT } from "../../layouts/i18n";
 
 function useUsers(page = 1) { return useQuery({ queryKey: ["users", page], queryFn: () => usersApi.list({ page }) }); }
 function useUser(id: number) { return useQuery({ queryKey: ["user", id], queryFn: () => usersApi.detail(id), enabled: id > 0 }); }
-function profileState(user: UserManagementRecord, t?: ReturnType<typeof useFeatureT>) { return user.linked_profile_state === "PROFILE_SETUP_REQUIRED" ? t ? t("profileSetupRequired") : "Profile setup required" : user.team_member_id ? t ? t("linkedTeamProfile") : "Linked Team profile" : user.linked_profile_state.replace(/_/g, " "); }
-function invalidateRoleData(client: ReturnType<typeof useQueryClient>, id: number) { void client.invalidateQueries({ queryKey: ["users"] }); void client.invalidateQueries({ queryKey: ["user", id] }); void client.invalidateQueries({ queryKey: teamQueryKeys.all }); void client.invalidateQueries({ queryKey: teamQueryKeys.detail(id) }); void client.invalidateQueries({ queryKey: ["dashboard"] }); void client.invalidateQueries({ queryKey: ["appointments"] }); void client.invalidateQueries({ queryKey: ["working-shifts"] }); }
+
+function profileState(user: UserManagementRecord, t: ReturnType<typeof useFeatureT>) {
+  if (user.team_member_id) return t("linkedTeamProfile");
+  if (user.linked_profile_state === "PROFILE_SETUP_REQUIRED") return t("profileSetupRequired");
+  return t("notRecorded");
+}
+
+function roleLabel(role: UserRole, t: ReturnType<typeof useFeatureT>) {
+  return role === "ADMIN" ? t("admin") : role === "DOCTOR" ? t("doctors") : t("staff");
+}
+
+function transitionCopy(value: string, t: ReturnType<typeof useFeatureT>) {
+  if (value.includes("matching professional profile will be created")) return t("roleTransitionHelp");
+  if (value.includes("already has the requested role")) return t("blockedTransition");
+  if (value.includes("Operational history")) return t("blockedTransition");
+  if (value.includes("last active Admin")) return t("blockedTransition");
+  return t("roleTransitionHelp");
+}
+
+function invalidateRoleData(client: ReturnType<typeof useQueryClient>, id: number) {
+  void client.invalidateQueries({ queryKey: ["users"] });
+  void client.invalidateQueries({ queryKey: ["user", id] });
+  void client.invalidateQueries({ queryKey: teamQueryKeys.all });
+  void client.invalidateQueries({ queryKey: teamQueryKeys.detail(id) });
+  void client.invalidateQueries({ queryKey: ["dashboard"] });
+  void client.invalidateQueries({ queryKey: ["appointments"] });
+  void client.invalidateQueries({ queryKey: ["working-shifts"] });
+}
 
 export function AdminUserListPage() {
-  const [page, setPage] = useState(1); const users = useUsers(page); const navigate = useNavigate(); const t = useFeatureT();
+  const [page, setPage] = useState(1);
+  const users = useUsers(page);
+  const navigate = useNavigate();
+  const t = useFeatureT();
+
   return <div className="admin-page"><PageHeaderV2 title={t("usersAccess")} description={t("usersDescription")} action={<Link className="v2-button" to="/admin/users/new">{t("newUser")}</Link>} />
     <DataTableShell title={t("accounts")} count={users.data?.count} state={users.isLoading ? <StatePanel state="loading" title={t("loadingAccounts")} /> : users.isError ? <StatePanel state="error" title={t("unableLoadAccounts")} description={getErrorMessage(users.error)} action={<Button variant="secondary" onClick={() => void users.refetch()}>{t("retry")}</Button>} /> : undefined}>
-      {users.data ? <table><thead><tr><th>{t("user")}</th><th>{t("role")}</th><th>{t("loginStatus")}</th><th>{t("passwordState")}</th><th>{t("profileState")}</th><th>{t("created")}</th><th>{t("updated")}</th><th /></tr></thead><tbody>{users.data.results.map((user) => <ClickableRow key={user.id} onOpen={() => navigate(`/admin/users/${user.id}`)}><td><strong className="bidi-isolate">{user.full_name}</strong><br /><small className="bidi-isolate">{user.email}</small></td><td>{user.role === "ADMIN" ? t("admin") : user.role === "DOCTOR" ? t("doctors") : t("staff")}</td><td><StatusBadge status={user.is_active ? "ACTIVE" : "INACTIVE"} /></td><td>{user.must_change_password ? t("mustChangePassword") : t("passwordCurrent")}</td><td>{user.team_member_id ? <Link data-row-action to={`/admin/team/${user.team_member_id}`}>{profileState(user, t)}</Link> : profileState(user, t)}</td><td className="bidi-isolate">{formatDateTime(user.created_at)}</td><td className="bidi-isolate">{formatDateTime(user.updated_at)}</td></ClickableRow>)}</tbody></table> : null}
+      {users.data ? <table><thead><tr><th>{t("user")}</th><th>{t("role")}</th><th>{t("loginStatus")}</th><th>{t("passwordState")}</th><th>{t("profileState")}</th><th>{t("created")}</th><th>{t("updated")}</th><th /></tr></thead><tbody>{users.data.results.map((user) => <ClickableRow key={user.id} onOpen={() => navigate(`/admin/users/${user.id}`)}><td><strong className="bidi-isolate">{user.full_name}</strong><br /><small className="bidi-isolate">{user.email}</small></td><td>{roleLabel(user.role, t)}</td><td><StatusBadge status={user.is_active ? "ACTIVE" : "INACTIVE"} /></td><td>{user.must_change_password ? t("mustChangePassword") : t("passwordCurrent")}</td><td>{user.team_member_id ? <Link data-row-action to={`/admin/team/${user.team_member_id}`}>{profileState(user, t)}</Link> : profileState(user, t)}</td><td className="bidi-isolate">{formatDateTime(user.created_at)}</td><td className="bidi-isolate">{formatDateTime(user.updated_at)}</td></ClickableRow>)}</tbody></table> : null}
     </DataTableShell>{users.data ? <Pagination page={page} hasPrevious={Boolean(users.data.previous)} hasNext={Boolean(users.data.next)} onPrevious={() => setPage(page - 1)} onNext={() => setPage(page + 1)} /> : null}</div>;
 }
 
 function NewUserForm() {
-  const navigate = useNavigate(); const client = useQueryClient(); const [fullName, setFullName] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [role, setRole] = useState<UserRole>("ADMIN"); const t = useFeatureT();
+  const navigate = useNavigate();
+  const client = useQueryClient();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("ADMIN");
+  const t = useFeatureT();
   const mutation = useMutation({ mutationFn: (payload: UserCreatePayload) => usersApi.create(payload), onSuccess: (user) => { void client.invalidateQueries({ queryKey: ["users"] }); navigate(`/admin/users/${user.id}`); } });
   const requiresTeam = role !== "ADMIN";
-  return <form onSubmit={(e) => { e.preventDefault(); if (!requiresTeam) mutation.mutate({ full_name: fullName, email, role: "ADMIN", temporary_password: password }); }}><FormSection title={t("accountIdentity")}><Field label={t("fullName")} required value={fullName} onChange={(e) => setFullName(e.target.value)} /><Field label={t("loginEmail")} required type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></FormSection><FormSection title={t("role")}><SelectField label={t("systemRole")} value={role} onChange={(e) => setRole(e.target.value as UserRole)}><option value="ADMIN">{t("admin")}</option><option value="DOCTOR">{t("doctors")}</option><option value="STAFF">{t("staff")}</option></SelectField></FormSection>{requiresTeam ? <StatePanel state="locked" title={t("professionalProfileRequired")} description={t("teamOnboardingHelp")} action={<Link className="v2-button" to="/admin/team">{t("addTeamMember")}</Link>} /> : <FormSection title={t("temporaryPassword")}><Field label={t("temporaryPassword")} required minLength={8} type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></FormSection>}{mutation.error ? <StatePanel state="error" title={t("unableCreateAccount")} description={getErrorMessage(mutation.error)} /> : null}<div className="v2-sticky-actions"><Link className="v2-button secondary" to="/admin/users">{t("cancel")}</Link><Button type="submit" loading={mutation.isPending} disabled={requiresTeam}>{t("createAdminAccount")}</Button></div></form>;
+
+  return <form onSubmit={(event) => { event.preventDefault(); if (!requiresTeam) mutation.mutate({ full_name: fullName, email, role: "ADMIN", temporary_password: password }); }}>
+    <FormSection title={t("accountIdentity")}><Field label={t("fullName")} required value={fullName} onChange={(event) => setFullName(event.target.value)} /><Field label={t("loginEmail")} required type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></FormSection>
+    <FormSection title={t("role")}><SelectField label={t("systemRole")} value={role} onChange={(event) => setRole(event.target.value as UserRole)}><option value="ADMIN">{t("admin")}</option><option value="DOCTOR">{t("doctors")}</option><option value="STAFF">{t("staff")}</option></SelectField></FormSection>
+    {requiresTeam ? <StatePanel state="locked" title={t("professionalProfileRequired")} description={t("teamOnboardingHelp")} action={<Link className="v2-button" to="/admin/team">{t("addTeamMember")}</Link>} /> : <FormSection title={t("temporaryPassword")}><Field label={t("temporaryPassword")} required minLength={8} type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></FormSection>}
+    {mutation.error ? <StatePanel state="error" title={t("unableCreateAccount")} description={getErrorMessage(mutation.error)} /> : null}
+    <div className="v2-sticky-actions"><Link className="v2-button secondary" to="/admin/users">{t("cancel")}</Link><Button type="submit" loading={mutation.isPending} disabled={requiresTeam}>{t("createAdminAccount")}</Button></div>
+  </form>;
 }
+
 export function AdminNewUserPage() { const t = useFeatureT(); return <div className="admin-page"><PageHeaderV2 title={t("newUser")} description={t("newUserDescription")} /><SurfaceCard major><NewUserForm /></SurfaceCard></div>; }
 
 function RoleTransition({ user, onClose }: { user: UserManagementRecord; onClose: () => void }) {
-  const client = useQueryClient(); const [target, setTarget] = useState<UserRole>(user.role === "ADMIN" ? "DOCTOR" : "ADMIN"); const [preview, setPreview] = useState<Awaited<ReturnType<typeof teamApi.previewRoleTransition>> | null>(null); const [profile, setProfile] = useState<Record<string, string>>({});
+  const t = useFeatureT();
+  const client = useQueryClient();
+  const initialTarget = user.role === "ADMIN" ? "DOCTOR" : "ADMIN";
+  const [target, setTarget] = useState<UserRole>(initialTarget);
+  const [preview, setPreview] = useState<Awaited<ReturnType<typeof teamApi.previewRoleTransition>> | null>(null);
+  const [profile, setProfile] = useState<Record<string, string>>({});
   const previewMutation = useMutation({ mutationFn: () => teamApi.previewRoleTransition(user.id, target), onSuccess: setPreview });
   const confirmMutation = useMutation({ mutationFn: () => teamApi.confirmRoleTransition(user.id, { target_role: target, mode: "CONFIRM", confirmation_token: preview?.confirmation_token ?? "", profile, version: user.version }), onSuccess: () => { invalidateRoleData(client, user.id); onClose(); } });
+  const dirty = target !== initialTarget || Boolean(preview) || Object.values(profile).some(Boolean);
+  const pending = previewMutation.isPending || confirmMutation.isPending;
   const profileShape = preview?.required_target_profile;
-  return <Modal open title="Change role" description="Review the backend-signed transition consequences before confirming." onClose={onClose} pending={confirmMutation.isPending} dirty={Boolean(preview)}><SelectField label="Target role" value={target} onChange={(e) => { setTarget(e.target.value as UserRole); setPreview(null); }}><option value="ADMIN">Admin</option><option value="DOCTOR">Doctor</option><option value="STAFF">Staff</option></SelectField>{!preview ? <Button onClick={() => previewMutation.mutate()} loading={previewMutation.isPending}>Preview transition</Button> : <><SurfaceCard><SectionHeading title="Transition consequences" />{preview.allowed ? <ul>{preview.consequences.map((item) => <li key={item}>{item}</li>)}</ul> : <><p>This transition is blocked.</p><ul>{preview.blockers.map((item) => <li key={item.code}>{item.code}</li>)}</ul></>}</SurfaceCard>{profileShape === "doctor_profile" ? <><Field label="Specialty" value={profile.specialty ?? ""} onChange={(e) => setProfile({ ...profile, specialty: e.target.value })} /><Field label="Phone" value={profile.phone ?? ""} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} /><Field label="Biography" value={profile.bio ?? ""} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} /></> : null}{profileShape === "staff_profile" ? <><Field label="Position" value={profile.position ?? ""} onChange={(e) => setProfile({ ...profile, position: e.target.value })} /><Field label="Phone" value={profile.phone ?? ""} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} /></> : null}{confirmMutation.error ? <StatePanel state="error" title="Role transition failed" description={getErrorMessage(confirmMutation.error)} /> : null}<Button variant="danger" disabled={!preview.allowed || !preview.confirmation_token} loading={confirmMutation.isPending} onClick={() => confirmMutation.mutate()}>Confirm role transition</Button></>}</Modal>;
+
+  return <Modal open title={t("changeRole")} description={t("roleTransitionHelp")} onClose={onClose} pending={pending} dirty={dirty}>
+    <SelectField label={t("targetRole")} value={target} onChange={(event) => { setTarget(event.target.value as UserRole); setPreview(null); setProfile({}); }}><option value="ADMIN">{t("admin")}</option><option value="DOCTOR">{t("doctors")}</option><option value="STAFF">{t("staff")}</option></SelectField>
+    {!preview ? <Button onClick={() => previewMutation.mutate()} loading={previewMutation.isPending}>{t("previewTransition")}</Button> : <>
+      <SurfaceCard><SectionHeading title={t("transitionConsequences")} />{preview.allowed ? <ul>{preview.consequences.map((item) => <li key={item}>{transitionCopy(item, t)}</li>)}</ul> : <p>{t("blockedTransition")}</p>}</SurfaceCard>
+      {profileShape === "doctor_profile" ? <><Field label={t("specialty")} value={profile.specialty ?? ""} onChange={(event) => setProfile({ ...profile, specialty: event.target.value })} /><Field label={t("phone")} value={profile.phone ?? ""} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /><Field label={t("biography")} value={profile.bio ?? ""} onChange={(event) => setProfile({ ...profile, bio: event.target.value })} /></> : null}
+      {profileShape === "staff_profile" ? <><Field label={t("position")} value={profile.position ?? ""} onChange={(event) => setProfile({ ...profile, position: event.target.value })} /><Field label={t("phone")} value={profile.phone ?? ""} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /></> : null}
+      {confirmMutation.error ? <StatePanel state="error" title={t("roleTransitionFailed")} description={getErrorMessage(confirmMutation.error)} /> : null}
+      <Button variant="danger" disabled={!preview.allowed || !preview.confirmation_token} loading={confirmMutation.isPending} onClick={() => confirmMutation.mutate()}>{t("confirmTransition")}</Button>
+    </>}
+  </Modal>;
 }
 
 export function AdminUserDetailPage() {
-  const id = Number(useParams().userId); const user = useUser(id); const client = useQueryClient(); const [resetOpen, setResetOpen] = useState(false); const [deactivateOpen, setDeactivateOpen] = useState(false); const [transitionOpen, setTransitionOpen] = useState(false); const [password, setPassword] = useState(""); const t = useFeatureT();
-  const reset = useMutation({ mutationFn: () => usersApi.resetPassword(id, { temporary_password: password }), onSuccess: () => { invalidateRoleData(client, id); setPassword(""); setResetOpen(false); } }); const deactivate = useMutation({ mutationFn: () => usersApi.deactivate(id), onSuccess: () => { invalidateRoleData(client, id); setDeactivateOpen(false); } }); const reactivate = useMutation({ mutationFn: () => usersApi.reactivate(id), onSuccess: () => invalidateRoleData(client, id) });
-  if (user.isLoading) return <StatePanel state="loading" title="Loading account" />; if (user.isError || !user.data) return <StatePanel state="error" title="Account unavailable" description={user.error ? getErrorMessage(user.error) : undefined} />; const item = user.data;
-  return <div className="admin-page"><Link className="inline-back-link" to="/admin/users">Back to Users & Access</Link><PageHeaderV2 title={item.full_name} description="Authentication, security, and role authority" /><div className="dashboard-columns"><SurfaceCard><SectionHeading title="Account identity" /><dl className="detail-grid"><div><dt>Login email</dt><dd className="bidi-isolate">{item.email}</dd></div><div><dt>Created</dt><dd>{formatDateTime(item.created_at)}</dd></div><div><dt>Updated</dt><dd>{formatDateTime(item.updated_at)}</dd></div></dl></SurfaceCard><SurfaceCard><SectionHeading title="Security / password state" /><p><StatusBadge status={item.is_active ? "ACTIVE" : "INACTIVE"} /> · {item.must_change_password ? "Must change password" : "Password current"}</p><Button variant="secondary" onClick={() => setResetOpen(true)}><KeyRound size={16} />Reset temporary password</Button></SurfaceCard><SurfaceCard><SectionHeading title="Role and access" /><p>{item.role}</p><Button variant="secondary" onClick={() => setTransitionOpen(true)}><UserRoundCog size={16} />Change role</Button></SurfaceCard><SurfaceCard><SectionHeading title="Linked Team profile" />{item.team_member_id ? <Link className="v2-button secondary" to={`/admin/team/${item.team_member_id}`}>Open Team profile</Link> : <p>{profileState(item)}</p>}</SurfaceCard></div><SurfaceCard><SectionHeading title="Account access" />{item.is_active ? <Button variant="danger" onClick={() => setDeactivateOpen(true)}><ShieldCheck size={16} />Deactivate account</Button> : <Button onClick={() => reactivate.mutate()} loading={reactivate.isPending}>Reactivate account</Button>}{reactivate.error ? <StatePanel state="error" title="Unable to reactivate account" description={getErrorMessage(reactivate.error)} /> : null}</SurfaceCard>
-    <ConfirmDialog open={resetOpen} title="Reset temporary password" description="This forces a password change at next sign in." onClose={() => setResetOpen(false)} pending={reset.isPending} dirty={Boolean(password)}><Field label="Temporary password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /><Button loading={reset.isPending} disabled={!password} onClick={() => reset.mutate()}>Reset password</Button>{reset.error ? <StatePanel state="error" title="Unable to reset password" description={getErrorMessage(reset.error)} /> : null}</ConfirmDialog><ConfirmDialog open={deactivateOpen} title="Deactivate account" description="This preserves history and does not change professional status." onClose={() => setDeactivateOpen(false)} pending={deactivate.isPending}><Button variant="danger" loading={deactivate.isPending} onClick={() => deactivate.mutate()}>Deactivate account</Button>{deactivate.error ? <StatePanel state="error" title="Unable to deactivate account" description={getErrorMessage(deactivate.error)} /> : null}</ConfirmDialog>{transitionOpen ? <RoleTransition user={item} onClose={() => setTransitionOpen(false)} /> : null}
+  const id = Number(useParams().userId);
+  const user = useUser(id);
+  const client = useQueryClient();
+  const [resetOpen, setResetOpen] = useState(false);
+  const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [transitionOpen, setTransitionOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const t = useFeatureT();
+  const reset = useMutation({ mutationFn: () => usersApi.resetPassword(id, { temporary_password: password }), onSuccess: () => { invalidateRoleData(client, id); setPassword(""); setResetOpen(false); } });
+  const deactivate = useMutation({ mutationFn: () => usersApi.deactivate(id), onSuccess: () => { invalidateRoleData(client, id); setDeactivateOpen(false); } });
+  const reactivate = useMutation({ mutationFn: () => usersApi.reactivate(id), onSuccess: () => invalidateRoleData(client, id) });
+  if (user.isLoading) return <StatePanel state="loading" title={t("loadingAccount")} />;
+  if (user.isError || !user.data) return <StatePanel state="error" title={t("accountUnavailable")} description={user.error ? getErrorMessage(user.error) : undefined} />;
+  const item = user.data;
+
+  return <div className="admin-page"><Link className="inline-back-link" to="/admin/users">{t("usersAccess")}</Link><PageHeaderV2 title={item.full_name} description={t("authenticationAuthority")} /><div className="dashboard-columns">
+    <SurfaceCard><SectionHeading title={t("accountIdentity")} /><dl className="detail-grid"><div><dt>{t("loginEmail")}</dt><dd className="bidi-isolate">{item.email}</dd></div><div><dt>{t("created")}</dt><dd className="bidi-isolate">{formatDateTime(item.created_at)}</dd></div><div><dt>{t("updated")}</dt><dd className="bidi-isolate">{formatDateTime(item.updated_at)}</dd></div></dl></SurfaceCard>
+    <SurfaceCard><SectionHeading title={t("securityPassword")} /><p><StatusBadge status={item.is_active ? "ACTIVE" : "INACTIVE"} /> · {item.must_change_password ? t("mustChangePassword") : t("passwordCurrent")}</p><Button variant="secondary" onClick={() => setResetOpen(true)}><KeyRound size={16} />{t("resetPassword")}</Button></SurfaceCard>
+    <SurfaceCard><SectionHeading title={t("roleAccess")} /><p>{roleLabel(item.role, t)}</p><Button variant="secondary" onClick={() => setTransitionOpen(true)}><UserRoundCog size={16} />{t("changeRole")}</Button></SurfaceCard>
+    <SurfaceCard><SectionHeading title={t("linkedTeamProfile")} />{item.team_member_id ? <Link className="v2-button secondary" to={`/admin/team/${item.team_member_id}`}>{t("openTeamProfile")}</Link> : <p>{profileState(item, t)}</p>}</SurfaceCard>
+  </div><SurfaceCard><SectionHeading title={t("accountAccess")} />{item.is_active ? <Button variant="danger" onClick={() => setDeactivateOpen(true)}><ShieldCheck size={16} />{t("deactivate")}</Button> : <Button onClick={() => reactivate.mutate()} loading={reactivate.isPending}>{t("reactivate")}</Button>}{reactivate.error ? <StatePanel state="error" title={t("unableReactivate")} description={getErrorMessage(reactivate.error)} /> : null}</SurfaceCard>
+    <ConfirmDialog open={resetOpen} title={t("resetPassword")} description={t("resetPasswordHelp")} onClose={() => setResetOpen(false)} pending={reset.isPending} dirty={Boolean(password)}><Field label={t("temporaryPassword")} type="password" value={password} onChange={(event) => setPassword(event.target.value)} /><Button loading={reset.isPending} disabled={!password} onClick={() => reset.mutate()}>{t("resetPasswordAction")}</Button>{reset.error ? <StatePanel state="error" title={t("unableResetPassword")} description={getErrorMessage(reset.error)} /> : null}</ConfirmDialog>
+    <ConfirmDialog open={deactivateOpen} title={t("deactivate")} description={t("deactivateHelp")} onClose={() => setDeactivateOpen(false)} pending={deactivate.isPending}><Button variant="danger" loading={deactivate.isPending} onClick={() => deactivate.mutate()}>{t("deactivate")}</Button>{deactivate.error ? <StatePanel state="error" title={t("unableDeactivate")} description={getErrorMessage(deactivate.error)} /> : null}</ConfirmDialog>
+    {transitionOpen ? <RoleTransition user={item} onClose={() => setTransitionOpen(false)} /> : null}
   </div>;
 }
 
