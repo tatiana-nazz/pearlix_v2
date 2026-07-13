@@ -21,12 +21,12 @@ function invalidate(queryClient: ReturnType<typeof useQueryClient>, invoiceId?: 
 export function useBillingMutations() {
   const client = useQueryClient();
   return {
-    createHandoff: useMutation({ mutationFn: ({ visitId, payload }: { visitId: number; payload: BillingHandoffCreatePayload }) => visitsApi.createBillingHandoff(visitId, payload), onSuccess: (_, vars) => { invalidate(client); void client.invalidateQueries({ queryKey: ["visit", vars.visitId] }); } }),
+    createHandoff: useMutation({ mutationFn: ({ visitId, payload }: { visitId: number; payload: BillingHandoffCreatePayload }) => visitsApi.createBillingHandoff(visitId, payload), onSuccess: (handoff, vars) => { invalidate(client, undefined, handoff.id); void client.invalidateQueries({ queryKey: ["visit", vars.visitId] }); void client.invalidateQueries({ queryKey: ["patient", handoff.patient.id] }); } }),
     convert: useMutation({ mutationFn: ({ handoffId, payload }: { handoffId: number; payload: HandoffConversionPayload }) => billingApi.convertHandoff(handoffId, payload), onSuccess: (invoice, vars) => invalidate(client, invoice.id, vars.handoffId) }),
     dismiss: useMutation({ mutationFn: ({ handoffId, reason }: { handoffId: number; reason?: string }) => billingApi.dismissHandoff(handoffId, reason), onSuccess: (_, vars) => invalidate(client, undefined, vars.handoffId) }),
-    createInvoice: useMutation({ mutationFn: (payload: InvoicePayload) => billingApi.createInvoice(payload), onSuccess: (invoice) => invalidate(client, invoice.id) }),
+    createInvoice: useMutation({ mutationFn: (payload: InvoicePayload) => billingApi.createInvoice(payload), onSuccess: (invoice) => { invalidate(client, invoice.id); void client.invalidateQueries({ queryKey: ["patient", invoice.patient.id] }); } }),
     updateInvoice: useMutation({ mutationFn: ({ invoiceId, payload }: { invoiceId: number; payload: InvoicePayload }) => billingApi.updateInvoice(invoiceId, payload), onSuccess: (invoice) => invalidate(client, invoice.id) }),
     cancelInvoice: useMutation({ mutationFn: ({ invoiceId, reason }: { invoiceId: number; reason?: string }) => billingApi.cancelInvoice(invoiceId, reason), onSuccess: (invoice) => invalidate(client, invoice.id) }),
-    recordPayment: useMutation({ mutationFn: ({ invoiceId, payload }: { invoiceId: number; payload: PaymentPayload }) => billingApi.recordPayment(invoiceId, payload), onSuccess: (result, vars) => { client.setQueryData(["invoice", vars.invoiceId], (current: unknown) => current); invalidate(client, vars.invoiceId); } }),
+    recordPayment: useMutation({ mutationFn: ({ invoiceId, payload }: { invoiceId: number; payload: PaymentPayload }) => billingApi.recordPayment(invoiceId, payload), onSuccess: (_result, vars) => invalidate(client, vars.invoiceId) }),
   };
 }

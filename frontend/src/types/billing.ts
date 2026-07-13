@@ -5,6 +5,8 @@ import type { AppointmentStatus } from "./appointments";
 import type { PatientList } from "./patients";
 import type { VisitStatus } from "./visits";
 
+declare global { interface String { replaceAll(searchValue: string | RegExp, replaceValue: string): string; } }
+
 export type BillingHandoffStatus = "PENDING" | "CONVERTED_TO_INVOICE" | "DISMISSED";
 export type InvoiceStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
 
@@ -116,4 +118,18 @@ export interface PaymentPayload {
 export interface PaymentResponse {
   payment: Payment;
   invoice: InvoiceSummary;
+}
+
+export interface InvoicePrintData {
+  clinic: { clinic_name: string; address: string; phone_number: string; email: string };
+  invoice: { invoice_number: string; status: InvoiceStatus; created_at: string; cancelled_at: string | null; cancelled_reason: string };
+  patient: { id: number; full_name: string; phone_number: string };
+  visit: BillingVisitSummary | null;
+  appointment: Invoice["appointment"];
+  currency: Currency;
+  total_amount: string;
+  paid_amount: string;
+  remaining_amount: string;
+  notes: string;
+  payments: Payment[];
 }

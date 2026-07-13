@@ -7,6 +7,7 @@ import type {
   Payment,
   PaymentPayload,
   PaymentResponse,
+  InvoicePrintData,
 } from "../../types/billing";
 import { api } from "../http";
 
@@ -26,5 +27,5 @@ export const billingApi = {
   payments: (invoiceId: number) => api.get<Payment[]>(`/invoices/${invoiceId}/payments/`),
   recordPayment: (invoiceId: number, payload: PaymentPayload) =>
     api.post<PaymentResponse, PaymentPayload>(`/invoices/${invoiceId}/payments/`, payload),
-  printData: (invoiceId: number) => api.get<Record<string, unknown>>(`/invoices/${invoiceId}/print-data/`),
+  printData: (invoiceId: number) => api.get<InvoicePrintData>(`/invoices/${invoiceId}/print-data/`),
 };
