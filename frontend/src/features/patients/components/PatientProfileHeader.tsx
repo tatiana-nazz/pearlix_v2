@@ -22,9 +22,9 @@ export function PatientProfileHeader({ role, patient, onEdit, onArchive, onUnarc
     <section className="profile-header">
       <div>
         <p className="eyebrow">{t("patientProfile")}</p>
-        <h2>{patient.full_name}</h2>
+        <h2 className="bidi-isolate">{patient.full_name}</h2>
         <p>
-          <span className="bidi-isolate">{displayText(patient.phone_number)}</span> - <span className="bidi-isolate">{patient.age ? `${patient.age} ${t("yearsOld")}` : t("ageNotRecorded")}</span> - {patient.gender}
+          <span className="bidi-isolate">{displayText(patient.phone_number)}</span> - <span className="bidi-isolate">{patient.age ? `${patient.age} ${t("yearsOld")}` : t("ageNotRecorded")}</span> - {patient.gender === "Male" ? t("male") : t("female")}
         </p>
       </div>
       <div className="profile-actions">

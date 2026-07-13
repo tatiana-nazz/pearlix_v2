@@ -995,6 +995,8 @@ Network/offline fallback:
 
 No critical backend blocker was found for frontend integration planning.
 
+The production contract is current through completed Phase 14D. Backend runtime changed in Phase 14D: no. Browser QA remains the Phase 14F visual/UAT gate.
+
 ## O. Historical Phase Order
 
 - 13B — frontend foundation: Vite/React/TypeScript app structure, API client, environment config, and shared types.

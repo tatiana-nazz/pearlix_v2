@@ -26,7 +26,7 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
 
   return (
     <div className="patient-page narrow">
-      <PageHeaderV2 title={t("addPatient")} description="Create a patient record using the clinic patient API." />
+      <PageHeaderV2 title={t("addPatient")} description={t("createPatientDescription")} />
       <SurfaceCard major>
         <PatientForm
           mode="create"

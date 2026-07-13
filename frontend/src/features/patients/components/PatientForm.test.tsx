@@ -34,7 +34,7 @@ describe("PatientForm", () => {
   it("renders Doctor note without archive fields", () => {
     render(<PatientForm mode="create" role="DOCTOR" onSubmit={vi.fn()} />);
 
-    expect(screen.getByText(/Doctors can update patient profile fields/)).toBeInTheDocument();
+    expect(screen.getByText(/Doctors can update active patient profiles/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Archived/)).not.toBeInTheDocument();
   });
 });

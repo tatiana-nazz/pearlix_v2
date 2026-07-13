@@ -197,4 +197,6 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
+Phase 14D is complete: dashboards, Team, Users & Access, appointments, and patient workflows use the v2 palette, EN/AR copy, RTL/bidi utilities, and safe centered overlays. Backend runtime changes in Phase 14D: no. Migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate. Next is Phase 14E — Schedules and Leave, Visits, X-rays and AI, Billing, Clinic Settings, and Audit.
+
 `backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14C is complete with 75 frontend tests. Next is Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access. Deployment remains paused pending Phase 14D–14F and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14C.md`.

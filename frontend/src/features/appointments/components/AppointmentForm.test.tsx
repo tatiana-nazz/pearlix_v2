@@ -65,4 +65,15 @@ describe("AppointmentForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });
+
+  it("clears a stale selected patient ID when the visible query is replaced", async () => {
+    const onSubmit = vi.fn();
+    render(<AppointmentForm mode="create" doctors={[...doctors]} patients={[...patients]} initialDate="2026-07-10" initialDoctorId={7} onSubmit={onSubmit} />);
+    const patient = screen.getByRole("combobox", { name: "Patient" });
+    await userEvent.click(patient); await userEvent.click(screen.getByRole("button", { name: /Maya Patient/ }));
+    await userEvent.clear(patient); await userEvent.type(patient, "Unrelated patient");
+    await userEvent.click(screen.getByRole("button", { name: "Save appointment" }));
+    expect(await screen.findByText("Patient is required.")).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });

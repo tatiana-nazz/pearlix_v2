@@ -1,8 +1,9 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import type { UserRole } from "../../../types/auth";
 import type { PatientBloodGroup, PatientDetail, PatientGender } from "../../../types/patients";
 import { useFeatureT } from "../../../layouts/i18n";
+import { useOverlayClose } from "../../../components/v2";
 import {
   PatientFormErrors,
   PatientFormValues,
@@ -25,6 +26,7 @@ interface PatientFormProps {
   onCancel?: () => void;
   onReloadLatest?: () => void;
   onContinueReviewing?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 const bloodGroups = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
@@ -44,14 +46,22 @@ export function PatientForm({
   onCancel,
   onReloadLatest,
   onContinueReviewing,
+  onDirtyChange,
 }: PatientFormProps) {
   const t = useFeatureT();
   const [values, setValues] = useState<PatientFormValues>(() => (mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues));
   const [errors, setErrors] = useState<PatientFormErrors>({});
+  const initialSnapshot = useRef(JSON.stringify(mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues));
+  const requestClose = useOverlayClose();
 
   useEffect(() => {
-    if (mode === "edit") setValues(formValuesFromPatient(patient));
+    const next = mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues;
+    initialSnapshot.current = JSON.stringify(next);
+    setValues(next);
+    onDirtyChange?.(false);
   }, [mode, patient]);
+
+  useEffect(() => { onDirtyChange?.(JSON.stringify(values) !== initialSnapshot.current); }, [onDirtyChange, values]);
 
   useEffect(() => {
     if (error) setErrors(apiErrorToFormErrors(error));
@@ -70,6 +80,8 @@ export function PatientForm({
       return;
     }
     await onSubmit(values);
+    initialSnapshot.current = JSON.stringify(values);
+    onDirtyChange?.(false);
   }
 
   const fieldPrefix = mode === "create" ? "create-patient" : "edit-patient";
@@ -82,10 +94,10 @@ export function PatientForm({
           <p>{errors.conflict}</p>
           <div className="form-actions">
             <button className="button secondary compact-button" type="button" onClick={onContinueReviewing}>
-              Continue reviewing my changes
+              {t("continueReviewing")}
             </button>
             <button className="button primary compact-button" type="button" onClick={onReloadLatest}>
-              Reload latest record
+              {t("reloadLatest")}
             </button>
           </div>
         </div>
@@ -121,8 +133,8 @@ export function PatientForm({
           <label>
             {t("gender")} <span aria-hidden="true">*</span>
             <select value={values.gender} onChange={(event) => updateField("gender", event.target.value as PatientGender)}>
-              <option value="Female">Female</option>
-              <option value="Male">Male</option>
+              <option value="Female">{t("female")}</option>
+              <option value="Male">{t("male")}</option>
             </select>
           </label>
 
@@ -177,7 +189,7 @@ export function PatientForm({
             <select value={values.blood_group} onChange={(event) => updateField("blood_group", event.target.value as PatientBloodGroup)}>
               {bloodGroups.map((group) => (
                 <option key={group || "none"} value={group}>
-                  {group || "Not recorded"}
+                  {group || t("notRecorded")}
                 </option>
               ))}
             </select>
@@ -198,16 +210,16 @@ export function PatientForm({
         </label>
       </section>
 
-      {role === "DOCTOR" ? <p className="form-note">Doctors can update patient profile fields for active patients only. Archive controls are hidden.</p> : null}
+      {role === "DOCTOR" ? <p className="form-note">{t("doctorPatientHelp")}</p> : null}
 
       <div className="v2-sticky-actions">
         {onCancel ? (
-          <button className="button secondary" type="button" onClick={onCancel} disabled={isSubmitting}>
+          <button className="button secondary" type="button" onClick={onCancel ?? requestClose} disabled={isSubmitting}>
             {t("cancel")}
           </button>
         ) : null}
         <button className="button primary" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? `${t("save")}...` : submitLabel ?? t("save")}
+          {isSubmitting ? t("saving") : submitLabel ?? t("save")}
         </button>
       </div>
     </form>

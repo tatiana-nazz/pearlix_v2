@@ -22,3 +22,12 @@ Project: Dental Clinic Management System Website
 Completed capability summary: authenticated role workspaces; patient, scheduling, visit, X-ray/AI, and billing workflows; Admin account management, clinic settings, and audit-log visibility; deterministic development-only integrated demo story; the Phase 14B UI refocus design freeze; and Phase 14C.0 Team APIs. Team uses the User ID as its stable member ID, has transactional Doctor/Staff onboarding, profile optimistic locking, professional/login status separation, linkage-state reporting, protected role transitions, reactivation, and sanitized audit events. Phase 14A seed story remains available.
 
 Remaining post-MVP limitations: real AI integration, email forgot-password, unsupported professional fields (gender, qualifications, license, profile photo, Staff biography, and activity notes), online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization. Team and Users & Access runtime UI is remaining in-scope Phase 14D redesign work.
+
+## Phase 14D Closure
+
+- Current completed phase: 14D Priority Workflows
+- Next phase: Phase 14E — Schedules and Leave, Visits, X-rays and AI, Billing, Clinic Settings, and Audit
+- Final frontend regression: 90 passed
+- Backend runtime changes in Phase 14D: no
+- Migrations in Phase 14D: none
+- Browser QA/UAT remains pending as the Phase 14F visual acceptance gate.

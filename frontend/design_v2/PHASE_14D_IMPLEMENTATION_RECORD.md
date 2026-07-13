@@ -18,4 +18,4 @@ Supported professional fields remain Doctor specialty/phone/bio and Staff positi
 
 ## Completion status
 
-This is an in-progress implementation record, not a Phase 14D completion record. Palette correction, dark token implementation, Staff Dashboard visual correction, and the appointment modal/localization/RTL/interaction unit are complete. Automated frontend verification passed (88 tests); focused appointment backend checks passed (40 tests); browser QA is pending because the local app was unavailable, and the bounded migration-drift command timed out. Patient localization, RTL/bidi, visual acceptance, and final Phase 14D closure remain; Phase 14E has not started.
+This is the Phase 14D implementation record. Palette correction, dashboards, Team, Users & Access, centered appointment overlays, and patient workflow localization/RTL/bidi are complete. Automated frontend verification is recorded in `QA_14D.md`; browser QA remains pending as the Phase 14F visual/UAT gate. Backend runtime changed: no; migrations: none. Phase 14E has not started.

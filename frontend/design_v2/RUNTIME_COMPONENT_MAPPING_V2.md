@@ -16,7 +16,7 @@ No v2 primitive may coexist indefinitely with one-off CSS. Each old component is
 | dialog backdrops | Replace | `Modal`, `Drawer`, `ConfirmDialog` 14C | overlay primitive; high focus risk; Escape/outside/dirty/focus-return tests; delete all local backdrop panels after migration. |
 | Loading/Empty/Error | Refactor | `StatePanel`, `Skeleton` 14C | parallel primitives; low; state snapshots; deprecate old states after pages convert. |
 | dashboard pages | Refactor | role dashboard compositions 14D | after 14C primitives; high route-data risk; seeded KPI/link/preview tests; remove technical copy/components after all 3 accepted. |
-| appointment components | Refactor/split | toolbar, timeline/grid/list, centered appointment Modal, reschedule modal 14D | after tables/overlay; high availability risk; role/action/date/localization/dirty-close tests; no appointment drawer origin remains. |
+| appointment components | Refactor/split | toolbar, timeline/grid/list, centered appointment Modal, reschedule modal 14D | after tables/overlay; high availability risk; role/action/date/localization/dirty-close tests; no side-panel origin remains. |
 | patient components | Refactor | profile header/tabs/row/form 14D | after patient shell; high versioning risk; edit/archive/conflict tests; remove old profile grids on acceptance. |
 | visit pages | Refactor | clinical workspace/read-only detail 14E | after form/overlay; high ownership risk; save/complete/read-only tests; remove old workspace CSS after tests. |
 | X-ray/AI pages | Refactor | imaging list/viewer/AI panel/external-case action sheet 14E | after media primitive; high protected-media risk; blob/revoke/RBAC tests; delete old xray grids after visual/regression evidence. |
@@ -34,7 +34,7 @@ No v2 primitive may coexist indefinitely with one-off CSS. Each old component is
 
 ## Remaining feature-specific overlays
 
-The shared v2 overlay foundation is complete in 14C. Legacy feature consumers remain only to avoid feature redesign: `features/appointments/components/AppointmentConfirmDialog.tsx` and `AppointmentDetailsDialog.tsx` (14D, remove after appointment drawer/confirm migration); `features/patients/components/ArchivePatientDialog.tsx` and `pages/patients/PatientProfilePage.tsx` (14D, remove after patient detail/form migration); `pages/admin/AdminManagementPages.tsx` (14D, remove after Users & Access migration); `features/billing/components/BillingDialogs.tsx` and `pages/billing/BillingPages.tsx` (14E, remove after billing workflow migration); `features/visits/components/CompleteVisitDialog.tsx` (14E, remove after visit workspace migration); and `features/xrays/components/XrayUploadDialog.tsx` plus `ExternalXrayDialogs.tsx` (14E, remove after imaging workflow migration).
+The shared v2 overlay foundation is complete in 14C. Legacy feature consumers remain only to avoid feature redesign: `features/patients/components/ArchivePatientDialog.tsx` and `pages/patients/PatientProfilePage.tsx` (14D, remove after patient detail/form migration); `pages/admin/AdminManagementPages.tsx` (14D, remove after Users & Access migration); `features/billing/components/BillingDialogs.tsx` and `pages/billing/BillingPages.tsx` (14E, remove after billing workflow migration); `features/visits/components/CompleteVisitDialog.tsx` (14E, remove after visit workspace migration); and `features/xrays/components/XrayUploadDialog.tsx` plus `ExternalXrayDialogs.tsx` (14E, remove after imaging workflow migration).
 
 ## Phase 14D in-progress migration note
 

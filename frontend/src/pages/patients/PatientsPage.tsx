@@ -6,6 +6,7 @@ import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
 import { ConfirmDialog } from "../../components/v2";
+import { useFeatureT } from "../../layouts/i18n";
 import { ArchiveFilter, DoctorWorkflowFilter, PatientFilters } from "../../features/patients/components/PatientFilters";
 import { PatientTable } from "../../features/patients/components/PatientTable";
 import { useArchivePatient, useUnarchivePatient } from "../../features/patients/hooks/usePatientMutations";
@@ -16,12 +17,6 @@ import type { PatientListFilters, PatientListItem } from "../../types/patients";
 
 interface PatientsPageProps {
   role: UserRole;
-}
-
-function roleDescription(role: UserRole): string {
-  if (role === "STAFF") return "Create, update, archive, and restore patient records according to backend permissions.";
-  if (role === "DOCTOR") return "Clinic-wide active patient access with profile editing where backend rules allow.";
-  return "Read-only patient access for clinic supervision.";
 }
 
 function paramsToFilters(role: UserRole, searchParams: URLSearchParams, debouncedSearch: string): PatientListFilters {
@@ -39,6 +34,7 @@ function paramsToFilters(role: UserRole, searchParams: URLSearchParams, debounce
 }
 
 export function PatientsPage({ role }: PatientsPageProps) {
+  const t = useFeatureT();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -112,17 +108,19 @@ export function PatientsPage({ role }: PatientsPageProps) {
   const currentPage = filters.page ?? 1;
   const isMutating = archive.isPending || unarchive.isPending;
   const dialogError = dialogMode === "archive" ? archive.error : unarchive.error;
+  const workspace = role === "STAFF" ? t("staffWorkspace") : role === "DOCTOR" ? t("doctorWorkspace") : t("adminWorkspace");
+  const description = role === "STAFF" ? t("patientWorkspaceStaff") : role === "DOCTOR" ? t("patientWorkspaceDoctor") : t("patientWorkspaceAdmin");
 
   return (
     <div className="patient-page">
       <PageHeader
-        eyebrow={`${role.toLowerCase()} workspace`}
-        title="Patients"
-        description={roleDescription(role)}
+        eyebrow={workspace}
+        title={t("patients")}
+        description={description}
         actions={
           permissions.canCreate ? (
             <Link className="button primary" to={newPatientPath(role)}>
-              Add Patient
+              {t("addPatient")}
             </Link>
           ) : null
         }
@@ -141,11 +139,11 @@ export function PatientsPage({ role }: PatientsPageProps) {
       </Card>
 
       <Card>
-        {patients.isLoading ? <LoadingState title="Loading patients..." /> : null}
-        {patients.isError ? <ErrorState error={patients.error} onRetry={() => void patients.refetch()} title="Unable to load patients" /> : null}
+        {patients.isLoading ? <LoadingState title={t("loadingPatients")} /> : null}
+        {patients.isError ? <ErrorState error={patients.error} onRetry={() => void patients.refetch()} title={t("unableToLoadPatients")} /> : null}
         {patients.data ? (
           <>
-            {patients.isFetching ? <p className="panel-note">Refreshing patient results...</p> : null}
+            {patients.isFetching ? <p className="panel-note">{t("refreshingPatients")}</p> : null}
             <PatientTable
               role={role}
               patients={patients.data.results}
@@ -154,14 +152,14 @@ export function PatientsPage({ role }: PatientsPageProps) {
               onUnarchive={openUnarchiveDialog}
             />
             <div className="pagination-bar">
-              <span>{patients.data.count} records</span>
+              <span className="bidi-isolate">{patients.data.count} {t("records")}</span>
               <div>
                 <button className="button secondary" type="button" disabled={!patients.data.previous || currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
-                  Previous
+                  {t("previous")}
                 </button>
-                <span>Page {currentPage}</span>
+                <span className="bidi-isolate">{t("page")} {currentPage}</span>
                 <button className="button secondary" type="button" disabled={!patients.data.next} onClick={() => setPage(currentPage + 1)}>
-                  Next
+                  {t("next")}
                 </button>
               </div>
             </div>
@@ -169,7 +167,7 @@ export function PatientsPage({ role }: PatientsPageProps) {
         ) : null}
       </Card>
 
-      <ConfirmDialog open={Boolean(dialogPatient)} title={dialogMode === "archive" ? "Archive patient" : "Unarchive patient"} description={dialogPatient ? `${dialogMode === "archive" ? "Archive" : "Restore"} ${dialogPatient.full_name}.` : undefined} onClose={() => setDialogPatient(null)} pending={isMutating}><button className={dialogMode === "archive" ? "v2-button danger" : "v2-button"} type="button" disabled={isMutating} onClick={() => void confirmArchiveChange()}>{dialogMode === "archive" ? "Archive patient" : "Unarchive patient"}</button>{dialogError ? <ErrorState error={dialogError} title="Unable to update archive state" /> : null}</ConfirmDialog>
+      <ConfirmDialog open={Boolean(dialogPatient)} title={dialogMode === "archive" ? t("archivePatient") : t("unarchivePatient")} description={dialogPatient ? `${dialogMode === "archive" ? t("archivePatientPrompt") : t("unarchivePatientPrompt")} ${dialogPatient.full_name}` : undefined} onClose={() => setDialogPatient(null)} pending={isMutating}><button className={dialogMode === "archive" ? "v2-button danger" : "v2-button"} type="button" disabled={isMutating} onClick={() => void confirmArchiveChange()}>{dialogMode === "archive" ? t("archivePatient") : t("unarchivePatient")}</button>{dialogError ? <ErrorState error={dialogError} title={t("unableArchive")} /> : null}</ConfirmDialog>
     </div>
   );
 }

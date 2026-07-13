@@ -19,6 +19,13 @@ describe("Phase 14C shared primitives", () => {
     expect(screen.getByLabelText("Status: Not recorded")).toBeInTheDocument();
   });
 
+  it("localizes the status badge accessible label in Arabic", () => {
+    document.documentElement.lang = "ar";
+    render(<StatusBadge status="CHECKED_IN" />);
+    expect(screen.getByLabelText("الحالة: تم تسجيل الحضور")).toBeInTheDocument();
+    document.documentElement.lang = "en";
+  });
+
   it("supports tab selection and arrow-key navigation", () => {
     function Example() { const [selected, setSelected] = useState("one"); return <Tabs selected={selected} onSelect={setSelected} tabs={[{ id:"one", label:"One" }, { id:"two", label:"Two" }]} />; }
     render(<Example />);
