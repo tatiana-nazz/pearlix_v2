@@ -1,11 +1,12 @@
-"""Validate Phase 14E Task 1 documentation consistency (standard library only)."""
+"""Validate Phase 14E Tasks 1 and 2 documentation consistency (standard library only)."""
 from pathlib import Path
 import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND_TOTAL = "41 files, 148 tests"
-FOCUSED_BACKEND_TOTAL = "83 passed"
+FRONTEND_TOTAL = "43 files, 157 tests"
+SCHEDULE_BACKEND_TOTAL = "83 passed"
+VISIT_BACKEND_TOTAL = "248 passed"
 FILES = {
     "status": "backend/project_docs/PROJECT_STATUS.md",
     "readme": "frontend/README.md",
@@ -19,6 +20,18 @@ ACCEPTANCE_TESTS = {
     "frontend/src/api/endpoints/schedule.test.ts": (
         ("./schedule",),
         ("never DELETE", "apply and copy modes", "retrieve endpoint"),
+    ),
+    "frontend/src/features/visits/components/VisitWorkspace.test.tsx": (
+        ("./VisitWorkspace",),
+        ("five-field clinical-note payload", "blocks internal navigation", "saves dirty notes"),
+    ),
+    "frontend/src/pages/visits/DoctorActiveVisitPage.test.tsx": (
+        ("./DoctorActiveVisitPage",),
+        ("doctor day appointments", "loading, error retry, denied, and populated states"),
+    ),
+    "frontend/src/features/appointments/utils/appointmentPermissions.test.ts": (
+        ("./appointmentPermissions",),
+        ("never exposes Start Visit",),
     ),
 }
 
@@ -37,8 +50,10 @@ def main() -> int:
         "phase 14d automated acceptance is complete",
         "phase 14e is in progress",
         "schedules and leave",
+        "visits",
         FRONTEND_TOTAL,
-        FOCUSED_BACKEND_TOTAL,
+        SCHEDULE_BACKEND_TOTAL,
+        VISIT_BACKEND_TOTAL,
         "backend runtime changed: no",
         "migrations: none",
         "phase 14f",
@@ -47,12 +62,13 @@ def main() -> int:
         for phrase in required:
             if phrase not in source:
                 errors.append(f"{key} missing {phrase!r}")
-        for phrase in ("visits", "x-rays/ai", "billing", "clinic settings", "audit"):
+        for phrase in ("x-rays/ai", "billing", "clinic settings", "audit"):
             if phrase not in source:
                 errors.append(f"{key} does not state remaining Phase 14E work: {phrase!r}")
 
-    if "next phase 14e task: visits" not in text.get("status", ""):
-        errors.append("status does not identify Visits as the next Phase 14E task")
+    status = text.get("status", "")
+    if "next phase 14e task: x-rays and ai" not in status:
+        errors.append("status does not identify X-rays and AI as the next Phase 14E task")
     if "phase 14e has not started" in "\n".join(text.values()):
         errors.append("stale wording: 'phase 14e has not started'")
 
