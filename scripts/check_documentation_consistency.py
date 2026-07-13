@@ -4,7 +4,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND_TOTAL = "50 files, 166 tests"
+FRONTEND_TOTAL = "54 files, 176 tests"
 SCHEDULE_BACKEND_TOTAL = "83 passed"
 VISIT_BACKEND_TOTAL = "248 passed"
 XRAY_BACKEND_TOTAL = "131 passed"
@@ -61,11 +61,27 @@ ACCEPTANCE_TESTS = {
     ),
     "frontend/src/features/billing/components/BillingDialogs.test.tsx": (
         ("./BillingDialogs",),
-        ("omits currency", "overpayment"),
+        ("omits a currency payload", "overpayment"),
     ),
     "frontend/src/api/endpoints/billing.test.ts": (
         ("./billing",),
         ("POST-only", "never DELETE"),
+    ),
+    "frontend/src/features/billing/components/VisitBillingSection.test.tsx": (
+        ("./VisitBillingSection",),
+        ("owning completed visit", "Admin and Staff read-only"),
+    ),
+    "frontend/src/pages/billing/BillingPages.test.tsx": (
+        ("./BillingPages",),
+        ("Admin invoices read-only", "selected patient instead of a raw patient identifier", "structured print data"),
+    ),
+    "frontend/src/pages/billing/BillingInvoicePages.test.tsx": (
+        ("./BillingPages",),
+        ("Admin detail read-only", "remaining balance", "relationship fields"),
+    ),
+    "frontend/src/layouts/i18n.billing.test.ts": (
+        ("./i18n",),
+        ("typed Arabic billing labels",),
     ),
 }
 
@@ -120,6 +136,19 @@ def main() -> int:
         for scenario in scenarios:
             if scenario not in source:
                 errors.append(f"acceptance test lacks representative scenario {relative}: {scenario!r}")
+
+    billing_runtime = "\n".join(
+        (ROOT / relative).read_text(encoding="utf-8")
+        for relative in (
+            "frontend/src/pages/billing/BillingPages.tsx",
+            "frontend/src/features/billing/components/BillingDialogs.tsx",
+            "frontend/src/features/billing/components/BillingLists.tsx",
+            "frontend/src/features/billing/components/VisitBillingSection.tsx",
+        )
+    )
+    for forbidden in ("Patient ID", "JSON.stringify", "<pre", "dialog-backdrop", "dialog-panel"):
+        if forbidden in billing_runtime:
+            errors.append(f"billing runtime retains forbidden legacy content: {forbidden!r}")
 
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
