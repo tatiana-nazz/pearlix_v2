@@ -2,9 +2,9 @@
 
 ## Current Phase 14D acceptance-test closure
 
-Phase 14D acceptance-test closure is in progress. The frontend retains the approved dashboard, Team, Users & Access, appointment, and patient workflows while shared-overlay, route, and page acceptance coverage is completed. Backend runtime changed in Phase 14D: no; migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate. Phase 14E has not started.
+Phase 14D acceptance-test closure remains in progress. The frontend retains the approved dashboard, Team, Users & Access, appointment, and patient workflows with expanded shared-overlay, route, and page acceptance coverage; the full mandated scenario matrices remain outstanding. Backend runtime changed in Phase 14D: no; migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate. Phase 14E has not started.
 
-The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Phase 14D closure records 38 files, 104 tests, while browser QA remains pending for Phase 14F.
+The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Phase 14D closure records 40 files, 119 tests, while browser QA remains pending for Phase 14F.
 
 Phase: Originally created for 13A; capability audit through completed Phase 14C shell/token/icon/shared-component foundation. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `tatiana-nazz/pearlix_v2`, branch `phase-14d-priority-workflows`

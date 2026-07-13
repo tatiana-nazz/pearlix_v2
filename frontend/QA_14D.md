@@ -2,7 +2,7 @@
 
 ## Closure status
 
-Phase 14D acceptance-test closure is in progress. Phase 14E has not started. Browser QA remains the Phase 14F visual/UAT gate. Backend runtime changed: no. Migrations: none.
+Phase 14D acceptance-test closure remains in progress: the expanded suites pass, but the full mandated scenario matrices are not yet complete. Phase 14E has not started. Browser QA remains the Phase 14F visual/UAT gate. Backend runtime changed: no. Migrations: none.
 
 - Dashboards, Team, Users & Access, appointments, and patient workflows use the Phase 14D v2 surfaces.
 - Feature copy is typed EN/AR, with localized role, status, and availability labels; the Team and Users & Access pages do not present raw display enums.
@@ -12,7 +12,7 @@ Phase 14D acceptance-test closure is in progress. Phase 14E has not started. Bro
 
 ## Automated verification
 
-- Frontend: `npm.cmd run typecheck` passed; `npm.cmd run test:run` passed (38 files, 104 tests); `npm.cmd run build` passed.
+- Frontend: `npm.cmd run typecheck` passed; `npm.cmd run test:run` passed (40 files, 119 tests); `npm.cmd run build` passed.
 - Backend: `manage.py check` reported `System check identified no issues (0 silenced).` Migration drift check reported `No changes detected`.
 - Full backend suite: `python -m pytest` passed (414 tests).
 - Focused backend suites: Team/account and Users/role transition 35 passed; appointments 39 passed; patients and IDOR/security 25 passed (99 focused tests total).

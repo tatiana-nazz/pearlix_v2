@@ -4,7 +4,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND_TOTAL = "38 files, 104 tests"
+FRONTEND_TOTAL = "40 files, 119 tests"
 FILES = {
     "status": "backend/project_docs/PROJECT_STATUS.md",
     "audit": "backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md",
@@ -16,10 +16,12 @@ FILES = {
     "blueprints": "frontend/design_v2/SCREEN_BLUEPRINTS_V2.md",
 }
 ACCEPTANCE_TESTS = {
-    "frontend/src/pages/admin/TeamPages.test.tsx": "./TeamPages",
-    "frontend/src/pages/admin/AdminManagementPages.test.tsx": "./AdminManagementPages",
-    "frontend/src/pages/patients/NewPatientPage.test.tsx": "./NewPatientPage",
-    "frontend/src/pages/patients/PatientProfilePage.test.tsx": "./PatientProfilePage",
+    "frontend/src/pages/admin/TeamPages.test.tsx": ("./TeamPages", ("creates a Doctor", "pending")),
+    "frontend/src/pages/admin/AdminManagementPages.test.tsx": ("./AdminManagementPages", ("role blockers", "exact production payload")),
+    "frontend/src/pages/patients/NewPatientPage.test.tsx": ("./NewPatientPage", ("successful create", "ordinary route navigation")),
+    "frontend/src/pages/patients/PatientProfilePage.test.tsx": ("./PatientProfilePage", ("reload confirmation", "request failure")),
+    "frontend/src/pages/patients/PatientsPage.test.tsx": ("./PatientsPage", ("filters", "archive and unarchive")),
+    "frontend/src/pages/patients/PatientClinicalHistoryRoute.test.tsx": ("./PatientProfilePage", ("Visits selected", "Arabic/RTL")),
 }
 
 
@@ -34,11 +36,11 @@ def main() -> int:
             text[key] = path.read_text(encoding="utf-8").lower()
 
     expected = {
-        "status": ("current phase: phase 14d complete", "next phase: phase 14e", "backend runtime changes in phase 14d: no", "migrations in phase 14d: none", "phase 14f"),
-        "audit": ("phase 14d final acceptance is complete", "tatiana-nazz/pearlix_v2", "phase 14f"),
-        "readme": ("phase 14d final acceptance is complete", "phase 14e", "phase 14f"),
-        "qa": ("phase 14d final acceptance is complete", FRONTEND_TOTAL, "documentation consistency checker is not a substitute", "phase 14f"),
-        "record": ("phase 14d final acceptance is complete", FRONTEND_TOTAL, "backend runtime changed: no", "migrations: none"),
+        "status": ("current phase: phase 14d acceptance-test closure in progress", "next phase: phase 14e", "backend runtime changes in phase 14d: no", "migrations in phase 14d: none", "phase 14f"),
+        "audit": ("phase 14d acceptance-test closure remains in progress", "tatiana-nazz/pearlix_v2", "phase 14f"),
+        "readme": ("phase 14d acceptance-test closure remains in progress", "phase 14e", "phase 14f"),
+        "qa": ("phase 14d acceptance-test closure remains in progress", FRONTEND_TOTAL, "documentation consistency checker is not a substitute", "phase 14f"),
+        "record": ("phase 14d acceptance-test closure remains in progress", FRONTEND_TOTAL, "backend runtime changed: no", "migrations: none"),
         "mapping": ("phase 14d closure", "phase 14e is next"),
         "matrix": ("phase 14d automated closure", "phase 14f"),
         "blueprints": ("phase 14d closure note", "phase 14f"),
@@ -80,7 +82,7 @@ def main() -> int:
     else:
         errors.append("missing frontend/src/layouts/i18n.ts")
 
-    for relative, production_import in ACCEPTANCE_TESTS.items():
+    for relative, (production_import, scenarios) in ACCEPTANCE_TESTS.items():
         path = ROOT / relative
         if not path.is_file():
             errors.append(f"missing acceptance test {relative}")
@@ -90,6 +92,9 @@ def main() -> int:
             errors.append(f"empty acceptance test {relative}")
         elif production_import not in source:
             errors.append(f"acceptance test lacks production import {relative}")
+        for scenario in scenarios:
+            if scenario not in source:
+                errors.append(f"acceptance test lacks representative scenario {relative}: {scenario!r}")
 
     runtime_root = ROOT / "frontend/src"
     banned_runtime_copy = (
@@ -106,7 +111,7 @@ def main() -> int:
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
         return 1
-    print("Documentation consistency check passed. It does not replace typecheck, tests, build, or backend verification.")
+    print("Documentation consistency check passed. It does not replace typecheck, tests, build, backend verification, or browser QA.")
     return 0
 
 
