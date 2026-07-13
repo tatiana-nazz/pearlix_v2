@@ -15,7 +15,7 @@ Purpose: forced/voluntary credential change. Order: context, current password (w
 ## Dashboards
 
 ### `/admin/dashboard`
-Purpose: supervisory operations. Above fold: title/date, `Clinic settings` secondary action, KPIs Active patients → Today appointments → Needs reschedule → Pending handoffs → Unpaid invoices, then 8/4 grid: Needs attention queue (left) and Recent audit/clinic summary (right). Queue rows show identity, date/status, reason, chevron; 4 initial items, Show more to 8, Collapse, View all to filtered destination. KPI links: patients active, appointments date=today, needs-reschedule status, handoffs pending, invoices unpaid. 1440 five KPI columns; 1280 3+2; 1024 two columns then 7/5 stack; 768 one-column. Admin has no workflow mutation cards.
+Purpose: supervisory operations. Above fold: title/date, `Clinic settings` secondary action, four primary KPI cards and the operational queue. Queue rows show identity, date/status, reason, chevron; 4 initial items, Show more to 8, Collapse, View all to filtered destination. KPI links retain backed filtered destinations. 1440 four-card composition; 1280 two-by-two; 1024 two columns then stack; 768 one-column. Admin has no workflow mutation cards.
 
 ### `/staff/dashboard`
 Purpose: front-desk execution. Above fold: title/date, `New appointment`, `Find patient`, KPIs Today appointments → Checked in → Needs reschedule → Pending handoffs → Unpaid/partially paid. Queues in order: Upcoming today, Checked-in, Needs reschedule, Pending billing handoffs, Recent patients, Own schedule/leave summary. Rows show patient, time/doctor, status, context and chevron; each preview 4, expands to 8, collapses, View all routes to its filtered dataset. 1440 KPI 5-up and queues 6/6; 1280 3+2 and 7/5; 1024 two KPI columns/one queue column; 768 one. Click destinations preserve date/status; no fake navigation or unsupported payment action.
@@ -52,12 +52,12 @@ Purpose: role-specific discovery. Order: title/action (Staff `Add patient` only)
 Purpose: create. Order Identity → Contact → Medical summary → Insurance/emergency → Address → sticky Cancel/Create. 1200 px two-column form at 1440/1280, one column at 1024/768. Gender/blood group controlled; archive is not raw checkbox; duplicate/validation errors are local.
 
 ### `*/patients/:patientId`, `/doctor/patients/:patientId/clinical-history`
-Purpose: patient context/history. Order: back, identity header/avatar/contact/last-next, authorized Edit, tabs Overview → Medical history → Visits → Appointments → X-rays & AI → Billing (Admin/Staff only). Desktop header 8/4, overview 7/5; 1024 stack panels; 768 one-column cards. Doctor clinical-history route preselects Visits. Edit is dialog/drawer with dirty rule; Admin has no mutations; Doctor cannot see billing.
+Purpose: patient context/history. Order: back, identity header/avatar/contact/last-next, authorized Edit, tabs Overview → Medical history → Visits → Appointments → X-rays & AI → Billing (Admin/Staff only). Desktop header 8/4, overview 7/5; 1024 stack panels; 768 one-column cards. Doctor clinical-history route preselects Visits. Edit is a centered Modal with dirty rules; Admin has no mutations; Doctor cannot see billing.
 
 ## Appointments
 
 ### `*/appointments/day`
-Purpose: day operations. Order: title/Staff `New appointment`, tabs, Today/previous/next/date, doctor/status filters, vertical timeline, selected detail drawer. 1440 timeline 9/3 detail; 1280 8/4; 1024 one doctor timeline with drawer; 768 single column timeline. Blocks show time, patient, doctor, status text/icon. Staff state actions are inside detail; Admin read-only, Doctor own/start-visit only.
+Purpose: day operations. Order: title/Staff `New appointment`, tabs, Today/previous/next/date, doctor/status filters, vertical timeline, centered detail/form modal. 1440 timeline full shell; 1280 and 1024 retain contained content; 768 single column timeline. Blocks show time, patient, doctor, status text/icon. Staff state actions are inside centered modal; Admin read-only, Doctor own/start-visit only.
 
 ### `*/appointments/week`
 Purpose: weekly capacity. Same toolbar order; seven-day time grid with contained horizontal scroll at 1024/768, never tiny cards. 1440/1280 grid takes full shell; selected block opens a centered details modal. Doctor own data only; Staff mutation remains in centered modals.

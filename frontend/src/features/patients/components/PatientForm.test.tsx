@@ -37,4 +37,15 @@ describe("PatientForm", () => {
     expect(screen.getByText(/Doctors can update active patient profiles/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Archived/)).not.toBeInTheDocument();
   });
+
+  it("clears the conflict banner while preserving entered form values", async () => {
+    const error = new ApiClientError({ code: "VERSION_CONFLICT", message: "Conflict", details: {}, status: 409 });
+    const onContinueReviewing = vi.fn();
+    render(<PatientForm mode="create" role="STAFF" error={error} onSubmit={vi.fn()} onContinueReviewing={onContinueReviewing} />);
+    await userEvent.type(screen.getByLabelText(/First name/), "Maya");
+    await userEvent.click(screen.getByRole("button", { name: "Continue reviewing my changes" }));
+    expect(screen.queryByText(/changed elsewhere/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/First name/)).toHaveValue("Maya");
+    expect(onContinueReviewing).toHaveBeenCalledOnce();
+  });
 });

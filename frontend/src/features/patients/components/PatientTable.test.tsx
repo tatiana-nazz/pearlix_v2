@@ -59,4 +59,10 @@ describe("PatientTable", () => {
     expect(screen.queryByRole("button", { name: "Archive patient" })).not.toBeInTheDocument();
     expect(screen.queryByText("Status")).not.toBeInTheDocument();
   });
+
+  it("renders age zero and never exposes the optimistic-lock version", () => {
+    renderTable("STAFF", [{ ...patient, age: 0, version: 77 }]);
+    expect(screen.getByRole("row", { name: /0 years old/ })).toBeInTheDocument();
+    expect(screen.queryByText("77")).not.toBeInTheDocument();
+  });
 });

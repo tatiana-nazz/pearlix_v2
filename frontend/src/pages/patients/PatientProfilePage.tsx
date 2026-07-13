@@ -152,6 +152,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
               onContinueReviewing={() => updatePatient.reset()}
             />
         ) : null}
+        {reloadConfirm ? <div className="v2-discard-dialog" role="alertdialog" aria-modal="true" aria-label={t("reloadLatest")}><p>{t("reloadPatientPrompt")}</p><button className="v2-button secondary" type="button" onClick={() => setReloadConfirm(false)}>{t("continueReviewing")}</button><button className="v2-button danger" type="button" onClick={() => void handleReloadLatestPatient()}>{t("reloadLatest")}</button></div> : null}
       </Modal>
 
       <PatientProfileTabs role={role} activeTab={activeTab === "billing" && !permissions.canViewBillingTab ? "overview" : activeTab} onTabChange={setTab} />
@@ -192,7 +193,6 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
       ) : null}
 
       <ConfirmDialog open={Boolean(archiveMode)} title={archiveMode === "archive" ? t("archivePatient") : t("unarchivePatient")} description={archiveMode === "archive" ? t("archivePatientHelp") : t("unarchivePatientPrompt")} onClose={() => setArchiveMode(null)} pending={isArchiveSubmitting}><button className={archiveMode === "archive" ? "v2-button danger" : "v2-button"} type="button" onClick={() => void handleArchiveChange()} disabled={isArchiveSubmitting}>{archiveMode === "archive" ? t("archivePatient") : t("unarchivePatient")}</button>{archiveError ? <ErrorState error={archiveError} title={t("unableArchive")} /> : null}</ConfirmDialog>
-      <ConfirmDialog open={reloadConfirm} title={t("reloadLatest")} description={t("reloadPatientPrompt")} onClose={() => setReloadConfirm(false)}><button className="v2-button secondary" type="button" onClick={() => setReloadConfirm(false)}>{t("continueReviewing")}</button><button className="v2-button danger" type="button" onClick={() => void handleReloadLatestPatient()}>{t("reloadLatest")}</button></ConfirmDialog>
     </div>
   );
 }

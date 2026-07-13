@@ -1,15 +1,15 @@
 # Frontend/Backend Integration Audit
 
-## Phase 14C shell foundation
+## Current status through Phase 14D
 
-Phase 14C changes frontend shell and shared UI foundations only. Backend runtime changed: no; migrations: none. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract. Team and Users & Access runtime UI remains assigned to Phase 14D; no `/admin/team` runtime route is introduced in Phase 14C.
+Phase 14D is complete. The frontend includes the approved dashboard, Team, Users & Access, appointment, and patient workflows, including the `/admin/team` runtime route, EN/AR copy, RTL/bidi, and centered appointment modals. Backend runtime changed in Phase 14D: no; migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate.
 
 The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Browser QA remains pending.
 
 Phase: Originally created for 13A; capability audit through completed Phase 14C shell/token/icon/shared-component foundation. See `PROJECT_STATUS.md` for canonical current/next phase status.
-Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
+Backend source of truth: GitHub `tatiana-nazz/pearlix_v2`, branch `phase-14d-priority-workflows`
 API base URL: `/api/`  
-Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, Phase 14C.0 Team/account-linkage API foundation, and Phase 14C shell/token/icon/shared-component foundation are complete. The next phase is Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access; deployment remains paused.
+Backend status: Phase 14D Priority Workflows is complete. Phase 14E is next; deployment remains paused pending Phase 14F browser evidence.
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 

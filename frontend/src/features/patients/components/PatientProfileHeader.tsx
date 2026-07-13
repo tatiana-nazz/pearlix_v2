@@ -24,7 +24,7 @@ export function PatientProfileHeader({ role, patient, onEdit, onArchive, onUnarc
         <p className="eyebrow">{t("patientProfile")}</p>
         <h2 className="bidi-isolate">{patient.full_name}</h2>
         <p>
-          <span className="bidi-isolate">{displayText(patient.phone_number)}</span> - <span className="bidi-isolate">{patient.age ? `${patient.age} ${t("yearsOld")}` : t("ageNotRecorded")}</span> - {patient.gender === "Male" ? t("male") : t("female")}
+          <span className="bidi-isolate">{displayText(patient.phone_number)}</span> - <span className="bidi-isolate">{patient.age !== null && patient.age !== undefined ? `${patient.age} ${t("yearsOld")}` : t("ageNotRecorded")}</span> - {patient.gender === "Male" ? t("male") : t("female")}
         </p>
       </div>
       <div className="profile-actions">
@@ -35,7 +35,7 @@ export function PatientProfileHeader({ role, patient, onEdit, onArchive, onUnarc
           </button>
         ) : null}
         {permissions.canArchive ? (
-          <button className="button secondary" type="button" onClick={onArchive}>
+          <button className="button danger" type="button" onClick={onArchive}>
             {t("archivePatient")}
           </button>
         ) : null}

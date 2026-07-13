@@ -72,6 +72,14 @@ export function PatientForm({
     setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
   }
 
+  function message(error: string | undefined) {
+    if (!error) return error;
+    const known: Record<string, "firstNameRequired" | "lastNameRequired" | "genderRequired" | "dobFuture" | "requestFailed" | "patientChangedElsewhere"> = {
+      firstNameRequired: "firstNameRequired", lastNameRequired: "lastNameRequired", genderRequired: "genderRequired", dobFuture: "dobFuture", requestFailed: "requestFailed", patientChangedElsewhere: "patientChangedElsewhere",
+    };
+    return known[error] ? t(known[error]) : error;
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const nextErrors = validatePatientForm(values);
@@ -88,12 +96,12 @@ export function PatientForm({
 
   return (
     <form className="patient-form v2-form" onSubmit={handleSubmit} noValidate>
-      {errors.form ? <div className="form-error">{errors.form}</div> : null}
+      {errors.form ? <div className="form-error">{message(errors.form)}</div> : null}
       {errors.conflict ? (
         <div className="form-error conflict-banner">
-          <p>{errors.conflict}</p>
+          <p>{message(errors.conflict)}</p>
           <div className="form-actions">
-            <button className="button secondary compact-button" type="button" onClick={onContinueReviewing}>
+            <button className="button secondary compact-button" type="button" onClick={() => { setErrors((current) => ({ ...current, conflict: undefined, form: undefined })); onContinueReviewing?.(); }}>
               {t("continueReviewing")}
             </button>
             <button className="button primary compact-button" type="button" onClick={onReloadLatest}>
@@ -115,7 +123,7 @@ export function PatientForm({
               aria-invalid={Boolean(errors.first_name)}
               aria-describedby={errors.first_name ? `${fieldPrefix}-first-name-error` : undefined}
             />
-            {errors.first_name ? <span id={`${fieldPrefix}-first-name-error`} className="field-error">{errors.first_name}</span> : null}
+            {errors.first_name ? <span id={`${fieldPrefix}-first-name-error`} className="field-error">{message(errors.first_name)}</span> : null}
           </label>
 
           <label>
@@ -127,7 +135,7 @@ export function PatientForm({
               aria-invalid={Boolean(errors.last_name)}
               aria-describedby={errors.last_name ? `${fieldPrefix}-last-name-error` : undefined}
             />
-            {errors.last_name ? <span id={`${fieldPrefix}-last-name-error`} className="field-error">{errors.last_name}</span> : null}
+            {errors.last_name ? <span id={`${fieldPrefix}-last-name-error`} className="field-error">{message(errors.last_name)}</span> : null}
           </label>
 
           <label>
@@ -146,7 +154,7 @@ export function PatientForm({
               onChange={(event) => updateField("date_of_birth", event.target.value)}
               aria-invalid={Boolean(errors.date_of_birth)}
             />
-            {errors.date_of_birth ? <span className="field-error">{errors.date_of_birth}</span> : null}
+            {errors.date_of_birth ? <span className="field-error">{message(errors.date_of_birth)}</span> : null}
           </label>
         </div>
       </section>
@@ -213,7 +221,7 @@ export function PatientForm({
       {role === "DOCTOR" ? <p className="form-note">{t("doctorPatientHelp")}</p> : null}
 
       <div className="v2-sticky-actions">
-        {onCancel ? (
+        {onCancel || mode === "edit" ? (
           <button className="button secondary" type="button" onClick={onCancel ?? requestClose} disabled={isSubmitting}>
             {t("cancel")}
           </button>

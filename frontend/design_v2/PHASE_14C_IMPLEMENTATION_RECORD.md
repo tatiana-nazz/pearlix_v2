@@ -16,4 +16,4 @@ Six focused Phase 14C test files add 23 behavioral tests. Full frontend regressi
 
 The shared Modal/Drawer/ConfirmDialog foundation is complete and tested for outside click, Escape, focus, dirty discard, and pending locks. Named feature-consumer migrations remain: appointment dialogs (`features/appointments/components/*Dialog.tsx`, owner 14D); patient archive/edit dialogs (`features/patients/components/ArchivePatientDialog.tsx`, `pages/patients/PatientProfilePage.tsx`, owner 14D); billing dialogs (`features/billing/components/BillingDialogs.tsx`, `pages/billing/BillingPages.tsx`, owner 14E); visit dialogs (`features/visits/components/CompleteVisitDialog.tsx`, owner 14E); X-ray dialogs (`features/xrays/components/*Dialog*.tsx`, owner 14E); and Admin account dialogs (`pages/admin/AdminManagementPages.tsx`, owner 14D).
 
-No `/admin/team` runtime route exists. Browser QA remains pending. Next phase: Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access.
+At the Phase 14C checkpoint, the Team route had not yet been introduced. Browser QA remains pending. Subsequent Phase 14D work added the runtime Team surface.

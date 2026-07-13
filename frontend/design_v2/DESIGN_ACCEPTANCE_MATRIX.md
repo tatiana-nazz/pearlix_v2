@@ -14,8 +14,8 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | SH-02 | shell collapsed, Staff seed | 84 px Lucide rail, tooltip/name, persisted state | 1024 dark/EN; no letter labels | 14C |
 | SH-03 | tablet drawer, Doctor seed | labelled focus-trapped drawer, closes after navigation | 768 light/AR; no page overflow | 14C |
 | SH-04 | header utilities | theme, EN/AR, profile/role menu update preferences | interaction test + both themes/languages | 14C |
-| DB-ADM | `/admin/dashboard`, Phase 14A data | five ordered KPIs, 4→8 previews and filtered links/read-only | 1440/1024/768 populated + empty/error | 14D |
-| DB-STF | `/staff/dashboard`, Phase 14A data | exact five KPI/queue order and two quick actions | 1440/1024/768, queue click preserves filter | 14D |
+| DB-ADM | `/admin/dashboard`, Phase 14A data | approved four primary KPI cards, previews and filtered links/read-only | 1440/1024/768 populated + empty/error | 14D |
+| DB-STF | `/staff/dashboard`, Phase 14A data | approved four primary KPI cards, queue order and two quick actions | 1440/1024/768, queue click preserves filter | 14D |
 | DB-DOC | `/doctor/dashboard`, active visit seed | banner only when active; own-only KPI/queues | 1440/1024/768, no billing action | 14D |
 | TEAM-L | `/admin/team`, Doctor/Staff seeds | tabs, search, paged rich rows, only supported fields | 1440/1024/768 + Team API/RBAC test | 14C.0/14D |
 | TEAM-D | `/admin/team/:memberId` | ordered profile/schedule/leave/workload/account; no fake activity | supported-field/error/readonly evidence | 14C.0/14D |

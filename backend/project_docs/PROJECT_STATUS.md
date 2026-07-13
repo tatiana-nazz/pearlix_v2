@@ -1,33 +1,20 @@
 # Project Status
 
-This is the canonical current-phase tracker. Other project documents describe capabilities and defer current/next-phase status to this file.
+This is the canonical current-phase tracker for the Dental Clinic Management System Website.
 
-Project: Dental Clinic Management System Website
-
-- Current completed phase: 14C Shell, Tokens, Lucide Icons, and Shared Components
-- Phase 13 series: complete
-- Next phase: Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access
-- Next step: implement the complete approved Phase 14D priority-workflow scope
-- Final backend full regression: 414 passed
-- Final frontend regression: 75 passed
-- Backend runtime changes in Phase 14C: no
-- Migrations in Phase 14C: none
-- Backend runtime changes in Phase 14C.0: yes
-- Frontend visible UI changes in Phase 14C: shell/token/shared-component foundation
-- Frontend contract types, wrappers, and tests changed in Phase 14C.0: yes
-- Migrations in Phase 14C.0: accounts.0005 adds User/DoctorProfile/StaffProfile optimistic-lock versions
-- Browser QA/UAT: pending execution with seeded local QA accounts
-- Release recommendation: deployment paused; implement Phases 14D–14F, then complete visual browser QA before controlled deployment
-
-Completed capability summary: authenticated role workspaces; patient, scheduling, visit, X-ray/AI, and billing workflows; Admin account management, clinic settings, and audit-log visibility; deterministic development-only integrated demo story; the Phase 14B UI refocus design freeze; and Phase 14C.0 Team APIs. Team uses the User ID as its stable member ID, has transactional Doctor/Staff onboarding, profile optimistic locking, professional/login status separation, linkage-state reporting, protected role transitions, reactivation, and sanitized audit events. Phase 14A seed story remains available.
-
-Remaining post-MVP limitations: real AI integration, email forgot-password, unsupported professional fields (gender, qualifications, license, profile photo, Staff biography, and activity notes), online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization. Team and Users & Access runtime UI is remaining in-scope Phase 14D redesign work.
-
-## Phase 14D Closure
-
-- Current completed phase: 14D Priority Workflows
+- Current completed phase: Phase 14D — Priority Workflows
 - Next phase: Phase 14E — Schedules and Leave, Visits, X-rays and AI, Billing, Clinic Settings, and Audit
-- Final frontend regression: 90 passed
+- Final frontend regression: 92 passed
+- Focused backend verification: appointment 40 passed; patient 25 passed
 - Backend runtime changes in Phase 14D: no
 - Migrations in Phase 14D: none
-- Browser QA/UAT remains pending as the Phase 14F visual acceptance gate.
+- Browser QA/UAT: pending for the Phase 14F visual acceptance gate
+- Release recommendation: deployment remains paused pending Phase 14E, Phase 14F, and browser visual/UAT evidence.
+
+Completed Phase 14D scope: dashboards; Team; Users & Access; appointment Day/Week/Month/List/Needs Reschedule views; centered appointment details/forms/status confirmations; patient list/create/profile/clinical-history workflows; EN/AR feature copy; RTL/bidi utilities; v2 palette and overlays. The backend API, permissions, serializers, models, and migrations were unchanged in Phase 14D.
+
+Remaining post-MVP limitations include real AI integration, email forgot-password, unsupported professional fields, online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.
+
+## Historical context
+
+Phase 13 is complete. Phase 14A provided deterministic development data; Phase 14B froze the UI refocus design; Phase 14C.0 added Team/account-linkage APIs; and Phase 14C added shell, token, icon, preference, and shared-component foundations. Those historical facts do not change the current completed Phase 14D status.

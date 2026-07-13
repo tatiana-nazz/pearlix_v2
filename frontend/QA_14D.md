@@ -15,8 +15,8 @@
 ## Automated verification
 
 - Focused palette, shared-interaction, and Staff Dashboard component tests cover light/dark token values, non-underlined interactive surfaces, four-card composition, semantic variants, primary actions, and API-derived KPI counts.
-- Frontend automated verification: `npm run typecheck` passed; `npm run test:run` passed (33 files, 90 tests); `npm run build` passed.
-- Backend verification: `manage.py check` passed; focused appointment tests passed (40), `tests/patients/test_patients_api.py` passed (22), and `tests/security/test_idor_frontend_fields_security.py` passed (3). `makemigrations --check --dry-run` exceeded the bounded task timeout and remains pending rerun in the normal development terminal.
+- Frontend automated verification: `npm run typecheck` passed; `npm run test:run` passed (33 files, 92 tests); `npm run build` passed.
+- Backend verification: `manage.py check` passed; focused appointment tests passed (40), `tests/patients/test_patients_api.py` passed (22), and `tests/security/test_idor_frontend_fields_security.py` passed (3). `makemigrations --check --dry-run --verbosity 2` passed with `No changes detected` (a database-history timeout warning did not change the exit result).
 
 ## Browser QA
 
