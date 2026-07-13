@@ -46,3 +46,5 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | WIDTH-01 | all priority routes | 1440,1280,1024,768 geometry/no overflow | four screenshots each role | 14F |
 
 Any failed ID blocks the dependent phase and Phase 14G.
+
+Phase 14D automated closure covers dashboards, Team, Users & Access, appointments, and patients with EN/AR, RTL/bidi, role restrictions, and shared-overlay regression coverage. Browser QA is pending for Phase 14F; Phase 14E is next.

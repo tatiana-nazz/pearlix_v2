@@ -4,7 +4,7 @@
 
 Phase 14D is complete. The frontend includes the approved dashboard, Team, Users & Access, appointment, and patient workflows, including the `/admin/team` runtime route, EN/AR copy, RTL/bidi, and centered appointment modals. Backend runtime changed in Phase 14D: no; migrations: none. Browser QA remains pending as the Phase 14F visual/UAT gate.
 
-The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Browser QA remains pending.
+The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Phase 14D closure records 97 frontend tests across 35 files, while browser QA remains pending for Phase 14F.
 
 Phase: Originally created for 13A; capability audit through completed Phase 14C shell/token/icon/shared-component foundation. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `tatiana-nazz/pearlix_v2`, branch `phase-14d-priority-workflows`

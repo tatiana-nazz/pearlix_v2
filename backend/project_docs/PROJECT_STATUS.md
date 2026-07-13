@@ -4,7 +4,7 @@ This is the canonical current-phase tracker for the Dental Clinic Management Sys
 
 - Current completed phase: Phase 14D — Priority Workflows
 - Next phase: Phase 14E — Schedules and Leave, Visits, X-rays and AI, Billing, Clinic Settings, and Audit
-- Final frontend regression: 92 passed
+- Final frontend regression: 97 passed across 35 files
 - Focused backend verification: appointment 38 passed; patient 25 passed
 - Backend runtime changes in Phase 14D: no
 - Migrations in Phase 14D: none

@@ -18,4 +18,4 @@ Supported professional fields remain Doctor specialty/phone/bio and Staff positi
 
 ## Completion status
 
-This is the Phase 14D implementation record. Palette correction, dashboards, Team, Users & Access, centered appointment overlays, and patient workflow localization/RTL/bidi are complete. Automated frontend verification is recorded in `QA_14D.md`; browser QA remains pending as the Phase 14F visual/UAT gate. Backend runtime changed: no; migrations: none. Phase 14E has not started.
+This is the Phase 14D implementation record. Palette correction, dashboards, Team, Users & Access, centered appointment overlays, and patient workflow localization/RTL/bidi are complete. Automated frontend verification is recorded in `QA_14D.md` (35 files and 97 tests); browser QA remains pending as the Phase 14F visual/UAT gate. Backend runtime changed: no; migrations: none. Phase 14E has not started.

@@ -119,3 +119,7 @@ Purpose: immutable oversight. Order title, actor/action/entity/date filters, pag
 
 ### `access denied`, `not found`
 Purpose: safe terminal state. Order icon, title, literal explanation, `Return to dashboard`; 520 px compact center with no data/action leakage; RTL/theme matched.
+
+## Phase 14D closure note
+
+The implemented Team, Users & Access, appointment, and patient overlays use the centered shared overlay system. RTL uses logical placement and bidi isolation for mixed-direction values. Browser visual/UAT evidence remains Phase 14F work; Phase 14E has not started.
