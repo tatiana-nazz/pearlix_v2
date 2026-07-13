@@ -4,7 +4,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND_TOTAL = "54 files, 176 tests"
+FRONTEND_TOTAL = "56 files, 188 tests"
 SCHEDULE_BACKEND_TOTAL = "83 passed"
 VISIT_BACKEND_TOTAL = "248 passed"
 XRAY_BACKEND_TOTAL = "131 passed"
@@ -69,19 +69,52 @@ ACCEPTANCE_TESTS = {
     ),
     "frontend/src/features/billing/components/VisitBillingSection.test.tsx": (
         ("./VisitBillingSection",),
-        ("owning completed visit", "Admin and Staff read-only"),
+        ("owning completed visit", "active and non-owning Doctor", "Admin and Staff read-only", "existing handoff"),
     ),
     "frontend/src/pages/billing/BillingPages.test.tsx": (
         ("./BillingPages",),
-        ("Admin invoices read-only", "selected patient instead of a raw patient identifier", "structured print data"),
+        ("Admin invoices read-only", "selected patient instead of a raw patient identifier", "structured print data", "Arabic root RTL direction", "controlled list filters", "dirty New Invoice navigation"),
     ),
     "frontend/src/pages/billing/BillingInvoicePages.test.tsx": (
         ("./BillingPages",),
-        ("Admin detail read-only", "remaining balance", "relationship fields"),
+        ("Admin detail read-only", "locks paid and cancelled", "remaining balance", "exact remaining payment", "relationship fields"),
+    ),
+    "frontend/src/pages/billing/BillingHandoffPages.test.tsx": (
+        ("./BillingPages",),
+        ("Staff Convert and Dismiss only for a pending handoff", "Admin, Doctor, converted, and dismissed", "exact conversion payload", "POST-only dismissal payload", "navigates once after a successful conversion"),
+    ),
+    "frontend/src/features/billing/hooks/useBilling.test.tsx": (
+        ("./useBilling",),
+        ("invalidates invoice, payment, print, list, handoff, and dashboard data",),
     ),
     "frontend/src/layouts/i18n.billing.test.ts": (
         ("./i18n",),
         ("typed Arabic billing labels",),
+    ),
+}
+
+# These fragments require the acceptance files to exercise production state and
+# interactions, rather than merely naming a scenario in prose.
+ACTUAL_INTERACTION_EVIDENCE = {
+    "frontend/src/features/billing/components/VisitBillingSection.test.tsx": (
+        'status: "ACTIVE"', 'status: "COMPLETED"', 'results = [{ id: 9 }]',
+    ),
+    "frontend/src/pages/billing/BillingPages.test.tsx": (
+        'document.documentElement.dir = "rtl"', 'closest("[dir]")',
+        'fireEvent.change(handoff.getByLabelText("Created from")',
+        'router.navigate("/staff/billing/invoices")',
+    ),
+    "frontend/src/pages/billing/BillingInvoicePages.test.tsx": (
+        'status: "PAID"', 'status: "CANCELLED"',
+        'value: "60"', 'value: "50.00"',
+    ),
+    "frontend/src/pages/billing/BillingHandoffPages.test.tsx": (
+        'status: "CONVERTED_TO_INVOICE"', 'status: "DISMISSED"',
+        'handoffId: 12', 'getAllByText("Invoice")',
+    ),
+    "frontend/src/features/billing/hooks/useBilling.test.tsx": (
+        'billingApi.recordPayment', '["invoice-payments", 14]',
+        '["invoice-print-data", 14]',
     ),
 }
 
@@ -136,6 +169,9 @@ def main() -> int:
         for scenario in scenarios:
             if scenario not in source:
                 errors.append(f"acceptance test lacks representative scenario {relative}: {scenario!r}")
+        for evidence in ACTUAL_INTERACTION_EVIDENCE.get(relative, ()):
+            if evidence not in source:
+                errors.append(f"acceptance test lacks production interaction evidence {relative}: {evidence!r}")
 
     billing_runtime = "\n".join(
         (ROOT / relative).read_text(encoding="utf-8")
@@ -146,7 +182,7 @@ def main() -> int:
             "frontend/src/features/billing/components/VisitBillingSection.tsx",
         )
     )
-    for forbidden in ("Patient ID", "JSON.stringify", "<pre", "dialog-backdrop", "dialog-panel"):
+    for forbidden in ("Patient ID", "Doctor ID", "Visit ID", "Appointment ID", "JSON.stringify", "<pre", "dialog-backdrop", "dialog-panel", "dir={role"):
         if forbidden in billing_runtime:
             errors.append(f"billing runtime retains forbidden legacy content: {forbidden!r}")
 
