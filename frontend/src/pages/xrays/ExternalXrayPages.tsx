@@ -1,31 +1,40 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-import { Card } from "../../components/Card";
-import { EmptyState } from "../../components/EmptyState";
-import { ErrorState } from "../../components/ErrorState";
-import { LoadingState } from "../../components/LoadingState";
-import { PageHeader } from "../../components/PageHeader";
-import { StatusPill } from "../../components/StatusPill";
+import { Button, ClickableRow, DataTableShell, PageHeaderV2, SelectField, StatePanel } from "../../components/v2";
 import { ExternalXrayDetail } from "../../features/xrays/components/ExternalXrayDetail";
 import { XrayUploadDialog } from "../../features/xrays/components/XrayUploadDialog";
 import { useExternalXray, useExternalXrayMutations, useExternalXrays } from "../../features/xrays/hooks/useXrays";
+import { useFeatureT } from "../../layouts/i18n";
 import type { UserRole } from "../../types/auth";
 import { formatDateTime } from "../../utils/dates";
 import { displayText } from "../../utils/formatters";
 
+function statusLabel(status: string, t: ReturnType<typeof useFeatureT>) {
+  return status === "TEMPORARY" ? t("temporary") : status === "ATTACHED_TO_PATIENT" ? t("attachedToPatient") : t("discarded");
+}
+
 export function ExternalXrayListPage({ role }: { role: UserRole }) {
-  const external = useExternalXrays();
+  const t = useFeatureT();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Number(searchParams.get("page") || "1");
+  const status = searchParams.get("status") || "";
+  const external = useExternalXrays({ page, status: status || undefined, uploaded_by: searchParams.get("uploaded_by") || undefined, created_from: searchParams.get("created_from") || undefined, created_to: searchParams.get("created_to") || undefined });
   const mutations = useExternalXrayMutations();
   const [uploadOpen, setUploadOpen] = useState(false);
-  return <div className="xray-page"><PageHeader eyebrow={`${role.toLowerCase()} workspace`} title="External X-ray Workspace" description={role === "ADMIN" ? "Temporary cases across the clinic." : "Your temporary external X-ray cases."} actions={<button className="button primary" type="button" onClick={() => { mutations.upload.reset(); setUploadOpen(true); }}>Upload external X-ray</button>} />
-    {external.isLoading ? <LoadingState title="Loading external X-rays..." /> : null}{external.isError ? <ErrorState error={external.error} title="Unable to load external X-rays" onRetry={() => void external.refetch()} /> : null}
-    {external.data ? (external.data.results.length ? <Card><div className="table-scroll"><table className="xray-table"><thead><tr><th>Case</th><th>Uploaded by</th><th>Created</th><th>Status</th><th /></tr></thead><tbody>{external.data.results.map((item) => <tr key={item.id}><td><strong>{displayText(item.title, item.original_file_name)}</strong><span>{item.content_type}</span></td><td>{item.uploaded_by.full_name}</td><td>{formatDateTime(item.created_at)}</td><td><StatusPill status={item.status} /></td><td><Link className="button secondary compact-button" to={`/${role.toLowerCase()}/external-xrays/${item.id}`}>Open</Link></td></tr>)}</tbody></table></div></Card> : <EmptyState title="No external X-ray cases found." />) : null}
-    {uploadOpen ? <XrayUploadDialog title="Upload external X-ray" isSubmitting={mutations.upload.isPending} error={mutations.upload.error} onCancel={() => setUploadOpen(false)} onSubmit={(payload) => void mutations.upload.mutateAsync(payload).then(() => setUploadOpen(false))} /> : null}
+  function updateParams(update: Record<string, string | null>) { const next = new URLSearchParams(searchParams); Object.entries(update).forEach(([key, value]) => value ? next.set(key, value) : next.delete(key)); setSearchParams(next); }
+  function setPage(nextPage: number) { updateParams({ page: String(nextPage) }); }
+  return <div className="xray-page"><PageHeaderV2 title={t("externalWorkspace")} description={role === "ADMIN" ? t("externalDescriptionAdmin") : t("externalDescriptionDoctor")} action={<Button type="button" onClick={() => { mutations.upload.reset(); setUploadOpen(true); }}>{t("uploadExternalXray")}</Button>} />
+    <div className="xray-filter"><SelectField label={t("status")} value={status} onChange={(event) => updateParams({ status: event.target.value || null, page: "1" })}><option value="">{t("allStatuses")}</option><option value="TEMPORARY">{t("temporary")}</option><option value="ATTACHED_TO_PATIENT">{t("attachedToPatient")}</option><option value="DISCARDED">{t("discarded")}</option></SelectField></div>
+    {external.isLoading ? <StatePanel state="loading" title={t("loadingExternalXrays")} /> : null}{external.isError ? <StatePanel state="error" title={t("externalUnavailable")} action={<Button type="button" variant="secondary" onClick={() => void external.refetch()}>{t("retry")}</Button>} /> : null}
+    {external.data ? <><DataTableShell title={t("externalWorkspace")} count={external.data.count} state={external.data.results.length ? undefined : <p>{t("noExternalXrays")}</p>}><table className="xray-table"><thead><tr><th>{t("externalCase")}</th><th>{t("uploadedBy")}</th><th>{t("uploaded")}</th><th>{t("status")}</th><th>{t("aiResult")}</th></tr></thead><tbody>{external.data.results.map((item) => <ClickableRow key={item.id} onOpen={() => navigate(`/${role.toLowerCase()}/external-xrays/${item.id}`)}><td><strong className="bidi-isolate">{displayText(item.title, item.original_file_name)}</strong><span className="bidi-isolate">{item.content_type}</span></td><td className="bidi-isolate">{item.uploaded_by.full_name}</td><td className="bidi-isolate">{formatDateTime(item.created_at)}</td><td>{statusLabel(item.status, t)}</td><td>{item.has_ai_result ? t("aiAvailable") : t("aiNotRun")}</td></ClickableRow>)}</tbody></table></DataTableShell><div className="pagination-bar"><span>{external.data.count} {t("records")}</span><div><Button compact variant="secondary" disabled={!external.data.previous || page <= 1} onClick={() => setPage(page - 1)}>{t("previous")}</Button><span className="bidi-isolate">{t("page")} {page}</span><Button compact variant="secondary" disabled={!external.data.next} onClick={() => setPage(page + 1)}>{t("next")}</Button></div></div></> : null}
+    {uploadOpen ? <XrayUploadDialog title={t("uploadExternalXray")} isSubmitting={mutations.upload.isPending} error={mutations.upload.error} onCancel={() => setUploadOpen(false)} onSubmit={(payload) => { void mutations.upload.mutateAsync(payload).then(() => setUploadOpen(false)); }} /> : null}
   </div>;
 }
 
 export function ExternalXrayDetailPage({ role }: { role: UserRole }) {
+  const t = useFeatureT();
   const external = useExternalXray(Number(useParams().caseId));
-  return <div className="xray-page"><PageHeader eyebrow={`${role.toLowerCase()} workspace`} title="External X-ray Case" description="Temporary cases use protected media and explicit lifecycle actions." />{external.isLoading ? <LoadingState title="Loading external X-ray..." /> : null}{external.isError ? <ErrorState error={external.error} title="External X-ray unavailable" onRetry={() => void external.refetch()} /> : null}{external.data ? <ExternalXrayDetail role={role} external={external.data} /> : null}</div>;
+  return <div className="xray-page"><PageHeaderV2 title={t("externalCase")} description={t("externalCaseDescription")} />{external.isLoading ? <StatePanel state="loading" title={t("loadingExternalXrays")} /> : null}{external.isError ? <StatePanel state="error" title={t("externalUnavailable")} action={<Button type="button" variant="secondary" onClick={() => void external.refetch()}>{t("retry")}</Button>} /> : null}{external.data ? <ExternalXrayDetail role={role} external={external.data} /> : null}</div>;
 }

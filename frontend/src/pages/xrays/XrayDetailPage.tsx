@@ -1,13 +1,13 @@
 import { useParams } from "react-router-dom";
 
-import { ErrorState } from "../../components/ErrorState";
-import { LoadingState } from "../../components/LoadingState";
-import { PageHeader } from "../../components/PageHeader";
+import { Button, PageHeaderV2, StatePanel } from "../../components/v2";
 import { XrayDetail } from "../../features/xrays/components/XrayDetail";
 import { useXray } from "../../features/xrays/hooks/useXrays";
+import { useFeatureT } from "../../layouts/i18n";
 import type { UserRole } from "../../types/auth";
 
 export function XrayDetailPage({ role }: { role: UserRole }) {
+  const t = useFeatureT();
   const xray = useXray(Number(useParams().xrayId));
-  return <div className="xray-page"><PageHeader eyebrow={`${role.toLowerCase()} workspace`} title="X-ray Details" description="Protected image and AI information remain available only through authenticated API access." />{xray.isLoading ? <LoadingState title="Loading X-ray..." /> : null}{xray.isError ? <ErrorState error={xray.error} title="X-ray unavailable" onRetry={() => void xray.refetch()} /> : null}{xray.data ? <XrayDetail role={role} xray={xray.data} /> : null}</div>;
+  return <div className="xray-page"><PageHeaderV2 title={t("xrayDetails")} description={t("xrayDetailsDescription")} />{xray.isLoading ? <StatePanel state="loading" title={t("loadingXrays")} /> : null}{xray.isError ? <StatePanel state="error" title={t("xrayUnavailable")} action={<Button type="button" variant="secondary" onClick={() => void xray.refetch()}>{t("retry")}</Button>} /> : null}{xray.data ? <XrayDetail role={role} xray={xray.data} /> : null}</div>;
 }
