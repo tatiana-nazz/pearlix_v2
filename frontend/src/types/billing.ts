@@ -5,8 +5,6 @@ import type { AppointmentStatus } from "./appointments";
 import type { PatientList } from "./patients";
 import type { VisitStatus } from "./visits";
 
-declare global { interface String { replaceAll(searchValue: string | RegExp, replaceValue: string): string; } }
-
 export type BillingHandoffStatus = "PENDING" | "CONVERTED_TO_INVOICE" | "DISMISSED";
 export type InvoiceStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
 
