@@ -1,27 +1,19 @@
 import { Link } from "react-router-dom";
 
-import { EmptyState } from "../../components/EmptyState";
-import { ErrorState } from "../../components/ErrorState";
-import { LoadingState } from "../../components/LoadingState";
-import { PageHeader } from "../../components/PageHeader";
-import { useActiveVisit } from "../../features/visits/hooks/useVisits";
+import { Button, PageHeaderV2, StatePanel } from "../../components/v2";
+import { ApiClientError } from "../../api/errors";
 import { VisitWorkspace } from "../../features/visits/components/VisitWorkspace";
+import { useActiveVisit } from "../../features/visits/hooks/useVisits";
+import { useFeatureT } from "../../layouts/i18n";
 
 export function DoctorActiveVisitPage() {
+  const t = useFeatureT();
   const activeVisit = useActiveVisit();
-
-  return (
-    <div className="visit-page">
-      <PageHeader eyebrow="doctor workspace" title="Active Visit" description="Document the current clinical encounter and complete it when care is finished." />
-      {activeVisit.isLoading ? <LoadingState title="Loading active visit..." /> : null}
-      {activeVisit.isError ? <ErrorState error={activeVisit.error} onRetry={() => void activeVisit.refetch()} title="Unable to load active visit" /> : null}
-      {activeVisit.data ? <VisitWorkspace role="DOCTOR" visit={activeVisit.data} /> : null}
-      {activeVisit.data === null ? (
-        <div className="state-panel">
-          <div><h3>No active visit</h3><EmptyState title="Start a checked-in appointment to begin documenting a visit." /></div>
-          <Link className="button primary" to="/doctor/appointments/day">Open appointments</Link>
-        </div>
-      ) : null}
-    </div>
-  );
+  const denied = activeVisit.error instanceof ApiClientError && activeVisit.error.code === "PERMISSION_DENIED";
+  return <div className="visit-page"><PageHeaderV2 title={t("activeVisit")} description={t("activeVisitDescription")} />
+    {activeVisit.isLoading ? <StatePanel state="loading" title={t("loadingVisit")} /> : null}
+    {activeVisit.isError ? <StatePanel state={denied ? "denied" : "error"} title={denied ? t("visitAccessDenied") : t("visitUnavailable")} action={<Button type="button" variant="secondary" onClick={() => void activeVisit.refetch()}>{t("retry")}</Button>} /> : null}
+    {activeVisit.data ? <VisitWorkspace role="DOCTOR" visit={activeVisit.data} /> : null}
+    {activeVisit.data === null ? <StatePanel state="empty" title={t("noActiveVisit")} description={t("noActiveVisitDescription")} action={<Link className="button primary" to="/doctor/appointments/day">{t("openDayAppointments")}</Link>} /> : null}
+  </div>;
 }

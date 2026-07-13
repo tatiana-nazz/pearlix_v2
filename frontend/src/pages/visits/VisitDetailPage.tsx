@@ -1,25 +1,24 @@
 import { useParams } from "react-router-dom";
 
-import { ErrorState } from "../../components/ErrorState";
-import { LoadingState } from "../../components/LoadingState";
-import { PageHeader } from "../../components/PageHeader";
+import { ApiClientError } from "../../api/errors";
+import { Button, PageHeaderV2, StatePanel } from "../../components/v2";
 import { VisitWorkspace } from "../../features/visits/components/VisitWorkspace";
 import { useVisit } from "../../features/visits/hooks/useVisits";
+import { useFeatureT } from "../../layouts/i18n";
 import type { UserRole } from "../../types/auth";
 
 interface VisitDetailPageProps { role: UserRole; }
 
 export function VisitDetailPage({ role }: VisitDetailPageProps) {
+  const t = useFeatureT();
   const { visitId } = useParams();
-  const parsedVisitId = Number(visitId);
-  const visit = useVisit(parsedVisitId);
-
-  return (
-    <div className="visit-page">
-      <PageHeader eyebrow={`${role.toLowerCase()} workspace`} title="Visit Details" description="Review the appointment context and clinical documentation for this visit." />
-      {visit.isLoading ? <LoadingState title="Loading visit details..." /> : null}
-      {visit.isError ? <ErrorState error={visit.error} onRetry={() => void visit.refetch()} title="Unable to load visit details" /> : null}
-      {visit.data ? <VisitWorkspace role={role} visit={visit.data} /> : null}
-    </div>
-  );
+  const visit = useVisit(Number(visitId));
+  const code = visit.error instanceof ApiClientError ? visit.error.code : undefined;
+  const state = code === "PERMISSION_DENIED" ? "denied" : code === "NOT_FOUND" ? "notFound" : "error";
+  const title = state === "denied" ? t("visitAccessDenied") : state === "notFound" ? t("visitNotFound") : t("visitUnavailable");
+  return <div className="visit-page"><PageHeaderV2 title={t("visitDetails")} description={t("visitDetailsDescription")} />
+    {visit.isLoading ? <StatePanel state="loading" title={t("loadingVisit")} /> : null}
+    {visit.isError ? <StatePanel state={state} title={title} action={<Button type="button" variant="secondary" onClick={() => void visit.refetch()}>{t("retry")}</Button>} /> : null}
+    {visit.data ? <VisitWorkspace role={role} visit={visit.data} /> : null}
+  </div>;
 }

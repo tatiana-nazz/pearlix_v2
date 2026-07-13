@@ -13,7 +13,9 @@ function invalidateVisitContext(queryClient: ReturnType<typeof useQueryClient>, 
   void queryClient.invalidateQueries({ queryKey: ["active-visit"] });
   void queryClient.invalidateQueries({ queryKey: ["appointments"] });
   void queryClient.invalidateQueries({ queryKey: ["patient", visit.patient.id, "visits"] });
+  void queryClient.invalidateQueries({ queryKey: ["patient", visit.patient.id] });
   void queryClient.invalidateQueries({ queryKey: ["dashboard", "doctor"] });
+  void queryClient.invalidateQueries({ queryKey: ["billing-handoffs"] });
 }
 
 export function useVisit(visitId: number) {

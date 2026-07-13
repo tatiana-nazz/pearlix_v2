@@ -46,6 +46,14 @@ const scheduleMessages = {
     schedules: "الجداول", scheduleAdministration: "إدارة الجداول", scheduleHelp: "الجداول الافتراضية قوالب. طبّقها أو انسخها لتغيير جدول الموظف.", clinicDefaults: "الجدول الافتراضي للعيادة", employeeSchedule: "جدول الموظف", selectEmployee: "اختر موظفاً", selectScheduleSource: "اختر جدولاً مصدراً", addShift: "إضافة وردية", editShift: "تعديل الوردية", shiftName: "اسم الوردية", weekday: "يوم الأسبوع", startTime: "وقت البدء", endTime: "وقت الانتهاء", activateShift: "تفعيل الوردية", deactivateShift: "إيقاف الوردية", applyDefaults: "تطبيق الافتراضيات", copySchedule: "نسخ الجدول", missingOnly: "النواقص فقط", replaceAll: "استبدال الكل", mode: "الوضع", noDefaults: "لا توجد ورديات افتراضية للعيادة.", noEmployeeShifts: "لا توجد ورديات مخصصة لهذا الموظف.", loadingSchedules: "جارٍ تحميل الجداول", scheduleUnavailable: "الجداول غير متاحة", defaultShift: "وردية افتراضية", employee: "الموظف", doctor: "طبيب", staff: "موظف", leaveAvailability: "الإجازة والتوفر", leaveHelp: "تُلغى الإجازة ولا تُحذف. إجازة الموظف لا تؤثر في مواعيد المرضى.", createLeave: "إنشاء إجازة", editLeave: "تعديل الإجازة", cancelLeave: "إلغاء الإجازة", leaveRecords: "سجلات الإجازة", noLeave: "لا توجد إجازات أو فترات عدم توفر.", leaveUnavailable: "سجلات الإجازة غير متاحة", loadingLeave: "جارٍ تحميل سجلات الإجازة", start: "البداية", end: "النهاية", type: "النوع", unavailable: "غير متاح", availableOverride: "تجاوز التوفر", cancelled: "ملغاة", activeLeave: "نشطة", dateFrom: "من", dateTo: "إلى", allEmployees: "كل الموظفين", allLeaveStates: "كل حالات الإجازة", currentFutureLeave: "الإجازة الحالية والقادمة", mySchedule: "جدول عملي", myLeave: "إجازتي وفترات عدم التوفر", readOnlySchedule: "هذا جدولك بالتوقيت المحلي للعيادة. يمكن للمدير فقط تغييره.", readOnlyLeave: "هذا سجل توفرك الحالي والقادم. يمكن للمدير فقط تغييره.", noOwnShifts: "لم تُخصص لك ورديات عمل.", impactTitle: "تأكيد تأثير المواعيد", impactMessage: "سيؤدي التأكيد إلى نقل هذه المواعيد إلى بحاجة لإعادة الجدولة.", impactCount: "مواعيد مستقبلية متأثرة", keepSchedule: "الاحتفاظ بالجدول الحالي", confirmChange: "تأكيد التغيير", doctorImpact: "إجازة الطبيب هذه ستنقل المواعيد المستقبلية المتداخلة إلى بحاجة لإعادة الجدولة.", staffImpact: "إجازة الموظف هذه لا تؤثر في مواعيد المرضى.", cancelLeaveImpact: "يبقي الإلغاء سجل الإجازة كتاريخ وقد يعيد المواعيد المؤهلة.", saveShift: "حفظ الوردية", saveLeave: "حفظ الإجازة", backToLeave: "العودة إلى الإجازة", leaveNotFound: "لم يتم العثور على سجل الإجازة.", conflictHelp: "تم تغيير هذا السجل في مكان آخر. حمّل أحدث إصدار وحاول مجدداً.", appointmentStatus: "حالة الموعد", affectedAppointments: "المواعيد المتأثرة",
   },
 } as const;
+const visitMessages = {
+  EN: {
+    activeVisit: "Active visit", visitDetails: "Visit details", activeVisitDescription: "Document the current clinical encounter and complete it when care is finished.", visitDetailsDescription: "Review the appointment context and clinical documentation for this visit.", loadingVisit: "Loading visit", visitUnavailable: "Visit information is unavailable", noActiveVisit: "No active visit", noActiveVisitDescription: "Start a checked-in appointment to begin documenting a visit.", openDayAppointments: "Open day appointments", patient: "Patient", doctor: "Doctor", appointment: "Appointment", reason: "Reason", started: "Started", completed: "Completed", clinicalNotes: "Clinical notes", clinicalNotesDescription: "Record the clinical encounter. Completed visits remain editable for the owning doctor.", clinicalNotesReadOnly: "Clinical notes are read-only for your role and this visit.", symptoms: "Symptoms", diagnosis: "Diagnosis", treatment: "Treatment", followUpNotes: "Follow-up notes", saveNotes: "Save notes", savingNotes: "Saving notes", unableToSaveNotes: "Unable to save clinical notes. Review the entries and try again.", patientProfile: "Patient profile", completeVisit: "Complete visit", completingVisit: "Completing visit", saveAndComplete: "Save and complete", completeVisitDescription: "Mark this active visit as completed. The linked appointment will also be completed.", dirtyNotesComplete: "Unsaved clinical notes will be saved before the visit is completed.", keepVisitActive: "Keep visit active", unableToCompleteVisit: "Unable to complete the visit. The active workspace remains available.", discardVisitChanges: "Discard unsaved clinical notes?", visitAccessDenied: "This visit is not available for your role.", visitNotFound: "The requested visit was not found.", visitNotRecorded: "Not recorded",
+  },
+  AR: {
+    activeVisit: "الزيارة النشطة", visitDetails: "تفاصيل الزيارة", activeVisitDescription: "وثّق المعاينة السريرية الحالية وأكملها عند انتهاء الرعاية.", visitDetailsDescription: "راجع سياق الموعد والتوثيق السريري لهذه الزيارة.", loadingVisit: "جارٍ تحميل الزيارة", visitUnavailable: "معلومات الزيارة غير متاحة", noActiveVisit: "لا توجد زيارة نشطة", noActiveVisitDescription: "ابدأ موعداً تم تسجيل حضوره لبدء توثيق الزيارة.", openDayAppointments: "فتح مواعيد اليوم", patient: "المريض", doctor: "الطبيب", appointment: "الموعد", reason: "السبب", started: "بدأت", completed: "اكتملت", clinicalNotes: "الملاحظات السريرية", clinicalNotesDescription: "وثّق المعاينة السريرية. تبقى الزيارات المكتملة قابلة للتعديل للطبيب المالك.", clinicalNotesReadOnly: "الملاحظات السريرية للقراءة فقط لدورك وهذه الزيارة.", symptoms: "الأعراض", diagnosis: "التشخيص", treatment: "العلاج", followUpNotes: "ملاحظات المتابعة", saveNotes: "حفظ الملاحظات", savingNotes: "جارٍ حفظ الملاحظات", unableToSaveNotes: "تعذر حفظ الملاحظات السريرية. راجع الإدخالات وحاول مجدداً.", patientProfile: "ملف المريض", completeVisit: "إكمال الزيارة", completingVisit: "جارٍ إكمال الزيارة", saveAndComplete: "حفظ وإكمال", completeVisitDescription: "ضع علامة على الزيارة النشطة كمكتملة. سيُكمل الموعد المرتبط أيضاً.", dirtyNotesComplete: "سيتم حفظ الملاحظات السريرية غير المحفوظة قبل إكمال الزيارة.", keepVisitActive: "إبقاء الزيارة نشطة", unableToCompleteVisit: "تعذر إكمال الزيارة. تبقى مساحة العمل النشطة متاحة.", discardVisitChanges: "تجاهل الملاحظات السريرية غير المحفوظة؟", visitAccessDenied: "هذه الزيارة غير متاحة لدورك.", visitNotFound: "لم يتم العثور على الزيارة المطلوبة.", visitNotRecorded: "غير مسجل",
+  },
+} as const;
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -58,18 +66,20 @@ const featureMessageKeysMatch: SameKeys<typeof featureMessages.EN, typeof featur
 const featureExtensionKeysMatch: SameKeys<typeof featureExtensions.EN, typeof featureExtensions.AR> = true;
 const acceptanceMessageKeysMatch: SameKeys<typeof acceptanceMessages.EN, typeof acceptanceMessages.AR> = true;
 const scheduleMessageKeysMatch: SameKeys<typeof scheduleMessages.EN, typeof scheduleMessages.AR> = true;
+const visitMessageKeysMatch: SameKeys<typeof visitMessages.EN, typeof visitMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
 void featureExtensionKeysMatch;
 void acceptanceMessageKeysMatch;
 void scheduleMessageKeysMatch;
+void visitMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -83,6 +93,9 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
 
   const scheduleDictionary = scheduleMessages[language];
   if (hasOwnKey(scheduleDictionary, key)) return scheduleDictionary[key];
+
+  const visitDictionary = visitMessages[language];
+  if (hasOwnKey(visitDictionary, key)) return visitDictionary[key];
 
   throw new Error(`Missing translation for key: ${key}`);
 }

@@ -35,4 +35,12 @@ describe("getAppointmentPermissions", () => {
       isReadOnly: true,
     });
   });
+
+  it("never exposes Start Visit for non-checked-in appointment states or non-Doctors", () => {
+    for (const status of ["UPCOMING", "ACTIVE", "COMPLETED", "CANCELLED", "NO_SHOW", "NEEDS_RESCHEDULE"] as const) {
+      expect(getAppointmentPermissions("DOCTOR", appointment(status)).canStartVisit).toBe(false);
+    }
+    expect(getAppointmentPermissions("STAFF", appointment("CHECKED_IN")).canStartVisit).toBe(false);
+    expect(getAppointmentPermissions("ADMIN", appointment("CHECKED_IN")).canStartVisit).toBe(false);
+  });
 });
