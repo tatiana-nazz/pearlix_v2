@@ -37,6 +37,15 @@ const acceptanceMessages = {
   EN: { transitionCreateOrReactivate: "A matching professional profile will be created or reactivated.", transitionAlreadyRole: "This account already has the selected role.", transitionHistory: "Operational history stays with this account, so its role cannot be changed.", transitionAtomicChange: "The role and matching professional profile will be changed together.", transitionLastAdmin: "The last active Admin account cannot be changed to a professional role.", blockerNoRoleChange: "The selected role is already assigned to this account.", blockerHistory: "Existing operational history prevents this role change.", blockerLastActiveAdmin: "At least one active Admin account must remain.", blockerUnknown: "This role change is unavailable.", transitionCounts: "Related records", workingShifts: "Working shifts", doctorAvailabilityExceptions: "Doctor availability exceptions", staffAvailabilityExceptions: "Staff availability exceptions", appointmentCount: "Appointments", visitCount: "Visits" },
   AR: { transitionCreateOrReactivate: "سيتم إنشاء الملف المهني المطابق أو إعادة تنشيطه.", transitionAlreadyRole: "لدى هذا الحساب الدور المحدد بالفعل.", transitionHistory: "يبقى السجل التشغيلي مرتبطاً بهذا الحساب، لذلك لا يمكن تغيير دوره.", transitionAtomicChange: "سيتم تغيير الدور والملف المهني المطابق معاً.", transitionLastAdmin: "لا يمكن تغيير حساب المدير النشط الأخير إلى دور مهني.", blockerNoRoleChange: "الدور المحدد مُسند إلى هذا الحساب بالفعل.", blockerHistory: "السجل التشغيلي الحالي يمنع تغيير هذا الدور.", blockerLastActiveAdmin: "يجب بقاء حساب مدير نشط واحد على الأقل.", blockerUnknown: "تغيير الدور غير متاح.", transitionCounts: "السجلات المرتبطة", workingShifts: "ورديات العمل", doctorAvailabilityExceptions: "استثناءات توفر الطبيب", staffAvailabilityExceptions: "استثناءات توفر الموظف", appointmentCount: "المواعيد", visitCount: "الزيارات" },
 } as const;
+
+const scheduleMessages = {
+  EN: {
+    schedules: "Schedules", scheduleAdministration: "Schedule administration", scheduleHelp: "Clinic defaults are templates. Apply or copy them to change an employee schedule.", clinicDefaults: "Clinic default schedule", employeeSchedule: "Employee schedule", selectEmployee: "Select an employee", selectScheduleSource: "Select a source schedule", addShift: "Add shift", editShift: "Edit shift", shiftName: "Shift name", weekday: "Weekday", startTime: "Start time", endTime: "End time", activateShift: "Activate shift", deactivateShift: "Deactivate shift", applyDefaults: "Apply defaults", copySchedule: "Copy schedule", missingOnly: "Missing only", replaceAll: "Replace all", mode: "Mode", noDefaults: "No clinic default shifts have been created.", noEmployeeShifts: "No shifts have been assigned to this employee.", loadingSchedules: "Loading schedules", scheduleUnavailable: "Schedules are unavailable", defaultShift: "Default shift", employee: "Employee", doctor: "Doctor", staff: "Staff", leaveAvailability: "Leave and availability", leaveHelp: "Leave is cancelled, never deleted. Staff leave does not affect patient appointments.", createLeave: "Create leave", editLeave: "Edit leave", cancelLeave: "Cancel leave", leaveRecords: "Leave records", noLeave: "No leave or unavailable periods were returned.", leaveUnavailable: "Leave records are unavailable", loadingLeave: "Loading leave records", start: "Start", end: "End", type: "Type", unavailable: "Unavailable", availableOverride: "Available override", cancelled: "Cancelled", activeLeave: "Active", dateFrom: "From", dateTo: "To", allEmployees: "All employees", allLeaveStates: "All leave states", currentFutureLeave: "Current and future leave", mySchedule: "My working schedule", myLeave: "My leave and unavailable periods", readOnlySchedule: "This is your clinic-local schedule. Only an Admin can change it.", readOnlyLeave: "This is your current and future availability history. Only an Admin can change it.", noOwnShifts: "No working shifts have been assigned.", impactTitle: "Confirm appointment impact", impactMessage: "Confirming will move these appointments to Needs Reschedule.", impactCount: "affected future appointments", keepSchedule: "Keep current schedule", confirmChange: "Confirm change", doctorImpact: "This Doctor leave will move overlapping future appointments to Needs Reschedule.", staffImpact: "This Staff leave does not affect patient appointments.", cancelLeaveImpact: "Cancelling retains the leave record as history and may restore eligible appointments.", saveShift: "Save shift", saveLeave: "Save leave", backToLeave: "Back to leave", leaveNotFound: "Leave record was not found.", conflictHelp: "This record changed elsewhere. Reload the latest version and try again.", appointmentStatus: "Appointment status", affectedAppointments: "Affected appointments",
+  },
+  AR: {
+    schedules: "الجداول", scheduleAdministration: "إدارة الجداول", scheduleHelp: "الجداول الافتراضية قوالب. طبّقها أو انسخها لتغيير جدول الموظف.", clinicDefaults: "الجدول الافتراضي للعيادة", employeeSchedule: "جدول الموظف", selectEmployee: "اختر موظفاً", selectScheduleSource: "اختر جدولاً مصدراً", addShift: "إضافة وردية", editShift: "تعديل الوردية", shiftName: "اسم الوردية", weekday: "يوم الأسبوع", startTime: "وقت البدء", endTime: "وقت الانتهاء", activateShift: "تفعيل الوردية", deactivateShift: "إيقاف الوردية", applyDefaults: "تطبيق الافتراضيات", copySchedule: "نسخ الجدول", missingOnly: "النواقص فقط", replaceAll: "استبدال الكل", mode: "الوضع", noDefaults: "لا توجد ورديات افتراضية للعيادة.", noEmployeeShifts: "لا توجد ورديات مخصصة لهذا الموظف.", loadingSchedules: "جارٍ تحميل الجداول", scheduleUnavailable: "الجداول غير متاحة", defaultShift: "وردية افتراضية", employee: "الموظف", doctor: "طبيب", staff: "موظف", leaveAvailability: "الإجازة والتوفر", leaveHelp: "تُلغى الإجازة ولا تُحذف. إجازة الموظف لا تؤثر في مواعيد المرضى.", createLeave: "إنشاء إجازة", editLeave: "تعديل الإجازة", cancelLeave: "إلغاء الإجازة", leaveRecords: "سجلات الإجازة", noLeave: "لا توجد إجازات أو فترات عدم توفر.", leaveUnavailable: "سجلات الإجازة غير متاحة", loadingLeave: "جارٍ تحميل سجلات الإجازة", start: "البداية", end: "النهاية", type: "النوع", unavailable: "غير متاح", availableOverride: "تجاوز التوفر", cancelled: "ملغاة", activeLeave: "نشطة", dateFrom: "من", dateTo: "إلى", allEmployees: "كل الموظفين", allLeaveStates: "كل حالات الإجازة", currentFutureLeave: "الإجازة الحالية والقادمة", mySchedule: "جدول عملي", myLeave: "إجازتي وفترات عدم التوفر", readOnlySchedule: "هذا جدولك بالتوقيت المحلي للعيادة. يمكن للمدير فقط تغييره.", readOnlyLeave: "هذا سجل توفرك الحالي والقادم. يمكن للمدير فقط تغييره.", noOwnShifts: "لم تُخصص لك ورديات عمل.", impactTitle: "تأكيد تأثير المواعيد", impactMessage: "سيؤدي التأكيد إلى نقل هذه المواعيد إلى بحاجة لإعادة الجدولة.", impactCount: "مواعيد مستقبلية متأثرة", keepSchedule: "الاحتفاظ بالجدول الحالي", confirmChange: "تأكيد التغيير", doctorImpact: "إجازة الطبيب هذه ستنقل المواعيد المستقبلية المتداخلة إلى بحاجة لإعادة الجدولة.", staffImpact: "إجازة الموظف هذه لا تؤثر في مواعيد المرضى.", cancelLeaveImpact: "يبقي الإلغاء سجل الإجازة كتاريخ وقد يعيد المواعيد المؤهلة.", saveShift: "حفظ الوردية", saveLeave: "حفظ الإجازة", backToLeave: "العودة إلى الإجازة", leaveNotFound: "لم يتم العثور على سجل الإجازة.", conflictHelp: "تم تغيير هذا السجل في مكان آخر. حمّل أحدث إصدار وحاول مجدداً.", appointmentStatus: "حالة الموعد", affectedAppointments: "المواعيد المتأثرة",
+  },
+} as const;
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -48,17 +57,19 @@ const baseMessageKeysMatch: SameKeys<typeof messages.EN, typeof messages.AR> = t
 const featureMessageKeysMatch: SameKeys<typeof featureMessages.EN, typeof featureMessages.AR> = true;
 const featureExtensionKeysMatch: SameKeys<typeof featureExtensions.EN, typeof featureExtensions.AR> = true;
 const acceptanceMessageKeysMatch: SameKeys<typeof acceptanceMessages.EN, typeof acceptanceMessages.AR> = true;
+const scheduleMessageKeysMatch: SameKeys<typeof scheduleMessages.EN, typeof scheduleMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
 void featureExtensionKeysMatch;
 void acceptanceMessageKeysMatch;
+void scheduleMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -69,6 +80,9 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
 
   const acceptanceDictionary = acceptanceMessages[language];
   if (hasOwnKey(acceptanceDictionary, key)) return acceptanceDictionary[key];
+
+  const scheduleDictionary = scheduleMessages[language];
+  if (hasOwnKey(scheduleDictionary, key)) return scheduleDictionary[key];
 
   throw new Error(`Missing translation for key: ${key}`);
 }
