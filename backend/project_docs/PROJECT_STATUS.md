@@ -3,22 +3,23 @@
 This is the canonical current-phase tracker for the Dental Clinic Management System Website.
 
 - Current completed phase: Phase 14D automated acceptance
-- Current phase: Phase 14E supporting operations (in progress)
-- Completed Phase 14E Tasks: Schedules and Leave; Visits; X-rays and AI; Billing
-- Current Phase 14E task: Clinic Settings and Audit
-- Next Phase 14E tasks: Clinic Settings and Audit
-- Frontend regression baseline: 56 files, 188 tests
+- Current phase: Phase 14E supporting operations automated acceptance: complete
+- Completed Phase 14E Tasks: Schedules and Leave; Visits; X-rays and AI; Billing; Clinic Settings; Audit
+- Next phase: Phase 14F browser visual/UAT acceptance
+- Frontend regression baseline: 57 files, 191 tests
 - Focused Phase 14E schedule/leave backend verification: 83 passed
 - Focused Phase 14E visit backend verification: 248 passed
 - Focused Phase 14E X-ray/AI backend verification: 131 passed
 - Focused Phase 14E Billing backend verification: 71 passed
+- Focused Phase 14E Clinic/Audit backend verification: 170 passed
+- Full backend verification: 414 passed
 - Django check: passed; migration drift: no changes detected
 - Backend runtime changes in Phase 14E: no
 - Migrations in Phase 14E: none
 - Browser QA/UAT: pending for the Phase 14F visual acceptance gate
 - Release recommendation: deployment remains paused pending remaining Phase 14E work, Phase 14F, and browser visual/UAT evidence.
 
-Phase 14D automated acceptance is complete. Phase 14E is in progress: Schedules and Leave, Visits, X-rays/AI, and Billing are complete. Billing acceptance now has typed EN/AR runtime copy; URL-backed role-aware handoff and invoice filters; selected patient/doctor entity controls instead of raw identifiers; safe dirty New Invoice navigation; structured A4 print that inherits the application direction; and lifecycle evidence for role/status boundaries, exact handoff/payment payloads, successful payment cache invalidation, and POST-only cancellation/dismissal. Clinic Settings and Audit have not started and are the next Phase 14E tasks. Browser QA remains the explicitly deferred Phase 14F visual/UAT gate. The backend API, permissions, serializers, models, and migrations remain unchanged; backend runtime changed: no; migrations: none.
+Phase 14D automated acceptance is complete. Phase 14E supporting operations automated acceptance: complete. Schedules and Leave, Visits, X-rays/AI, Billing, Clinic Settings, and Audit are complete. Clinic Settings has explicit typed sections, validation, changed-field PATCH and safe navigation; Audit has URL-backed read-only filters and a bounded safe metadata renderer with redaction. Browser QA remains pending for Phase 14F browser visual/UAT acceptance. Deployment remains paused. The backend API, permissions, serializers, models, and migrations remain unchanged; backend runtime changed: no; migrations: none.
 
 Remaining post-MVP limitations include real AI integration, email forgot-password, unsupported professional fields, online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.
 

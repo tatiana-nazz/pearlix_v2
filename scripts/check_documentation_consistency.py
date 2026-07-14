@@ -4,11 +4,13 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND_TOTAL = "56 files, 188 tests"
+FRONTEND_TOTAL = "57 files, 191 tests"
 SCHEDULE_BACKEND_TOTAL = "83 passed"
 VISIT_BACKEND_TOTAL = "248 passed"
 XRAY_BACKEND_TOTAL = "131 passed"
 BILLING_BACKEND_TOTAL = "71 passed"
+CLINIC_AUDIT_BACKEND_TOTAL = "170 passed"
+FULL_BACKEND_TOTAL = "414 passed"
 FILES = {
     "status": "backend/project_docs/PROJECT_STATUS.md",
     "readme": "frontend/README.md",
@@ -91,6 +93,10 @@ ACCEPTANCE_TESTS = {
         ("./i18n",),
         ("typed Arabic billing labels",),
     ),
+    "frontend/src/pages/admin/ClinicAuditPages.test.tsx": (
+        ("./AdminManagementPages",),
+        ("four typed settings sections", "PATCHes only changed number and array values", "URL-backed audit filters", "safe structured redacted audit metadata"),
+    ),
 }
 
 # These fragments require the acceptance files to exercise production state and
@@ -117,6 +123,10 @@ ACTUAL_INTERACTION_EVIDENCE = {
         'billingApi.recordPayment', '["invoice-payments", 14]',
         '["invoice-print-data", 14]',
     ),
+    "frontend/src/pages/admin/ClinicAuditPages.test.tsx": (
+        'capacity_per_slot: 4', 'allowed_durations_minutes: [15, 30, 60]',
+        'entity_type=patient', 'metadata_json: { password:', 'document.querySelector("pre")',
+    ),
 }
 
 
@@ -132,7 +142,7 @@ def main() -> int:
 
     required = (
         "phase 14d automated acceptance is complete",
-        "phase 14e is in progress",
+        "phase 14e supporting operations automated acceptance: complete",
         "schedules and leave",
         "visits",
         FRONTEND_TOTAL,
@@ -140,6 +150,8 @@ def main() -> int:
         VISIT_BACKEND_TOTAL,
         XRAY_BACKEND_TOTAL,
         BILLING_BACKEND_TOTAL,
+        CLINIC_AUDIT_BACKEND_TOTAL,
+        FULL_BACKEND_TOTAL,
         "backend runtime changed: no",
         "migrations: none",
         "phase 14f",
@@ -153,8 +165,8 @@ def main() -> int:
                 errors.append(f"{key} does not state remaining Phase 14E work: {phrase!r}")
 
     status = text.get("status", "")
-    if "next phase 14e tasks: clinic settings and audit" not in status:
-        errors.append("status does not identify Clinic Settings and Audit as the next Phase 14E tasks")
+    if "phase 14f browser visual/uat acceptance" not in status:
+        errors.append("status does not identify Phase 14F browser visual/UAT acceptance as next")
     if "phase 14e has not started" in "\n".join(text.values()):
         errors.append("stale wording: 'phase 14e has not started'")
 
@@ -186,6 +198,10 @@ def main() -> int:
     for forbidden in ("Patient ID", "Doctor ID", "Visit ID", "Appointment ID", "JSON.stringify", "<pre", "dialog-backdrop", "dialog-panel", "dir={role"):
         if forbidden in billing_runtime:
             errors.append(f"billing runtime retains forbidden legacy content: {forbidden!r}")
+    admin_runtime = (ROOT / "frontend/src/pages/admin/AdminManagementPages.tsx").read_text(encoding="utf-8")
+    for forbidden in ("Object.entries(data)", "JSON.stringify", "<pre", "dangerouslySetInnerHTML"):
+        if forbidden in admin_runtime:
+            errors.append(f"admin runtime retains forbidden legacy content: {forbidden!r}")
 
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
