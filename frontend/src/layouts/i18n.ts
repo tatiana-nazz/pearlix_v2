@@ -82,6 +82,10 @@ const clinicAuditMessages = {
     clinicSettings: "إعدادات العيادة", clinicSettingsHelp: "تنطبق الإعدادات الإدارية على عمليات العيادة المستقبلية؛ إعدادات الذكاء الاصطناعي تجريبية وغير سريرية.", clinicIdentity: "هوية العيادة", scheduling: "الجدولة", localizationBilling: "اللغة وافتراضات الفوترة", aiWorkspace: "إعداد مساحة الذكاء الاصطناعي", clinicName: "اسم العيادة", address: "العنوان", phone: "الهاتف", email: "البريد الإلكتروني", timezone: "المنطقة الزمنية IANA", capacity: "السعة لكل وقت بدء", allowedDurations: "المدد المسموحة", defaultDuration: "المدة الافتراضية", supportedCurrencies: "العملات المدعومة", defaultCurrency: "العملة الافتراضية", defaultLanguage: "اللغة الافتراضية", aiMode: "وضع الذكاء الاصطناعي", aiServiceUrl: "رابط خدمة الذكاء الاصطناعي", saveSettings: "حفظ الإعدادات", discardChanges: "تجاهل التغييرات؟", discard: "تجاهل", keepEditing: "متابعة التحرير", settingsSaved: "تم حفظ الإعدادات.", settingsUnavailable: "إعدادات العيادة غير متاحة", saveFailed: "تعذر حفظ الإعدادات.", capacityInvalid: "يجب أن تكون السعة واحداً على الأقل.", durationRelationship: "يجب أن تكون المدة الافتراضية مسموحة.", currencyRelationship: "يجب أن تكون العملة الافتراضية مدعومة.", emailInvalid: "أدخل بريداً إلكترونياً صالحاً.", timezoneRequired: "يلزم تحديد منطقة زمنية IANA.", aiUrlInvalid: "أدخل رابط خدمة ذكاء اصطناعي صالحاً.", auditLogs: "سجل التدقيق", auditRecords: "سجلات التدقيق", auditRecord: "سجل تدقيق", actor: "الفاعل", actorRole: "دور الفاعل", action: "الإجراء", entityType: "نوع الكيان", entityId: "معرف الكيان (دقيق)", occurred: "وقت الحدوث", system: "النظام", metadata: "بيانات وصفية", noAuditLogs: "لم يتم العثور على سجلات تدقيق.", auditUnavailable: "سجل التدقيق غير متاح", auditRecordUnavailable: "سجل التدقيق غير متاح", clearFilters: "مسح عوامل التصفية", allRoles: "كل الأدوار", allActions: "كل الإجراءات", allEntities: "كل الكيانات", metadataEmpty: "لا توجد بيانات وصفية.", redacted: "محجوب", backToAudit: "العودة إلى سجل التدقيق", unknown: "غير معروف", notFound: "سجل التدقيق غير موجود.", aiDjangoInternal: "داخلي في جانغو", aiSeparateService: "خدمة منفصلة", aiMockAdapter: "محول تجريبي"
   },
 } as const;
+const clinicSettingsOptionMessages = {
+  EN: { languageEnglish: "English", languageArabic: "Arabic" },
+  AR: { languageEnglish: "الإنجليزية", languageArabic: "العربية" },
+} as const;
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -99,6 +103,7 @@ const xrayMessageKeysMatch: SameKeys<typeof xrayMessages.EN, typeof xrayMessages
 const billingMessageKeysMatch: SameKeys<typeof billingMessages.EN, typeof billingMessages.AR> = true;
 const billingAcceptanceMessageKeysMatch: SameKeys<typeof billingAcceptanceMessages.EN, typeof billingAcceptanceMessages.AR> = true;
 const clinicAuditMessageKeysMatch: SameKeys<typeof clinicAuditMessages.EN, typeof clinicAuditMessages.AR> = true;
+const clinicSettingsOptionMessageKeysMatch: SameKeys<typeof clinicSettingsOptionMessages.EN, typeof clinicSettingsOptionMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
@@ -110,12 +115,13 @@ void xrayMessageKeysMatch;
 void billingMessageKeysMatch;
 void billingAcceptanceMessageKeysMatch;
 void clinicAuditMessageKeysMatch;
+void clinicSettingsOptionMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -141,6 +147,8 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
 
   const billingAcceptanceDictionary = billingAcceptanceMessages[language];
   if (hasOwnKey(billingAcceptanceDictionary, key)) return billingAcceptanceDictionary[key];
+  const clinicSettingsOptionDictionary = clinicSettingsOptionMessages[language];
+  if (hasOwnKey(clinicSettingsOptionDictionary, key)) return clinicSettingsOptionDictionary[key];
   const clinicAuditDictionary = clinicAuditMessages[language];
   if (hasOwnKey(clinicAuditDictionary, key)) return clinicAuditDictionary[key];
 
