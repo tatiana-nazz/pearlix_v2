@@ -86,6 +86,10 @@ const clinicSettingsOptionMessages = {
   EN: { languageEnglish: "English", languageArabic: "Arabic" },
   AR: { languageEnglish: "الإنجليزية", languageArabic: "العربية" },
 } as const;
+const auditAcceptanceMessages = {
+  EN: { auditFilters: "Audit filters", auditActorSearchPlaceholder: "Search actors", auditExactIdentifier: "Exact identifier", auditRefreshing: "Refreshing audit records", auditIpAddress: "IP address", auditMetadataTruncated: "Additional metadata is hidden", auditNull: "None", auditRoleAdmin: "Admin", auditRoleStaff: "Staff", auditRoleDoctor: "Doctor", auditActionClinicSettingsUpdated: "Clinic settings updated", auditActionPatientCreated: "Patient Created", auditActionPatientUpdated: "Patient updated", auditActionAppointmentCreated: "Appointment created", auditActionAppointmentUpdated: "Appointment updated", auditActionAppointmentStatusChanged: "Appointment status changed", auditActionVisitStarted: "Visit started", auditActionVisitUpdated: "Visit updated", auditActionVisitCompleted: "Visit completed", auditActionBillingHandoffCreated: "Billing handoff created", auditActionBillingHandoffConverted: "Billing handoff converted", auditActionBillingHandoffDismissed: "Billing handoff dismissed", auditActionInvoiceCreated: "Invoice created", auditActionInvoiceUpdated: "Invoice updated", auditActionInvoiceCancelled: "Invoice cancelled", auditActionPaymentRecorded: "Payment recorded", auditActionXrayUploaded: "X-ray uploaded", auditActionXrayAiRun: "X-ray AI run", auditActionExternalXrayUploaded: "External X-ray uploaded", auditActionExternalXrayAiRun: "External X-ray AI run", auditActionExternalXrayAttached: "External X-ray attached", auditActionExternalXrayDiscarded: "External X-ray discarded", auditActionUserCreated: "User created", auditActionUserUpdated: "User updated", auditActionUserDeactivated: "User deactivated", auditActionUserReactivated: "User reactivated", auditActionUserPasswordReset: "User password reset", auditActionUserRoleChanged: "User role changed", auditActionScheduleUpdated: "Schedule updated", auditActionLeaveCreated: "Leave created", auditActionLeaveUpdated: "Leave updated", auditActionLeaveCancelled: "Leave cancelled", auditEntityClinicSettings: "Clinic settings", auditEntityPatient: "Patient", auditEntityAppointment: "Appointment", auditEntityVisit: "Visit", auditEntityBillingHandoff: "Billing handoff", auditEntityInvoice: "Invoice", auditEntityPayment: "Payment", auditEntityXray: "X-ray", auditEntityExternalXray: "External X-ray", auditEntityUser: "User", auditEntityTeamMember: "Team member", auditEntitySchedule: "Schedule", auditEntityLeave: "Leave" },
+  AR: { auditFilters: "مرشحات التدقيق", auditActorSearchPlaceholder: "البحث عن الفاعلين", auditExactIdentifier: "معرف دقيق", auditRefreshing: "جارٍ تحديث سجلات التدقيق", auditIpAddress: "عنوان IP", auditMetadataTruncated: "تم إخفاء بيانات وصفية إضافية", auditNull: "لا شيء", auditRoleAdmin: "مسؤول", auditRoleStaff: "موظف", auditRoleDoctor: "طبيب", auditActionClinicSettingsUpdated: "تم تحديث إعدادات العيادة", auditActionPatientCreated: "تم إنشاء مريض", auditActionPatientUpdated: "تم تحديث المريض", auditActionAppointmentCreated: "تم إنشاء موعد", auditActionAppointmentUpdated: "تم تحديث الموعد", auditActionAppointmentStatusChanged: "تم تغيير حالة الموعد", auditActionVisitStarted: "بدأت الزيارة", auditActionVisitUpdated: "تم تحديث الزيارة", auditActionVisitCompleted: "اكتملت الزيارة", auditActionBillingHandoffCreated: "تم إنشاء تحويل الفوترة", auditActionBillingHandoffConverted: "تم تحويل تحويل الفوترة", auditActionBillingHandoffDismissed: "تم رفض تحويل الفوترة", auditActionInvoiceCreated: "تم إنشاء الفاتورة", auditActionInvoiceUpdated: "تم تحديث الفاتورة", auditActionInvoiceCancelled: "تم إلغاء الفاتورة", auditActionPaymentRecorded: "تم تسجيل الدفعة", auditActionXrayUploaded: "تم رفع الأشعة السينية", auditActionXrayAiRun: "تم تشغيل الذكاء الاصطناعي للأشعة", auditActionExternalXrayUploaded: "تم رفع أشعة خارجية", auditActionExternalXrayAiRun: "تم تشغيل الذكاء الاصطناعي للأشعة الخارجية", auditActionExternalXrayAttached: "تم إرفاق الأشعة الخارجية", auditActionExternalXrayDiscarded: "تم تجاهل الأشعة الخارجية", auditActionUserCreated: "تم إنشاء المستخدم", auditActionUserUpdated: "تم تحديث المستخدم", auditActionUserDeactivated: "تم إلغاء تنشيط المستخدم", auditActionUserReactivated: "تمت إعادة تنشيط المستخدم", auditActionUserPasswordReset: "تمت إعادة تعيين كلمة مرور المستخدم", auditActionUserRoleChanged: "تم تغيير دور المستخدم", auditActionScheduleUpdated: "تم تحديث الجدول", auditActionLeaveCreated: "تم إنشاء الإجازة", auditActionLeaveUpdated: "تم تحديث الإجازة", auditActionLeaveCancelled: "تم إلغاء الإجازة", auditEntityClinicSettings: "إعدادات العيادة", auditEntityPatient: "مريض", auditEntityAppointment: "موعد", auditEntityVisit: "زيارة", auditEntityBillingHandoff: "تحويل الفوترة", auditEntityInvoice: "فاتورة", auditEntityPayment: "دفعة", auditEntityXray: "أشعة سينية", auditEntityExternalXray: "أشعة خارجية", auditEntityUser: "مستخدم", auditEntityTeamMember: "عضو فريق", auditEntitySchedule: "جدول", auditEntityLeave: "إجازة" },
+} as const;
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -104,6 +108,7 @@ const billingMessageKeysMatch: SameKeys<typeof billingMessages.EN, typeof billin
 const billingAcceptanceMessageKeysMatch: SameKeys<typeof billingAcceptanceMessages.EN, typeof billingAcceptanceMessages.AR> = true;
 const clinicAuditMessageKeysMatch: SameKeys<typeof clinicAuditMessages.EN, typeof clinicAuditMessages.AR> = true;
 const clinicSettingsOptionMessageKeysMatch: SameKeys<typeof clinicSettingsOptionMessages.EN, typeof clinicSettingsOptionMessages.AR> = true;
+const auditAcceptanceMessageKeysMatch: SameKeys<typeof auditAcceptanceMessages.EN, typeof auditAcceptanceMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
@@ -116,12 +121,13 @@ void billingMessageKeysMatch;
 void billingAcceptanceMessageKeysMatch;
 void clinicAuditMessageKeysMatch;
 void clinicSettingsOptionMessageKeysMatch;
+void auditAcceptanceMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -149,6 +155,8 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
   if (hasOwnKey(billingAcceptanceDictionary, key)) return billingAcceptanceDictionary[key];
   const clinicSettingsOptionDictionary = clinicSettingsOptionMessages[language];
   if (hasOwnKey(clinicSettingsOptionDictionary, key)) return clinicSettingsOptionDictionary[key];
+  const auditAcceptanceDictionary = auditAcceptanceMessages[language];
+  if (hasOwnKey(auditAcceptanceDictionary, key)) return auditAcceptanceDictionary[key];
   const clinicAuditDictionary = clinicAuditMessages[language];
   if (hasOwnKey(clinicAuditDictionary, key)) return clinicAuditDictionary[key];
 
