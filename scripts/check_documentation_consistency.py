@@ -1,212 +1,141 @@
-"""Validate Phase 14E supporting-operations documentation and acceptance evidence."""
+"""Validate Phase 14E closure documentation and production acceptance evidence."""
 from pathlib import Path
 import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND_TOTAL = "57 files, 191 tests"
-SCHEDULE_BACKEND_TOTAL = "83 passed"
-VISIT_BACKEND_TOTAL = "248 passed"
-XRAY_BACKEND_TOTAL = "131 passed"
-BILLING_BACKEND_TOTAL = "71 passed"
-CLINIC_AUDIT_BACKEND_TOTAL = "170 passed"
-FULL_BACKEND_TOTAL = "414 passed"
-FILES = {
+FRONTEND_TOTAL = "60 files, 213 tests"
+STATUS_FILES = {
     "status": "backend/project_docs/PROJECT_STATUS.md",
     "readme": "frontend/README.md",
     "record": "frontend/design_v2/PHASE_14E_IMPLEMENTATION_RECORD.md",
 }
-ACCEPTANCE_TESTS = {
-    "frontend/src/pages/admin/ScheduleLeaveManagementPage.test.tsx": (
-        ("./ScheduleManagementPage", "./LeaveManagementPage", "../profile/OwnSchedulePage", "../profile/OwnLeavePage"),
-        ("impact confirmation", "non-DELETE actions", "read-only"),
-    ),
-    "frontend/src/api/endpoints/schedule.test.ts": (
-        ("./schedule",),
-        ("never DELETE", "apply and copy modes", "retrieve endpoint"),
-    ),
-    "frontend/src/features/visits/components/VisitWorkspace.test.tsx": (
-        ("./VisitWorkspace",),
-        ("five-field clinical-note payload", "blocks internal navigation", "saves dirty notes"),
-    ),
-    "frontend/src/pages/visits/DoctorActiveVisitPage.test.tsx": (
-        ("./DoctorActiveVisitPage",),
-        ("doctor day appointments", "loading, error retry, denied, and populated states"),
-    ),
-    "frontend/src/features/appointments/utils/appointmentPermissions.test.ts": (
-        ("./appointmentPermissions",),
-        ("never exposes Start Visit",),
-    ),
-    "frontend/src/features/xrays/hooks/useProtectedMedia.test.tsx": (
-        ("./useProtectedMedia",),
-        ("creates temporary object URLs", "revokes replaced and unmounted URLs"),
-    ),
-    "frontend/src/features/xrays/components/ProtectedXrayImage.test.tsx": (
-        ("./ProtectedXrayImage",),
-        ("authenticated-media failures", "decode failures"),
-    ),
-    "frontend/src/features/xrays/components/XrayUploadDialog.test.tsx": (
-        ("./XrayUploadDialog",),
-        ("supported multipart-ready payload", "blocks every close action"),
-    ),
-    "frontend/src/features/xrays/components/ExternalXrayDialogs.test.tsx": (
-        ("./ExternalXrayDialogs",),
-        ("exact attach payload", "pending destructive confirmation"),
-    ),
-    "frontend/src/features/xrays/components/ExternalXrayDetail.test.tsx": (
-        ("./ExternalXrayDetail",),
-        ("Admin upload-case management", "another Doctor"),
-    ),
-    "frontend/src/api/endpoints/xrays.test.ts": (
-        ("./xrays",),
-        ("never DELETE", "discard/"),
-    ),
-    "frontend/src/features/billing/components/BillingDialogs.test.tsx": (
-        ("./BillingDialogs",),
-        ("omits a currency payload", "overpayment"),
-    ),
-    "frontend/src/api/endpoints/billing.test.ts": (
-        ("./billing",),
-        ("POST-only", "never DELETE"),
-    ),
-    "frontend/src/features/billing/components/VisitBillingSection.test.tsx": (
-        ("./VisitBillingSection",),
-        ("owning completed visit", "active and non-owning Doctor", "Admin and Staff read-only", "existing handoff"),
-    ),
-    "frontend/src/pages/billing/BillingPages.test.tsx": (
-        ("./BillingPages",),
-        ("Admin invoices read-only", "selected patient instead of a raw patient identifier", "structured A4 print data", "Arabic root RTL direction", "controlled list filters", "dirty New Invoice navigation"),
-    ),
-    "frontend/src/pages/billing/BillingInvoicePages.test.tsx": (
-        ("./BillingPages",),
-        ("Admin detail read-only", "locks paid and cancelled", "remaining balance", "exact remaining payment", "relationship fields"),
-    ),
-    "frontend/src/pages/billing/BillingHandoffPages.test.tsx": (
-        ("./BillingPages",),
-        ("Staff Convert and Dismiss only for a pending handoff", "Admin, Doctor, converted, and dismissed", "exact conversion payload", "POST-only dismissal payload", "navigates once after a successful conversion"),
-    ),
-    "frontend/src/features/billing/hooks/useBilling.test.tsx": (
-        ("./useBilling",),
-        ("invalidates invoice, payment, print, list, handoff, and dashboard data",),
-    ),
-    "frontend/src/layouts/i18n.billing.test.ts": (
-        ("./i18n",),
-        ("typed Arabic billing labels",),
-    ),
-    "frontend/src/pages/admin/ClinicAuditPages.test.tsx": (
-        ("./AdminManagementPages",),
-        ("four typed settings sections", "PATCHes only changed number and array values", "URL-backed audit filters", "safe structured redacted audit metadata"),
-    ),
+STATUS_REQUIREMENTS = (
+    "phase 14e supporting operations automated acceptance: complete",
+    "schedules and leave",
+    "visits",
+    "x-rays/ai",
+    "billing",
+    "clinic settings",
+    "audit",
+    FRONTEND_TOTAL,
+    "83 passed",
+    "248 passed",
+    "131 passed",
+    "71 passed",
+    "170 passed",
+    "414 passed",
+    "django check passed",
+    "migration drift: no changes detected",
+    "backend runtime modified: no",
+    "migrations: none",
+    "phase 14f browser visual/uat acceptance is next",
+    "deployment remains paused",
+)
+ACCEPTANCE_EVIDENCE = {
+    "frontend/src/pages/admin/ClinicSettingsPage.test.tsx": {
+        "import": "./ClinicSettingsPage",
+        "scenarios": (
+            "four explicit typed sections",
+            "PATCHes only exact changed typed fields",
+            "localized GET error and retries",
+            "blocks beforeunload and internal navigation while settings are dirty",
+            "locks duplicate submission and navigation while a save is pending",
+            "preserves dirty values after a failed save",
+            "uses a successful response as the baseline, announces success",
+            "localized AI modes, and an RTL page direction",
+        ),
+    },
+    "frontend/src/pages/admin/AuditPages.test.tsx": {
+        "import": "./AuditPages",
+        "scenarios": (
+            "URL-backed filters",
+            "debounces actor server search",
+            "ignores an older actor-search response after a newer search",
+            "localizes known values, safely humanizes unknown values",
+            "opens rows with mouse or keyboard",
+            "opens System and unknown rows by mouse and Space",
+            "bounded structured metadata with nested redaction and plain HTML-like text",
+            "renders bounded typed metadata, all sensitive key families",
+            "localizes Arabic audit labels and retains RTL direction",
+        ),
+    },
+    "frontend/src/api/endpoints/audit.test.ts": {
+        "import": "./audit",
+        "scenarios": (
+            "uses GET for the list and detail endpoints",
+            "exposes no mutation operations",
+        ),
+    },
 }
+RUNTIME_FILES = (
+    "frontend/src/pages/admin/AdminManagementPages.tsx",
+    "frontend/src/pages/admin/ClinicSettingsPage.tsx",
+    "frontend/src/pages/admin/AuditPages.tsx",
+    "frontend/src/api/endpoints/audit.ts",
+)
+FORBIDDEN_RUNTIME = (
+    "Object.entries(data)",
+    "JSON.stringify",
+    "<pre",
+    "dangerouslySetInnerHTML",
+    "LegacyAdminClinicSettingsPage",
+)
+FORBIDDEN_AUTHORITY = (
+    "56 files, 188 tests",
+    "Phase 14E is in progress",
+    "Clinic Settings and Audit have not started",
+    "Phase 14E is not complete",
+    "Clinic Settings and Audit are the next tasks",
+)
 
-# These fragments require the acceptance files to exercise production state and
-# interactions, rather than merely naming a scenario in prose.
-ACTUAL_INTERACTION_EVIDENCE = {
-    "frontend/src/features/billing/components/VisitBillingSection.test.tsx": (
-        'status: "ACTIVE"', 'status: "COMPLETED"', 'results = [{ id: 9 }]',
-    ),
-    "frontend/src/pages/billing/BillingPages.test.tsx": (
-        'document.documentElement.dir = "rtl"', 'closest("[dir]")',
-        'article.a4-invoice', '.print-control',
-        'fireEvent.change(handoff.getByLabelText("Created from")',
-        'router.navigate("/staff/billing/invoices")',
-    ),
-    "frontend/src/pages/billing/BillingInvoicePages.test.tsx": (
-        'status: "PAID"', 'status: "CANCELLED"',
-        'value: "60"', 'value: "50.00"',
-    ),
-    "frontend/src/pages/billing/BillingHandoffPages.test.tsx": (
-        'status: "CONVERTED_TO_INVOICE"', 'status: "DISMISSED"',
-        'handoffId: 12', 'getAllByText("Invoice")',
-    ),
-    "frontend/src/features/billing/hooks/useBilling.test.tsx": (
-        'billingApi.recordPayment', '["invoice-payments", 14]',
-        '["invoice-print-data", 14]',
-    ),
-    "frontend/src/pages/admin/ClinicAuditPages.test.tsx": (
-        'capacity_per_slot: 4', 'allowed_durations_minutes: [15, 30, 60]',
-        'entity_type=patient', 'metadata_json: { password:', 'document.querySelector("pre")',
-    ),
-}
+
+def read(relative: str, errors: list[str]) -> str:
+    path = ROOT / relative
+    if not path.is_file():
+        errors.append(f"missing {relative}")
+        return ""
+    return path.read_text(encoding="utf-8")
 
 
 def main() -> int:
     errors: list[str] = []
-    text: dict[str, str] = {}
-    for key, relative in FILES.items():
-        path = ROOT / relative
-        if not path.is_file():
-            errors.append(f"missing {relative}")
-        else:
-            text[key] = path.read_text(encoding="utf-8").lower()
+    status_text = {name: read(relative, errors) for name, relative in STATUS_FILES.items()}
 
-    required = (
-        "phase 14d automated acceptance is complete",
-        "phase 14e supporting operations automated acceptance: complete",
-        "schedules and leave",
-        "visits",
-        FRONTEND_TOTAL,
-        SCHEDULE_BACKEND_TOTAL,
-        VISIT_BACKEND_TOTAL,
-        XRAY_BACKEND_TOTAL,
-        BILLING_BACKEND_TOTAL,
-        CLINIC_AUDIT_BACKEND_TOTAL,
-        FULL_BACKEND_TOTAL,
-        "backend runtime changed: no",
-        "migrations: none",
-        "phase 14f",
-    )
-    for key, source in text.items():
-        for phrase in required:
-            if phrase not in source:
-                errors.append(f"{key} missing {phrase!r}")
-        for phrase in ("x-rays/ai", "billing", "clinic settings", "audit"):
-            if phrase not in source:
-                errors.append(f"{key} does not state remaining Phase 14E work: {phrase!r}")
+    for name, source in status_text.items():
+        lowered = source.lower()
+        for requirement in STATUS_REQUIREMENTS:
+            if requirement not in lowered:
+                errors.append(f"{name} missing current-status evidence: {requirement!r}")
+        for forbidden in FORBIDDEN_AUTHORITY:
+            if forbidden.lower() in lowered:
+                errors.append(f"{name} retains stale or contradictory authority: {forbidden!r}")
 
-    status = text.get("status", "")
-    if "phase 14f browser visual/uat acceptance" not in status:
-        errors.append("status does not identify Phase 14F browser visual/UAT acceptance as next")
-    if "phase 14e has not started" in "\n".join(text.values()):
-        errors.append("stale wording: 'phase 14e has not started'")
-
-    for relative, (imports, scenarios) in ACCEPTANCE_TESTS.items():
-        path = ROOT / relative
-        if not path.is_file():
-            errors.append(f"missing acceptance test {relative}")
+    for relative, evidence in ACCEPTANCE_EVIDENCE.items():
+        source = read(relative, errors)
+        if not source:
             continue
-        source = path.read_text(encoding="utf-8")
-        for production_import in imports:
-            if production_import not in source:
-                errors.append(f"acceptance test lacks production import {relative}: {production_import!r}")
-        for scenario in scenarios:
+        if evidence["import"] not in source:
+            errors.append(f"acceptance test lacks production import: {relative}")
+        for scenario in evidence["scenarios"]:
             if scenario not in source:
                 errors.append(f"acceptance test lacks representative scenario {relative}: {scenario!r}")
-        for evidence in ACTUAL_INTERACTION_EVIDENCE.get(relative, ()):
-            if evidence not in source:
-                errors.append(f"acceptance test lacks production interaction evidence {relative}: {evidence!r}")
 
-    billing_runtime = "\n".join(
-        (ROOT / relative).read_text(encoding="utf-8")
-        for relative in (
-            "frontend/src/pages/billing/BillingPages.tsx",
-            "frontend/src/features/billing/components/BillingDialogs.tsx",
-            "frontend/src/features/billing/components/BillingLists.tsx",
-            "frontend/src/features/billing/components/VisitBillingSection.tsx",
-        )
-    )
-    for forbidden in ("Patient ID", "Doctor ID", "Visit ID", "Appointment ID", "JSON.stringify", "<pre", "dialog-backdrop", "dialog-panel", "dir={role"):
-        if forbidden in billing_runtime:
-            errors.append(f"billing runtime retains forbidden legacy content: {forbidden!r}")
-    admin_runtime = (ROOT / "frontend/src/pages/admin/AdminManagementPages.tsx").read_text(encoding="utf-8")
-    for forbidden in ("Object.entries(data)", "JSON.stringify", "<pre", "dangerouslySetInnerHTML"):
-        if forbidden in admin_runtime:
-            errors.append(f"admin runtime retains forbidden legacy content: {forbidden!r}")
+    for relative in RUNTIME_FILES:
+        source = read(relative, errors)
+        for forbidden in FORBIDDEN_RUNTIME:
+            if forbidden in source:
+                errors.append(f"active runtime retains forbidden content {relative}: {forbidden!r}")
+
+    for name, source in status_text.items():
+        for forbidden in FORBIDDEN_RUNTIME:
+            if forbidden in source:
+                errors.append(f"{name} retains forbidden current-authority content: {forbidden!r}")
 
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
         return 1
-    print("Documentation consistency check passed. It does not replace typecheck, tests, build, backend verification, or browser QA.")
+    print("Documentation consistency check passed. It does not replace typecheck, tests, build, backend verification, or Phase 14F browser QA.")
     return 0
 
 
