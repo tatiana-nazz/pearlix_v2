@@ -6,7 +6,7 @@
 - [ ] From `D:\pearlix_v2\backend`, use `D:\pearlix_v2\backend\.venv\Scripts\python.exe manage.py check` and `manage.py migrate --check`.
 - [ ] Start backend: `D:\pearlix_v2\backend\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000`.
 - [ ] From `D:\pearlix_v2\frontend`, start frontend: `npm.cmd run dev -- --host 127.0.0.1`.
-- [ ] Before review, confirm `backend/.env` allows the intended origin `http://127.0.0.1:5173` in `CORS_ALLOWED_ORIGINS`; Phase 14F found that the current configuration permits only `http://localhost:5173` (CORS-14F-01). Do not perform this configuration correction as part of the visual review.
+- [ ] Confirm `backend/.env` explicitly allows both local development origins in `CORS_ALLOWED_ORIGINS`: `http://127.0.0.1:5173` and `http://localhost:5173`. CORS-14F-01 was resolved before this review; do not broaden the allowlist or enable wildcard CORS.
 - [ ] Open `http://127.0.0.1:5173/login`; confirm browser console is clear of application errors and API requests reach `http://127.0.0.1:8000/api/`.
 - [ ] Sign in with the local deterministic Admin, Staff, and Doctor accounts documented in `backend/project_docs/DEMO_STORY.md`. Do not record passwords in this checklist or commit them.
 
@@ -46,6 +46,7 @@ Check visual hierarchy, density, spacing, alignment, clipped/overflowing content
 
 - [ ] Save only reliable, unedited screenshots under `frontend/design_v2/phase14f_evidence/` with role, route, viewport, language, theme, and defect ID in the filename.
 - [ ] Add each approved change below; do not implement corrections during this review.
+- [ ] Recheck `RTL-14F-01`: Doctor dashboard at 768x1024, Arabic, light, RTL currently has a horizontal page scrollbar (`phase14f_evidence/doctor-dashboard-768x1024-ar-light-rtl.png`).
 
 ### User-approved visual correction list
 
