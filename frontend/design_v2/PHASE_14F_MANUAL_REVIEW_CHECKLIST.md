@@ -6,6 +6,7 @@
 - [ ] From `D:\pearlix_v2\backend`, use `D:\pearlix_v2\backend\.venv\Scripts\python.exe manage.py check` and `manage.py migrate --check`.
 - [ ] Start backend: `D:\pearlix_v2\backend\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000`.
 - [ ] From `D:\pearlix_v2\frontend`, start frontend: `npm.cmd run dev -- --host 127.0.0.1`.
+- [ ] Before review, confirm `backend/.env` allows the intended origin `http://127.0.0.1:5173` in `CORS_ALLOWED_ORIGINS`; Phase 14F found that the current configuration permits only `http://localhost:5173` (CORS-14F-01). Do not perform this configuration correction as part of the visual review.
 - [ ] Open `http://127.0.0.1:5173/login`; confirm browser console is clear of application errors and API requests reach `http://127.0.0.1:8000/api/`.
 - [ ] Sign in with the local deterministic Admin, Staff, and Doctor accounts documented in `backend/project_docs/DEMO_STORY.md`. Do not record passwords in this checklist or commit them.
 
