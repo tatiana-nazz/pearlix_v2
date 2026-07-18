@@ -721,6 +721,9 @@ p {
 }
 
 .table-scroll {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
   overflow-x: auto;
 }
 
@@ -769,6 +772,15 @@ p {
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
+}
+
+.patient-table .row-actions {
+  inline-size: max-content;
+}
+
+.patient-table .compact-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .pagination-bar {

@@ -24,18 +24,34 @@ describe("DoctorActiveVisitPage production route states", () => {
     expect(screen.getByRole("link", { name: "Open day appointments" })).toHaveAttribute("href", "/doctor/appointments/day");
   });
 
-  it("renders loading, error retry, denied, and populated states without backend copy", () => {
+  it("renders loading, server error retry, denied, and populated states without backend copy", () => {
     activeVisitState.current = { data: null, isLoading: true, isError: false, error: null, refetch: vi.fn() };
     const { rerender } = render(<MemoryRouter><DoctorActiveVisitPage /></MemoryRouter>);
     expect(screen.getByText("Loading visit")).toBeInTheDocument();
     const retry = vi.fn();
+    activeVisitState.current = { data: null, isLoading: false, isError: true, error: new ApiClientError({ code: "REQUEST_FAILED", message: "server unavailable", details: {}, status: 500 }), refetch: retry };
+    rerender(<MemoryRouter><DoctorActiveVisitPage /></MemoryRouter>);
+    expect(screen.getByText("Visit information is unavailable")).toBeInTheDocument();
+    screen.getByRole("button", { name: "Retry" }).click();
+    expect(retry).toHaveBeenCalledOnce();
     activeVisitState.current = { data: null, isLoading: false, isError: true, error: new ApiClientError({ code: "PERMISSION_DENIED", message: "forbidden", details: {}, status: 403 }), refetch: retry };
     rerender(<MemoryRouter><DoctorActiveVisitPage /></MemoryRouter>);
     expect(screen.getByText("This visit is not available for your role.")).toBeInTheDocument();
     screen.getByRole("button", { name: "Retry" }).click();
-    expect(retry).toHaveBeenCalledOnce();
+    expect(retry).toHaveBeenCalledTimes(2);
     activeVisitState.current = { data: { patient: { full_name: "Maya Patient" } }, isLoading: false, isError: false, error: null, refetch: vi.fn() };
     rerender(<MemoryRouter><DoctorActiveVisitPage /></MemoryRouter>);
     expect(screen.getByText("Active workspace for Maya Patient")).toBeInTheDocument();
+  });
+
+  it("renders the localized RTL empty state for the known no-active-visit outcome", () => {
+    document.documentElement.lang = "ar";
+    document.documentElement.dir = "rtl";
+    useAuthStore.setState({ user: { language_preference: "AR" } as never });
+    render(<MemoryRouter><DoctorActiveVisitPage /></MemoryRouter>);
+    expect(document.documentElement).toHaveAttribute("dir", "rtl");
+    expect(screen.getByText("لا توجد زيارة نشطة")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "فتح مواعيد اليوم" })).toHaveAttribute("href", "/doctor/appointments/day");
+    expect(screen.queryByText("No active visit")).not.toBeInTheDocument();
   });
 });

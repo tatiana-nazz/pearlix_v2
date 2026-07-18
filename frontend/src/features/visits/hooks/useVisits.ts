@@ -26,6 +26,10 @@ export function useVisit(visitId: number) {
   });
 }
 
+export function isNoActiveVisitError(error: unknown): error is ApiClientError {
+  return error instanceof ApiClientError && error.status === 404 && error.code === "NOT_FOUND";
+}
+
 export function useActiveVisit() {
   return useQuery({
     queryKey: ["active-visit"],
@@ -33,7 +37,7 @@ export function useActiveVisit() {
       try {
         return await visitsApi.active();
       } catch (error) {
-        if (error instanceof ApiClientError && error.code === "NOT_FOUND") return null;
+        if (isNoActiveVisitError(error)) return null;
         throw error;
       }
     },

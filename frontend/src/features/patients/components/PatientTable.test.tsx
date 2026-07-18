@@ -60,6 +60,18 @@ describe("PatientTable", () => {
     expect(screen.queryByText("Status")).not.toBeInTheDocument();
   });
 
+  it("keeps the Doctor action label intact inside the table scroll container in Arabic", () => {
+    useAuthStore.setState({ user: { language_preference: "AR" } as never, role: "DOCTOR" });
+    render(
+      <MemoryRouter>
+        <PatientTable role="DOCTOR" patients={[patient]} showArchivedStatus={false} onArchive={vi.fn()} onUnarchive={vi.fn()} />
+      </MemoryRouter>,
+    );
+    const action = screen.getByRole("link", { name: "تعديل المريض" });
+    expect(action.closest(".row-actions")).not.toBeNull();
+    expect(action.closest(".table-scroll")).not.toBeNull();
+  });
+
   it("renders age zero and never exposes the optimistic-lock version", () => {
     renderTable("STAFF", [{ ...patient, age: 0, version: 77 }]);
     expect(screen.getByRole("row", { name: /0 years old/ })).toBeInTheDocument();

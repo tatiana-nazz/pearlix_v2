@@ -1,12 +1,28 @@
-import type { LanguagePreference } from "../types/auth";
+import type { LanguagePreference, UserRole } from "../types/auth";
 import { useAuthStore } from "../auth/authStore";
 
 const messages = {
-  EN: { menu: "Open navigation", theme: "Theme", language: "Language", light: "Light", dark: "Dark", system: "System", logout: "Logout", schedule: "My schedule", leave: "My leave", workspace: "Workspace", clinical: "Clinical operations", administration: "Administration", personal: "Personal", close: "Close navigation" },
-  AR: { menu: "فتح التنقل", theme: "السمة", language: "اللغة", light: "فاتح", dark: "داكن", system: "النظام", logout: "تسجيل الخروج", schedule: "جدولي", leave: "إجازاتي", workspace: "مساحة العمل", clinical: "العمليات السريرية", administration: "الإدارة", personal: "شخصي", close: "إغلاق التنقل" },
+  EN: { menu: "Open navigation", navigation: "navigation", theme: "Theme", language: "Language", light: "Light", dark: "Dark", system: "System", logout: "Logout", schedule: "My schedule", leave: "My leave", workspace: "Workspace", clinical: "Clinical operations", administration: "Administration", personal: "Personal", close: "Close navigation", collapseSidebar: "Collapse sidebar", expandSidebar: "Expand sidebar", switchToLightMode: "Switch to light mode", switchToDarkMode: "Switch to dark mode", systemLight: "System: light", systemDark: "System: dark", dashboard: "Dashboard", team: "Team", usersAccess: "Users & Access", schedules: "Schedules", appointments: "Appointments", needsReschedule: "Needs reschedule", patients: "Patients", xraysAi: "X-rays & AI", externalXrays: "External X-rays", billing: "Billing", billingHandoffs: "Billing handoffs", invoices: "Invoices", clinicSettings: "Clinic settings", auditLogs: "Audit logs", myAppointments: "My appointments", activeVisit: "Active visit", externalXrayWorkspace: "External X-ray Workspace", myBillingHandoffs: "My billing handoffs", doctor: "Doctor", staff: "Staff", admin: "Admin", user: "User", doctorWorkspace: "Doctor workspace", staffWorkspace: "Staff workspace", adminWorkspace: "Admin workspace" },
+  AR: { menu: "فتح التنقل", navigation: "التنقل", theme: "السمة", language: "اللغة", light: "فاتح", dark: "داكن", system: "النظام", logout: "تسجيل الخروج", schedule: "جدولي", leave: "إجازاتي", workspace: "مساحة العمل", clinical: "العمليات السريرية", administration: "الإدارة", personal: "شخصي", close: "إغلاق التنقل", collapseSidebar: "طي الشريط الجانبي", expandSidebar: "توسيع الشريط الجانبي", switchToLightMode: "التبديل إلى الوضع الفاتح", switchToDarkMode: "التبديل إلى الوضع الداكن", systemLight: "النظام: فاتح", systemDark: "النظام: داكن", dashboard: "لوحة التحكم", team: "الفريق", usersAccess: "المستخدمون والصلاحيات", schedules: "الجداول", appointments: "المواعيد", needsReschedule: "يحتاج إعادة جدولة", patients: "المرضى", xraysAi: "الأشعة والذكاء الاصطناعي", externalXrays: "الأشعة الخارجية", billing: "الفوترة", billingHandoffs: "تحويلات الفوترة", invoices: "الفواتير", clinicSettings: "إعدادات العيادة", auditLogs: "سجلات التدقيق", myAppointments: "مواعيدي", activeVisit: "الزيارة النشطة", externalXrayWorkspace: "مساحة عمل الأشعة الخارجية", myBillingHandoffs: "تحويلات الفوترة الخاصة بي", doctor: "طبيب", staff: "موظف", admin: "مسؤول", user: "مستخدم", doctorWorkspace: "مساحة عمل الطبيب", staffWorkspace: "مساحة عمل الموظفين", adminWorkspace: "مساحة عمل الإدارة" },
 } as const;
 
+export type ShellMessageKey = keyof typeof messages.EN;
+
 export function t(language: LanguagePreference, key: keyof typeof messages.EN) { return messages[language][key]; }
+
+export function roleT(language: LanguagePreference, role: UserRole | null | undefined) {
+  if (role === "ADMIN") return t(language, "admin");
+  if (role === "STAFF") return t(language, "staff");
+  if (role === "DOCTOR") return t(language, "doctor");
+  return t(language, "user");
+}
+
+export function workspaceT(language: LanguagePreference, role: UserRole | null | undefined) {
+  if (role === "ADMIN") return t(language, "adminWorkspace");
+  if (role === "STAFF") return t(language, "staffWorkspace");
+  if (role === "DOCTOR") return t(language, "doctorWorkspace");
+  return t(language, "workspace");
+}
 
 // Feature dictionaries extend the shell dictionary; feature pages use this hook rather
 // than introducing a second localization provider.
