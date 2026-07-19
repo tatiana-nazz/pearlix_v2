@@ -13,6 +13,7 @@ import { appointmentKey } from "./useAppointments";
 
 function invalidateAppointments(queryClient: ReturnType<typeof useQueryClient>, appointmentId?: number) {
   void queryClient.invalidateQueries({ queryKey: ["appointments"] });
+  void queryClient.invalidateQueries({ queryKey: ["appointment-calendar-range"] });
   void queryClient.invalidateQueries({ queryKey: ["appointment-availability"] });
   if (appointmentId) void queryClient.invalidateQueries({ queryKey: appointmentKey(appointmentId) });
 }

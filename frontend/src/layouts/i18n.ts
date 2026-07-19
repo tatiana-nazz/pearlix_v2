@@ -192,6 +192,15 @@ const leavePolishMessages = {
   AR: { patientQuickFindHelp: "\u0627\u0628\u062d\u062b \u0641\u064a \u0633\u062c\u0644\u0627\u062a \u0627\u0644\u0645\u0631\u0636\u0649 \u0645\u0646 \u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645.", archivedPatients: "\u0627\u0644\u0645\u0631\u0636\u0649 \u0627\u0644\u0645\u0624\u0631\u0634\u0641\u0648\u0646", searchingPatients: "\u062c\u0627\u0631\u064d \u0627\u0644\u0628\u062d\u062b \u0639\u0646 \u0627\u0644\u0645\u0631\u0636\u0649…", noMatchingPatients: "\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0631\u0636\u0649 \u0645\u0637\u0627\u0628\u0642\u0648\u0646", patientSearchUnavailable: "\u0628\u062d\u062b \u0627\u0644\u0645\u0631\u0636\u0649 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d", clearSearch: "\u0645\u0633\u062d \u0627\u0644\u0628\u062d\u062b", upcoming: "\u0642\u0627\u062f\u0645", inEffect: "\u0633\u0627\u0631\u064a \u0627\u0644\u0645\u0641\u0639\u0648\u0644", ended: "\u0645\u0646\u062a\u0647\u064d", lifecycle: "\u062f\u0648\u0631\u0629 \u0627\u0644\u062d\u0627\u0644\u0629", clearFilters: "\u0645\u0633\u062d \u0627\u0644\u0641\u0644\u0627\u062a\u0631", searchEmployees: "\u0628\u062d\u062b \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646", noMatchingEmployees: "\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0648\u0638\u0641\u0648\u0646 \u0645\u0637\u0627\u0628\u0642\u0648\u0646", employeeSearchLoading: "\u062c\u0627\u0631\u064d \u0627\u0644\u0628\u062d\u062b \u0639\u0646 \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646…", employeeSearchUnavailable: "\u0628\u062d\u062b \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d", noLeaveMatches: "\u0644\u0627 \u062a\u0648\u062c\u062f \u0633\u062c\u0644\u0627\u062a \u0625\u062c\u0627\u0632\u0629 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0647\u0630\u0647 \u0627\u0644\u0641\u0644\u0627\u062a\u0631.", refreshingLeave: "\u062c\u0627\u0631\u064d \u062a\u062d\u062f\u064a\u062b \u0633\u062c\u0644\u0627\u062a \u0627\u0644\u0625\u062c\u0627\u0632\u0629…" },
 } as const;
 
+const appointmentDetailSummaryMessages = {
+  EN: {
+    loadingAppointmentDetails: "Loading appointment details…", unableToLoadAppointmentDetails: "Unable to load appointment details", appointmentNotFound: "Appointment not found.", appointmentSummaryDescription: "Appointment history for this patient. Open an appointment to review its details.", noPatientAppointments: "No appointments found for this patient.", loadingVisits: "Loading visits…", unableToLoadVisits: "Unable to load visits", noVisitsRecorded: "No visits have been recorded for this patient.", clinicalHistoryDescription: "Clinical history for this patient. Visit access remains read-only according to your role.", diagnosis: "Diagnosis", treatment: "Treatment", showingCount: "Showing", of: "of",
+  },
+  AR: {
+    loadingAppointmentDetails: "\u062c\u0627\u0631\u064d \u062a\u062d\u0645\u064a\u0644 \u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u0645\u0648\u0639\u062f…", unableToLoadAppointmentDetails: "\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u0645\u0648\u0639\u062f", appointmentNotFound: "\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0648\u0639\u062f.", appointmentSummaryDescription: "\u0633\u062c\u0644 \u0645\u0648\u0627\u0639\u064a\u062f \u0647\u0630\u0627 \u0627\u0644\u0645\u0631\u064a\u0636. \u0627\u0641\u062a\u062d \u0627\u0644\u0645\u0648\u0639\u062f \u0644\u0645\u0631\u0627\u062c\u0639\u0629 \u062a\u0641\u0627\u0635\u064a\u0644\u0647.", noPatientAppointments: "\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0648\u0627\u0639\u064a\u062f \u0645\u0633\u062c\u0644\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0631\u064a\u0636.", loadingVisits: "\u062c\u0627\u0631\u064d \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0632\u064a\u0627\u0631\u0627\u062a…", unableToLoadVisits: "\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0632\u064a\u0627\u0631\u0627\u062a", noVisitsRecorded: "\u0644\u0645 \u062a\u064f\u0633\u062c\u0644 \u0623\u064a \u0632\u064a\u0627\u0631\u0627\u062a \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0631\u064a\u0636.", clinicalHistoryDescription: "\u0627\u0644\u0633\u062c\u0644 \u0627\u0644\u0633\u0631\u064a\u0631\u064a \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0631\u064a\u0636. \u064a\u0628\u0642\u0649 \u0648\u0635\u0648\u0644 \u0627\u0644\u0632\u064a\u0627\u0631\u0629 \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u062d\u0633\u0628 \u062f\u0648\u0631\u0643.", diagnosis: "\u0627\u0644\u062a\u0634\u062e\u064a\u0635", treatment: "\u0627\u0644\u0639\u0644\u0627\u062c", showingCount: "\u064a\u062a\u0645 \u0639\u0631\u0636", of: "\u0645\u0646",
+  },
+} as const;
+
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -218,6 +227,7 @@ const profileMessageKeysMatch: SameKeys<typeof profileMessages.EN, typeof profil
 const teamDirectoryMessageKeysMatch: SameKeys<typeof teamDirectoryMessages.EN, typeof teamDirectoryMessages.AR> = true;
 const professionalScheduleMessageKeysMatch: SameKeys<typeof professionalScheduleMessages.EN, typeof professionalScheduleMessages.AR> = true;
 const leavePolishMessageKeysMatch: SameKeys<typeof leavePolishMessages.EN, typeof leavePolishMessages.AR> = true;
+const appointmentDetailSummaryMessageKeysMatch: SameKeys<typeof appointmentDetailSummaryMessages.EN, typeof appointmentDetailSummaryMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
@@ -238,12 +248,13 @@ void profileMessageKeysMatch;
 void teamDirectoryMessageKeysMatch;
 void professionalScheduleMessageKeysMatch;
 void leavePolishMessageKeysMatch;
+void appointmentDetailSummaryMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN | keyof typeof appointmentDetailSummaryMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -291,6 +302,8 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
   if (hasOwnKey(professionalScheduleDictionary, key)) return professionalScheduleDictionary[key];
   const leavePolishDictionary = leavePolishMessages[language];
   if (hasOwnKey(leavePolishDictionary, key)) return leavePolishDictionary[key];
+  const appointmentDetailSummaryDictionary = appointmentDetailSummaryMessages[language];
+  if (hasOwnKey(appointmentDetailSummaryDictionary, key)) return appointmentDetailSummaryDictionary[key];
 
   throw new Error(`Missing translation for key: ${key}`);
 }
