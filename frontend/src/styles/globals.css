@@ -931,9 +931,20 @@ p {
 .patient-form-grid,
 .appointment-form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: var(--space-4);
 }
+
+.appointment-field { min-inline-size: 0; }
+.appointment-field .v2-field, .appointment-field > label { display: grid; gap: var(--space-2); height: 100%; }
+.appointment-field .v2-field select, .appointment-field > label > input, .appointment-field > label > textarea { min-block-size: 46px; }
+.appointment-field.patient-field { grid-column: span 4; }
+.appointment-field.doctor-field { grid-column: span 3; }
+.appointment-field.date-field { grid-column: span 2; }
+.appointment-field.duration-field { grid-column: span 3; }
+.appointment-field.time-field { grid-column: span 5; }
+.appointment-field.reason-field { grid-column: span 7; }
+.appointment-field.notes-field { grid-column: 1 / -1; }
 
 .appointment-form {
   display: grid;
@@ -1322,12 +1333,21 @@ p {
   .patient-filters,
   .patient-form-grid,
   .appointment-filters,
-  .appointment-form-grid,
   .availability-grid,
   .reschedule-grid,
   .detail-grid {
     grid-template-columns: 1fr;
   }
+
+  .appointment-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .appointment-field.patient-field,
+  .appointment-field.doctor-field,
+  .appointment-field.date-field,
+  .appointment-field.duration-field,
+  .appointment-field.time-field,
+  .appointment-field.reason-field,
+  .appointment-field.notes-field { grid-column: auto; }
 
   .appointment-calendar-layout { grid-template-columns: 1fr; }
   .appointment-period-controls { justify-content: flex-start; }
@@ -1366,6 +1386,8 @@ p {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+
+  .appointment-form-grid { grid-template-columns: 1fr; }
 
   .staff-dashboard .dashboard-kpi-grid {
     grid-template-columns: 1fr;

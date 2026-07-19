@@ -60,6 +60,6 @@ export function useAppointmentAvailability(filters: AppointmentAvailabilityFilte
   return useQuery({
     queryKey: ["appointment-availability", filters],
     queryFn: () => getAppointmentAvailability(filters as AppointmentAvailabilityFilters),
-    enabled: Boolean(filters?.doctor_id && filters?.date),
+    enabled: Boolean(filters?.doctor_id && filters?.date && filters.duration_minutes && filters.duration_minutes > 0),
   });
 }
