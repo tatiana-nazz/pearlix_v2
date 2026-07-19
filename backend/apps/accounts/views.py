@@ -1,10 +1,11 @@
 from django.contrib.auth import authenticate
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated, SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -259,26 +260,84 @@ def _team_profile_data(user):
     }
 
 
+def _prefetched_availability(user):
+    profile = linked_profile(user)
+    if not profile.is_active:
+        return {"availability": "UNAVAILABLE", "on_leave": False, "next_exception": None}
+    exceptions = getattr(user, "team_doctor_availability_exceptions", []) if user.role == User.Role.DOCTOR else getattr(user, "team_staff_availability_exceptions", [])
+    now = timezone.now()
+    current = next((item for item in exceptions if item.start_datetime <= now < item.end_datetime), None)
+    upcoming = next((item for item in exceptions if item.start_datetime > now), None)
+    return {
+        "availability": "ON_LEAVE" if current else "AVAILABLE",
+        "on_leave": bool(current),
+        "next_exception": {"start_datetime": upcoming.start_datetime, "end_datetime": upcoming.end_datetime, "reason": upcoming.reason} if upcoming else None,
+    }
+
+
+def _schedule_summary(user):
+    shifts = getattr(user, "team_active_shifts", None)
+    if shifts is None:
+        shifts = list(WorkingShift.objects.filter(employee=user, is_active=True).order_by("weekday", "start_time", "id"))
+    return {"has_active_schedule": bool(shifts), "active_shift_count": len(shifts)}
+
+
 def _team_summary(user, *, appointments=0, active_visits=0):
     return {
         "id": user.id,
         "role": user.role,
         "full_name": user.full_name,
+        "email": user.email,
         **_team_profile_data(user),
         "account": user_account_summary(user),
-        "availability": availability_summary(user),
+        "availability": _prefetched_availability(user) if hasattr(user, "team_doctor_availability_exceptions") else availability_summary(user),
         "today_workload": {"appointment_count": appointments, "active_visit_count": active_visits},
+        "schedule_summary": _schedule_summary(user),
         "created_at": linked_profile(user).created_at,
         "updated_at": linked_profile(user).updated_at,
     }
 
 
+def _team_staff_summary(user, *, appointments=0, active_visits=0):
+    """Directory representation intentionally safe for the Staff read-only role."""
+    profile = _team_profile_data(user)
+    return {
+        "id": user.id,
+        "role": user.role,
+        "full_name": user.full_name,
+        "professional_status": profile["professional_status"],
+        "specialty": profile["specialty"],
+        "position": profile["position"],
+        "phone": profile["phone"],
+        "email": user.email,
+        "availability": _prefetched_availability(user) if hasattr(user, "team_doctor_availability_exceptions") else availability_summary(user),
+        "today_workload": {"appointment_count": appointments, "active_visit_count": active_visits},
+        "schedule_summary": _schedule_summary(user),
+    }
+
+
+class IsAdminOrStaffTeamReadOnly(BasePermission):
+    """Admins retain Team management; Staff can only read the Team directory."""
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.user.role == User.Role.ADMIN:
+            return True
+        return request.user.role == User.Role.STAFF and request.method in SAFE_METHODS
+
+
 class TeamMemberViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsAuthenticated, IsAdminOrStaffTeamReadOnly]
     pagination_class = TeamMemberPagination
 
     def _queryset(self):
-        query = User.objects.select_related("doctor_profile", "staff_profile").filter(
+        exception_query = AvailabilityException.objects.filter(is_cancelled=False, type=AvailabilityException.Type.UNAVAILABLE).order_by("start_datetime", "id")
+        query = User.objects.select_related("doctor_profile", "staff_profile").prefetch_related(
+            Prefetch("working_shifts", queryset=WorkingShift.objects.filter(is_active=True).order_by("weekday", "start_time", "id"), to_attr="team_active_shifts"),
+            Prefetch("doctor_availability_exceptions", queryset=exception_query, to_attr="team_doctor_availability_exceptions"),
+            Prefetch("staff_availability_exceptions", queryset=exception_query, to_attr="team_staff_availability_exceptions"),
+        ).filter(
             Q(role=User.Role.DOCTOR, doctor_profile__isnull=False) | Q(role=User.Role.STAFF, staff_profile__isnull=False)
         ).order_by("id")
         params = self.request.query_params
@@ -307,7 +366,8 @@ class TeamMemberViewSet(viewsets.ViewSet):
         _, today_start, today_end = clinic_today_window()
         appointment_counts = dict(Appointment.objects.filter(doctor_id__in=user_ids, start_datetime__gte=today_start, start_datetime__lt=today_end).values("doctor_id").annotate(count=Count("id")).values_list("doctor_id", "count"))
         visit_counts = dict(Visit.objects.filter(doctor_id__in=user_ids, status=Visit.Status.ACTIVE).values("doctor_id").annotate(count=Count("id")).values_list("doctor_id", "count"))
-        return page.get_paginated_response([_team_summary(user, appointments=appointment_counts.get(user.id, 0), active_visits=visit_counts.get(user.id, 0)) for user in users])
+        summary = _team_staff_summary if request.user.role == User.Role.STAFF else _team_summary
+        return page.get_paginated_response([summary(user, appointments=appointment_counts.get(user.id, 0), active_visits=visit_counts.get(user.id, 0)) for user in users])
 
     def create(self, request):
         serializer = TeamMemberCreateSerializer(data=request.data)
@@ -329,13 +389,26 @@ class TeamMemberViewSet(viewsets.ViewSet):
         now, start, end = clinic_today_window()
         appointments = Appointment.objects.select_related("patient").filter(doctor=user, start_datetime__gte=start, start_datetime__lt=end).order_by("start_datetime", "id")[:20] if user.role == User.Role.DOCTOR else []
         leaves = (AvailabilityException.objects.filter(doctor=user) if user.role == User.Role.DOCTOR else AvailabilityException.objects.filter(staff=user)).filter(is_cancelled=False, end_datetime__gte=now).order_by("start_datetime", "id")[:20]
+        active_shifts = list(WorkingShift.objects.filter(employee=user, is_active=True).values("id", "name", "weekday", "start_time", "end_time", "is_active", "version"))
+        active_visits = Visit.objects.filter(doctor=user, status=Visit.Status.ACTIVE).count() if user.role == User.Role.DOCTOR else 0
+        if request.user.role == User.Role.STAFF:
+            return Response({
+                **_team_staff_summary(user, appointments=len(appointments), active_visits=active_visits),
+                "profile": {"specialty": profile.specialty, "phone": profile.phone, "bio": profile.bio} if user.role == User.Role.DOCTOR else {"position": profile.position, "phone": profile.phone},
+                "active_shifts": [{key: row[key] for key in ("name", "weekday", "start_time", "end_time")} for row in active_shifts],
+                "current_future_leave": list(leaves.values("start_datetime", "end_datetime", "type", "reason")),
+                "today_appointments": [{"patient_name": row.patient.full_name, "start_datetime": row.start_datetime, "end_datetime": row.end_datetime, "status": row.status, "reason": row.reason} for row in appointments],
+            })
         return Response({
-            **_team_summary(user, appointments=len(appointments), active_visits=Visit.objects.filter(doctor=user, status=Visit.Status.ACTIVE).count() if user.role == User.Role.DOCTOR else 0),
+            **_team_summary(user, appointments=len(appointments), active_visits=active_visits),
             "profile": {"specialty": profile.specialty, "phone": profile.phone, "bio": profile.bio, "is_active": profile.is_active} if user.role == User.Role.DOCTOR else {"position": profile.position, "phone": profile.phone, "is_active": profile.is_active},
-            "active_shifts": list(WorkingShift.objects.filter(employee=user, is_active=True).values("id", "name", "weekday", "start_time", "end_time", "is_active", "version")),
+            "active_shifts": active_shifts,
             "current_future_leave": list(leaves.values("id", "start_datetime", "end_datetime", "type", "reason", "is_cancelled", "version")),
             "today_appointments": [{"id": row.id, "patient_id": row.patient_id, "patient_name": row.patient.full_name, "start_datetime": row.start_datetime, "end_datetime": row.end_datetime, "status": row.status, "reason": row.reason} for row in appointments],
         })
+
+    def destroy(self, request, pk=None):
+        raise MethodNotAllowed("DELETE")
 
     def partial_update(self, request, pk=None):
         try:

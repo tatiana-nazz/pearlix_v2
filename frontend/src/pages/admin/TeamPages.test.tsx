@@ -14,7 +14,7 @@ vi.mock("../../api/endpoints/team", () => ({
 }));
 
 const member = {
-  id: 7, role: "DOCTOR" as const, full_name: "Dr Maya", professional_status: "ACTIVE" as const, specialty: "Endodontics", position: null, phone: "+963 11", account: { id: 44, email: "maya@example.test", is_active: true, must_change_password: false, created_at: "2026-01-01", updated_at: "2026-01-01" }, availability: { availability: "AVAILABLE" as const, on_leave: false, next_exception: null }, today_workload: { appointment_count: 3, active_visit_count: 0 }, version: 1, created_at: "2026-01-01", updated_at: "2026-01-01",
+  id: 7, role: "DOCTOR" as const, full_name: "Dr Maya", professional_status: "ACTIVE" as const, specialty: "Endodontics", position: null, phone: "+963 11", email: "maya@example.test", account: { id: 44, email: "maya@example.test", is_active: true, must_change_password: false, created_at: "2026-01-01", updated_at: "2026-01-01" }, availability: { availability: "AVAILABLE" as const, on_leave: false, next_exception: null }, today_workload: { appointment_count: 3, active_visit_count: 0 }, schedule_summary: { has_active_schedule: true, active_shift_count: 1 }, version: 1, created_at: "2026-01-01", updated_at: "2026-01-01",
 };
 
 function renderPage(entry = "/admin/team") {
@@ -63,7 +63,7 @@ describe("Admin Team acceptance additions", () => {
     await waitFor(() => expect(teamApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ q: "Maya", page: 1 })));
     fireEvent.change(screen.getByLabelText("Professional status"), { target: { value: "ACTIVE" } });
     await waitFor(() => expect(teamApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ professional_status: "ACTIVE" })));
-    fireEvent.keyDown(screen.getByText("Dr Maya").closest("tr")!, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Doctors Dr Maya" }));
     expect(await screen.findByText("Doctors professional record")).toBeInTheDocument();
   });
 

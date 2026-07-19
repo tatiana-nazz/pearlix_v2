@@ -20,9 +20,15 @@ export interface TeamMemberSummary {
   specialty: string | null;
   position: string | null;
   phone: string;
-  account: LinkedAccountSummary;
+  /** Safe contact field available to both Admin and Staff directory views. */
+  email: string;
   availability: { availability: TeamAvailability; on_leave: boolean; next_exception: { id: number; start_datetime: string; end_datetime: string; reason: string } | null };
   today_workload: { appointment_count: number; active_visit_count: number };
+  schedule_summary: { has_active_schedule: boolean; active_shift_count: number };
+}
+
+export interface AdminTeamMemberSummary extends TeamMemberSummary {
+  account: LinkedAccountSummary;
   version: number;
   created_at: string;
   updated_at: string;
@@ -33,6 +39,15 @@ export interface TeamMemberDetail extends TeamMemberSummary {
   active_shifts: Array<{ id: number; name: string; weekday: number; start_time: string; end_time: string; is_active: boolean; version: number }>;
   current_future_leave: Array<{ id: number; start_datetime: string; end_datetime: string; type: string; reason: string; is_cancelled: boolean; version: number }>;
   today_appointments: Array<{ id: number; patient_id: number; patient_name: string; start_datetime: string; end_datetime: string; status: string; reason: string }>;
+}
+
+export interface AdminTeamMemberDetail extends TeamMemberDetail, AdminTeamMemberSummary {}
+
+export interface StaffTeamMemberDetail extends TeamMemberSummary {
+  profile: { specialty: string; phone: string; bio: string } | { position: string; phone: string };
+  active_shifts: Array<{ name: string; weekday: number; start_time: string; end_time: string }>;
+  current_future_leave: Array<{ start_datetime: string; end_datetime: string; type: string; reason: string }>;
+  today_appointments: Array<{ patient_name: string; start_datetime: string; end_datetime: string; status: string; reason: string }>;
 }
 
 export interface TeamMemberCreatePayload {

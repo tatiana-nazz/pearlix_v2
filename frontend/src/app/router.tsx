@@ -11,7 +11,7 @@ import { ChangePasswordPage } from "../pages/ChangePasswordPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { AdminDashboardPage } from "../pages/admin/AdminDashboardPage";
-import { AdminTeamDetailPage, AdminTeamListPage } from "../pages/admin/TeamPages";
+import { AdminTeamDetailPage, AdminTeamListPage, StaffTeamDetailPage, StaffTeamListPage } from "../pages/admin/TeamPages";
 import { ScheduleManagementPage } from "../pages/admin/ScheduleManagementPage";
 import { LeaveManagementPage } from "../pages/admin/LeaveManagementPage";
 import { AppointmentsPage } from "../pages/appointments/AppointmentsPage";
@@ -124,6 +124,8 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/staff/dashboard" replace /> },
               { path: "dashboard", element: <StaffDashboardPage /> },
+              { path: "team", element: <StaffTeamListPage /> },
+              { path: "team/:memberId", element: <StaffTeamDetailPage /> },
               { path: "profile", element: <OwnProfilePage /> },
               { path: "profile/schedule", element: <OwnSchedulePage /> },
               { path: "profile/leave", element: <OwnLeavePage /> },

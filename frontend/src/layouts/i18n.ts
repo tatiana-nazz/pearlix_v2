@@ -170,6 +170,14 @@ const profileMessages = {
     changePassword: "\u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631",
   },
 } as const;
+const teamDirectoryMessages = {
+  EN: {
+    cards: "Cards", directoryPresentation: "Directory presentation", emptyTeamDirectory: "No Team members are available.", loadingTeam: "Loading Team directory…", noActiveSchedule: "No active schedule", noContactValue: "Not recorded", noTeamMatches: "No Team members match these filters.", activeSchedule: "Active schedule", refreshingTeam: "Refreshing Team results…", scheduleStatus: "Schedule status", todayWorkload: "Today's workload",
+  },
+  AR: {
+    cards: "\u0628\u0637\u0627\u0642\u0627\u062a", directoryPresentation: "\u0637\u0631\u064a\u0642\u0629 \u0639\u0631\u0636 \u0627\u0644\u062f\u0644\u064a\u0644", emptyTeamDirectory: "\u0644\u0627 \u064a\u0648\u062c\u062f \u0623\u0639\u0636\u0627\u0621 \u0641\u064a \u0627\u0644\u0641\u0631\u064a\u0642.", loadingTeam: "\u062c\u0627\u0631\u064d \u062a\u062d\u0645\u064a\u0644 \u062f\u0644\u064a\u0644 \u0627\u0644\u0641\u0631\u064a\u0642…", noActiveSchedule: "\u0644\u0627 \u064a\u0648\u062c\u062f \u062c\u062f\u0648\u0644 \u0646\u0634\u0637", noContactValue: "\u063a\u064a\u0631 \u0645\u0633\u062c\u0644", noTeamMatches: "\u0644\u0627 \u064a\u0648\u062c\u062f \u0623\u0639\u0636\u0627\u0621 \u064a\u0637\u0627\u0628\u0642\u0648\u0646 \u0647\u0630\u0647 \u0627\u0644\u0641\u0644\u0627\u062a\u0631.", activeSchedule: "\u062c\u062f\u0648\u0644 \u0646\u0634\u0637", refreshingTeam: "\u062c\u0627\u0631\u064d \u062a\u062d\u062f\u064a\u062b \u0646\u062a\u0627\u0626\u062c \u0627\u0644\u0641\u0631\u064a\u0642…", scheduleStatus: "\u062d\u0627\u0644\u0629 \u0627\u0644\u062c\u062f\u0648\u0644", todayWorkload: "\u0639\u0628\u0621 \u0639\u0645\u0644 \u0627\u0644\u064a\u0648\u0645",
+  },
+} as const;
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -193,6 +201,7 @@ const appointmentChoiceMessageKeysMatch: SameKeys<typeof appointmentChoiceMessag
 const clinicSettingsOptionMessageKeysMatch: SameKeys<typeof clinicSettingsOptionMessages.EN, typeof clinicSettingsOptionMessages.AR> = true;
 const auditAcceptanceMessageKeysMatch: SameKeys<typeof auditAcceptanceMessages.EN, typeof auditAcceptanceMessages.AR> = true;
 const profileMessageKeysMatch: SameKeys<typeof profileMessages.EN, typeof profileMessages.AR> = true;
+const teamDirectoryMessageKeysMatch: SameKeys<typeof teamDirectoryMessages.EN, typeof teamDirectoryMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
@@ -210,12 +219,13 @@ void appointmentChoiceMessageKeysMatch;
 void clinicSettingsOptionMessageKeysMatch;
 void auditAcceptanceMessageKeysMatch;
 void profileMessageKeysMatch;
+void teamDirectoryMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -257,6 +267,8 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
   if (hasOwnKey(clinicAuditDictionary, key)) return clinicAuditDictionary[key];
   const appointmentChoiceDictionary = appointmentChoiceMessages[language];
   if (hasOwnKey(appointmentChoiceDictionary, key)) return appointmentChoiceDictionary[key];
+  const teamDirectoryDictionary = teamDirectoryMessages[language];
+  if (hasOwnKey(teamDirectoryDictionary, key)) return teamDirectoryDictionary[key];
 
   throw new Error(`Missing translation for key: ${key}`);
 }
