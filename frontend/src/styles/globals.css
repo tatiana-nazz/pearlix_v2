@@ -691,9 +691,17 @@ p {
 
 .patient-filters {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px);
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px) auto;
   gap: var(--space-4);
   align-items: end;
+}
+
+.patient-search-field {
+  min-inline-size: 0;
+}
+
+.patient-clear-filters {
+  white-space: nowrap;
 }
 
 .patient-filters label,
@@ -775,6 +783,52 @@ p {
 .patient-table tbody tr:hover,
 .appointment-table tbody tr:hover {
   background: var(--v2-surface-raised, var(--color-surface));
+}
+
+.patient-table tbody tr:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.patient-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-inline-size: 220px;
+}
+
+.patient-identity > span:last-child,
+.patient-contact {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.patient-identity strong,
+.patient-contact bdi {
+  overflow-wrap: anywhere;
+}
+
+.patient-identity small,
+.patient-contact bdi + bdi {
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.patient-initials {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: 999px;
+  background: var(--color-primary-soft, var(--v2-surface-subtle));
+  color: var(--color-primary-strong);
+  font-weight: 750;
+}
+
+.patient-archived {
+  color: var(--color-warning, var(--color-muted));
 }
 
 .appointment-table td span {

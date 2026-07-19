@@ -41,6 +41,23 @@ const featureMessages = {
     patientWorkspaceStaff: "إدارة سجلات المرضى وبيانات التواصل والمتابعة.", patientWorkspaceDoctor: "مراجعة وتحديث ملفات المرضى النشطين ضمن رعايتك.", patientWorkspaceAdmin: "مراجعة سجلات المرضى للإشراف على العيادة.", loadingPatients: "جارٍ تحميل المرضى…", refreshingPatients: "جارٍ تحديث نتائج المرضى…", unableToLoadPatients: "تعذر تحميل المرضى", patientNotFound: "لم يتم العثور على المريض.", patientUnavailable: "لم يتم العثور على المريض أو أنه غير متاح لهذا الدور.", genderAge: "الجنس والعمر", male: "ذكر", female: "أنثى", lastVisit: "آخر زيارة معي", archivePatientPrompt: "هل تريد أرشفة سجل هذا المريض؟", unarchivePatientPrompt: "هل تريد إعادة هذا المريض إلى السجلات النشطة؟", archivePatientHelp: "تُحتفَظ بالسجلات المؤرشفة ويمكن استعادتها.", unableArchive: "تعذر تحديث حالة أرشفة المريض", createPatientDescription: "أنشئ سجل مريض للعيادة.", doctorPatientHelp: "يمكن للأطباء تحديث ملفات المرضى النشطين. عناصر الأرشفة غير متاحة.", billingUnavailableDoctor: "الفوترة والفواتير غير متاحة في مساحة عمل الطبيب.", loadingPatientProfile: "جارٍ تحميل ملف المريض…", unableLoadPatientProfile: "تعذر تحميل ملف المريض", continueReviewing: "متابعة مراجعة تغييراتي", reloadLatest: "تحميل أحدث سجل", reloadPatientPrompt: "هل تريد تحميل أحدث سجل للمريض وتجاهل تعديلاتك غير المحفوظة؟", requestFailed: "تعذر إتمام الطلب.", patientChangedElsewhere: "تم تعديل هذا المريض في مكان آخر. راجع تغييراتك أو حمّل أحدث سجل.", firstNameRequired: "الاسم الأول مطلوب.", lastNameRequired: "اسم العائلة مطلوب.", genderRequired: "الجنس مطلوب.", dobFuture: "لا يمكن أن يكون تاريخ الميلاد في المستقبل.", saving: "جارٍ الحفظ…", clinicalHistory: "السجل السريري", age: "العمر", version: "الإصدار", createdBy: "أنشئ بواسطة", updatedBy: "حدّث بواسطة", noMedicalSummary: "لا يوجد ملخص طبي مسجل.", noMedicalHistory: "لا يوجد تاريخ طبي مسجل.", noInsuranceInfo: "لا توجد معلومات تأمين مسجلة.", noGeneralNotes: "لا توجد ملاحظات عامة مسجلة.", editSummary: "تعديل الملخص", profileOverviewDescription: "بيانات التواصل والخصائص والسجل.", medicalSummaryDescription: "ملخص الملف والملاحظات العامة.",
   },
 } as const;
+const patientListMessages = {
+  EN: {
+    patientListContact: "Contact",
+    patientListLastVisit: "Last visit",
+    patientListNextAppointment: "Next appointment",
+    patientNoMatching: "No patients match the current search or filters.",
+    patientNoRecords: "No patient records yet.",
+  },
+  AR: {
+    patientListContact: "\u0627\u0644\u062a\u0648\u0627\u0635\u0644",
+    patientListLastVisit: "\u0622\u062e\u0631 \u0632\u064a\u0627\u0631\u0629",
+    patientListNextAppointment: "\u0627\u0644\u0645\u0648\u0639\u062f \u0627\u0644\u0642\u0627\u062f\u0645",
+    patientNoMatching: "\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0631\u0636\u0649 \u064a\u0637\u0627\u0628\u0642\u0648\u0646 \u0627\u0644\u0628\u062d\u062b \u0623\u0648 \u0627\u0644\u0641\u0644\u0627\u062a\u0631.",
+    patientNoRecords: "\u0644\u0627 \u062a\u0648\u062c\u062f \u0633\u062c\u0644\u0627\u062a \u0645\u0631\u0636\u0649 \u0628\u0639\u062f.",
+  },
+} as const;
+
 // Keep feature-local copy in the same translation system.  This small extension
 // covers the Phase 14D dashboard and administration surfaces without a second
 // provider or runtime locale dependency.
@@ -146,6 +163,7 @@ type SameKeys<Left extends object, Right extends object> =
 const baseMessageKeysMatch: SameKeys<typeof messages.EN, typeof messages.AR> = true;
 const featureMessageKeysMatch: SameKeys<typeof featureMessages.EN, typeof featureMessages.AR> = true;
 const featureExtensionKeysMatch: SameKeys<typeof featureExtensions.EN, typeof featureExtensions.AR> = true;
+const patientListMessageKeysMatch: SameKeys<typeof patientListMessages.EN, typeof patientListMessages.AR> = true;
 const acceptanceMessageKeysMatch: SameKeys<typeof acceptanceMessages.EN, typeof acceptanceMessages.AR> = true;
 const scheduleMessageKeysMatch: SameKeys<typeof scheduleMessages.EN, typeof scheduleMessages.AR> = true;
 const visitMessageKeysMatch: SameKeys<typeof visitMessages.EN, typeof visitMessages.AR> = true;
@@ -160,6 +178,7 @@ const profileMessageKeysMatch: SameKeys<typeof profileMessages.EN, typeof profil
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
 void featureExtensionKeysMatch;
+void patientListMessageKeysMatch;
 void acceptanceMessageKeysMatch;
 void scheduleMessageKeysMatch;
 void visitMessageKeysMatch;
@@ -175,11 +194,14 @@ function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
   if (hasOwnKey(featureDictionary, key)) return featureDictionary[key];
+
+  const patientListDictionary = patientListMessages[language];
+  if (hasOwnKey(patientListDictionary, key)) return patientListDictionary[key];
 
   const extensionDictionary = featureExtensions[language];
   if (hasOwnKey(extensionDictionary, key)) return extensionDictionary[key];

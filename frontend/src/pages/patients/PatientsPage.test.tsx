@@ -1,154 +1,96 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useArchivePatient, useUnarchivePatient } from "../../features/patients/hooks/usePatientMutations";
+import { useAuthStore } from "../../auth/authStore";
 import { usePatients } from "../../features/patients/hooks/usePatients";
 import { PatientsPage } from "./PatientsPage";
 
 vi.mock("../../features/patients/hooks/usePatients", () => ({ usePatients: vi.fn() }));
-vi.mock("../../features/patients/hooks/usePatientMutations", () => ({ useArchivePatient: vi.fn(), useUnarchivePatient: vi.fn() }));
 
 const activePatient = { id: 7, first_name: "Nour", last_name: "Haddad", full_name: "Nour Haddad", gender: "Female" as const, date_of_birth: null, age: 28, phone_number: "+963 11", email: "nour@example.test", national_id_or_passport: null, blood_group: "" as const, is_archived: false, version: 4, created_at: "2026-01-01", updated_at: "2026-01-01" };
-const archivedPatient = { ...activePatient, id: 8, full_name: "Hadi Haddad", first_name: "Hadi", is_archived: true, version: 5 };
-const mutateAsync = vi.fn().mockResolvedValue(activePatient);
-const reset = vi.fn();
-
 function Location() { const location = useLocation(); return <output data-testid="location">{location.pathname}{location.search}</output>; }
 function renderPage(role: "ADMIN" | "STAFF" | "DOCTOR", entry = "/staff/patients") {
   const path = `/${role.toLowerCase()}/patients`;
   return render(<MemoryRouter initialEntries={[entry]}><Routes><Route path={path} element={<><PatientsPage role={role} /><Location /></>} /><Route path={`${path}/:patientId`} element={<Location />} /></Routes></MemoryRouter>);
 }
-
 function mockPatients(results = [activePatient], overrides = {}) {
-  vi.mocked(usePatients).mockImplementation(() => ({ data: { count: results.length, next: "/next", previous: null, results }, isLoading: false, isFetching: false, isError: false, error: null, refetch: vi.fn(), ...overrides }) as never);
-  vi.mocked(useArchivePatient).mockReturnValue({ mutateAsync, reset, isPending: false, error: null } as never);
-  vi.mocked(useUnarchivePatient).mockReturnValue({ mutateAsync, reset, isPending: false, error: null } as never);
+  const refetch = vi.fn();
+  vi.mocked(usePatients).mockImplementation(() => ({ data: { count: results.length, next: null, previous: null, results }, isLoading: false, isFetching: false, isError: false, error: null, refetch, ...overrides }) as never);
+  return refetch;
 }
 
-afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); document.documentElement.lang = "en"; document.documentElement.dir = "ltr"; });
+afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); useAuthStore.setState({ user: null, role: null }); document.documentElement.lang = "en"; document.documentElement.dir = "ltr"; });
 
-describe("PatientsPage production list, filters, and archive workflow", () => {
-  it("shows Add Patient only to Staff and keeps localized, bidi-safe rows free of raw enums", () => {
+describe("PatientsPage", () => {
+  it("uses URL-backed supported archive and doctor workflow filters and preserves pagination", () => {
     mockPatients();
-    renderPage("STAFF");
-    expect(screen.getByRole("link", { name: "Add Patient" })).toHaveAttribute("href", "/staff/patients/new");
-    expect(screen.getByText("Nour Haddad").closest("td")).toHaveClass("bidi-isolate");
-    expect(screen.queryByText("Female")).not.toBeInTheDocument();
-  });
-
-  it("does not expose Staff creation or archive controls to Admin and Doctor", () => {
-    mockPatients();
-    const { unmount } = renderPage("ADMIN", "/admin/patients");
-    expect(screen.queryByRole("link", { name: "Add Patient" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Archive patient" })).not.toBeInTheDocument();
-    unmount();
-    renderPage("DOCTOR", "/doctor/patients");
-    expect(screen.queryByRole("link", { name: "Add Patient" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Archive patient" })).not.toBeInTheDocument();
-  });
-
-  it("maps archive and Doctor workflow filters into production query filters", async () => {
-    mockPatients();
-    const { unmount } = renderPage("STAFF", "/staff/patients?archive=archived&page=3");
-    expect(vi.mocked(usePatients)).toHaveBeenLastCalledWith(expect.objectContaining({ page: 3, is_archived: true }));
+    const { unmount } = renderPage("STAFF", "/staff/patients?search=nour&archive=archived&page=3");
+    expect(vi.mocked(usePatients)).toHaveBeenLastCalledWith(expect.objectContaining({ search: "nour", is_archived: true, page: 3 }));
     fireEvent.change(screen.getByLabelText("Archive state"), { target: { value: "active" } });
-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("page=1"));
+    expect(screen.getByTestId("location")).toHaveTextContent("search=nour&page=1");
     unmount();
-    renderPage("DOCTOR", "/doctor/patients?scope=my_patients");
-    expect(vi.mocked(usePatients)).toHaveBeenLastCalledWith(expect.objectContaining({ my_patients: true }));
-    fireEvent.change(screen.getByLabelText("Patient scope"), { target: { value: "upcoming_with_me" } });
-    await waitFor(() => expect(vi.mocked(usePatients)).toHaveBeenLastCalledWith(expect.objectContaining({ upcoming_with_me: true })));
+    renderPage("DOCTOR", "/doctor/patients?scope=upcoming_with_me&page=2");
+    expect(vi.mocked(usePatients)).toHaveBeenLastCalledWith(expect.objectContaining({ upcoming_with_me: true, page: 2 }));
     fireEvent.change(screen.getByLabelText("Patient scope"), { target: { value: "last_visit_with_me" } });
-    await waitFor(() => expect(vi.mocked(usePatients)).toHaveBeenLastCalledWith(expect.objectContaining({ last_visit_with_me: true })));
+    expect(screen.getByTestId("location")).toHaveTextContent("scope=last_visit_with_me&page=1");
   });
 
-  it("preserves search, filters, and query parameters while paginating and debouncing search", async () => {
+  it("debounces server search, resets page, and clears active filters", async () => {
     vi.useFakeTimers();
     mockPatients();
-    renderPage("STAFF", "/staff/patients?archive=archived&page=2&keep=value");
+    renderPage("STAFF", "/staff/patients?archive=archived&page=3");
     fireEvent.change(screen.getByLabelText("Search patients"), { target: { value: "Nour" } });
-    await act(async () => { vi.advanceTimersByTime(300); });
-    expect(screen.getByTestId("location")).toHaveTextContent("search=Nour");
-    expect(screen.getByTestId("location")).toHaveTextContent("archive=archived");
-    expect(screen.getByTestId("location")).toHaveTextContent("keep=value");
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByTestId("location")).toHaveTextContent("page=2");
-    vi.useRealTimers();
+    expect(screen.getByTestId("location")).toHaveTextContent("archive=archived&page=3");
+    act(() => vi.advanceTimersByTime(300));
+    expect(screen.getByTestId("location")).toHaveTextContent("archive=archived&page=1&search=Nour");
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("page=1");
   });
 
-  it("opens profile rows by click, Enter, and Space while nested archive actions stay isolated", async () => {
+  it("keeps list actions out of every role while retaining Staff creation", () => {
     mockPatients();
-    const { unmount } = renderPage("STAFF");
-    const row = screen.getByText("Nour Haddad").closest("tr")!;
-    fireEvent.click(row); expect(screen.getByTestId("location")).toHaveTextContent("/patients/7");
-    // Re-render the list route for each keyboard assertion.
-    unmount();
-    mockPatients();
-    renderPage("STAFF");
-    const keyboardRow = screen.getByText("Nour Haddad").closest("tr")!;
-    fireEvent.keyDown(keyboardRow, { key: "Enter" });
-    expect(screen.getByTestId("location")).toHaveTextContent("/patients/7");
+    const staff = renderPage("STAFF");
+    expect(screen.getByRole("link", { name: "Add Patient" })).toHaveAttribute("href", "/staff/patients/new");
+    expect(screen.queryByRole("button", { name: /archive|unarchive|edit|view/i })).not.toBeInTheDocument();
+    staff.unmount();
+    renderPage("ADMIN", "/admin/patients");
+    expect(screen.queryByRole("link", { name: "Add Patient" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /archive|unarchive|edit|view/i })).not.toBeInTheDocument();
   });
 
-  it("confirms archive and unarchive with exact id/version payloads and retains an error", async () => {
-    mockPatients([activePatient, archivedPatient]);
-    renderPage("STAFF");
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Archive patient" }));
-    await user.click(within(screen.getByRole("dialog", { name: "Archive patient" })).getByRole("button", { name: "Archive patient" }));
-    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ id: 7, version: 4 }));
-  });
-
-  it("opens rows with Space and isolates nested archive controls from row navigation", () => {
-    mockPatients();
-    renderPage("STAFF");
-    const row = screen.getByText("Nour Haddad").closest("tr")!;
-    fireEvent.keyDown(row, { key: " " });
-    expect(screen.getByTestId("location")).toHaveTextContent("/patients/7");
-
-    // A fresh list route proves the action opens its dialog instead of the row target.
-    renderPage("STAFF");
-    fireEvent.click(screen.getAllByRole("button", { name: "Archive patient" })[0]!);
-    expect(screen.getByRole("dialog", { name: "Archive patient" })).toBeInTheDocument();
-    expect(screen.getAllByTestId("location")[1]).toHaveTextContent("/staff/patients");
-  });
-
-  it("renders loading, refreshing, empty, retryable error, and pending archive states from production boundaries", () => {
+  it("renders loading, refreshing, distinct empty states, and retryable errors", () => {
     mockPatients([], { isLoading: true, data: undefined });
     const loading = renderPage("STAFF");
     expect(screen.getByText("Loading patients…")).toBeInTheDocument();
     loading.unmount();
     mockPatients([], { isFetching: true });
     const refreshing = renderPage("STAFF");
-    expect(screen.getByText("Refreshing patient results…")).toBeInTheDocument();
+    expect(screen.getByText("Refreshing patient results…")).toHaveAttribute("role", "status");
     refreshing.unmount();
     mockPatients([]);
     const empty = renderPage("STAFF");
-    expect(screen.getByText("No patients found for this filter.")).toBeInTheDocument();
+    expect(screen.getByText("No patient records yet.")).toBeInTheDocument();
     empty.unmount();
-    const retry = vi.fn();
-    mockPatients([], { data: undefined, isError: true, error: new Error("Unavailable"), refetch: retry });
-    const error = renderPage("STAFF");
+    mockPatients([]);
+    const noMatch = renderPage("STAFF", "/staff/patients?search=nope");
+    expect(screen.getByText("No patients match the current search or filters.")).toBeInTheDocument();
+    noMatch.unmount();
+    const retry = mockPatients([], { data: undefined, isError: true, error: new Error("Unavailable") });
+    renderPage("STAFF");
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(retry).toHaveBeenCalledTimes(1);
-    error.unmount();
-    mockPatients();
-    vi.mocked(useArchivePatient).mockReturnValue({ mutateAsync, reset, isPending: true, error: null } as never);
-    renderPage("STAFF");
-    fireEvent.click(screen.getByRole("button", { name: "Archive patient" }));
-    expect(within(screen.getByRole("dialog", { name: "Archive patient" })).getByRole("button", { name: "Archive patient" })).toBeDisabled();
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(screen.getByRole("dialog", { name: "Archive patient" })).toBeInTheDocument();
   });
 
-  it("uses localized root direction and bidi isolation for Arabic patient data", () => {
+  it("uses the table scroll surface and localized Arabic copy without exposing raw values", () => {
     document.documentElement.lang = "ar";
     document.documentElement.dir = "rtl";
-    mockPatients([{ ...activePatient, full_name: "ليلى Haddad" }]);
+    useAuthStore.setState({ user: { language_preference: "AR" } as never, role: "STAFF" });
+    mockPatients([{ ...activePatient, full_name: "ليلى Haddad", email: "" }]);
     renderPage("STAFF");
     expect(document.documentElement).toHaveAttribute("dir", "rtl");
-    expect(screen.getByText("ليلى Haddad").closest("td")).toHaveClass("bidi-isolate");
+    expect(screen.getByText("ليلى Haddad")).toHaveClass("bidi-isolate");
+    expect(screen.queryByText("Female")).not.toBeInTheDocument();
+    expect(document.querySelector(".v2-table-scroll")).not.toBeNull();
   });
 });

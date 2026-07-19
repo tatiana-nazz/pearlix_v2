@@ -12,6 +12,8 @@ interface PatientFiltersProps {
   onSearchChange: (value: string) => void;
   onArchiveFilterChange: (value: ArchiveFilter) => void;
   onDoctorFilterChange: (value: DoctorWorkflowFilter) => void;
+  hasActiveFilters?: boolean;
+  onClear?: () => void;
 }
 
 export function PatientFilters({
@@ -22,12 +24,14 @@ export function PatientFilters({
   onSearchChange,
   onArchiveFilterChange,
   onDoctorFilterChange,
+  hasActiveFilters = false,
+  onClear = () => undefined,
 }: PatientFiltersProps) {
   const t = useFeatureT();
   return (
     <section className="patient-filters" aria-label={t("patientFilters")}>
-      <label>
-        {t("search")}
+      <label className="patient-search-field">
+        {t("searchPatients")}
         <input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
@@ -57,6 +61,7 @@ export function PatientFilters({
           </select>
         </label>
       ) : null}
+      {hasActiveFilters ? <button className="button secondary patient-clear-filters" type="button" onClick={onClear}>{t("clearFilters")}</button> : null}
     </section>
   );
 }

@@ -15,11 +15,11 @@ vi.mock("../../features/patients/hooks/usePatientMutations", () => ({ useArchive
 const patient = { id: 9, version: 3, is_archived: false, first_name: "Nour", last_name: "Haddad", full_name: "Nour Haddad", gender: "Female" as const, date_of_birth: null, age: 28, phone_number: "+963 11", email: "nour@example.test", national_id_or_passport: null, blood_group: "" as const, address: "Damascus", emergency_contact: "Hadi", medical_conditions_history: "", insurance_info: "", general_notes: "", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z", created_by: null, updated_by: null };
 const idleQuery = { data: undefined, isLoading: false, error: null, refetch: vi.fn() };
 
-function Location() { const location = useLocation(); return <output data-testid="location">{location.search}</output>; }
+function Location() { const location = useLocation(); return <output data-testid="location">{location.pathname}{location.search}</output>; }
 
 function renderPage(role: "ADMIN" | "STAFF" | "DOCTOR" = "STAFF", entry = "/staff/patients/9") {
   const path = `/${role.toLowerCase()}/patients/:patientId`;
-  return render(<MemoryRouter initialEntries={[entry]}><Routes><Route path={path} element={<><PatientProfilePage role={role} defaultTab={role === "DOCTOR" ? "visits" : "overview"} /><Location /></>} /></Routes></MemoryRouter>);
+  return render(<MemoryRouter initialEntries={[entry]}><Routes><Route path={path} element={<><PatientProfilePage role={role} defaultTab={role === "DOCTOR" ? "visits" : "overview"} /><Location /></>} /><Route path={`/${role.toLowerCase()}/patients`} element={<Location />} /></Routes></MemoryRouter>);
 }
 
 function mockPage(refetch: ReturnType<typeof vi.fn>, reset = vi.fn(), updateError: unknown = new ApiClientError({ code: "VERSION_CONFLICT", message: "Changed elsewhere", details: {}, status: 409 })) {
@@ -35,6 +35,13 @@ function mockPage(refetch: ReturnType<typeof vi.fn>, reset = vi.fn(), updateErro
 }
 
 describe("Patient profile production route", () => {
+  it("returns through Back to the preserved list search, filter, and page state", () => {
+    mockPage(vi.fn());
+    renderPage("STAFF", "/staff/patients/9?search=nour&archive=archived&page=3");
+    fireEvent.click(screen.getByRole("link", { name: "Back to patients" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/staff/patients?search=nour&archive=archived&page=3");
+  });
+
   it("keeps Admin read-only, gives Doctor editing without billing or archive controls, and locks archived records", () => {
     mockPage(vi.fn());
     const admin = renderPage("ADMIN", "/admin/patients/9?tab=billing");

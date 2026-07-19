@@ -24,7 +24,8 @@ import {
   usePatientXrays,
 } from "../../features/patients/hooks/usePatient";
 import { useArchivePatient, useUnarchivePatient, useUpdatePatient } from "../../features/patients/hooks/usePatientMutations";
-import { getPatientPermissions, patientListPath } from "../../features/patients/utils/patientPermissions";
+import { getPatientPermissions } from "../../features/patients/utils/patientPermissions";
+import { patientListNavigation } from "../../features/patients/utils/patientListNavigation";
 import type { PatientFormValues } from "../../features/patients/utils/patientFormMapping";
 import type { UserRole } from "../../types/auth";
 
@@ -136,7 +137,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
 
   return (
     <div className="patient-page">
-      <Link className="inline-back-link" to={patientListPath(role)}>
+      <Link className="inline-back-link" to={patientListNavigation(role, `?${searchParams.toString()}`)}>
         {t("backToPatients")}
       </Link>
       <PatientProfileHeader
