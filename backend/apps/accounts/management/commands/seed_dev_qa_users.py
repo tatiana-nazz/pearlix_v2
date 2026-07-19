@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
+from apps.scheduling.models import WorkingShift
 
 
 FALLBACK_PASSWORD = "PearlixDev123!"
@@ -161,9 +162,14 @@ class Command(BaseCommand):
                     "specialty": "General Dentistry",
                     "phone": "",
                     "bio": "Local QA doctor profile.",
-                    "is_active": True,
+                    "is_active": False,
                 },
             )
+            profile = DoctorProfile.objects.get(user=user)
+            if profile.is_active and not WorkingShift.objects.filter(employee=user, is_active=True).exists():
+                profile.is_active = False
+                profile.version += 1
+                profile.save(update_fields=["is_active", "version", "updated_at"])
             return "doctor created" if created else "doctor present"
         if user.role == User.Role.STAFF:
             _, created = StaffProfile.objects.get_or_create(
@@ -171,8 +177,13 @@ class Command(BaseCommand):
                 defaults={
                     "phone": "",
                     "position": "Local QA Staff",
-                    "is_active": True,
+                    "is_active": False,
                 },
             )
+            profile = StaffProfile.objects.get(user=user)
+            if profile.is_active and not WorkingShift.objects.filter(employee=user, is_active=True).exists():
+                profile.is_active = False
+                profile.version += 1
+                profile.save(update_fields=["is_active", "version", "updated_at"])
             return "staff created" if created else "staff present"
         return "not applicable"

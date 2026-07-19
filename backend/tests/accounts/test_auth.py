@@ -76,9 +76,10 @@ def test_authenticated_user_can_fetch_me(staff_client, staff_user):
         "is_active": True,
         "theme_preference": User.ThemePreference.SYSTEM,
         "language_preference": User.LanguagePreference.EN,
-        "must_change_password": False,
-        "password_changed_at": None,
-    }
+            "must_change_password": False,
+            "password_changed_at": None,
+            "operational_status": None,
+        }
 
 
 @pytest.mark.django_db

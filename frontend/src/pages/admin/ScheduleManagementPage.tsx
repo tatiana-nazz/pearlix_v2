@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Copy, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { scheduleApi } from "../../api/endpoints/schedule";
 import { usersApi } from "../../api/endpoints/users";
@@ -18,6 +19,7 @@ const blankShift: ShiftDraft = { name: "", weekday: 0, start_time: "09:00", end_
 const isEmployee = <T extends { role: string }>(person: T): person is T & { role: "DOCTOR" | "STAFF" } => person.role === "DOCTOR" || person.role === "STAFF";
 
 function isImpact(error: unknown): error is ApiClientError { return error instanceof ApiClientError && error.code === "SHIFT_CHANGE_REQUIRES_CONFIRMATION"; }
+function isScheduleInvariant(error: unknown): boolean { return error instanceof ApiClientError && error.code === "ACTIVE_PROFESSIONAL_REQUIRES_SCHEDULE"; }
 function impactDetails(error: ApiClientError): ShiftImpact { return error.details as unknown as ShiftImpact; }
 
 function ShiftEditor({ initial, onSave, onDirtyChange, onPendingChange }: { initial: ShiftDraft; onSave: (draft: ShiftDraft) => Promise<unknown>; onDirtyChange: (dirty: boolean) => void; onPendingChange: (pending: boolean) => void }) {
@@ -45,6 +47,7 @@ function ShiftEditor({ initial, onSave, onDirtyChange, onPendingChange }: { init
 export function ScheduleManagementPage() {
   const t = useFeatureT();
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
+  const [params] = useSearchParams();
   const client = useQueryClient();
   const [employeeId, setEmployeeId] = useState<number | null>(null);
   const [mode, setMode] = useState<ScheduleApplyMode>("MISSING_ONLY");
@@ -53,15 +56,17 @@ export function ScheduleManagementPage() {
   const [editorDirty, setEditorDirty] = useState(false);
   const [editorPending, setEditorPending] = useState(false);
   const [impact, setImpact] = useState<{ details: ShiftImpact; rerun: () => void } | null>(null);
+  const [invariantError, setInvariantError] = useState(false);
   const defaults = useQuery({ queryKey: ["clinic-default-shifts"], queryFn: scheduleApi.defaultShifts });
   const people = useQuery({ queryKey: ["schedule-employees"], queryFn: () => usersApi.list({ page: 1 }) });
   const shifts = useQuery({ queryKey: ["employee-working-shifts", employeeId], queryFn: () => scheduleApi.workingShifts({ employee_id: employeeId ?? undefined }), enabled: employeeId !== null });
   const weekday = (day: number) => new Intl.DateTimeFormat(language === "AR" ? "ar" : "en", { weekday: "long" }).format(new Date(Date.UTC(2024, 0, 1 + day)));
   const employees = useMemo(() => (people.data?.results ?? []).filter(isEmployee), [people.data]);
+  useEffect(() => { const requested = Number(params.get("employee")); if (requested && employees.some((person) => person.id === requested)) setEmployeeId(requested); }, [employees, params]);
   const role = (value: "DOCTOR" | "STAFF") => value === "DOCTOR" ? t("doctor") : t("staff");
   const employeeName = (id: number) => employees.find((person) => person.id === id)?.full_name ?? "";
-  const invalidate = () => { void client.invalidateQueries({ queryKey: ["clinic-default-shifts"] }); void client.invalidateQueries({ queryKey: ["employee-working-shifts", employeeId] }); void client.invalidateQueries({ queryKey: ["working-shifts"] }); void client.invalidateQueries({ queryKey: ["appointments"] }); void client.invalidateQueries({ queryKey: ["needs-reschedule"] }); };
-  const withImpact = (error: unknown, rerun: () => void) => { if (isImpact(error)) setImpact({ details: impactDetails(error), rerun }); };
+  const invalidate = () => { void client.invalidateQueries({ queryKey: ["clinic-default-shifts"] }); void client.invalidateQueries({ queryKey: ["employee-working-shifts", employeeId] }); void client.invalidateQueries({ queryKey: ["working-shifts"] }); void client.invalidateQueries({ queryKey: ["appointments"] }); void client.invalidateQueries({ queryKey: ["needs-reschedule"] }); void client.invalidateQueries({ queryKey: ["team-members"] }); void client.invalidateQueries({ queryKey: ["doctors"] }); };
+  const withImpact = (error: unknown, rerun: () => void) => { if (isImpact(error)) setImpact({ details: impactDetails(error), rerun }); if (isScheduleInvariant(error)) setInvariantError(true); };
   const apply = useMutation({ mutationFn: (confirmed: boolean) => scheduleApi.applyDefault(employeeId!, mode, confirmed), onSuccess: invalidate, onError: (error) => withImpact(error, () => apply.mutate(true)) });
   const copy = useMutation({ mutationFn: (confirmed: boolean) => scheduleApi.copySchedule(copySource!, employeeId!, mode, confirmed), onSuccess: invalidate, onError: (error) => withImpact(error, () => copy.mutate(true)) });
   const toggleDefault = useMutation({ mutationFn: ({ shift, confirmed }: { shift: ClinicDefaultShift; confirmed: boolean }) => scheduleApi.setDefaultShiftActive(shift.id, shift.version, !shift.is_active), onSuccess: invalidate });
@@ -83,6 +88,7 @@ export function ScheduleManagementPage() {
 
   return <div className="admin-page">
     <PageHeaderV2 title={t("schedules")} description={t("scheduleHelp")} />
+    {invariantError ? <StatePanel state="error" title={t("cannotRemoveFinalShift")} description={`${t("deactivateProfessionalFirst")} · ${t("addAnotherActiveShift")}`} /> : null}
     <div className="schedule-grid">
       <SurfaceCard major><SectionHeading title={t("clinicDefaults")} description={t("scheduleAdministration")} /><Button onClick={() => setEditor({ kind: "default" })}><Plus size={18} />{t("addShift")}</Button>
         {defaults.isLoading ? <StatePanel state="loading" title={t("loadingSchedules")} /> : defaults.isError ? <StatePanel state="error" title={t("scheduleUnavailable")} description={getErrorMessage(defaults.error)} action={<Button variant="secondary" onClick={() => void defaults.refetch()}>{t("retry")}</Button>} /> : !defaultRows.length ? <StatePanel state="empty" title={t("noDefaults")} /> : <ul className="schedule-list">{defaultRows.map((shift) => <li key={shift.id}><div><strong className="bidi-isolate">{shift.name}</strong><span><bdi>{weekday(shift.weekday)} · {formatClock(shift.start_time)}–{formatClock(shift.end_time)}</bdi></span></div><div className="schedule-actions"><StatusBadge status={shift.is_active ? "ACTIVE" : "INACTIVE"} /><Button compact variant="secondary" onClick={() => setEditor({ kind: "default", shift })}>{t("editShift")}</Button><Button compact variant="secondary" loading={toggleDefault.isPending} onClick={() => toggleDefault.mutate({ shift, confirmed: false })}>{shift.is_active ? t("deactivateShift") : t("activateShift")}</Button></div></li>)}</ul>}

@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from apps.audit.services import log_activity
+from apps.accounts.professional_schedule import ProfessionalScheduleRuleError, assert_schedule_mutation_preserves_active_schedule, lock_professional_and_active_shifts
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
 from apps.scheduling.models import Appointment, AvailabilityException, ClinicDefaultShift, WorkingShift
@@ -163,14 +164,19 @@ def set_default_shift_active(*, instance, version, is_active, user):
 
 
 def create_working_shift(*, serializer, user):
-    data = serializer.validated_data; employee = data["employee"]
-    validate_shift_overlap(model=WorkingShift, employee=employee, weekday=data["weekday"], start_time=data["start_time"], end_time=data["end_time"], is_active=True)
-    return serializer.save(created_by=user, updated_by=user)
+    with transaction.atomic():
+        data = serializer.validated_data; employee = data["employee"]
+        lock_professional_and_active_shifts(employee)
+        validate_shift_overlap(model=WorkingShift, employee=employee, weekday=data["weekday"], start_time=data["start_time"], end_time=data["end_time"], is_active=True)
+        instance = serializer.save(created_by=user, updated_by=user)
+        assert_schedule_mutation_preserves_active_schedule(employee)
+        return instance
 
 
 def update_working_shift(*, instance, serializer, user, confirm_appointment_impact=False, request=None):
     with transaction.atomic():
         locked = WorkingShift.objects.select_for_update().select_related("employee").get(pk=instance.pk); require_version(locked, serializer.validated_data.get("version"))
+        lock_professional_and_active_shifts(locked.employee)
         data = serializer.validated_data; candidate = {"weekday": data.get("weekday", locked.weekday), "start_time": data.get("start_time", locked.start_time), "end_time": data.get("end_time", locked.end_time), "is_active": data.get("is_active", locked.is_active)}
         validate_shift_overlap(model=WorkingShift, employee=locked.employee, exclude_id=locked.id, **candidate)
         rows = list(WorkingShift.objects.filter(employee=locked.employee, is_active=True).exclude(id=locked.id).values("weekday", "start_time", "end_time", "is_active")) + [candidate]
@@ -178,6 +184,7 @@ def update_working_shift(*, instance, serializer, user, confirm_appointment_impa
         if impacted and not confirm_appointment_impact: raise _impact_error(locked.employee, impacted, rows)
         for field, value in data.items(): setattr(locked, field, value)
         locked.version += 1; locked.updated_by = user; locked.save()
+        assert_schedule_mutation_preserves_active_schedule(locked.employee)
         if impacted: _mark_shift_impacts(impacted, locked, user, request)
         return locked, len(impacted)
 
@@ -193,6 +200,7 @@ def _schedule_rows(shifts): return [{"name": row.name, "weekday": row.weekday, "
 def _apply_schedule(*, employee, templates, mode, user, confirm_appointment_impact, request=None, source_default=False):
     if mode not in {"MISSING_ONLY", "REPLACE_ALL"}: raise AppointmentRuleError("VALIDATION_ERROR", "Some fields are invalid.", {"mode": ["Use MISSING_ONLY or REPLACE_ALL."]})
     with transaction.atomic():
+        lock_professional_and_active_shifts(employee)
         existing = list(WorkingShift.objects.select_for_update().filter(employee=employee).order_by("id")); active = [shift for shift in existing if shift.is_active]
         incoming = [row for row in templates if row.is_active]
         if mode == "MISSING_ONLY":
@@ -202,6 +210,7 @@ def _apply_schedule(*, employee, templates, mode, user, confirm_appointment_impa
                 overlaps = any(s.weekday == template.weekday and s.start_time < template.end_time and s.end_time > template.start_time for s in active)
                 if exact or overlaps: skipped += 1; continue
                 WorkingShift.objects.create(employee=employee, name=template.name, weekday=template.weekday, start_time=template.start_time, end_time=template.end_time, is_active=True, source_default_shift=template.source_default_shift if source_default else None, created_by=user, updated_by=user); created += 1
+            assert_schedule_mutation_preserves_active_schedule(employee)
             return {"created_count": created, "deactivated_count": 0, "skipped_count": skipped, "impacted_appointments_count": 0}
         proposed = _schedule_rows(incoming)
         impacted = _impacted_appointments(employee, proposed)
@@ -210,6 +219,7 @@ def _apply_schedule(*, employee, templates, mode, user, confirm_appointment_impa
         for shift in active:
             shift.is_active = False; shift.version += 1; shift.updated_by = user; shift.save(update_fields=["is_active", "version", "updated_by", "updated_at"]); deactivated += 1
         created_rows = [WorkingShift.objects.create(employee=employee, name=t.name, weekday=t.weekday, start_time=t.start_time, end_time=t.end_time, is_active=True, source_default_shift=t.source_default_shift if source_default else None, created_by=user, updated_by=user) for t in incoming]
+        assert_schedule_mutation_preserves_active_schedule(employee)
         if impacted: _mark_shift_impacts(impacted, created_rows[0] if created_rows else active[0], user, request)
         return {"created_count": len(created_rows), "deactivated_count": deactivated, "skipped_count": 0, "impacted_appointments_count": len(impacted)}
 

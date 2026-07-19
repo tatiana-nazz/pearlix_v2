@@ -15,6 +15,7 @@ export interface UserSummary {
 export interface AuthUser extends UserSummary {
   must_change_password: boolean;
   password_changed_at: string | null;
+  operational_status?: "ACTIVE" | "INACTIVE" | "SETUP_REQUIRED" | "INVARIANT_VIOLATION" | null;
 }
 
 export interface LoginPayload {

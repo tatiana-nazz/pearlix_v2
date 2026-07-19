@@ -1,6 +1,7 @@
 import type { UserRole } from "./auth";
 
 export type ProfessionalStatus = "ACTIVE" | "INACTIVE";
+export type OperationalStatus = "ACTIVE" | "INACTIVE" | "SETUP_REQUIRED" | "INVARIANT_VIOLATION";
 export type TeamAvailability = "AVAILABLE" | "ON_LEAVE" | "UNAVAILABLE";
 
 export interface LinkedAccountSummary {
@@ -17,6 +18,7 @@ export interface TeamMemberSummary {
   role: Extract<UserRole, "DOCTOR" | "STAFF">;
   full_name: string;
   professional_status: ProfessionalStatus;
+  operational_status: OperationalStatus;
   specialty: string | null;
   position: string | null;
   phone: string;
@@ -59,5 +61,5 @@ export interface TeamMemberCreatePayload {
 
 export type TeamMemberUpdatePayload = { version: number; specialty?: string; phone?: string; bio?: string } | { version: number; position?: string; phone?: string };
 export interface ProfessionalStatusPayload { is_active: boolean; version: number; reason?: string; }
-export interface RoleTransitionPreview { current_role: UserRole; target_role: UserRole; linked_profile_state: string; operational_history: Record<string, number>; required_target_profile: "doctor_profile" | "staff_profile" | null; allowed: boolean; blockers: Array<{ code: string; counts: Record<string, number> }>; consequences: string[]; confirmation_token: string | null; }
+export interface RoleTransitionPreview { current_role: UserRole; target_role: UserRole; linked_profile_state: string; operational_history: Record<string, number>; required_target_profile: "doctor_profile" | "staff_profile" | null; schedule_setup_required?: boolean; allowed: boolean; blockers: Array<{ code: string; counts: Record<string, number> }>; consequences: string[]; confirmation_token: string | null; }
 export interface RoleTransitionConfirmPayload { target_role: UserRole; mode: "CONFIRM"; confirmation_token: string; profile: Record<string, string>; version: number; }

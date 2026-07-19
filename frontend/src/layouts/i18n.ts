@@ -178,6 +178,15 @@ const teamDirectoryMessages = {
     cards: "\u0628\u0637\u0627\u0642\u0627\u062a", directoryPresentation: "\u0637\u0631\u064a\u0642\u0629 \u0639\u0631\u0636 \u0627\u0644\u062f\u0644\u064a\u0644", emptyTeamDirectory: "\u0644\u0627 \u064a\u0648\u062c\u062f \u0623\u0639\u0636\u0627\u0621 \u0641\u064a \u0627\u0644\u0641\u0631\u064a\u0642.", loadingTeam: "\u062c\u0627\u0631\u064d \u062a\u062d\u0645\u064a\u0644 \u062f\u0644\u064a\u0644 \u0627\u0644\u0641\u0631\u064a\u0642…", noActiveSchedule: "\u0644\u0627 \u064a\u0648\u062c\u062f \u062c\u062f\u0648\u0644 \u0646\u0634\u0637", noContactValue: "\u063a\u064a\u0631 \u0645\u0633\u062c\u0644", noTeamMatches: "\u0644\u0627 \u064a\u0648\u062c\u062f \u0623\u0639\u0636\u0627\u0621 \u064a\u0637\u0627\u0628\u0642\u0648\u0646 \u0647\u0630\u0647 \u0627\u0644\u0641\u0644\u0627\u062a\u0631.", activeSchedule: "\u062c\u062f\u0648\u0644 \u0646\u0634\u0637", refreshingTeam: "\u062c\u0627\u0631\u064d \u062a\u062d\u062f\u064a\u062b \u0646\u062a\u0627\u0626\u062c \u0627\u0644\u0641\u0631\u064a\u0642…", scheduleStatus: "\u062d\u0627\u0644\u0629 \u0627\u0644\u062c\u062f\u0648\u0644", todayWorkload: "\u0639\u0628\u0621 \u0639\u0645\u0644 \u0627\u0644\u064a\u0648\u0645",
   },
 } as const;
+const professionalScheduleMessages = {
+  EN: {
+    setupRequired: "Setup required", operationalStatus: "Operational status", invariantViolation: "Schedule invariant violation", configureSchedule: "Configure schedule", applyClinicDefaults: "Apply clinic defaults", copyScheduleAction: "Copy schedule", scheduleRequiredHelp: "This professional remains inactive until an active schedule is configured.", cannotActivateWithoutShift: "Cannot activate without an active shift.", cannotRemoveFinalShift: "Cannot remove the final active shift.", deactivateProfessionalFirst: "Deactivate professional first", addAnotherActiveShift: "Add another active shift", scheduleSetupComplete: "Schedule setup complete", scheduleSetupFailed: "Schedule setup failed",
+  },
+  AR: {
+    setupRequired: "يلزم الإعداد", operationalStatus: "الحالة التشغيلية", invariantViolation: "مخالفة قاعدة الجدول", configureSchedule: "إعداد الجدول", applyClinicDefaults: "تطبيق افتراضيات العيادة", copyScheduleAction: "نسخ الجدول", scheduleRequiredHelp: "يبقى المهني غير نشط حتى يتم إعداد جدول نشط.", cannotActivateWithoutShift: "لا يمكن التفعيل بدون وردية نشطة.", cannotRemoveFinalShift: "لا يمكن إزالة الوردية النشطة الأخيرة.", deactivateProfessionalFirst: "أوقف تفعيل المهني أولاً", addAnotherActiveShift: "أضف وردية نشطة أخرى", scheduleSetupComplete: "اكتمل إعداد الجدول", scheduleSetupFailed: "فشل إعداد الجدول",
+  },
+} as const;
+
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -202,6 +211,7 @@ const clinicSettingsOptionMessageKeysMatch: SameKeys<typeof clinicSettingsOption
 const auditAcceptanceMessageKeysMatch: SameKeys<typeof auditAcceptanceMessages.EN, typeof auditAcceptanceMessages.AR> = true;
 const profileMessageKeysMatch: SameKeys<typeof profileMessages.EN, typeof profileMessages.AR> = true;
 const teamDirectoryMessageKeysMatch: SameKeys<typeof teamDirectoryMessages.EN, typeof teamDirectoryMessages.AR> = true;
+const professionalScheduleMessageKeysMatch: SameKeys<typeof professionalScheduleMessages.EN, typeof professionalScheduleMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
@@ -220,12 +230,13 @@ void clinicSettingsOptionMessageKeysMatch;
 void auditAcceptanceMessageKeysMatch;
 void profileMessageKeysMatch;
 void teamDirectoryMessageKeysMatch;
+void professionalScheduleMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -269,6 +280,8 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
   if (hasOwnKey(appointmentChoiceDictionary, key)) return appointmentChoiceDictionary[key];
   const teamDirectoryDictionary = teamDirectoryMessages[language];
   if (hasOwnKey(teamDirectoryDictionary, key)) return teamDirectoryDictionary[key];
+  const professionalScheduleDictionary = professionalScheduleMessages[language];
+  if (hasOwnKey(professionalScheduleDictionary, key)) return professionalScheduleDictionary[key];
 
   throw new Error(`Missing translation for key: ${key}`);
 }

@@ -11,6 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.accounts.models import User
+from apps.accounts.professional_schedule import operational_status
 from apps.accounts.serializers import (
     AdminResetPasswordSerializer,
     AuthUserSerializer,
@@ -283,16 +284,18 @@ def _schedule_summary(user):
 
 
 def _team_summary(user, *, appointments=0, active_visits=0):
+    schedule = _schedule_summary(user)
     return {
         "id": user.id,
         "role": user.role,
         "full_name": user.full_name,
         "email": user.email,
         **_team_profile_data(user),
+        "operational_status": operational_status(professional_is_active=linked_profile(user).is_active, active_shift_count=schedule["active_shift_count"]),
         "account": user_account_summary(user),
         "availability": _prefetched_availability(user) if hasattr(user, "team_doctor_availability_exceptions") else availability_summary(user),
         "today_workload": {"appointment_count": appointments, "active_visit_count": active_visits},
-        "schedule_summary": _schedule_summary(user),
+        "schedule_summary": schedule,
         "created_at": linked_profile(user).created_at,
         "updated_at": linked_profile(user).updated_at,
     }
@@ -301,18 +304,20 @@ def _team_summary(user, *, appointments=0, active_visits=0):
 def _team_staff_summary(user, *, appointments=0, active_visits=0):
     """Directory representation intentionally safe for the Staff read-only role."""
     profile = _team_profile_data(user)
+    schedule = _schedule_summary(user)
     return {
         "id": user.id,
         "role": user.role,
         "full_name": user.full_name,
         "professional_status": profile["professional_status"],
+        "operational_status": operational_status(professional_is_active=linked_profile(user).is_active, active_shift_count=schedule["active_shift_count"]),
         "specialty": profile["specialty"],
         "position": profile["position"],
         "phone": profile["phone"],
         "email": user.email,
         "availability": _prefetched_availability(user) if hasattr(user, "team_doctor_availability_exceptions") else availability_summary(user),
         "today_workload": {"appointment_count": appointments, "active_visit_count": active_visits},
-        "schedule_summary": _schedule_summary(user),
+        "schedule_summary": schedule,
     }
 
 

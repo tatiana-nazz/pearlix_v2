@@ -14,6 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
+from apps.accounts.professional_schedule import assert_professional_activation_allowed
 from apps.ai_results.models import AIResult
 from apps.ai_results.services import run_ai_for_xray
 from apps.audit.models import ActivityLog
@@ -146,10 +147,10 @@ class Command(BaseCommand):
             )
             if role == User.Role.DOCTOR:
                 specialty, phone, bio = DOCTOR_PROFILE_SPECS[slug]
-                DoctorProfile.objects.create(user=user, specialty=specialty, phone=phone, bio=bio, is_active=True)
+                DoctorProfile.objects.create(user=user, specialty=specialty, phone=phone, bio=bio, is_active=False)
             elif role == User.Role.STAFF:
                 position, phone = STAFF_PROFILE_SPECS[slug]
-                StaffProfile.objects.create(user=user, position=position, phone=phone, is_active=True)
+                StaffProfile.objects.create(user=user, position=position, phone=phone, is_active=False)
             accounts[slug] = user
             log_activity(actor=user, action="demo_user_created", entity_type="user", entity_id=user.id, metadata={"demo_story": DEMO_TAG, "role": role})
         return accounts
@@ -205,6 +206,13 @@ class Command(BaseCommand):
         for staff_key in ("staff.one", "staff.two"):
             for weekday in range(7):
                 WorkingShift.objects.create(employee=accounts[staff_key], name="Demo staff shift", weekday=weekday, start_time=time(8), end_time=time(16), created_by=accounts["admin"], updated_by=accounts["admin"])
+        for user in accounts.values():
+            profile = getattr(user, "doctor_profile", None) or getattr(user, "staff_profile", None)
+            if profile and WorkingShift.objects.filter(employee=user, is_active=True).exists():
+                assert_professional_activation_allowed(user)
+                profile.is_active = True
+                profile.version += 1
+                profile.save(update_fields=["is_active", "version", "updated_at"])
 
     def _dt(self, day, hour, minute=0):
         return timezone.make_aware(datetime.combine(day, time(hour, minute)), timezone.get_current_timezone())

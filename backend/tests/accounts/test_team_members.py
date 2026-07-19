@@ -1,5 +1,6 @@
 import pytest
 from rest_framework.test import APIClient
+from django.core.management import call_command
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
 from apps.audit.models import ActivityLog
@@ -19,8 +20,34 @@ def test_team_member_onboarding_is_transactional_and_sanitized(admin_client):
     assert user.must_change_password and user.check_password("StrongTeam!4567")
     assert user.role == User.Role.DOCTOR and user.doctor_profile.specialty == "Endodontics"
     assert response.data["account"]["is_active"] is True
+    assert response.data["professional_status"] == "INACTIVE"
+    assert response.data["operational_status"] == "SETUP_REQUIRED"
     event = ActivityLog.objects.get(action="team_member_created", entity_id=str(user.id))
     assert "password" not in str(event.metadata_json).lower()
+
+
+@pytest.mark.django_db
+def test_professional_activation_requires_an_active_shift_and_preserves_version(admin_client, doctor_user):
+    profile = DoctorProfile.objects.create(user=doctor_user, specialty="General", is_active=False)
+    rejected = admin_client.post(f"/api/team-members/{doctor_user.id}/set-professional-status/", {"version": profile.version, "is_active": True}, format="json")
+    profile.refresh_from_db()
+    assert rejected.status_code == 409
+    assert rejected.data["code"] == "ACTIVE_PROFESSIONAL_REQUIRES_SCHEDULE"
+    assert profile.is_active is False and profile.version == 1 and doctor_user.is_active is True
+    WorkingShift.objects.create(employee=doctor_user, weekday=Weekday.MONDAY, name="Morning", start_time="09:00", end_time="12:00")
+    activated = admin_client.post(f"/api/team-members/{doctor_user.id}/set-professional-status/", {"version": profile.version, "is_active": True}, format="json")
+    assert activated.status_code == 200 and activated.data["operational_status"] == "ACTIVE"
+
+
+@pytest.mark.django_db
+def test_audit_professional_schedules_fixes_only_profile_status(capsys, doctor_user):
+    profile = DoctorProfile.objects.create(user=doctor_user, specialty="General", is_active=True)
+    call_command("audit_professional_schedules")
+    assert "violations=1" in capsys.readouterr().out
+    call_command("audit_professional_schedules", "--fix")
+    profile.refresh_from_db(); doctor_user.refresh_from_db()
+    assert profile.is_active is False and profile.version == 2 and doctor_user.is_active is True
+    assert ActivityLog.objects.filter(action="professional_schedule_invariant_repaired", entity_id=str(doctor_user.id)).exists()
 
 
 @pytest.mark.django_db

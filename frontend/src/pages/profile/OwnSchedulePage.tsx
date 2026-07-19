@@ -10,6 +10,7 @@ import { formatClock } from "../../utils/dates";
 export function OwnSchedulePage() {
   const t = useFeatureT();
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
+  const operationalStatus = useAuthStore((state) => state.user?.operational_status);
   const shifts = useQuery({ queryKey: ["my-working-shifts"], queryFn: () => scheduleApi.workingShifts() });
   const weekday = (day: number) => new Intl.DateTimeFormat(language === "AR" ? "ar" : "en", { weekday: "long" }).format(new Date(Date.UTC(2024, 0, 1 + day)));
   if (shifts.isLoading) return <StatePanel state="loading" title={t("loadingSchedules")} />;

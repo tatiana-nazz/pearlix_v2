@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from apps.accounts.models import DoctorProfile, StaffProfile
+from apps.accounts.professional_schedule import active_shift_count, operational_status, professional_profile
 from apps.accounts.team_services import profile_state
 
 User = get_user_model()
@@ -35,6 +36,7 @@ class UserSummarySerializer(serializers.ModelSerializer):
 
 
 class AuthUserSerializer(serializers.ModelSerializer):
+    operational_status = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = (
@@ -47,8 +49,13 @@ class AuthUserSerializer(serializers.ModelSerializer):
             "language_preference",
             "must_change_password",
             "password_changed_at",
+            "operational_status",
         )
         read_only_fields = fields
+
+    def get_operational_status(self, obj):
+        profile = professional_profile(obj)
+        return None if profile is None else operational_status(professional_is_active=profile.is_active, active_shift_count=active_shift_count(obj))
 
 
 class LoginSerializer(serializers.Serializer):
