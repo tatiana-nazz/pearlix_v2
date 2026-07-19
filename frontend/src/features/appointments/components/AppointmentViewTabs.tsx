@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 import type { AppointmentViewMode } from "../../../types/appointments";
 import type { UserRole } from "../../../types/auth";
@@ -12,11 +12,12 @@ interface AppointmentViewTabsProps {
 
 export function AppointmentViewTabs({ role, views }: AppointmentViewTabsProps) {
   const t = useFeatureT();
+  const location = useLocation();
   const labels: Record<AppointmentViewMode, string> = { day: t("day"), week: t("week"), month: t("month"), list: t("list"), "needs-reschedule": t("needsReschedule") };
   return (
-    <nav className="appointment-tabs" aria-label="Appointment views">
+    <nav className="appointment-tabs" aria-label={t("appointmentViews")}>
       {views.map((view) => (
-        <NavLink key={view} to={appointmentViewPath(role, view)} className={({ isActive }) => (isActive ? "active" : "")}>
+        <NavLink key={view} to={{ pathname: appointmentViewPath(role, view), search: location.search }} className={({ isActive }) => (isActive ? "active" : "")}>
           {labels[view]}
         </NavLink>
       ))}

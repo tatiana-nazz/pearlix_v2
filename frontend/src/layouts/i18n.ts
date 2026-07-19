@@ -70,6 +70,15 @@ const featureExtensions = {
   },
 } as const;
 
+const calendarMessages = {
+  EN: {
+    appointmentViews: "Appointment views", calendarNavigation: "Calendar navigation", previousDay: "Previous day", nextDay: "Next day", previousWeek: "Previous week", nextWeek: "Next week", previousMonth: "Previous month", nextMonth: "Next month", today: "Today", daySummary: "Day Summary", weekSummary: "Week Summary", monthSummary: "Month Summary", total: "Total", upcoming: "Upcoming", checkedIn: "Checked in", activeInVisit: "Active / In visit", completed: "Completed", needsReschedule: "Needs reschedule", cancelled: "Cancelled", noShow: "No-show", openAppointmentsForDate: "Open appointments for", viewDay: "View day", selectedDay: "Selected day", calendarAppointmentCount: "appointments", calendarLoading: "Loading calendar…", calendarEmpty: "No appointments in this period.", calendarError: "Unable to load calendar",
+  },
+  AR: {
+    appointmentViews: "طرق عرض المواعيد", calendarNavigation: "التنقل في التقويم", previousDay: "اليوم السابق", nextDay: "اليوم التالي", previousWeek: "الأسبوع السابق", nextWeek: "الأسبوع التالي", previousMonth: "الشهر السابق", nextMonth: "الشهر التالي", today: "اليوم", daySummary: "ملخص اليوم", weekSummary: "ملخص الأسبوع", monthSummary: "ملخص الشهر", total: "الإجمالي", upcoming: "قادم", checkedIn: "تم تسجيل الحضور", activeInVisit: "نشط / في الزيارة", completed: "مكتمل", needsReschedule: "يحتاج إعادة جدولة", cancelled: "ملغى", noShow: "لم يحضر", openAppointmentsForDate: "فتح مواعيد", viewDay: "عرض اليوم", selectedDay: "اليوم المحدد", calendarAppointmentCount: "مواعيد", calendarLoading: "جارٍ تحميل التقويم…", calendarEmpty: "لا توجد مواعيد في هذه الفترة.", calendarError: "تعذر تحميل التقويم",
+  },
+} as const;
+
 const acceptanceMessages = {
   EN: { transitionCreateOrReactivate: "A matching professional profile will be created or reactivated.", transitionAlreadyRole: "This account already has the selected role.", transitionHistory: "Operational history stays with this account, so its role cannot be changed.", transitionAtomicChange: "The role and matching professional profile will be changed together.", transitionLastAdmin: "The last active Admin account cannot be changed to a professional role.", blockerNoRoleChange: "The selected role is already assigned to this account.", blockerHistory: "Existing operational history prevents this role change.", blockerLastActiveAdmin: "At least one active Admin account must remain.", blockerUnknown: "This role change is unavailable.", transitionCounts: "Related records", workingShifts: "Working shifts", doctorAvailabilityExceptions: "Doctor availability exceptions", staffAvailabilityExceptions: "Staff availability exceptions", appointmentCount: "Appointments", visitCount: "Visits" },
   AR: { transitionCreateOrReactivate: "سيتم إنشاء الملف المهني المطابق أو إعادة تنشيطه.", transitionAlreadyRole: "لدى هذا الحساب الدور المحدد بالفعل.", transitionHistory: "يبقى السجل التشغيلي مرتبطاً بهذا الحساب، لذلك لا يمكن تغيير دوره.", transitionAtomicChange: "سيتم تغيير الدور والملف المهني المطابق معاً.", transitionLastAdmin: "لا يمكن تغيير حساب المدير النشط الأخير إلى دور مهني.", blockerNoRoleChange: "الدور المحدد مُسند إلى هذا الحساب بالفعل.", blockerHistory: "السجل التشغيلي الحالي يمنع تغيير هذا الدور.", blockerLastActiveAdmin: "يجب بقاء حساب مدير نشط واحد على الأقل.", blockerUnknown: "تغيير الدور غير متاح.", transitionCounts: "السجلات المرتبطة", workingShifts: "ورديات العمل", doctorAvailabilityExceptions: "استثناءات توفر الطبيب", staffAvailabilityExceptions: "استثناءات توفر الموظف", appointmentCount: "المواعيد", visitCount: "الزيارات" },
@@ -163,6 +172,7 @@ type SameKeys<Left extends object, Right extends object> =
 const baseMessageKeysMatch: SameKeys<typeof messages.EN, typeof messages.AR> = true;
 const featureMessageKeysMatch: SameKeys<typeof featureMessages.EN, typeof featureMessages.AR> = true;
 const featureExtensionKeysMatch: SameKeys<typeof featureExtensions.EN, typeof featureExtensions.AR> = true;
+const calendarMessageKeysMatch: SameKeys<typeof calendarMessages.EN, typeof calendarMessages.AR> = true;
 const patientListMessageKeysMatch: SameKeys<typeof patientListMessages.EN, typeof patientListMessages.AR> = true;
 const acceptanceMessageKeysMatch: SameKeys<typeof acceptanceMessages.EN, typeof acceptanceMessages.AR> = true;
 const scheduleMessageKeysMatch: SameKeys<typeof scheduleMessages.EN, typeof scheduleMessages.AR> = true;
@@ -178,6 +188,7 @@ const profileMessageKeysMatch: SameKeys<typeof profileMessages.EN, typeof profil
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
 void featureExtensionKeysMatch;
+void calendarMessageKeysMatch;
 void patientListMessageKeysMatch;
 void acceptanceMessageKeysMatch;
 void scheduleMessageKeysMatch;
@@ -194,7 +205,7 @@ function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -205,6 +216,9 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
 
   const extensionDictionary = featureExtensions[language];
   if (hasOwnKey(extensionDictionary, key)) return extensionDictionary[key];
+
+  const calendarDictionary = calendarMessages[language];
+  if (hasOwnKey(calendarDictionary, key)) return calendarDictionary[key];
 
   const acceptanceDictionary = acceptanceMessages[language];
   if (hasOwnKey(acceptanceDictionary, key)) return acceptanceDictionary[key];
