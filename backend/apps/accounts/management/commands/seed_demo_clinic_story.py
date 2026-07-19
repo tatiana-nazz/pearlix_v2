@@ -84,7 +84,7 @@ PATIENT_NAMES = (
     ("Nour", "Atieh", "Female"), ("Bassam", "Salloum", "Male"),
     ("Reem", "Assaf", "Female"), ("Hani", "Mikhael", "Male"),
     ("Sawsan", "Rahme", "Female"), ("Ibrahim", "Saad", "Male"),
-    ("Yara", "Matar", "Female"), ("Maher", "Elias", "Male"),
+    ("ليان", "Matar", "Female"), ("Maher", "Elias", "Male"),
     ("Dania", "Farhat", "Female"), ("Riad", "Hakim", "Male"),
 )
 
@@ -123,9 +123,11 @@ class Command(BaseCommand):
         ))
         self.stdout.write("QA accounts (local development only):")
         for key in ("admin", "staff.one", "staff.two", "doctor.one", "doctor.two", "doctor.three", "doctor.four"):
-            self.stdout.write(f"- {accounts[key].email} / {options['password']}")
+            self.stdout.write(f"- {key}: {accounts[key].email}")
         if options["include_must_change_user"]:
-            self.stdout.write(f"- {accounts['doctor.mustchange'].email} / {options['password']} (must change password)")
+            self.stdout.write(f"- doctor.mustchange: {accounts['doctor.mustchange'].email} (must change password; setup required)")
+        self.stdout.write("Credentials are supplied locally with --password and are never echoed by this command.")
+        self._write_story_aliases(accounts, patients, story)
 
     def _reference_date(self, raw):
         if not raw:
@@ -176,7 +178,8 @@ class Command(BaseCommand):
             patient = Patient.objects.create(
                 first_name=first, last_name=last, gender=gender,
                 date_of_birth=date(reference_date.year - (20 + index), max(1, (index % 12) + 1), min(28, (index % 27) + 1)),
-                phone_number=f"+963-93-{index:07d}", email=f"patient{index}@{EMAIL_DOMAIN}",
+                phone_number="" if index == 24 else f"+963-93-{index:07d}",
+                email="" if index == 23 else f"patient{index}@{EMAIL_DOMAIN}",
                 national_id_or_passport=f"{PATIENT_ID_PREFIX}{index:03d}", address="Synthetic Damascus address",
                 emergency_contact="Synthetic emergency contact", blood_group="O+" if index % 2 else "A+",
                 medical_conditions_history="Synthetic demo medical summary.", insurance_info="Demo self-pay", general_notes="Synthetic demo record.",
@@ -249,7 +252,7 @@ class Command(BaseCommand):
         app["no_show"] = self._appointment(patient=patients[20], doctor=d2, start=self._dt(past, 15), duration=30, status=Appointment.Status.NO_SHOW, staff=staff, reason="No show demo")
         app["future"] = self._appointment(patient=patients[21], doctor=d4, start=self._dt(today + timedelta(days=6), 14), duration=60, status=Appointment.Status.UPCOMING, staff=staff, reason="Future split shift")
         app["rescheduled"] = self._appointment(patient=patients[22], doctor=d1, start=self._dt(today + timedelta(days=7), 9), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Already rescheduled")
-        leave = AvailabilityException.objects.create(doctor=d1, start_datetime=self._dt(future, 9), end_datetime=self._dt(future, 11), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo approved leave", created_by=accounts["admin"], updated_by=accounts["admin"])
+        leave = AvailabilityException.objects.create(doctor=d1, start_datetime=self._dt(future, 9), end_datetime=self._dt(future, 11), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo upcoming leave", created_by=accounts["admin"], updated_by=accounts["admin"])
         for index, minute in ((8, 0), (9, 30)):
             appointment = self._appointment(patient=patients[index], doctor=d1, start=self._dt(future, 9, minute), duration=30, status=Appointment.Status.NEEDS_RESCHEDULE, staff=staff, reason="Needs reschedule: leave")
             appointment.reschedule_source_exception = leave
@@ -267,7 +270,11 @@ class Command(BaseCommand):
         shift.updated_by = accounts["admin"]
         shift.save(update_fields=["end_time", "version", "updated_by", "updated_at"])
         app["shift"] = shifted
-        return {"appointments": app, "active_visit": active_visit, "completed_visits": completed, "leave": leave, "shift": shift}
+        active_leave = AvailabilityException.objects.create(doctor=d4, start_datetime=self._dt(today, 15), end_datetime=self._dt(today, 16), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo active leave", created_by=accounts["admin"], updated_by=accounts["admin"])
+        ended_leave = AvailabilityException.objects.create(doctor=d4, start_datetime=self._dt(past, 15), end_datetime=self._dt(past, 16), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo ended leave", created_by=accounts["admin"], updated_by=accounts["admin"])
+        cancelled_leave = AvailabilityException.objects.create(staff=staff, start_datetime=self._dt(today + timedelta(days=2), 9), end_datetime=self._dt(today + timedelta(days=2), 10), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo cancelled leave", created_by=accounts["admin"], updated_by=accounts["admin"], is_cancelled=True, cancelled_at=timezone.now(), cancelled_by=accounts["admin"])
+        available_override = AvailabilityException.objects.create(doctor=d2, start_datetime=self._dt(today + timedelta(days=1), 17), end_datetime=self._dt(today + timedelta(days=1), 18), type=AvailabilityException.Type.AVAILABLE_OVERRIDE, reason="Demo available override", created_by=accounts["admin"], updated_by=accounts["admin"])
+        return {"appointments": app, "active_visit": active_visit, "completed_visits": completed, "leave": leave, "shift": shift, "active_leave": active_leave, "ended_leave": ended_leave, "cancelled_leave": cancelled_leave, "available_override": available_override}
 
     def _upload(self, filename):
         from django.core.files.uploadedfile import SimpleUploadedFile
@@ -360,3 +367,31 @@ class Command(BaseCommand):
                     (Path(settings.MEDIA_ROOT) / name).unlink(missing_ok=True)
                 except OSError:
                     pass
+
+    def _write_story_aliases(self, accounts, patients, story):
+        appointments = story["appointments"]
+        self.stdout.write("Browser QA aliases (local IDs):")
+        for alias, record in (
+            ("PATIENT_PROFILE", patients[0]),
+            ("PATIENT_ARCHIVED", patients[18]),
+            ("APPOINTMENT_CHECKED_IN", appointments["checked_in"]),
+            ("APPOINTMENT_RESCHEDULABLE", appointments["leave_8"]),
+            ("APPOINTMENT_EDITABLE", appointments["today_confirmed"]),
+            ("VISIT_ACTIVE", story["active_visit"]),
+            ("VISIT_COMPLETED", story["completed_visits"][0]),
+            ("XRAY_AI", story["imaging"]["xray"]),
+            ("EXTERNAL_XRAY", story["imaging"]["attached"]),
+            ("BILLING_HANDOFF_PENDING", story["billing"]["pending"]),
+            ("INVOICE_UNPAID", story["billing"]["unpaid"]),
+            ("INVOICE_PARTIAL", story["billing"]["partial"]),
+            ("INVOICE_PAID", story["billing"]["paid"]),
+            ("LEAVE_UPCOMING", story["leave"]),
+            ("LEAVE_ACTIVE", story["active_leave"]),
+            ("LEAVE_ENDED", story["ended_leave"]),
+            ("LEAVE_CANCELLED", story["cancelled_leave"]),
+            ("AVAILABLE_OVERRIDE", story["available_override"]),
+        ):
+            self.stdout.write(f"- {alias}={record.id}")
+        self.stdout.write(f"- DOCTOR_NO_ACTIVE_VISIT={accounts['doctor.one'].id}")
+        self.stdout.write(f"- DOCTOR_STARTABLE_VISIT={accounts['doctor.two'].id}")
+        self.stdout.write(f"- DOCTOR_ACTIVE_VISIT={accounts['doctor.three'].id}")

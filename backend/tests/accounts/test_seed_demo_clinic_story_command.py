@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -54,14 +55,18 @@ def test_demo_story_is_idempotent_and_reset_preserves_non_demo_data(tmp_path):
 @override_settings(DEBUG=True)
 def test_demo_story_relationships_dashboards_and_media_are_coherent(tmp_path):
     with override_settings(MEDIA_ROOT=tmp_path):
-        seed("--reset-demo", "--include-must-change-user", "--reference-date", "2026-01-15")
+        output = seed("--reset-demo", "--include-must-change-user", "--reference-date", "2026-01-15")
 
         assert User.objects.filter(email__endswith=f"@{DOMAIN}", is_active=True).count() == 8
         assert User.objects.filter(email="doctor.mustchange@pearlix-demo.local", must_change_password=True).exists()
         assert Patient.objects.filter(national_id_or_passport__startswith=PREFIX).count() == 24
         assert Appointment.objects.filter(status=Appointment.Status.NEEDS_RESCHEDULE, reschedule_source_exception__isnull=False).count() >= 2
         assert Appointment.objects.filter(status=Appointment.Status.NEEDS_RESCHEDULE, reschedule_source_working_shift__isnull=False).exists()
-        assert AvailabilityException.objects.filter(reason="Demo approved leave").exists()
+        assert AvailabilityException.objects.filter(reason="Demo upcoming leave", is_cancelled=False).exists()
+        assert AvailabilityException.objects.filter(reason="Demo active leave", is_cancelled=False).exists()
+        assert AvailabilityException.objects.filter(reason="Demo ended leave", is_cancelled=False).exists()
+        assert AvailabilityException.objects.filter(reason="Demo cancelled leave", is_cancelled=True).exists()
+        assert AvailabilityException.objects.filter(reason="Demo available override", type=AvailabilityException.Type.AVAILABLE_OVERRIDE, is_cancelled=False).exists()
         assert WorkingShift.objects.filter(employee__email="doctor.four@pearlix-demo.local", start_time="08:00").exists()
         assert WorkingShift.objects.filter(employee__email="doctor.four@pearlix-demo.local", start_time="13:00").exists()
         assert Visit.objects.filter(status=Visit.Status.ACTIVE).count() == 1
@@ -87,3 +92,18 @@ def test_demo_story_relationships_dashboards_and_media_are_coherent(tmp_path):
             assert response.status_code == 200
             assert response.data
         assert any(Path(path).name.startswith("demo14a-") for path in XrayAttachment.objects.values_list("original_file", flat=True))
+        assert Patient.objects.filter(national_id_or_passport__startswith=PREFIX, first_name="ليان").exists()
+        assert Patient.objects.filter(national_id_or_passport__startswith=PREFIX, email="").exists()
+        assert Patient.objects.filter(national_id_or_passport__startswith=PREFIX, phone_number="").exists()
+        setup_required = User.objects.get(email="doctor.mustchange@pearlix-demo.local")
+        assert setup_required.doctor_profile.is_active is False
+        assert not WorkingShift.objects.filter(employee=setup_required, is_active=True).exists()
+        assert "APPOINTMENT_CHECKED_IN=" in output
+        assert "Credentials are supplied locally with --password" in output
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=False)
+def test_demo_story_refuses_non_debug_environments():
+    with pytest.raises(CommandError, match="Refusing to seed the demo clinic story when DEBUG is false"):
+        seed("--reference-date", "2026-01-15")
