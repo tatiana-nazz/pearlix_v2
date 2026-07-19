@@ -6,9 +6,13 @@ const messages = {
   AR: { menu: "فتح التنقل", navigation: "التنقل", theme: "السمة", language: "اللغة", light: "فاتح", dark: "داكن", system: "النظام", logout: "تسجيل الخروج", schedule: "جدولي", leave: "إجازاتي", workspace: "مساحة العمل", clinical: "العمليات السريرية", administration: "الإدارة", personal: "شخصي", close: "إغلاق التنقل", collapseSidebar: "طي الشريط الجانبي", expandSidebar: "توسيع الشريط الجانبي", switchToLightMode: "التبديل إلى الوضع الفاتح", switchToDarkMode: "التبديل إلى الوضع الداكن", systemLight: "النظام: فاتح", systemDark: "النظام: داكن", dashboard: "لوحة التحكم", team: "الفريق", usersAccess: "المستخدمون والصلاحيات", schedules: "الجداول", appointments: "المواعيد", needsReschedule: "يحتاج إعادة جدولة", patients: "المرضى", xraysAi: "الأشعة والذكاء الاصطناعي", externalXrays: "الأشعة الخارجية", billing: "الفوترة", billingHandoffs: "تحويلات الفوترة", invoices: "الفواتير", clinicSettings: "إعدادات العيادة", auditLogs: "سجلات التدقيق", myAppointments: "مواعيدي", activeVisit: "الزيارة النشطة", externalXrayWorkspace: "مساحة عمل الأشعة الخارجية", myBillingHandoffs: "تحويلات الفوترة الخاصة بي", doctor: "طبيب", staff: "موظف", admin: "مسؤول", user: "مستخدم", doctorWorkspace: "مساحة عمل الطبيب", staffWorkspace: "مساحة عمل الموظفين", adminWorkspace: "مساحة عمل الإدارة" },
 } as const;
 
-export type ShellMessageKey = keyof typeof messages.EN;
+export type ShellMessageKey = keyof typeof messages.EN | "myProfile" | "languageToggle";
 
-export function t(language: LanguagePreference, key: keyof typeof messages.EN) { return messages[language][key]; }
+export function t(language: LanguagePreference, key: ShellMessageKey) {
+  if (key === "myProfile") return language === "AR" ? "\u0645\u0644\u0641\u064a \u0627\u0644\u0634\u062e\u0635\u064a" : "My profile";
+  if (key === "languageToggle") return language === "AR" ? "\u0627\u0644\u062a\u0628\u062f\u064a\u0644 \u0625\u0644\u0649 \u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629" : "Switch to Arabic";
+  return messages[language][key];
+}
 
 export function roleT(language: LanguagePreference, role: UserRole | null | undefined) {
   if (role === "ADMIN") return t(language, "admin");
@@ -106,6 +110,32 @@ const auditAcceptanceMessages = {
   EN: { auditFilters: "Audit filters", auditActorSearchPlaceholder: "Search actors", auditExactIdentifier: "Exact identifier", auditRefreshing: "Refreshing audit records", auditIpAddress: "IP address", auditMetadataTruncated: "Additional metadata is hidden", auditNull: "None", auditRoleAdmin: "Admin", auditRoleStaff: "Staff", auditRoleDoctor: "Doctor", auditActionClinicSettingsUpdated: "Clinic settings updated", auditActionPatientCreated: "Patient Created", auditActionPatientUpdated: "Patient updated", auditActionAppointmentCreated: "Appointment created", auditActionAppointmentUpdated: "Appointment updated", auditActionAppointmentStatusChanged: "Appointment status changed", auditActionVisitStarted: "Visit started", auditActionVisitUpdated: "Visit updated", auditActionVisitCompleted: "Visit completed", auditActionBillingHandoffCreated: "Billing handoff created", auditActionBillingHandoffConverted: "Billing handoff converted", auditActionBillingHandoffDismissed: "Billing handoff dismissed", auditActionInvoiceCreated: "Invoice created", auditActionInvoiceUpdated: "Invoice updated", auditActionInvoiceCancelled: "Invoice cancelled", auditActionPaymentRecorded: "Payment recorded", auditActionXrayUploaded: "X-ray uploaded", auditActionXrayAiRun: "X-ray AI run", auditActionExternalXrayUploaded: "External X-ray uploaded", auditActionExternalXrayAiRun: "External X-ray AI run", auditActionExternalXrayAttached: "External X-ray attached", auditActionExternalXrayDiscarded: "External X-ray discarded", auditActionUserCreated: "User created", auditActionUserUpdated: "User updated", auditActionUserDeactivated: "User deactivated", auditActionUserReactivated: "User reactivated", auditActionUserPasswordReset: "User password reset", auditActionUserRoleChanged: "User role changed", auditActionScheduleUpdated: "Schedule updated", auditActionLeaveCreated: "Leave created", auditActionLeaveUpdated: "Leave updated", auditActionLeaveCancelled: "Leave cancelled", auditEntityClinicSettings: "Clinic settings", auditEntityPatient: "Patient", auditEntityAppointment: "Appointment", auditEntityVisit: "Visit", auditEntityBillingHandoff: "Billing handoff", auditEntityInvoice: "Invoice", auditEntityPayment: "Payment", auditEntityXray: "X-ray", auditEntityExternalXray: "External X-ray", auditEntityUser: "User", auditEntityTeamMember: "Team member", auditEntitySchedule: "Schedule", auditEntityLeave: "Leave" },
   AR: { auditFilters: "مرشحات التدقيق", auditActorSearchPlaceholder: "البحث عن الفاعلين", auditExactIdentifier: "معرف دقيق", auditRefreshing: "جارٍ تحديث سجلات التدقيق", auditIpAddress: "عنوان IP", auditMetadataTruncated: "تم إخفاء بيانات وصفية إضافية", auditNull: "لا شيء", auditRoleAdmin: "مسؤول", auditRoleStaff: "موظف", auditRoleDoctor: "طبيب", auditActionClinicSettingsUpdated: "تم تحديث إعدادات العيادة", auditActionPatientCreated: "تم إنشاء مريض", auditActionPatientUpdated: "تم تحديث المريض", auditActionAppointmentCreated: "تم إنشاء موعد", auditActionAppointmentUpdated: "تم تحديث الموعد", auditActionAppointmentStatusChanged: "تم تغيير حالة الموعد", auditActionVisitStarted: "بدأت الزيارة", auditActionVisitUpdated: "تم تحديث الزيارة", auditActionVisitCompleted: "اكتملت الزيارة", auditActionBillingHandoffCreated: "تم إنشاء تحويل الفوترة", auditActionBillingHandoffConverted: "تم تحويل تحويل الفوترة", auditActionBillingHandoffDismissed: "تم رفض تحويل الفوترة", auditActionInvoiceCreated: "تم إنشاء الفاتورة", auditActionInvoiceUpdated: "تم تحديث الفاتورة", auditActionInvoiceCancelled: "تم إلغاء الفاتورة", auditActionPaymentRecorded: "تم تسجيل الدفعة", auditActionXrayUploaded: "تم رفع الأشعة السينية", auditActionXrayAiRun: "تم تشغيل الذكاء الاصطناعي للأشعة", auditActionExternalXrayUploaded: "تم رفع أشعة خارجية", auditActionExternalXrayAiRun: "تم تشغيل الذكاء الاصطناعي للأشعة الخارجية", auditActionExternalXrayAttached: "تم إرفاق الأشعة الخارجية", auditActionExternalXrayDiscarded: "تم تجاهل الأشعة الخارجية", auditActionUserCreated: "تم إنشاء المستخدم", auditActionUserUpdated: "تم تحديث المستخدم", auditActionUserDeactivated: "تم إلغاء تنشيط المستخدم", auditActionUserReactivated: "تمت إعادة تنشيط المستخدم", auditActionUserPasswordReset: "تمت إعادة تعيين كلمة مرور المستخدم", auditActionUserRoleChanged: "تم تغيير دور المستخدم", auditActionScheduleUpdated: "تم تحديث الجدول", auditActionLeaveCreated: "تم إنشاء الإجازة", auditActionLeaveUpdated: "تم تحديث الإجازة", auditActionLeaveCancelled: "تم إلغاء الإجازة", auditEntityClinicSettings: "إعدادات العيادة", auditEntityPatient: "مريض", auditEntityAppointment: "موعد", auditEntityVisit: "زيارة", auditEntityBillingHandoff: "تحويل الفوترة", auditEntityInvoice: "فاتورة", auditEntityPayment: "دفعة", auditEntityXray: "أشعة سينية", auditEntityExternalXray: "أشعة خارجية", auditEntityUser: "مستخدم", auditEntityTeamMember: "عضو فريق", auditEntitySchedule: "جدول", auditEntityLeave: "إجازة" },
 } as const;
+const profileMessages = {
+  EN: {
+    profileDescription: "Your account identity and saved workspace preferences.",
+    fullName: "Full name",
+    email: "Email",
+    role: "Role",
+    currentLanguage: "Current language",
+    currentTheme: "Current theme",
+    passwordChangeState: "Password change state",
+    passwordChangeRequired: "Password change required",
+    passwordCurrent: "Password current",
+    changePassword: "Change password",
+  },
+  AR: {
+    profileDescription: "\u0647\u0648\u064a\u0629 \u062d\u0633\u0627\u0628\u0643 \u0648\u062a\u0641\u0636\u064a\u0644\u0627\u062a \u0645\u0633\u0627\u062d\u0629 \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0645\u062d\u0641\u0648\u0638\u0629.",
+    fullName: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644",
+    email: "\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a",
+    role: "\u0627\u0644\u062f\u0648\u0631",
+    currentLanguage: "\u0627\u0644\u0644\u063a\u0629 \u0627\u0644\u062d\u0627\u0644\u064a\u0629",
+    currentTheme: "\u0627\u0644\u0633\u0645\u0629 \u0627\u0644\u062d\u0627\u0644\u064a\u0629",
+    passwordChangeState: "\u062d\u0627\u0644\u0629 \u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631",
+    passwordChangeRequired: "\u064a\u062c\u0628 \u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631",
+    passwordCurrent: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u062d\u062f\u0651\u062b\u0629",
+    changePassword: "\u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631",
+  },
+} as const;
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -125,6 +155,7 @@ const billingAcceptanceMessageKeysMatch: SameKeys<typeof billingAcceptanceMessag
 const clinicAuditMessageKeysMatch: SameKeys<typeof clinicAuditMessages.EN, typeof clinicAuditMessages.AR> = true;
 const clinicSettingsOptionMessageKeysMatch: SameKeys<typeof clinicSettingsOptionMessages.EN, typeof clinicSettingsOptionMessages.AR> = true;
 const auditAcceptanceMessageKeysMatch: SameKeys<typeof auditAcceptanceMessages.EN, typeof auditAcceptanceMessages.AR> = true;
+const profileMessageKeysMatch: SameKeys<typeof profileMessages.EN, typeof profileMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
@@ -138,12 +169,13 @@ void billingAcceptanceMessageKeysMatch;
 void clinicAuditMessageKeysMatch;
 void clinicSettingsOptionMessageKeysMatch;
 void auditAcceptanceMessageKeysMatch;
+void profileMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof featureExtensions.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -173,6 +205,8 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
   if (hasOwnKey(clinicSettingsOptionDictionary, key)) return clinicSettingsOptionDictionary[key];
   const auditAcceptanceDictionary = auditAcceptanceMessages[language];
   if (hasOwnKey(auditAcceptanceDictionary, key)) return auditAcceptanceDictionary[key];
+  const profileDictionary = profileMessages[language];
+  if (hasOwnKey(profileDictionary, key)) return profileDictionary[key];
   const clinicAuditDictionary = clinicAuditMessages[language];
   if (hasOwnKey(clinicAuditDictionary, key)) return clinicAuditDictionary[key];
 

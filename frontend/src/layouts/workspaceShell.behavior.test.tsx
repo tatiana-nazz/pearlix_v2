@@ -28,7 +28,7 @@ describe("Phase 14C production workspace shell", () => {
     await waitFor(() => expect(document.documentElement).toHaveAttribute("dir", "rtl"));
     expect(document.querySelector(".app-workspace")).toHaveClass("app-workspace");
     expect(document.querySelector(".workspace-content")).toHaveClass("workspace-content");
-    expect(screen.getAllByText("مساحة عمل الطبيب")).toHaveLength(2);
+    expect(screen.getAllByText("مساحة عمل الطبيب")).toHaveLength(1);
     expect(screen.getByRole("link", { name:"لوحة التحكم" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name:"مواعيدي" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name:"الزيارة النشطة" })).toBeInTheDocument();

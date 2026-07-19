@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LogOut, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, X } from "lucide-react";
 
 import type { UserRole } from "../types/auth";
 import { useAuthStore } from "../auth/authStore";
@@ -27,7 +27,7 @@ export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerC
         <div className="app-sidebar-brand-copy">
           <strong>Pearlix</strong>
           <span>{workspaceT(language, role)}</span>
-        </div>{drawerOpen ? <button className="v2-icon-button drawer-close" type="button" aria-label={t(language, "close")} onClick={onDrawerClose}><X size={20} /></button> : null}<button className="v2-icon-button sidebar-toggle" type="button" aria-label={collapsed ? t(language, "expandSidebar") : t(language, "collapseSidebar")} data-tooltip={collapsed ? t(language, "expandSidebar") : t(language, "collapseSidebar")} onClick={onCollapse}>{collapsed ? <PanelLeftOpen className="directional-icon" size={20} /> : <PanelLeftClose className="directional-icon" size={20} />}</button>
+        </div>{drawerOpen ? <button className="v2-icon-button drawer-close" type="button" aria-label={t(language, "close")} onClick={onDrawerClose}><X size={20} /></button> : null}<button className="v2-icon-button sidebar-toggle sidebar-toggle-simple" type="button" aria-label={collapsed ? t(language, "expandSidebar") : t(language, "collapseSidebar")} data-tooltip={collapsed ? t(language, "expandSidebar") : t(language, "collapseSidebar")} onClick={onCollapse}>{collapsed ? <ChevronRight className="directional-icon" size={22} /> : <ChevronLeft className="directional-icon" size={22} />}</button>
       </div>
       <nav className="app-sidebar-nav" aria-label={`${roleT(language, role)} ${t(language, "navigation")}`}>
         {groups.map((group) => {

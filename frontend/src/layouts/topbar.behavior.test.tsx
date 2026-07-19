@@ -14,12 +14,17 @@ function renderTopbar() { return render(<MemoryRouter initialEntries={["/admin/a
 
 describe("Phase 14C production theme and language controls", () => {
   it("uses explicit LIGHT/DARK toggle and ignores OS changes outside SYSTEM", async () => {
-    renderTopbar(); expect(document.documentElement.dataset.theme).toBe("light"); const toggle=screen.getByRole("button", { name:"Switch to dark mode" }); fireEvent.click(toggle); await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark")); listeners.forEach((listener) => listener({ matches:false } as MediaQueryListEvent)); expect(document.documentElement.dataset.theme).toBe("dark"); expect(screen.getByText("Day Appointments")).toBeInTheDocument();
+    renderTopbar(); expect(document.documentElement.dataset.theme).toBe("light"); const toggle=screen.getByRole("button", { name:"Switch to dark mode" }); fireEvent.click(toggle); await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark")); listeners.forEach((listener) => listener({ matches:false } as MediaQueryListEvent)); expect(document.documentElement.dataset.theme).toBe("dark"); expect(screen.getByText("Nour Haddad")).toBeInTheDocument();
   });
   it("resolves SYSTEM through live matchMedia while preserving a compact accessible description", async () => {
     useAuthStore.setState({ user:{ ...user, theme_preference:"SYSTEM" } }); renderTopbar(); expect(screen.getByRole("button", { name:"Switch to dark mode" })).toHaveAttribute("data-tooltip", "System: light"); act(() => listeners.forEach((listener) => listener({ matches:true } as MediaQueryListEvent))); await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
   });
-  it("switches EN/AR using the production preference flow and applies root direction", async () => {
-    renderTopbar(); fireEvent.click(screen.getByRole("button", { name:/AR/ })); await waitFor(() => expect(document.documentElement.lang).toBe("ar")); expect(document.documentElement.dir).toBe("rtl"); expect(screen.getByText("\u0645\u0648\u0627\u0639\u064a\u062f \u0627\u0644\u064a\u0648\u0645")).toBeInTheDocument(); fireEvent.click(screen.getByRole("button", { name:"EN" })); await waitFor(() => expect(document.documentElement.lang).toBe("en"));
+  it("uses static bidi-safe identity with one language toggle and applies root direction", async () => {
+    renderTopbar(); expect(screen.getByText("Nour Haddad")).toHaveClass("bidi-isolate"); expect(screen.getByText("Admin")).toBeInTheDocument(); expect(document.querySelector("details")).toBeNull(); expect(document.querySelector(".user-avatar")).toBeNull(); expect(screen.getAllByRole("button", { name:/Switch to Arabic/ })).toHaveLength(1); expect(screen.getAllByRole("button", { name:/Switch to dark mode/ })).toHaveLength(1); expect(screen.queryByRole("button", { name:"Logout" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name:"Switch to Arabic" })); await waitFor(() => expect(document.documentElement.lang).toBe("ar")); expect(document.documentElement.dir).toBe("rtl"); expect(screen.getByText("\u0645\u0633\u0624\u0648\u0644")).toBeInTheDocument(); expect(screen.getByRole("button", { name:"\u0627\u0644\u062a\u0628\u062f\u064a\u0644 \u0625\u0644\u0649 \u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629" })).toBeInTheDocument();
+  });
+
+  it("keeps a long current-user identity within the intended truncating container", () => {
+    useAuthStore.setState({ user:{ ...user, full_name:"Dr Nour Haddad Al-Masri Al-Haddad Al-Karim" } }); renderTopbar(); expect(screen.getByText("Dr Nour Haddad Al-Masri Al-Haddad Al-Karim").closest(".current-user-identity")).not.toBeNull();
   });
 });

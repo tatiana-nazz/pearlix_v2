@@ -20,7 +20,17 @@ describe("Sidebar", () => {
 
     expect(navigationByRole.STAFF.some((item) => item.path.includes("external-xrays"))).toBe(false);
     expect(navigationByRole.DOCTOR.some((item) => item.path.includes("billing/invoices"))).toBe(false);
-    expect(navigationByRole.ADMIN.some((item) => item.path.includes("profile"))).toBe(false);
+    for (const role of ["ADMIN", "STAFF", "DOCTOR"] as const) expect(navigationByRole[role].some((item) => item.path === `/${role.toLowerCase()}/profile` && item.group === "personal")).toBe(true);
+  });
+
+  it("uses the localized simple-arrow collapse control and retains personal schedule and leave links", () => {
+    render(<MemoryRouter><Sidebar role="DOCTOR" /></MemoryRouter>);
+    const toggle = screen.getByRole("button", { name:"Collapse sidebar" });
+    expect(toggle).toHaveClass("sidebar-toggle-simple");
+    expect(toggle.querySelector("svg")).toHaveClass("directional-icon");
+    expect(screen.getByRole("link", { name:"My profile" })).toHaveAttribute("href", "/doctor/profile");
+    expect(screen.getByRole("link", { name:"My schedule" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name:"My leave" })).toBeInTheDocument();
   });
 
   it("renders accessible links for the current workspace", () => {

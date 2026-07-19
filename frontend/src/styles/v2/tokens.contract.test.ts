@@ -30,4 +30,18 @@ describe("Phase 14D palette and shared interaction contracts", () => {
     expect(components).toContain(".v2-text-action { display:inline-flex;");
     expect(components).toContain(".kpi-link:focus-visible,.summary-row:focus-visible,.v2-text-action:focus-visible");
   });
+
+  it("keeps readable shared typography, simple sidebar controls, and aligned card grids without a global overflow workaround", () => {
+    const typography = readFileSync(resolve(root, "src/styles/v2/typography.css"), "utf8");
+    const globals = readFileSync(resolve(root, "src/styles/globals.css"), "utf8");
+    expect(typography).toContain("--v2-font-size-nav:15px");
+    expect(typography).toContain("--v2-font-size-label:14px");
+    expect(typography).toContain("--v2-font-size-helper:13px");
+    expect(components).toContain(".v2-button { display:inline-flex;");
+    expect(components).toContain("text-decoration:none;");
+    expect(shell).toContain(".sidebar-toggle-simple { border-color:transparent; background:transparent;");
+    expect(globals).toContain(".dashboard-grid > *");
+    expect(globals).toContain("align-items: stretch;");
+    expect(shell).not.toContain(".app-shell { overflow-x:hidden");
+  });
 });

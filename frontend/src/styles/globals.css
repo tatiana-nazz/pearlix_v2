@@ -337,6 +337,23 @@ p {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-4);
+  align-items: stretch;
+}
+
+.dashboard-grid > *,
+.dashboard-columns > *,
+.queue-grid > * {
+  min-width: 0;
+}
+
+.dashboard-columns,
+.queue-grid {
+  align-items: stretch;
+}
+
+.dashboard-columns > .v2-card,
+.queue-grid > .v2-card {
+  height: 100%;
 }
 
 .staff-dashboard .dashboard-kpi-grid {
