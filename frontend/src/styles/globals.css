@@ -920,6 +920,26 @@ p {
 .schedule-list li div, .shift-card { display: grid; gap: var(--space-1); }
 .schedule-list span { color: var(--color-muted); font-size: var(--font-size-sm); }
 .schedule-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0; }
+.leave-list-header { display:flex; justify-content:space-between; align-items:center; gap:var(--space-3); margin-block-end:var(--space-4); }
+.leave-list-header h3 { margin:0; }
+.leave-filter-grid { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:var(--space-3); align-items:end; margin-block-end:var(--space-5); }
+.leave-filter-grid .v2-field,.leave-employee-picker { min-inline-size:0; }
+.leave-badges { display:flex; flex-wrap:wrap; gap:var(--space-1); align-items:center; }
+.leave-reason-cell { max-inline-size:28ch; overflow-wrap:anywhere; }
+.leave-own-list li { align-items:flex-start; }
+.patient-quick-find { position:relative; z-index:2; }
+.patient-quick-find-header { display:flex; align-items:start; justify-content:space-between; gap:var(--space-4); margin-block-end:var(--space-3); }
+.patient-quick-find-header .section-header { min-inline-size:0; }
+.patient-quick-find-header select { min-block-size:var(--v2-control); border:1px solid var(--v2-border); border-radius:var(--v2-radius-control); background:var(--v2-surface); color:var(--v2-text); padding-inline:10px; font:inherit; }
+.patient-quick-find-control { position:relative; display:flex; align-items:center; gap:var(--space-2); min-block-size:var(--v2-control); border:1px solid var(--v2-border); border-radius:var(--v2-radius-control); background:var(--v2-surface); padding-inline:var(--space-3); }
+.patient-quick-find-control:focus-within { outline:3px solid var(--v2-focus); outline-offset:2px; }
+.patient-quick-find-control input { min-inline-size:0; flex:1; border:0; outline:0; background:transparent; color:var(--v2-text); font:inherit; }
+.patient-quick-find-results { position:absolute; z-index:5; inset-inline:0; inset-block-start:calc(100% + var(--space-2)); display:grid; gap:var(--space-1); max-block-size:440px; overflow:auto; border:1px solid var(--v2-border); border-radius:var(--v2-radius-card); background:var(--v2-surface); box-shadow:var(--shadow-soft); padding:var(--space-2); }
+.patient-quick-find-results > p { margin:var(--space-3); color:var(--v2-muted); }
+.patient-quick-find-result { display:grid; grid-template-columns:auto minmax(0, 1fr) auto; gap:var(--space-3); align-items:center; border-radius:var(--v2-radius-small); color:inherit; padding:var(--space-3); text-decoration:none; }
+.patient-quick-find-result:hover,.patient-quick-find-result:focus-visible { background:var(--v2-surface-hover); outline:3px solid var(--v2-focus); outline-offset:1px; }
+.patient-quick-find-result > span:nth-child(2) { display:grid; gap:2px; min-inline-size:0; }.patient-quick-find-result small { overflow:hidden; color:var(--v2-muted); text-overflow:ellipsis; white-space:nowrap; }
+.patient-quick-find-avatar { display:grid; place-items:center; inline-size:36px; block-size:36px; border-radius:50%; background:var(--color-info-bg); color:var(--v2-info); font-size:var(--font-size-sm); font-weight:800; }
 .weekly-board { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); gap: var(--space-3); overflow-x: auto; }
 .shift-card { min-width: 150px; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
 @media (max-width: 1023px) { .schedule-grid { grid-template-columns: 1fr; } .compact-form { grid-template-columns: 1fr; } }
@@ -1350,6 +1370,7 @@ p {
   .appointment-field.notes-field { grid-column: auto; }
 
   .appointment-calendar-layout { grid-template-columns: 1fr; }
+  .leave-filter-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .appointment-period-controls { justify-content: flex-start; }
 
   .profile-actions,
@@ -1392,4 +1413,6 @@ p {
   .staff-dashboard .dashboard-kpi-grid {
     grid-template-columns: 1fr;
   }
+  .leave-filter-grid { grid-template-columns:1fr; }
+  .patient-quick-find-header { align-items:stretch; flex-direction:column; }
 }

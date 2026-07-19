@@ -187,6 +187,11 @@ const professionalScheduleMessages = {
   },
 } as const;
 
+const leavePolishMessages = {
+  EN: { patientQuickFindHelp: "Search current patient records without leaving the dashboard.", archivedPatients: "Archived patients", searchingPatients: "Searching patients…", noMatchingPatients: "No matching patients", patientSearchUnavailable: "Patient search unavailable", clearSearch: "Clear search", upcoming: "Upcoming", inEffect: "In effect", ended: "Ended", lifecycle: "Lifecycle", clearFilters: "Clear filters", searchEmployees: "Search employees", noMatchingEmployees: "No matching employees", employeeSearchLoading: "Searching employees…", employeeSearchUnavailable: "Employee search unavailable", noLeaveMatches: "No leave records match these filters.", refreshingLeave: "Refreshing leave records…" },
+  AR: { patientQuickFindHelp: "\u0627\u0628\u062d\u062b \u0641\u064a \u0633\u062c\u0644\u0627\u062a \u0627\u0644\u0645\u0631\u0636\u0649 \u0645\u0646 \u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645.", archivedPatients: "\u0627\u0644\u0645\u0631\u0636\u0649 \u0627\u0644\u0645\u0624\u0631\u0634\u0641\u0648\u0646", searchingPatients: "\u062c\u0627\u0631\u064d \u0627\u0644\u0628\u062d\u062b \u0639\u0646 \u0627\u0644\u0645\u0631\u0636\u0649…", noMatchingPatients: "\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0631\u0636\u0649 \u0645\u0637\u0627\u0628\u0642\u0648\u0646", patientSearchUnavailable: "\u0628\u062d\u062b \u0627\u0644\u0645\u0631\u0636\u0649 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d", clearSearch: "\u0645\u0633\u062d \u0627\u0644\u0628\u062d\u062b", upcoming: "\u0642\u0627\u062f\u0645", inEffect: "\u0633\u0627\u0631\u064a \u0627\u0644\u0645\u0641\u0639\u0648\u0644", ended: "\u0645\u0646\u062a\u0647\u064d", lifecycle: "\u062f\u0648\u0631\u0629 \u0627\u0644\u062d\u0627\u0644\u0629", clearFilters: "\u0645\u0633\u062d \u0627\u0644\u0641\u0644\u0627\u062a\u0631", searchEmployees: "\u0628\u062d\u062b \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646", noMatchingEmployees: "\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0648\u0638\u0641\u0648\u0646 \u0645\u0637\u0627\u0628\u0642\u0648\u0646", employeeSearchLoading: "\u062c\u0627\u0631\u064d \u0627\u0644\u0628\u062d\u062b \u0639\u0646 \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646…", employeeSearchUnavailable: "\u0628\u062d\u062b \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d", noLeaveMatches: "\u0644\u0627 \u062a\u0648\u062c\u062f \u0633\u062c\u0644\u0627\u062a \u0625\u062c\u0627\u0632\u0629 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0647\u0630\u0647 \u0627\u0644\u0641\u0644\u0627\u062a\u0631.", refreshingLeave: "\u062c\u0627\u0631\u064d \u062a\u062d\u062f\u064a\u062b \u0633\u062c\u0644\u0627\u062a \u0627\u0644\u0625\u062c\u0627\u0632\u0629…" },
+} as const;
+
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -212,6 +217,7 @@ const auditAcceptanceMessageKeysMatch: SameKeys<typeof auditAcceptanceMessages.E
 const profileMessageKeysMatch: SameKeys<typeof profileMessages.EN, typeof profileMessages.AR> = true;
 const teamDirectoryMessageKeysMatch: SameKeys<typeof teamDirectoryMessages.EN, typeof teamDirectoryMessages.AR> = true;
 const professionalScheduleMessageKeysMatch: SameKeys<typeof professionalScheduleMessages.EN, typeof professionalScheduleMessages.AR> = true;
+const leavePolishMessageKeysMatch: SameKeys<typeof leavePolishMessages.EN, typeof leavePolishMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
@@ -231,12 +237,13 @@ void auditAcceptanceMessageKeysMatch;
 void profileMessageKeysMatch;
 void teamDirectoryMessageKeysMatch;
 void professionalScheduleMessageKeysMatch;
+void leavePolishMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -282,6 +289,8 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
   if (hasOwnKey(teamDirectoryDictionary, key)) return teamDirectoryDictionary[key];
   const professionalScheduleDictionary = professionalScheduleMessages[language];
   if (hasOwnKey(professionalScheduleDictionary, key)) return professionalScheduleDictionary[key];
+  const leavePolishDictionary = leavePolishMessages[language];
+  if (hasOwnKey(leavePolishDictionary, key)) return leavePolishDictionary[key];
 
   throw new Error(`Missing translation for key: ${key}`);
 }

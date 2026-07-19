@@ -4,6 +4,7 @@ import { getStaffDashboard } from "../../api/endpoints/dashboard";
 import { PageHeaderV2, PreviewList, SectionHeading, StatePanel, SurfaceCard } from "../../components/v2";
 import { AppointmentPreview, DashboardAction, DashboardError, DashboardLoading, HandoffPreview, Icons, InvoicePreview, Kpis, useClinicDashboardDate } from "../dashboard/DashboardV2";
 import { useFeatureT } from "../../layouts/i18n";
+import { PatientQuickFind } from "../../features/patients/components/PatientQuickFind";
 
 export function StaffDashboardPage() {
   const t = useFeatureT(); const dashboard = useQuery({ queryKey: ["dashboard", "staff"], queryFn: getStaffDashboard }); const clinic = useClinicDashboardDate();
@@ -11,6 +12,7 @@ export function StaffDashboardPage() {
   if (dashboard.isError || !dashboard.data) return <DashboardError retry={() => { void dashboard.refetch(); }} />;
   const data = dashboard.data; const date = clinic.date ?? ""; const dated = (path: string) => date ? `${path}${path.includes("?") ? "&" : "?"}date=${date}` : path;
   return <div className="dashboard-page staff-dashboard"><PageHeaderV2 title={t("staffDashboard")} description={date ? `${t("clinicLocalDate")} · ${date}` : t("dateUnavailable")} action={<><Link className="v2-button" to="/staff/appointments/day">{t("addAppointment")}</Link><Link className="v2-button secondary" to="/staff/patients/new">{t("newPatient")}</Link></>} />
+    <PatientQuickFind />
     <Kpis testId="staff-main-kpis" items={[
       { label: t("todayAppointments"), value: data.today_appointments_count, helper: t("localClinicSchedule"), action: t("openSchedule"), to: dated("/staff/appointments/list"), icon: Icons.appointments, tone: "info" },
       { label: t("checkedIn"), value: data.checked_in_appointments.length, helper: t("readyForDoctor"), action: t("openQueue"), to: dated("/staff/appointments/list?status=CHECKED_IN"), icon: Icons.complete, tone: "success" },
