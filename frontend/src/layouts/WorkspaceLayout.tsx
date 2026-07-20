@@ -23,6 +23,10 @@ export function WorkspaceLayout({ role }: WorkspaceLayoutProps) {
   useEffect(() => { setCollapsed(localStorage.getItem(storageKey) === "collapsed"); }, [storageKey]);
   useEffect(() => { localStorage.setItem(storageKey, collapsed ? "collapsed" : "expanded"); }, [collapsed, storageKey]);
   useEffect(() => {
+    document.documentElement.lang = language === "AR" ? "ar" : "en";
+    document.documentElement.dir = language === "AR" ? "rtl" : "ltr";
+  }, [language]);
+  useEffect(() => {
     if (!drawerOpen) return;
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setDrawerOpen(false); };
     document.addEventListener("keydown", onKeyDown);

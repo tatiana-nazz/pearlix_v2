@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../auth/authStore";
 import { getErrorMessage } from "../utils/apiErrors";
@@ -7,7 +7,9 @@ import { dashboardPathForRole } from "../utils/roles";
 
 export function ChangePasswordPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { changePassword, logout } = useAuthStore();
+  const mustChangePassword = useAuthStore((state) => state.mustChangePassword);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -31,7 +33,8 @@ export function ChangePasswordPage() {
         current_password: currentPassword,
         new_password: newPassword,
       });
-      navigate(dashboardPathForRole(user.role), { replace: true });
+      const from = location.state && typeof location.state === "object" && "from" in location.state && typeof location.state.from === "string" ? location.state.from : null;
+      navigate(!mustChangePassword && from ? from : dashboardPathForRole(user.role), { replace: true });
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -75,6 +78,7 @@ export function ChangePasswordPage() {
       <button className="button primary" type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Updating..." : "Change password"}
       </button>
+      {!mustChangePassword && location.state && typeof location.state === "object" && "from" in location.state && typeof location.state.from === "string" ? <button className="button secondary" type="button" onClick={() => navigate(location.state.from)} disabled={isSubmitting}>Back</button> : null}
       <button className="button secondary" type="button" onClick={() => void logout()} disabled={isSubmitting}>
         Logout
       </button>

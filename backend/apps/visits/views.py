@@ -69,7 +69,7 @@ class VisitViewSet(viewsets.ReadOnlyModelViewSet):
     def active(self, request):
         visit = self.get_queryset().filter(status=Visit.Status.ACTIVE).first()
         if not visit:
-            return error_response("NOT_FOUND", "No active visit found.", status_code=status.HTTP_404_NOT_FOUND)
+            return error_response("NO_ACTIVE_VISIT", "No active visit found.", status_code=status.HTTP_404_NOT_FOUND)
         return Response(VisitDetailSerializer(visit).data)
 
     @action(detail=True, methods=["post"])

@@ -169,6 +169,7 @@ export const router = createBrowserRouter([
               { path: "appointments/week", element: <AppointmentsPage role="DOCTOR" view="week" /> },
               { path: "appointments/list", element: <AppointmentsPage role="DOCTOR" view="list" /> },
               { path: "appointments/needs-reschedule", element: <AppointmentsPage role="DOCTOR" view="needs-reschedule" /> },
+              { path: "appointments/:appointmentId/reschedule", element: <Navigate to="/access-denied" replace /> },
               { path: "patients", element: <PatientsPage role="DOCTOR" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="DOCTOR" /> },
               { path: "patients/:patientId/clinical-history", element: <PatientProfilePage role="DOCTOR" defaultTab="visits" /> },

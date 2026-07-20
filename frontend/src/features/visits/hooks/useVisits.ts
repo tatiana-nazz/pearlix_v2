@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { visitsApi } from "../../../api/endpoints/visits";
 import { ApiClientError } from "../../../api/errors";
+import { useAuthStore } from "../../../auth/authStore";
 import type { ClinicalNotesPayload, VisitDetail } from "../../../types/visits";
 
 export function visitKey(visitId: number) {
@@ -27,12 +28,14 @@ export function useVisit(visitId: number) {
 }
 
 export function isNoActiveVisitError(error: unknown): error is ApiClientError {
-  return error instanceof ApiClientError && error.status === 404 && error.code === "NOT_FOUND";
+  return error instanceof ApiClientError && error.status === 404 && error.code === "NO_ACTIVE_VISIT";
 }
 
 export function useActiveVisit() {
+  const userId = useAuthStore((state) => state.user?.id);
+  const role = useAuthStore((state) => state.role);
   return useQuery({
-    queryKey: ["active-visit"],
+    queryKey: ["active-visit", userId],
     queryFn: async () => {
       try {
         return await visitsApi.active();
@@ -41,6 +44,7 @@ export function useActiveVisit() {
         throw error;
       }
     },
+    enabled: role === "DOCTOR" && Boolean(userId),
   });
 }
 

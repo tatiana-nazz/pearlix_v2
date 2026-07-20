@@ -25,7 +25,7 @@ export function OwnProfilePage() {
         {user?.operational_status ? <div><dt>{featureT(language, "operationalStatus")}</dt><dd>{user.operational_status === "SETUP_REQUIRED" ? featureT(language, "setupRequired") : user.operational_status}</dd></div> : null}
       </dl>
       {user?.operational_status === "SETUP_REQUIRED" ? <p>{featureT(language, "scheduleRequiredHelp")}</p> : null}
-      <div className="own-profile-actions"><Link className="v2-button secondary" to="/change-password">{profileT("changePassword")}</Link></div>
+      <div className="own-profile-actions"><Link className="v2-button secondary" to="/change-password" state={{ from: `/${role?.toLowerCase() ?? ""}/profile` }}>{profileT("changePassword")}</Link></div>
     </SurfaceCard>
   </div>;
 }

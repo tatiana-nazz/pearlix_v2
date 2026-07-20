@@ -4,7 +4,7 @@
 
 body {
   margin: 0;
-  min-width: 768px;
+  min-width: 320px;
   min-height: 100vh;
   background: var(--color-bg);
   color: var(--color-text);
@@ -454,10 +454,11 @@ p {
 }
 
 .summary-row > div,
+.summary-row > span:not(.v2-status),
 .active-visit-content > div {
   display: grid;
   min-width: 0;
-  gap: var(--space-1);
+  gap: var(--v2-space-2);
 }
 
 .summary-row strong,
@@ -470,7 +471,8 @@ p {
 .active-visit-content span {
   overflow-wrap: anywhere;
   color: var(--color-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--v2-font-size-body);
+  line-height: 1.45;
 }
 
 .summary-row.compact {
