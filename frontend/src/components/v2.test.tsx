@@ -2,7 +2,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { useAuthStore } from "../auth/authStore";
+import type { AuthUser } from "../types/auth";
 import { Button, ClickableRow, Combobox, DataTableShell, Field, InOverlayAlertDialog, Modal, PreviewList, SelectField, StatePanel, StatusBadge, Tabs, useOverlayClose } from "./v2";
+
+const arabicUser: AuthUser = { id: 1, email: "doctor@example.test", full_name: "Doctor", role: "DOCTOR", is_active: true, theme_preference: "LIGHT", language_preference: "AR", must_change_password: false, password_changed_at: null };
 
 describe("Phase 14C shared primitives", () => {
   it("keeps buttons identifiable while loading and disables duplicate submission", () => {
@@ -24,6 +28,13 @@ describe("Phase 14C shared primitives", () => {
     render(<StatusBadge status="CHECKED_IN" />);
     expect(screen.getByLabelText("الحالة: تم تسجيل الحضور")).toBeInTheDocument();
     document.documentElement.lang = "en";
+  });
+
+  it("uses the optimistic language preference for status badges before document effects run", () => {
+    useAuthStore.setState({ user: arabicUser, role: "DOCTOR" });
+    render(<StatusBadge status="NEEDS_RESCHEDULE" />);
+    expect(screen.getByLabelText("الحالة: يحتاج إعادة جدولة")).toHaveTextContent("يحتاج إعادة جدولة");
+    useAuthStore.setState({ user: null, role: null });
   });
 
   it("supports tab selection and arrow-key navigation", () => {

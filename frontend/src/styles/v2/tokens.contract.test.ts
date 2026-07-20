@@ -40,6 +40,7 @@ describe("Phase 14D palette and shared interaction contracts", () => {
     expect(components).toContain(".v2-button { display:inline-flex;");
     expect(components).toContain("text-decoration:none;");
     expect(shell).toContain(".sidebar-toggle-simple { border-color:transparent; background:transparent;");
+    expect(shell).toContain(".workspace-header .v2-icon-button[data-tooltip]::after { inset-inline-start:auto; inset-inline-end:0; transform:none; }");
     expect(globals).toContain(".dashboard-grid > *");
     expect(globals).toContain("align-items: stretch;");
     expect(shell).not.toContain(".app-shell { overflow-x:hidden");

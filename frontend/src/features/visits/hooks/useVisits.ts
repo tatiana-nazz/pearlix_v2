@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { visitsApi } from "../../../api/endpoints/visits";
-import { ApiClientError } from "../../../api/errors";
+import { ApiClientError, toApiClientError } from "../../../api/errors";
 import { useAuthStore } from "../../../auth/authStore";
 import type { ClinicalNotesPayload, VisitDetail } from "../../../types/visits";
 
@@ -27,7 +27,7 @@ export function useVisit(visitId: number) {
   });
 }
 
-export function isNoActiveVisitError(error: unknown): error is ApiClientError {
+export function isNoActiveVisitError(error: unknown): boolean {
   return error instanceof ApiClientError && error.status === 404 && error.code === "NO_ACTIVE_VISIT";
 }
 
@@ -40,8 +40,10 @@ export function useActiveVisit() {
       try {
         return await visitsApi.active();
       } catch (error) {
-        if (isNoActiveVisitError(error)) return null;
-        throw error;
+        const apiError = toApiClientError(error);
+        // The dedicated active endpoint uses 404 exclusively for the documented empty state.
+        if (isNoActiveVisitError(apiError) || apiError.status === 404) return null;
+        throw apiError;
       }
     },
     enabled: role === "DOCTOR" && Boolean(userId),
