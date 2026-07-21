@@ -986,6 +986,18 @@ p {
 }
 
 .appointment-calendar-scroll { inline-size: 100%; max-inline-size: 100%; overflow-x: auto; }
+.appointment-workspace-tabs { margin-block-end: var(--space-5); }
+.appointment-workspace-tabs a { min-block-size: 44px; border: 0; border-bottom: 3px solid transparent; color: var(--color-muted); display: inline-flex; align-items: center; padding-inline: var(--space-4); text-decoration: none; font-weight: 750; white-space: nowrap; }
+.appointment-workspace-tabs a.active, .appointment-workspace-tabs a:focus-visible { color: var(--color-primary-strong); border-bottom-color: var(--color-primary); outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.appointment-day-schedule { display: grid; gap: var(--space-3); max-inline-size: 960px; }
+.appointment-day-block { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) auto; align-items: start; gap: var(--space-4); inline-size: 100%; min-block-size: 88px; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; text-align: start; }
+.appointment-day-block time { color: var(--record-text); font-weight: 800; }
+.appointment-day-block > span { display: grid; gap: var(--space-1); min-inline-size: 0; }
+.appointment-day-block small { overflow-wrap: anywhere; }
+.doctor-appointment-queue { display:grid; gap:var(--space-4); }
+.doctor-queue-heading { display:flex; justify-content:space-between; gap:var(--space-4); align-items:start; }.doctor-queue-heading h2 { font-size:var(--font-size-xl); }.doctor-queue-heading p { margin:var(--space-1) 0 0; }
+.doctor-queue-status-picker { display:flex; gap:var(--space-2); }.doctor-queue-status-picker button { border:1px solid var(--color-border); border-radius:var(--radius-sm); background:var(--color-surface); color:var(--color-text); padding:var(--space-2) var(--space-3); cursor:pointer; }.doctor-queue-status-picker button.active { border-color:var(--color-primary); color:var(--color-primary-strong); }
+.doctor-queue-records { display:grid; gap:var(--space-3); }.doctor-queue-record { display:grid; grid-template-columns:6rem minmax(0,1fr) auto; align-items:center; gap:var(--space-3); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); color:var(--record-text, var(--color-text)); text-decoration:none; }.doctor-queue-record:hover,.doctor-queue-record:focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }.doctor-queue-record span { display:grid; gap:2px; min-inline-size:0; }.doctor-queue-record small { overflow-wrap:anywhere; }
 .appointment-week-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(180px, 1fr));
@@ -1046,6 +1058,20 @@ p {
   color: var(--color-muted);
   font-size: var(--font-size-sm);
 }
+
+/* Shared whole-record appointment status contract.  --record-text remains a
+   normal high-contrast token; it is never the pale background/accent tone. */
+.appointment-record { --record-bg: var(--v2-surface-raised, var(--color-surface)); --record-border: var(--color-border); --record-text: var(--color-text); background: var(--record-bg) !important; border-color: var(--record-border) !important; color: var(--record-text) !important; }
+.appointment-record strong, .appointment-record bdi, .appointment-record span, .appointment-record small { color: inherit; }
+.appointment-record--upcoming { --record-bg: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-primary) 48%, var(--color-border)); }
+.appointment-record--checked-in { --record-bg: color-mix(in srgb, var(--color-success) 11%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-success) 48%, var(--color-border)); }
+.appointment-record--active { --record-bg: color-mix(in srgb, #5b5ce2 12%, var(--color-surface)); --record-border: color-mix(in srgb, #5b5ce2 50%, var(--color-border)); }
+.appointment-record--completed { --record-bg: color-mix(in srgb, var(--color-success) 8%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-success) 40%, var(--color-border)); }
+.appointment-record--needs-reschedule { --record-bg: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-warning) 54%, var(--color-border)); }
+.appointment-record--cancelled, .appointment-record--no-show { --record-bg: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-danger) 48%, var(--color-border)); }
+.appointment-record:hover, .appointment-record:focus-visible { box-shadow: inset 3px 0 0 var(--record-border); outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.appointment-calendar-item.appointment-record, .appointment-month-cell button.appointment-record { background: var(--record-bg) !important; border-inline-start: 4px solid var(--record-border); }
+.appointment-calendar-item.appointment-record span, .appointment-calendar-item.appointment-record small { color: var(--record-text); }
 
 .appointment-calendar-item small { color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -1423,6 +1449,8 @@ p {
   }
 
   .appointment-form-grid { grid-template-columns: 1fr; }
+  .appointment-day-block { grid-template-columns: 1fr; gap: var(--space-2); }
+  .doctor-queue-record { grid-template-columns:1fr; gap:var(--space-2); }
 
   .staff-dashboard .dashboard-kpi-grid {
     grid-template-columns: 1fr;

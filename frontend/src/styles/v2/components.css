@@ -16,5 +16,10 @@
 @media (max-width:1023px) { .v2-form-grid { grid-template-columns:1fr; } }
 @media (max-width:720px) { .team-directory-toolbar { align-items:stretch; flex-direction:column; }.team-directory-toolbar .v2-table-toolbar { justify-content:stretch; }.team-directory-toolbar input,.team-directory-toolbar select { flex:1 1 150px; }.team-view-toggle { flex:1 0 100%; }.team-view-toggle .v2-button { flex:1; } }
 
+.team-directory-card-fields > span { grid-template-columns:auto minmax(0,1fr); align-items:start; }
+.team-directory-card-fields > span > span { display:grid; gap:2px; min-inline-size:0; }
+.team-directory-card-fields > span > svg,.team-directory-card-metrics svg { color:var(--v2-info); margin-block-start:2px; }
+.team-directory-card-metrics > span { display:inline-flex; align-items:center; gap:4px; }
+
 /* Directory metadata must remain readable beside names and status badges. */
 .team-directory-role,.team-directory-card-fields small,.team-directory-card-metrics { font-size:var(--v2-font-size-body); line-height:1.45; }

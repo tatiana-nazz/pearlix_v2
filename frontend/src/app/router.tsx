@@ -28,7 +28,7 @@ import { ExternalXrayDetailPage } from "../pages/xrays/ExternalXrayPages";
 import { XrayDetailPage } from "../pages/xrays/XrayDetailPage";
 import { XrayWorkspacePage } from "../pages/xrays/XrayWorkspacePage";
 import { AdminAuditLogDetailPage, AdminAuditLogListPage, AdminClinicSettingsPage, AdminNewUserPage, AdminUserDetailPage, AdminUserListPage } from "../pages/admin/AdminManagementPages";
-import { BillingHandoffDetailPage, BillingHandoffListPage, InvoiceDetailPage, InvoiceListPage, InvoicePrintPage, NewInvoicePage } from "../pages/billing/BillingPages";
+import { BillingHandoffDetailPage, BillingHandoffListPage, BillingWorkspacePage, InvoiceDetailPage, InvoiceListPage, InvoicePrintPage, NewInvoicePage } from "../pages/billing/BillingPages";
 import type { UserRole } from "../types/auth";
 import { dashboardPathForRole } from "../utils/roles";
 
@@ -110,10 +110,10 @@ export const router = createBrowserRouter([
               { path: "clinic-settings", element: <AdminClinicSettingsPage /> },
               { path: "audit-logs", element: <AdminAuditLogListPage /> },
               { path: "audit-logs/:auditLogId", element: <AdminAuditLogDetailPage /> },
-              { path: "billing", element: <Navigate to="/admin/billing/handoffs" replace /> },
-              { path: "billing/handoffs", element: <BillingHandoffListPage role="ADMIN" /> },
+              { path: "billing", element: <BillingWorkspacePage role="ADMIN" /> },
+              { path: "billing/handoffs", element: <Navigate to="/admin/billing?tab=handoffs" replace /> },
               { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="ADMIN" /> },
-              { path: "billing/invoices", element: <InvoiceListPage role="ADMIN" /> },
+              { path: "billing/invoices", element: <Navigate to="/admin/billing?tab=invoices" replace /> },
               { path: "billing/invoices/:invoiceId", element: <InvoiceDetailPage role="ADMIN" /> },
               { path: "billing/invoices/:invoiceId/print", element: <InvoicePrintPage role="ADMIN" /> },
             ],
@@ -146,9 +146,10 @@ export const router = createBrowserRouter([
               { path: "visits/:visitId", element: <VisitDetailPage role="STAFF" /> },
               { path: "xrays", element: <XrayWorkspacePage role="STAFF" /> },
               { path: "xrays/:xrayId", element: <XrayDetailPage role="STAFF" /> },
-              { path: "billing/handoffs", element: <BillingHandoffListPage role="STAFF" /> },
+              { path: "billing", element: <BillingWorkspacePage role="STAFF" /> },
+              { path: "billing/handoffs", element: <Navigate to="/staff/billing?tab=handoffs" replace /> },
               { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="STAFF" /> },
-              { path: "billing/invoices", element: <InvoiceListPage role="STAFF" /> },
+              { path: "billing/invoices", element: <Navigate to="/staff/billing?tab=invoices" replace /> },
               { path: "billing/invoices/new", element: <NewInvoicePage /> },
               { path: "billing/invoices/:invoiceId", element: <InvoiceDetailPage role="STAFF" /> },
               { path: "billing/invoices/:invoiceId/payments", element: <InvoiceDetailPage role="STAFF" /> },

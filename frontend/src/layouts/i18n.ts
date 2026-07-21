@@ -245,6 +245,15 @@ const appointmentDetailSummaryMessages = {
   },
 } as const;
 
+const taskKMessages = {
+  EN: {
+    calendar: "Calendar", billing: "Billing", appointmentWorkspaceTabs: "Appointment workspace tabs", myAppointmentQueue: "My Appointment Queue", queueUpcoming: "Upcoming", queueCheckedIn: "Checked In", queueActive: "Active", queueCompleted: "Completed", queueCancelledNoShow: "Cancelled / No-show", invoicesAndPayments: "Invoices & Payments", totalTeam: "Total Team", activeToday: "Active Today", teamOverview: "Overview", teamSchedule: "Schedule", teamLeave: "Leave", teamAccess: "Access",
+  },
+  AR: {
+    calendar: "التقويم", billing: "الفوترة", appointmentWorkspaceTabs: "علامات تبويب مساحة المواعيد", myAppointmentQueue: "قائمة مواعيدي", queueUpcoming: "القادمة", queueCheckedIn: "تم تسجيل الحضور", queueActive: "نشطة", queueCompleted: "مكتملة", queueCancelledNoShow: "ملغاة / لم يحضر", invoicesAndPayments: "الفواتير والمدفوعات", totalTeam: "إجمالي الفريق", activeToday: "النشطون اليوم", teamOverview: "نظرة عامة", teamSchedule: "الجدول", teamLeave: "الإجازة", teamAccess: "الوصول",
+  },
+} as const;
+
 type SameKeys<Left extends object, Right extends object> =
   Exclude<keyof Left, keyof Right> extends never
     ? Exclude<keyof Right, keyof Left> extends never
@@ -272,6 +281,7 @@ const teamDirectoryMessageKeysMatch: SameKeys<typeof teamDirectoryMessages.EN, t
 const professionalScheduleMessageKeysMatch: SameKeys<typeof professionalScheduleMessages.EN, typeof professionalScheduleMessages.AR> = true;
 const leavePolishMessageKeysMatch: SameKeys<typeof leavePolishMessages.EN, typeof leavePolishMessages.AR> = true;
 const appointmentDetailSummaryMessageKeysMatch: SameKeys<typeof appointmentDetailSummaryMessages.EN, typeof appointmentDetailSummaryMessages.AR> = true;
+const taskKMessageKeysMatch: SameKeys<typeof taskKMessages.EN, typeof taskKMessages.AR> = true;
 
 void baseMessageKeysMatch;
 void featureMessageKeysMatch;
@@ -293,12 +303,13 @@ void teamDirectoryMessageKeysMatch;
 void professionalScheduleMessageKeysMatch;
 void leavePolishMessageKeysMatch;
 void appointmentDetailSummaryMessageKeysMatch;
+void taskKMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN | keyof typeof appointmentDetailSummaryMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN | keyof typeof appointmentDetailSummaryMessages.EN | keyof typeof taskKMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -348,6 +359,8 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
   if (hasOwnKey(leavePolishDictionary, key)) return leavePolishDictionary[key];
   const appointmentDetailSummaryDictionary = appointmentDetailSummaryMessages[language];
   if (hasOwnKey(appointmentDetailSummaryDictionary, key)) return appointmentDetailSummaryDictionary[key];
+  const taskKDictionary = taskKMessages[language];
+  if (hasOwnKey(taskKDictionary, key)) return taskKDictionary[key];
 
   throw new Error(`Missing translation for key: ${key}`);
 }

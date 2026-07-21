@@ -26,6 +26,20 @@ function queryParams(searchParams: URLSearchParams, allowed: string[]) { return 
 function handoffStatus(status: "PENDING" | "CONVERTED_TO_INVOICE" | "DISMISSED", t: ReturnType<typeof useFeatureT>) { return t(status === "PENDING" ? "pending" : status === "CONVERTED_TO_INVOICE" ? "converted" : "dismissed"); }
 function invoiceStatus(status: "UNPAID" | "PARTIALLY_PAID" | "PAID" | "CANCELLED", t: ReturnType<typeof useFeatureT>) { return t(status === "UNPAID" ? "unpaid" : status === "PARTIALLY_PAID" ? "partiallyPaid" : status === "PAID" ? "paidStatus" : "cancelled"); }
 
+/** The canonical Staff/Admin billing surface. Records stay separate; this only
+ * consolidates their navigation and preserves detail routes. */
+export function BillingWorkspacePage({ role }: { role: "ADMIN" | "STAFF" }) {
+  const t = useFeatureT(); const [params, setParams] = useSearchParams(); const tab = params.get("tab") === "invoices" ? "invoices" : "handoffs"; const page = Number(params.get(`${tab}_page`) || "1");
+  const handoffs = useHandoffs({ page, status: params.get("handoff_status") || undefined }); const invoices = useInvoices({ page, status: params.get("invoice_status") || undefined });
+  const select = (nextTab: "handoffs" | "invoices") => { const next = new URLSearchParams(params); next.set("tab", nextTab); setParams(next); };
+  const setPage = (nextPage: number) => { const next = new URLSearchParams(params); next.set(`${tab}_page`, String(nextPage)); setParams(next); };
+  const active = tab === "handoffs" ? handoffs : invoices;
+  return <div className="billing-page"><PageHeaderV2 title={t("billing")} description={tab === "handoffs" ? t("operationalHandoffVisibility") : role === "ADMIN" ? t("readonlyInvoiceVisibility") : t("clinicInvoiceVisibility")} action={role === "STAFF" && tab === "invoices" ? <Link className="v2-button secondary" to="/staff/billing/invoices/new">{t("newInvoice")}</Link> : undefined} />
+    <nav className="v2-tabs billing-workspace-tabs" aria-label={t("billing")}><button type="button" className={tab === "handoffs" ? "v2-tab active" : "v2-tab"} aria-current={tab === "handoffs" ? "page" : undefined} onClick={() => select("handoffs")}>{t("billingHandoffs")}</button><button type="button" className={tab === "invoices" ? "v2-tab active" : "v2-tab"} aria-current={tab === "invoices" ? "page" : undefined} onClick={() => select("invoices")}>{t("invoicesAndPayments")}</button></nav>
+    {active.isLoading ? <StatePanel state="loading" title={tab === "handoffs" ? t("loadingHandoffs") : t("loadingInvoices")} /> : active.isError ? <StatePanel state="error" title={t("error")} action={<Button onClick={() => void active.refetch()}>{t("retry")}</Button>} /> : tab === "handoffs" && handoffs.data ? <><HandoffList role={role} handoffs={handoffs.data.results} /><Pagination count={handoffs.data.count} page={page} previous={handoffs.data.previous} next={handoffs.data.next} setPage={setPage} /></> : tab === "invoices" && invoices.data ? <><InvoiceList role={role} invoices={invoices.data.results} /><Pagination count={invoices.data.count} page={page} previous={invoices.data.previous} next={invoices.data.next} setPage={setPage} /></> : null}
+  </div>;
+}
+
 function EntityFilter({ label, value, onChange, load }: { label: string; value: string; onChange: (value: string) => void; load: (search: string) => Promise<FilterOption[]> }) {
   const [options, setOptions] = useState<FilterOption[]>([]);
   const request = useRef(0);

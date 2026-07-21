@@ -6,6 +6,7 @@ import { dateFromAppointment } from "../utils/appointmentFilters";
 import { AppointmentStatusBadge } from "./AppointmentStatusBadge";
 import { useFeatureT } from "../../../layouts/i18n";
 import { useAuthStore } from "../../../auth/authStore";
+import { appointmentRecordClass } from "../utils/appointmentStatusAppearance";
 
 interface AppointmentWeekViewProps {
   role: UserRole;
@@ -30,7 +31,7 @@ export function AppointmentWeekView({ role, date, appointments, onDetails, onSel
             <span>{new Intl.DateTimeFormat(language === "AR" ? "ar" : "en", { weekday: "short" }).format(new Date(`${day}T00:00:00`))}</span><strong>{Number(day.slice(8, 10))}</strong>
           </button>
           {appointments.filter((appointment) => dateFromAppointment(appointment.start_datetime) === day).map((appointment) => (
-            <button key={appointment.id} type="button" className="appointment-calendar-item" onClick={(event) => { event.stopPropagation(); onDetails(appointment); }}>
+            <button key={appointment.id} type="button" className={`appointment-calendar-item ${appointmentRecordClass(appointment.status)}`} onClick={(event) => { event.stopPropagation(); onDetails(appointment); }}>
               <strong className="bidi-isolate">{formatTime(appointment.start_datetime)}</strong>
               <span className="bidi-isolate">{appointment.patient.full_name}</span>
               {role !== "DOCTOR" ? <small className="bidi-isolate">{appointment.doctor.full_name}</small> : null}
