@@ -1,4 +1,4 @@
-import { Navigate, createBrowserRouter } from "react-router-dom";
+import { Navigate, createBrowserRouter, useParams } from "react-router-dom";
 
 import { AuthGuard } from "../auth/AuthGuard";
 import { PasswordChangeGuard } from "../auth/PasswordChangeGuard";
@@ -21,14 +21,12 @@ import { NewPatientPage } from "../pages/patients/NewPatientPage";
 import { PatientProfilePage } from "../pages/patients/PatientProfilePage";
 import { PatientsPage } from "../pages/patients/PatientsPage";
 import { StaffDashboardPage } from "../pages/staff/StaffDashboardPage";
-import { OwnSchedulePage } from "../pages/profile/OwnSchedulePage";
-import { OwnLeavePage } from "../pages/profile/OwnLeavePage";
 import { OwnProfilePage } from "../pages/profile/OwnProfilePage";
 import { DoctorActiveVisitPage } from "../pages/visits/DoctorActiveVisitPage";
 import { VisitDetailPage } from "../pages/visits/VisitDetailPage";
-import { ExternalXrayDetailPage, ExternalXrayListPage } from "../pages/xrays/ExternalXrayPages";
+import { ExternalXrayDetailPage } from "../pages/xrays/ExternalXrayPages";
 import { XrayDetailPage } from "../pages/xrays/XrayDetailPage";
-import { XrayListPage } from "../pages/xrays/XrayListPage";
+import { XrayWorkspacePage } from "../pages/xrays/XrayWorkspacePage";
 import { AdminAuditLogDetailPage, AdminAuditLogListPage, AdminClinicSettingsPage, AdminNewUserPage, AdminUserDetailPage, AdminUserListPage } from "../pages/admin/AdminManagementPages";
 import { BillingHandoffDetailPage, BillingHandoffListPage, InvoiceDetailPage, InvoiceListPage, InvoicePrintPage, NewInvoicePage } from "../pages/billing/BillingPages";
 import type { UserRole } from "../types/auth";
@@ -37,6 +35,11 @@ import { dashboardPathForRole } from "../utils/roles";
 function HomeRedirect() {
   const role = useAuthStore((state) => state.role);
   return <Navigate to={dashboardPathForRole(role)} replace />;
+}
+
+function ExternalCaseRedirect({ role }: { role: "admin" | "doctor" }) {
+  const { caseId } = useParams();
+  return <Navigate to={`/${role}/xrays/cases/${caseId ?? ""}`} replace />;
 }
 
 export const router = createBrowserRouter([
@@ -96,10 +99,11 @@ export const router = createBrowserRouter([
               { path: "patients", element: <PatientsPage role="ADMIN" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="ADMIN" /> },
               { path: "visits/:visitId", element: <VisitDetailPage role="ADMIN" /> },
-              { path: "xrays", element: <XrayListPage role="ADMIN" /> },
+              { path: "xrays", element: <XrayWorkspacePage role="ADMIN" /> },
               { path: "xrays/:xrayId", element: <XrayDetailPage role="ADMIN" /> },
-              { path: "external-xrays", element: <ExternalXrayListPage role="ADMIN" /> },
-              { path: "external-xrays/:caseId", element: <ExternalXrayDetailPage role="ADMIN" /> },
+              { path: "xrays/cases/:caseId", element: <ExternalXrayDetailPage role="ADMIN" /> },
+              { path: "external-xrays", element: <Navigate to="/admin/xrays?tab=unassigned" replace /> },
+              { path: "external-xrays/:caseId", element: <ExternalCaseRedirect role="admin" /> },
               { path: "users", element: <AdminUserListPage /> },
               { path: "users/new", element: <AdminNewUserPage /> },
               { path: "users/:userId", element: <AdminUserDetailPage /> },
@@ -127,8 +131,8 @@ export const router = createBrowserRouter([
               { path: "team", element: <StaffTeamListPage /> },
               { path: "team/:memberId", element: <StaffTeamDetailPage /> },
               { path: "profile", element: <OwnProfilePage /> },
-              { path: "profile/schedule", element: <OwnSchedulePage /> },
-              { path: "profile/leave", element: <OwnLeavePage /> },
+              { path: "profile/schedule", element: <Navigate to="/staff/profile?tab=schedule" replace /> },
+              { path: "profile/leave", element: <Navigate to="/staff/profile?tab=leave" replace /> },
               { path: "appointments", element: <Navigate to="/staff/appointments/day" replace /> },
               { path: "appointments/day", element: <AppointmentsPage role="STAFF" view="day" /> },
               { path: "appointments/week", element: <AppointmentsPage role="STAFF" view="week" /> },
@@ -140,7 +144,7 @@ export const router = createBrowserRouter([
               { path: "patients/new", element: <NewPatientPage role="STAFF" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="STAFF" /> },
               { path: "visits/:visitId", element: <VisitDetailPage role="STAFF" /> },
-              { path: "xrays", element: <XrayListPage role="STAFF" /> },
+              { path: "xrays", element: <XrayWorkspacePage role="STAFF" /> },
               { path: "xrays/:xrayId", element: <XrayDetailPage role="STAFF" /> },
               { path: "billing/handoffs", element: <BillingHandoffListPage role="STAFF" /> },
               { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="STAFF" /> },
@@ -162,8 +166,8 @@ export const router = createBrowserRouter([
               { index: true, element: <Navigate to="/doctor/dashboard" replace /> },
               { path: "dashboard", element: <DoctorDashboardPage /> },
               { path: "profile", element: <OwnProfilePage /> },
-              { path: "profile/schedule", element: <OwnSchedulePage /> },
-              { path: "profile/leave", element: <OwnLeavePage /> },
+              { path: "profile/schedule", element: <Navigate to="/doctor/profile?tab=schedule" replace /> },
+              { path: "profile/leave", element: <Navigate to="/doctor/profile?tab=leave" replace /> },
               { path: "appointments", element: <Navigate to="/doctor/appointments/day" replace /> },
               { path: "appointments/day", element: <AppointmentsPage role="DOCTOR" view="day" /> },
               { path: "appointments/week", element: <AppointmentsPage role="DOCTOR" view="week" /> },
@@ -175,10 +179,11 @@ export const router = createBrowserRouter([
               { path: "patients/:patientId/clinical-history", element: <PatientProfilePage role="DOCTOR" defaultTab="visits" /> },
               { path: "visits/active", element: <DoctorActiveVisitPage /> },
               { path: "visits/:visitId", element: <VisitDetailPage role="DOCTOR" /> },
-              { path: "xrays", element: <XrayListPage role="DOCTOR" /> },
+              { path: "xrays", element: <XrayWorkspacePage role="DOCTOR" /> },
               { path: "xrays/:xrayId", element: <XrayDetailPage role="DOCTOR" /> },
-              { path: "external-xrays", element: <ExternalXrayListPage role="DOCTOR" /> },
-              { path: "external-xrays/:caseId", element: <ExternalXrayDetailPage role="DOCTOR" /> },
+              { path: "xrays/cases/:caseId", element: <ExternalXrayDetailPage role="DOCTOR" /> },
+              { path: "external-xrays", element: <Navigate to="/doctor/xrays?tab=unassigned" replace /> },
+              { path: "external-xrays/:caseId", element: <ExternalCaseRedirect role="doctor" /> },
               { path: "billing/handoffs", element: <BillingHandoffListPage role="DOCTOR" /> },
               { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="DOCTOR" /> },
             ],

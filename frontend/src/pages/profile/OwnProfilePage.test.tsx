@@ -19,7 +19,7 @@ function renderProfile(role: UserRole) {
 describe("OwnProfilePage", () => {
   beforeEach(() => { useAuthStore.setState({ user:user("ADMIN"), role:"ADMIN", accessToken:"a", refreshToken:"r", isAuthenticated:true, authStatus:"authenticated", mustChangePassword:false }); });
 
-  it("renders identity, persisted preferences, password state, and change-password navigation through every workspace guard", () => {
+  it("renders role-aware profile tabs and identity through every workspace guard", () => {
     for (const role of ["ADMIN", "STAFF", "DOCTOR"] as const) {
       useAuthStore.setState({ user:user(role), role });
       const view = renderProfile(role);
@@ -28,7 +28,14 @@ describe("OwnProfilePage", () => {
       expect(screen.getByText("nour@pearlix.test").closest("bdi")).not.toBeNull();
       expect(screen.getByText("System")).toBeInTheDocument();
       expect(screen.getByText("Password current")).toBeInTheDocument();
-      expect(screen.getByRole("link", { name:"Change password" })).toHaveAttribute("href", "/change-password");
+      expect(screen.getByRole("link", { name:"Personal Information" })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name:"Security" })).toBeInTheDocument();
+      if (role === "ADMIN") {
+        expect(screen.queryByRole("link", { name:"Schedule" })).not.toBeInTheDocument();
+      } else {
+        expect(screen.getByRole("link", { name:"Schedule" })).toHaveAttribute("href", `/${role.toLowerCase()}/profile?tab=schedule`);
+        expect(screen.getByRole("link", { name:"Leave" })).toBeInTheDocument();
+      }
       view.unmount();
     }
   });

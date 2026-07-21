@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { ChevronLeft, ChevronRight, LogOut, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, UserRound, X } from "lucide-react";
 
 import type { UserRole } from "../types/auth";
 import { useAuthStore } from "../auth/authStore";
@@ -18,8 +18,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerClose = () => undefined, onCollapse = () => undefined, onNavigate = () => undefined, onLogout = () => undefined }: SidebarProps) {
-  const groups: NavigationGroup[] = ["workspace", "clinical", "administration", "personal"];
+  const groups: NavigationGroup[] = ["workspace", "clinical", "administration"];
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
+  const user = useAuthStore((state) => state.user);
   return (
     <aside className="app-sidebar">
       <div className="app-sidebar-brand">
@@ -36,7 +37,7 @@ export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerC
           return <section className="nav-group" key={group}><h2 className="nav-group-label">{t(language, group)}</h2>{items.map((item) => { const Icon = item.icon; const label = t(language, item.labelKey); return <NavLink key={item.path} to={item.path} onClick={onNavigate} aria-label={label} className={({ isActive }) => isActive ? "v2-nav-link active" : "v2-nav-link"}><Icon aria-hidden="true" size={collapsed ? 22 : 20} strokeWidth={1.75} /><span className="nav-label">{label}</span></NavLink>; })}</section>;
         })}
       </nav>
-      <footer className="app-sidebar-footer"><button className="sidebar-logout" type="button" aria-label={t(language, "logout")} data-tooltip={t(language, "logout")} onClick={onLogout}><LogOut size={20} aria-hidden="true" /><span className="nav-label">{t(language, "logout")}</span></button></footer>
+      <footer className="app-sidebar-footer"><NavLink to={`/${role.toLowerCase()}/profile`} onClick={onNavigate} className={({ isActive }) => isActive ? "v2-nav-link active sidebar-profile-entry" : "v2-nav-link sidebar-profile-entry"} aria-label={t(language, "myProfile")} data-tooltip={t(language, "myProfile")}><UserRound size={20} aria-hidden="true" /><span className="nav-label"><strong>{user?.full_name ?? t(language, "myProfile")}</strong><small>{roleT(language, role)}</small></span></NavLink><button className="sidebar-logout" type="button" aria-label={t(language, "logout")} data-tooltip={t(language, "logout")} onClick={onLogout}><LogOut size={20} aria-hidden="true" /><span className="nav-label">{t(language, "logout")}</span></button></footer>
     </aside>
   );
 }
