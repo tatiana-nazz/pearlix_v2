@@ -99,9 +99,11 @@ class DoctorFinalChargeSerializer(serializers.Serializer):
 
 
 class AppointmentSummarySerializer(serializers.ModelSerializer):
+    doctor = UserSummarySerializer(read_only=True)
+
     class Meta:
         model = Appointment
-        fields = ("id", "start_datetime", "end_datetime", "duration_minutes", "status", "reason")
+        fields = ("id", "doctor", "start_datetime", "end_datetime", "duration_minutes", "status", "reason")
         read_only_fields = fields
 
 

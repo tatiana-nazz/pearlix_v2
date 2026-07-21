@@ -142,8 +142,10 @@ class InvoiceViewSet(
         queryset = Invoice.objects.select_related(
             "patient",
             "appointment",
+            "appointment__doctor",
             "visit",
             "visit__appointment",
+            "visit__appointment__doctor",
             "billing_handoff",
             "created_by",
         ).prefetch_related("payments", "payments__created_by")

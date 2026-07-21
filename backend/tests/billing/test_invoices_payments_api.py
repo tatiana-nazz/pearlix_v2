@@ -235,6 +235,18 @@ def test_invoice_list_filters(staff_client, invoice_factory, patient, patient_fa
 
 
 @pytest.mark.django_db
+def test_invoice_detail_includes_the_appointment_doctor(staff_client, invoice_factory, patient, appointment_factory, other_doctor_user):
+    appointment = appointment_factory(patient=patient, doctor=other_doctor_user, status=Appointment.Status.COMPLETED)
+    invoice = invoice_factory(patient=patient, appointment=appointment)
+
+    response = staff_client.get(f"/api/invoices/{invoice.id}/")
+
+    assert response.status_code == 200
+    assert response.data["appointment"]["doctor"]["id"] == other_doctor_user.id
+    assert response.data["appointment"]["doctor"]["full_name"] == other_doctor_user.full_name
+
+
+@pytest.mark.django_db
 def test_staff_can_update_non_cancelled_invoice_and_restricted_updates_are_rejected(staff_client, invoice_factory):
     invoice = invoice_factory(total_amount="100.00")
 

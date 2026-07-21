@@ -15,6 +15,7 @@ export interface BillingVisitSummary {
   completed_at: string | null;
   appointment: {
     id: number;
+    doctor: UserSummary;
     start_datetime: string;
     end_datetime: string;
     duration_minutes: number;
@@ -66,6 +67,7 @@ export interface Invoice extends Timestamped {
   patient: PatientList;
   appointment: {
     id: number;
+    doctor: UserSummary;
     start_datetime: string;
     end_datetime: string;
     duration_minutes: number;
