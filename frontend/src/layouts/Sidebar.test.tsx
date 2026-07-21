@@ -44,4 +44,10 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: "X-rays & AI" })).toHaveAttribute("href", "/doctor/xrays");
     expect(screen.queryByRole("link", { name: "Invoices" })).not.toBeInTheDocument();
   });
+
+  it("keeps clinic-wide schedule and leave management in Admin navigation", () => {
+    render(<MemoryRouter><Sidebar role="ADMIN" /></MemoryRouter>);
+    expect(screen.getByRole("link", { name: "Schedule Management" })).toHaveAttribute("href", "/admin/doctors");
+    expect(screen.getByRole("link", { name: "Leave Management" })).toHaveAttribute("href", "/admin/leave");
+  });
 });
