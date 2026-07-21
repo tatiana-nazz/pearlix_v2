@@ -24,6 +24,7 @@ from apps.billing.services import (
     cancel_invoice,
     convert_handoff_to_invoice,
     create_billing_handoff,
+    create_invoice_from_doctor_final_charge,
     create_invoice,
     dismiss_handoff,
     record_payment,
@@ -299,19 +300,14 @@ class Command(BaseCommand):
     def _create_billing_story(self, accounts, patients, story):
         doctor, staff = accounts["doctor.one"], accounts["staff.one"]
         visits = story["completed_visits"]
-        pending = create_billing_handoff(visit=visits[7], user=visits[7].doctor, data={"note": "Pending demo handoff", "suggested_amount": "250000.00", "currency": "SYP"})
-        converted = create_billing_handoff(visit=visits[8], user=visits[8].doctor, data={"note": "Convert demo handoff", "suggested_amount": "100.00", "currency": "USD"})
-        converted_invoice = convert_handoff_to_invoice(handoff=converted, user=staff, data={"total_amount": "100.00", "currency": "USD", "notes": "Converted demo invoice"})
-        dismissed = create_billing_handoff(visit=visits[9], user=visits[9].doctor, data={"note": "Dismiss demo handoff", "suggested_amount": "125000.00", "currency": "SYP"})
-        dismiss_handoff(handoff=dismissed, user=staff, data={"dismissed_reason": "Synthetic duplicate billing route"})
-        unpaid = create_invoice(user=staff, data={"patient": patients[14], "currency": "SYP", "total_amount": "300000.00", "notes": "Unpaid demo invoice"})
-        partial = create_invoice(user=staff, data={"patient": patients[15], "currency": "SYP", "total_amount": "200000.00", "notes": "Partial demo invoice"})
+        unpaid = create_invoice_from_doctor_final_charge(visit=visits[7], user=visits[7].doctor, data={"notes": "Unpaid demo invoice", "total_amount": "300000.00", "currency": "SYP"})
+        partial = create_invoice_from_doctor_final_charge(visit=visits[8], user=visits[8].doctor, data={"notes": "Partial demo invoice", "total_amount": "200000.00", "currency": "SYP"})
         record_payment(invoice=partial, user=staff, data={"amount": "75000.00", "currency": "SYP"})
-        paid = create_invoice(user=staff, data={"patient": patients[16], "currency": "USD", "total_amount": "120.00", "notes": "Paid demo invoice"})
+        paid = create_invoice_from_doctor_final_charge(visit=visits[9], user=visits[9].doctor, data={"notes": "Paid demo invoice", "total_amount": "120.00", "currency": "USD"})
         record_payment(invoice=paid, user=staff, data={"amount": "120.00", "currency": "USD"})
         cancelled = create_invoice(user=staff, data={"patient": patients[17], "currency": "SYP", "total_amount": "180000.00", "notes": "Cancelled demo invoice"})
         cancel_invoice(invoice=cancelled, user=staff, data={"cancelled_reason": "Synthetic cancellation"})
-        return {"pending": pending, "converted": converted, "converted_invoice": converted_invoice, "dismissed": dismissed, "unpaid": unpaid, "partial": partial, "paid": paid, "cancelled": cancelled}
+        return {"unpaid": unpaid, "partial": partial, "paid": paid, "cancelled": cancelled}
 
     def _log_story(self, accounts, patients, story):
         actor = accounts["admin"]
@@ -331,10 +327,7 @@ class Command(BaseCommand):
             if item:
                 log_activity(actor=item.uploaded_by, action=action, entity_type="xray", entity_id=item.id, metadata={"demo_story": DEMO_TAG, "xray_id": item.id})
         for action, entity_type, entity_id, actor in (
-            ("billing_handoff_created", "billing_handoff", story["billing"]["pending"].id, story["billing"]["pending"].doctor),
-            ("billing_handoff_converted", "billing_handoff", story["billing"]["converted"].id, accounts["staff.one"]),
-            ("billing_handoff_dismissed", "billing_handoff", story["billing"]["dismissed"].id, accounts["staff.one"]),
-            ("invoice_created", "invoice", story["billing"]["converted_invoice"].id, accounts["staff.one"]),
+            ("invoice_created", "invoice", story["billing"]["unpaid"].id, accounts["doctor.one"]),
             ("payment_recorded", "invoice", story["billing"]["paid"].id, accounts["staff.one"]),
         ):
             log_activity(actor=actor, action=action, entity_type=entity_type, entity_id=entity_id, metadata={"demo_story": DEMO_TAG, "record_id": entity_id})
@@ -381,7 +374,6 @@ class Command(BaseCommand):
             ("VISIT_COMPLETED", story["completed_visits"][0]),
             ("XRAY_AI", story["imaging"]["xray"]),
             ("EXTERNAL_XRAY", story["imaging"]["attached"]),
-            ("BILLING_HANDOFF_PENDING", story["billing"]["pending"]),
             ("INVOICE_UNPAID", story["billing"]["unpaid"]),
             ("INVOICE_PARTIAL", story["billing"]["partial"]),
             ("INVOICE_PAID", story["billing"]["paid"]),

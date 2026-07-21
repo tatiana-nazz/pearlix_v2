@@ -187,10 +187,7 @@ def doctor_dashboard(request):
         .first()
     )
     recent_visits = Visit.objects.select_related("patient", "appointment").filter(doctor=request.user).order_by("-started_at", "-id")[:10]
-    pending_handoffs = BillingHandoff.objects.select_related("patient", "doctor", "visit").filter(
-        doctor=request.user,
-        status=BillingHandoff.Status.PENDING,
-    )[:10]
+    pending_handoffs = BillingHandoff.objects.select_related("patient", "doctor", "visit").filter(doctor=request.user, status=BillingHandoff.Status.PENDING)[:10]
     own_working_schedule = WorkingShift.objects.filter(employee=request.user).order_by("weekday", "start_time", "id")
     own_leave = AvailabilityException.objects.select_related("doctor").filter(doctor=request.user).order_by("-start_datetime", "-id")[:10]
     return Response(

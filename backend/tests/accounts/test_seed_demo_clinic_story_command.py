@@ -76,7 +76,7 @@ def test_demo_story_relationships_dashboards_and_media_are_coherent(tmp_path):
         assert ExternalXrayCase.objects.filter(status=ExternalXrayCase.Status.TEMPORARY).exists()
         assert ExternalXrayCase.objects.filter(status=ExternalXrayCase.Status.ATTACHED_TO_PATIENT, attached_xray__isnull=False).exists()
         assert ExternalXrayCase.objects.filter(status=ExternalXrayCase.Status.DISCARDED).exists()
-        assert set(BillingHandoff.objects.values_list("status", flat=True)) >= {"PENDING", "CONVERTED_TO_INVOICE", "DISMISSED"}
+        assert set(BillingHandoff.objects.values_list("status", flat=True)) == {"CONVERTED_TO_INVOICE"}
         assert set(Invoice.objects.values_list("status", flat=True)) >= {"UNPAID", "PARTIALLY_PAID", "PAID", "CANCELLED"}
         for invoice in Invoice.objects.exclude(status=Invoice.Status.CANCELLED):
             assert invoice.paid_amount + invoice.remaining_amount == invoice.total_amount

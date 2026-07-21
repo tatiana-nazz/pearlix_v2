@@ -118,6 +118,12 @@ export interface PaymentResponse {
   invoice: InvoiceSummary;
 }
 
+export interface DoctorFinalChargePayload {
+  total_amount: string;
+  currency: Currency;
+  notes?: string;
+}
+
 export interface InvoicePrintData {
   clinic: { clinic_name: string; address: string; phone_number: string; email: string };
   invoice: { invoice_number: string; status: InvoiceStatus; created_at: string; cancelled_at: string | null; cancelled_reason: string };

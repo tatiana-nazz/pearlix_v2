@@ -245,6 +245,10 @@ const appointmentDetailSummaryMessages = {
   },
 } as const;
 
+const taskMMessages = {
+  EN: { finalCharge: "Final charge", finalChargeGuidance: "This final charge creates the official invoice immediately.", billingNoteOptional: "Billing note (optional)", createInvoice: "Create invoice", finalChargeFailed: "Unable to create the invoice. Review the final charge and try again." },
+  AR: { finalCharge: "المبلغ النهائي", finalChargeGuidance: "يؤدي إرسال المبلغ النهائي إلى إنشاء الفاتورة الرسمية فورًا.", billingNoteOptional: "ملاحظة فوترة (اختيارية)", createInvoice: "إنشاء الفاتورة", finalChargeFailed: "تعذر إنشاء الفاتورة. راجع المبلغ النهائي وحاول مرة أخرى." },
+} as const;
 const taskKMessages = {
   EN: {
     calendar: "Calendar", billing: "Billing", appointmentWorkspaceTabs: "Appointment workspace tabs", myAppointmentQueue: "My Appointment Queue", queueUpcoming: "Upcoming", queueCheckedIn: "Checked In", queueActive: "Active", queueCompleted: "Completed", queueCancelledNoShow: "Cancelled / No-show", invoicesAndPayments: "Invoices & Payments", totalTeam: "Total Team", activeToday: "Active Today", teamOverview: "Overview", teamSchedule: "Schedule", teamLeave: "Leave", teamAccess: "Access",
@@ -309,7 +313,7 @@ function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN | keyof typeof appointmentDetailSummaryMessages.EN | keyof typeof taskKMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN | keyof typeof appointmentDetailSummaryMessages.EN | keyof typeof taskKMessages.EN | keyof typeof taskMMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -361,6 +365,9 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
   if (hasOwnKey(appointmentDetailSummaryDictionary, key)) return appointmentDetailSummaryDictionary[key];
   const taskKDictionary = taskKMessages[language];
   if (hasOwnKey(taskKDictionary, key)) return taskKDictionary[key];
+
+  const taskMDictionary = taskMMessages[language];
+  if (hasOwnKey(taskMDictionary, key)) return taskMDictionary[key];
 
   throw new Error(`Missing translation for key: ${key}`);
 }

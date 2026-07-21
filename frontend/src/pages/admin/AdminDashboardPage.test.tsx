@@ -12,12 +12,11 @@ vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ isLoading: false, i
 import { AdminDashboardPage } from "./AdminDashboardPage";
 
 describe("Admin dashboard composition", () => {
-  it("renders exactly four primary API-derived KPI cards and keeps handoffs in the summary", () => {
+  it("renders exactly four primary API-derived KPI cards without handoff content", () => {
     render(<MemoryRouter><AdminDashboardPage /></MemoryRouter>);
     const cards = document.querySelectorAll(".dashboard-kpi-grid .kpi-card");
     expect(cards).toHaveLength(4);
     expect(Array.from(cards).map((card) => card.querySelector(".kpi-value")?.textContent)).toEqual(["12", "7", "2", "4"]);
-    expect(document.querySelector(".dashboard-page > .v2-card:last-child")?.textContent).toContain("Pending handoffs");
-    expect(document.querySelector(".dashboard-page > .v2-card:last-child")?.textContent).toContain("3");
+    expect(document.querySelector(".dashboard-page > .v2-card:last-child")?.textContent).not.toContain("Pending handoffs");
   });
 });

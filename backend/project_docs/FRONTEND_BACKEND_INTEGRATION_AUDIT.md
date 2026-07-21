@@ -1,5 +1,9 @@
 # Frontend/Backend Integration Audit
 
+## Billing workflow decision (Phase 14F Task M)
+
+The Doctor enters the final charge after completing the Visit. `POST /api/visits/{visit_id}/create-invoice/` atomically creates the official Invoice immediately. Staff does not approve or convert the charge, and normal Staff/Admin Billing navigation is Invoices & Payments only. Staff records Payments and performs permitted audited corrections; Admin is read-only. The legacy handoff routes remain isolated for historical compatibility.
+
 ## Completed Phase 14D automated acceptance
 
 Phase 14D automated acceptance is complete. The frontend retains the approved dashboard, Team, Users & Access, appointment, and patient workflows with shared-overlay, route, and page acceptance coverage. Backend runtime changed in Phase 14D: no; migrations: none. Browser QA remains explicitly pending as the Phase 14F visual/UAT gate. Phase 14E has not started.

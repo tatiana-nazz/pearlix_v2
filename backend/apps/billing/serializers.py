@@ -87,6 +87,17 @@ class HandoffConversionSerializer(serializers.Serializer):
         return value
 
 
+class DoctorFinalChargeSerializer(serializers.Serializer):
+    total_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    currency = serializers.ChoiceField(choices=Invoice.Currency.choices)
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_total_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Total amount must be positive.")
+        return value
+
+
 class AppointmentSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
@@ -153,6 +164,16 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
     def get_payment_count(self, obj):
         return obj.payments.count()
+
+
+class DoctorInvoiceSummarySerializer(serializers.ModelSerializer):
+    paid_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    remaining_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = ("id", "invoice_number", "total_amount", "currency", "paid_amount", "remaining_amount", "status", "notes", "created_at")
+        read_only_fields = fields
 
 
 class InvoiceCreateUpdateSerializer(serializers.Serializer):

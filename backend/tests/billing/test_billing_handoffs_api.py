@@ -94,6 +94,48 @@ def test_doctor_can_create_handoff_for_own_completed_visit_and_duplicate_is_reje
 
 
 @pytest.mark.django_db
+def test_doctor_final_charge_creates_official_invoice_immediately_and_is_duplicate_safe(
+    doctor_client, staff_client, admin_client, completed_visit, doctor_user
+):
+    payload = {"total_amount": "125.50", "currency": "USD", "notes": "Final charge"}
+    response = doctor_client.post(f"/api/visits/{completed_visit.id}/create-invoice/", payload, format="json")
+
+    assert response.status_code == 201
+    assert response.data["total_amount"] == "125.50"
+    assert response.data["currency"] == "USD"
+    assert response.data["status"] == Invoice.Status.UNPAID
+    assert response.data["paid_amount"] == "0.00"
+    assert response.data["remaining_amount"] == "125.50"
+    invoice = Invoice.objects.get(pk=response.data["id"])
+    handoff = BillingHandoff.objects.get(pk=invoice.billing_handoff_id)
+    assert invoice.visit_id == completed_visit.id
+    assert invoice.created_by_id == doctor_user.id
+    assert handoff.status == BillingHandoff.Status.CONVERTED_TO_INVOICE
+    assert handoff.converted_invoice_id == invoice.id
+    assert not BillingHandoff.objects.filter(visit=completed_visit, status=BillingHandoff.Status.PENDING).exists()
+
+    duplicate = doctor_client.post(f"/api/visits/{completed_visit.id}/create-invoice/", payload, format="json")
+    assert duplicate.status_code == 409
+    assert duplicate.data["code"] == "INVOICE_ALREADY_EXISTS"
+    assert Invoice.objects.filter(visit=completed_visit).count() == 1
+    for client in (staff_client, admin_client):
+        denied = client.post(f"/api/visits/{completed_visit.id}/create-invoice/", payload, format="json")
+        assert denied.status_code == 403
+
+
+@pytest.mark.django_db
+def test_doctor_final_charge_requires_completed_own_visit(doctor_client, active_visit):
+    response = doctor_client.post(
+        f"/api/visits/{active_visit.id}/create-invoice/",
+        {"total_amount": "10.00", "currency": "SYP"},
+        format="json",
+    )
+    assert response.status_code == 409
+    assert response.data["code"] == "VISIT_NOT_COMPLETED"
+    assert not Invoice.objects.exists()
+
+
+@pytest.mark.django_db
 def test_handoff_creation_requires_completed_own_visit(
     doctor_client,
     other_doctor_client,
