@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 
-import { ClickableRow, DataTableShell, statusLabel } from "../../../components/v2";
+import { ClickableRow, DataTableShell, StatusBadge, statusLabel } from "../../../components/v2";
 import { useFeatureT } from "../../../layouts/i18n";
 import type { UserRole } from "../../../types/auth";
 import type { BillingHandoff, Invoice } from "../../../types/billing";
@@ -32,8 +32,8 @@ export function InvoiceList({ role, invoices }: { role: UserRole; invoices: Invo
   const t = useFeatureT();
   return <DataTableShell title={t("invoices")} state={!invoices.length ? <p>{t("noInvoices")}</p> : undefined}>
     <table className="billing-table"><thead><tr><th>{t("invoice")}</th><th>{t("patient")}</th><th>{t("status")}</th><th>{t("total")}</th><th>{t("paid")}</th><th>{t("remaining")}</th><th>{t("issued")}</th></tr></thead><tbody>
-      {invoices.map((invoice) => <ClickableRow key={invoice.id} onOpen={() => navigate(`/${role.toLowerCase()}/billing/invoices/${invoice.id}`)}>
-        <td className="bidi-isolate">{invoice.invoice_number}</td><td className="bidi-isolate">{invoice.patient.full_name}</td><td>{invoiceStatus(invoice.status, t)}</td><td className="bidi-isolate">{formatMoney(invoice.total_amount, invoice.currency)}</td><td className="bidi-isolate">{formatMoney(invoice.paid_amount, invoice.currency)}</td><td className="bidi-isolate">{formatMoney(invoice.remaining_amount, invoice.currency)}</td><td className="bidi-isolate">{formatDateTime(invoice.created_at)}</td>
+      {invoices.map((invoice) => <ClickableRow key={invoice.id} onOpen={() => navigate(`/${role.toLowerCase()}/billing?tab=invoices&invoice=${invoice.id}`)}>
+        <td className="bidi-isolate">{invoice.invoice_number}</td><td className="bidi-isolate">{invoice.patient.full_name}</td><td><StatusBadge status={invoice.status} /></td><td className="bidi-isolate">{formatMoney(invoice.total_amount, invoice.currency)}</td><td className="bidi-isolate">{formatMoney(invoice.paid_amount, invoice.currency)}</td><td className="bidi-isolate">{formatMoney(invoice.remaining_amount, invoice.currency)}</td><td className="bidi-isolate">{formatDateTime(invoice.created_at)}</td>
       </ClickableRow>)}
     </tbody></table>
   </DataTableShell>;

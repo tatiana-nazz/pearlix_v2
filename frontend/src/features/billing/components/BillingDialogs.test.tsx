@@ -14,4 +14,9 @@ describe("Billing production dialogs", () => {
     fireEvent.keyDown(document, { key: "Escape" }); fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(cancel).not.toHaveBeenCalled(); expect(screen.getByRole("button", { name: "Record payment" })).toBeDisabled();
   });
+  it("uses the shared V2 field contract and keeps the invoice currency read-only", () => {
+    render(<PaymentDialog currency="SYP" remaining="10.00" pending={false} onCancel={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByRole("textbox", { name: "Amount" }).closest("label")).toHaveClass("v2-field");
+    expect(screen.getByRole("textbox", { name: "Currency" })).toHaveAttribute("readonly");
+  });
 });

@@ -969,6 +969,12 @@ p {
   gap: var(--space-4);
 }
 
+.patient-form-grid > label { display:grid; grid-column:span 6; gap:var(--space-2); min-inline-size:0; color:var(--v2-text); font-size:var(--v2-font-size-label); font-weight:650; }
+.patient-form-section > label { display:grid; gap:var(--space-2); color:var(--v2-text); font-size:var(--v2-font-size-label); font-weight:650; }
+.v2-overlay:has(.patient-form) { max-height:calc(100vh - 40px); overflow:hidden; }
+.v2-overlay:has(.patient-form) .patient-form { min-block-size:0; overflow:auto; padding-inline-end:var(--space-2); }
+.v2-overlay:has(.patient-form) .v2-sticky-actions { margin-block-end:calc(var(--v2-space-6) * -1); }
+
 .appointment-field { min-inline-size: 0; }
 .appointment-field .v2-field, .appointment-field > label { display: grid; gap: var(--space-2); height: 100%; }
 .appointment-field .v2-field select, .appointment-field > label > input, .appointment-field > label > textarea { min-block-size: 46px; }
@@ -1254,6 +1260,18 @@ p {
   margin: 0;
 }
 
+.detail-grid dt { font-size: var(--v2-font-size-label); line-height: 1.45; }
+.detail-grid dd { color: var(--v2-text); font-size: var(--v2-font-size-body); font-weight: 650; line-height: 1.55; }
+.invoice-details-overlay { display:grid; gap:var(--v2-space-5); }
+.invoice-details-status { display:flex; justify-content:flex-end; }
+.invoice-detail-section { display:grid; gap:var(--v2-space-3); border-block-start:1px solid var(--v2-border); padding-block-start:var(--v2-space-4); }
+.invoice-detail-section h3 { font-size:18px; }.invoice-detail-section p { margin:0; }
+.invoice-financial-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--v2-space-3); }
+.invoice-financial-summary > div { display:grid; gap:var(--v2-space-2); border:1px solid var(--v2-border); border-radius:var(--v2-radius-card); background:var(--v2-surface-subtle); padding:var(--v2-space-4); }
+.invoice-financial-summary span { color:var(--v2-muted); font-size:var(--v2-font-size-label); font-weight:700; }
+.invoice-financial-summary strong { color:var(--v2-text); font-size:24px; line-height:1.25; }
+.invoice-details-actions { position:sticky; inset-block-end:calc(var(--v2-space-6) * -1); display:flex; flex-wrap:wrap; justify-content:flex-end; gap:var(--v2-space-3); border-block-start:1px solid var(--v2-border); background:var(--v2-surface); padding:var(--v2-space-4) 0; }
+
 .medical-summary-grid {
   display: grid;
   gap: var(--space-4);
@@ -1399,6 +1417,8 @@ p {
     grid-template-columns: 1fr;
   }
 
+  .patient-form-grid > label { grid-column: auto; }
+
   .appointment-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .appointment-field.patient-field,
@@ -1456,5 +1476,6 @@ p {
     grid-template-columns: 1fr;
   }
   .leave-filter-grid { grid-template-columns:1fr; }
+  .invoice-financial-summary { grid-template-columns:1fr; }
   .patient-quick-find-header { align-items:stretch; flex-direction:column; }
 }

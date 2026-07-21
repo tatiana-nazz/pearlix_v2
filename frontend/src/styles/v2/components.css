@@ -21,5 +21,10 @@
 .team-directory-card-fields > span > svg,.team-directory-card-metrics svg { color:var(--v2-info); margin-block-start:2px; }
 .team-directory-card-metrics > span { display:inline-flex; align-items:center; gap:4px; }
 
+/* Directory cards need enough width for readable contact and workload groups. */
+.team-directory-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--v2-space-5); }
+@media (max-width:1023px) { .team-directory-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:720px) { .team-directory-grid { grid-template-columns:1fr; } }
+
 /* Directory metadata must remain readable beside names and status badges. */
 .team-directory-role,.team-directory-card-fields small,.team-directory-card-metrics { font-size:var(--v2-font-size-body); line-height:1.45; }

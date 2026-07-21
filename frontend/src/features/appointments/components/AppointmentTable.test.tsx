@@ -15,6 +15,8 @@ describe("AppointmentTable", () => {
     expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /edit|reschedule|check in|cancel|no-show|start visit|view/i })).not.toBeInTheDocument();
     const row = screen.getByRole("row", { name: /Maya Patient/ });
+    expect(row.querySelector(".appointment-record")).toBeNull();
+    expect(row.querySelector(".v2-status")).toBeInTheDocument();
     fireEvent.click(row); fireEvent.keyDown(row, { key: "Enter" }); fireEvent.keyDown(row, { key: " " });
     expect(open).toHaveBeenCalledTimes(3); expect(row).toHaveAttribute("aria-label", expect.stringContaining("Maya Patient"));
   });
