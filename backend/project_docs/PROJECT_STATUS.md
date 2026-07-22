@@ -23,6 +23,8 @@ Post-Phase-14F Stage 4 patient workflow alignment is complete for the Staff, Adm
 
 Post-Phase-14F Stage 5 team and staff-management visual alignment is complete for Team, Users & Access, schedules, leave, and own-profile surfaces. It preserves backend contracts, permissions, query state, security flows, and routes; backend changes: none; migrations: none. Evidence and visual-delta record: `frontend/design_v2/design_alignment_evidence/team-management/`, `frontend/design_v2/TEAM_MANAGEMENT_ALIGNMENT_RECORD.md`, and `frontend/design_v2/TEAM_MANAGEMENT_VISUAL_DELTA.md`. The next recommended stage is billing and financial workflow alignment.
 
+Post-Phase-14F Stage 6 billing visual alignment is complete for the billing workspace, invoice register/detail/print, financial summary, payment history, staff confirmations, and Admin read-only view. It made no backend change and added no migration. Focused frontend billing checks, typecheck, and production build passed. Evidence: `frontend/design_v2/design_alignment_evidence/billing/`. Next stage: visits and clinical workflows.
+
 Remaining post-MVP limitations include real AI integration, email forgot-password, unsupported professional fields, online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.
 
 ## Historical context

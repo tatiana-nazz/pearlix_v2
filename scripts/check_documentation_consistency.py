@@ -38,6 +38,13 @@ PATIENT_REQUIREMENTS = (
     "backend changes: none",
     "migrations: none",
 )
+STAGE6_FILES = (
+    "frontend/design_v2/DOCUMENT_AUTHORITY.md",
+    "frontend/design_v2/DESIGN_ALIGNMENT_HISTORY.md",
+    "frontend/design_v2/BILLING_ALIGNMENT_RECORD.md",
+    "frontend/design_v2/BILLING_VISUAL_DELTA.md",
+    "frontend/design_v2/design_alignment_evidence/billing/EVIDENCE_INDEX.md",
+)
 STALE_CURRENT_AUTHORITY = (
     "phase 14f browser visual/uat acceptance is next",
     "phase 14f complete — blocked",
@@ -81,6 +88,20 @@ def main() -> int:
     for filename in PATIENT_EVIDENCE_FILES:
         if not (patient_evidence / filename).is_file():
             errors.append(f"missing patient evidence screenshot: {filename}")
+
+    stage6_sources = {relative: read(relative, errors) for relative in STAGE6_FILES}
+    status = sources["status"].lower()
+    design_status = read("frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md", errors).lower()
+    for requirement in ("latest completed stage: stage 6", "next stage: visits and clinical workflows"):
+        if requirement not in design_status:
+            errors.append(f"design alignment status missing Stage 6 snapshot fact: {requirement!r}")
+    for stale in ("pending stage 1", "next stage: patient", "next recommended stage: team", "next recommended stage: billing"):
+        if stale in design_status:
+            errors.append(f"design alignment status retains stale marker: {stale!r}")
+    if "stage 6 billing visual alignment is complete" not in status:
+        errors.append("project status missing Stage 6 billing activity note")
+    if "9177f5eb404b922fbac1969447767ea0e7f31dc8" in "\n".join(stage6_sources.values()).lower():
+        errors.append("Stage 6 documentation retains invalid Stage 5 SHA")
 
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))

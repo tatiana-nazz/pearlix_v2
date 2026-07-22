@@ -1354,6 +1354,41 @@ p {
 .invoice-financial-summary strong { color:var(--v2-text); font-size:24px; line-height:1.25; }
 .invoice-details-actions { position:sticky; inset-block-end:calc(var(--v2-space-6) * -1); display:flex; flex-wrap:wrap; justify-content:flex-end; gap:var(--v2-space-3); border-block-start:1px solid var(--v2-border); background:var(--v2-surface); padding:var(--v2-space-4) 0; }
 
+/* Stage 6 billing composition: distinct register, record, and settlement zones. */
+.billing-page { gap: var(--v2-space-6); }
+.billing-page > .page-header { align-items: end; padding: clamp(20px, 3vw, 36px); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-card); background: var(--v2-surface); box-shadow: var(--v2-shadow-card); }
+.billing-page > .page-header h2 { max-width: 22ch; }
+.billing-page > .page-header p { max-width: 64ch; }
+.billing-filter-grid { padding: var(--v2-space-5); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-card); background: var(--v2-surface-subtle); box-shadow: var(--v2-shadow-soft); }
+.billing-page .v2-table-shell { padding: 0; overflow: hidden; }
+.billing-page .v2-table-toolbar { padding: var(--v2-space-5) var(--v2-space-6); border-block-end: 1px solid var(--v2-border); background: var(--v2-surface); }
+.billing-table { min-width: 860px; }
+.billing-table th { padding-block: var(--v2-space-4); background: var(--v2-surface-subtle); }
+.billing-table td { padding-block: var(--v2-space-4); vertical-align: middle; }
+.billing-table .v2-clickable-row { transition: background-color 160ms ease, box-shadow 160ms ease; }
+.billing-table .v2-clickable-row:hover, .billing-table .v2-clickable-row:focus-visible { background: var(--v2-primary-soft); outline: none; box-shadow: inset 4px 0 0 var(--v2-primary); }
+.billing-table td:first-child { color: var(--v2-primary-strong); font-weight: 800; letter-spacing: .02em; }
+.billing-table td:nth-child(4), .billing-table td:nth-child(5), .billing-table td:nth-child(6) { font-variant-numeric: tabular-nums; text-align: end; font-weight: 700; }
+.invoice-financial-summary { padding: var(--v2-space-4); border-radius: var(--v2-radius-card); background: var(--v2-primary-soft); }
+.invoice-financial-summary > div:nth-child(1) { border-block-start: 4px solid var(--v2-primary); }
+.invoice-financial-summary > div:nth-child(2) { border-block-start: 4px solid var(--v2-success); }
+.invoice-financial-summary > div:nth-child(3) { border-block-start: 4px solid var(--v2-warning); }
+.invoice-financial-summary > div:nth-child(3) strong { color: var(--v2-danger); }
+.invoice-details-overlay .invoice-detail-section { padding: var(--v2-space-4); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-card); background: var(--v2-surface-subtle); }
+.invoice-details-overlay .invoice-detail-section h3 { margin: 0; }
+.billing-detail-grid > .v2-card:first-child { display: grid; gap: var(--v2-space-5); }
+.billing-detail-grid > .v2-card:last-child { position: sticky; top: var(--v2-space-5); }
+.billing-detail-grid > .v2-card:last-child h3 { margin-top: 0; }
+.billing-detail-grid > .v2-card:last-child ul { display: grid; gap: var(--v2-space-3); margin: 0; padding: 0; list-style: none; }
+.billing-detail-grid > .v2-card:last-child li { padding: var(--v2-space-3); border-inline-start: 3px solid var(--v2-success); border-radius: var(--v2-radius-control); background: var(--v2-surface-subtle); }
+.a4-invoice { border-top: 9px solid var(--v2-primary); box-shadow: var(--v2-shadow-card); }
+.a4-invoice header { display: grid; grid-template-columns: 1fr auto; align-items: start; border-bottom-color: var(--v2-primary); }
+.a4-invoice header h2 { grid-column: 2; grid-row: 1 / span 3; align-self: center; padding: var(--v2-space-4); border-radius: var(--v2-radius-control); background: var(--v2-primary-soft); color: var(--v2-primary-strong); }
+.a4-invoice section:nth-of-type(2) { padding: var(--v2-space-4); border-radius: var(--v2-radius-card); background: var(--v2-surface-subtle); }
+@media (max-width: 900px) { .billing-detail-grid > .v2-card:last-child { position: static; } .billing-page > .page-header { padding: var(--v2-space-5); } }
+@media (max-width: 640px) { .billing-filter-grid { grid-template-columns: 1fr; } .billing-table { min-width: 720px; } .a4-invoice header { grid-template-columns: 1fr; } .a4-invoice header h2 { grid-column: 1; grid-row: auto; justify-self: start; } }
+@media print { .a4-invoice { border-top-color: #315be0; box-shadow: none; } .a4-invoice header h2, .a4-invoice section:nth-of-type(2) { background: #f7faff; } }
+
 .medical-summary-grid {
   display: grid;
   gap: var(--space-4);
