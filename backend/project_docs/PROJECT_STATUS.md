@@ -17,7 +17,7 @@ This is the canonical current-phase tracker for the Dental Clinic Management Sys
 
 Phase 14F re-verified the historical 14F-FINAL-01 through 14F-FINAL-05 findings against the runtime-and-evidence commit above. The responsive geometry, Staff-safe Team access, setup-required Team cards, Arabic/RTL status copy, and documented no-active-visit empty state all passed. The pass also corrected protected-media requests whose API-rooted serializer links otherwise produced a doubled `/api/api/` path in the browser. No schema or backend contract change was required.
 
-Post-Phase-14F activity: medical-blue visual-alignment Stage 1 is complete for frontend global tokens and shared components, and Stage 2 dashboard composition alignment is complete for Staff, Admin, and Doctor. Phase 14F remains complete; Stage 2 made no functional or backend change and added no migration. Evidence: `frontend/design_v2/design_alignment_evidence/dashboards/`.
+Post-Phase-14F activity: medical-blue visual-alignment Stages 1 and 2 remain complete. Stage 3 appointment workflow alignment is complete for the Staff, Admin, and Doctor appointment experience; it made no backend change and added no migration. Frontend tests, typecheck, production build, and the appointment browser matrix passed. Evidence: `frontend/design_v2/design_alignment_evidence/appointments/`.
 
 Remaining post-MVP limitations include real AI integration, email forgot-password, unsupported professional fields, online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.
 
