@@ -1,6 +1,6 @@
 # Appointment alignment browser evidence
 
-Branch: `post-14f-medical-blue-appointments`. Baseline: `dac8cc295820e5c8d8f57a0c71a1d93ff7724c69`. Tested working-tree state: Stage 3 implementation before commit. All files are unedited browser screenshots from the local deterministic demo story. Console result was PASS (no uncaught errors); network result was PASS (no unexpected failed request observed in the rendered workflows). Permission result was PASS for each role.
+Branch: `post-14f-medical-blue-appointments`. Baseline: `dac8cc295820e5c8d8f57a0c71a1d93ff7724c69`. Tested working-tree state: Stage 3 implementation before commit `a3dd5b20234fc22ebdd44729e7cd81c4a11ebc41`. All files are unedited browser screenshots from the local deterministic demo story. Console result was PASS (no uncaught errors); network result was PASS (no unexpected failed request observed in the rendered workflows). Permission result was PASS for each role.
 
 | Screenshot | Role / scenario / route | State | Viewport / language / theme / direction | Measurements (inner; client / document / body) | Local scroll | Result |
 | --- | --- | --- | --- | --- | --- | --- |

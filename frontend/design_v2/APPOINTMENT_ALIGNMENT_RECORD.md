@@ -6,7 +6,7 @@
 - Source branch and commit: `post-14f-medical-blue-dashboards` at `dac8cc295820e5c8d8f57a0c71a1d93ff7724c69`.
 - Stage branch: `post-14f-medical-blue-appointments`.
 - Authority order: backend contracts and RBAC; accepted appointment routes/workflows; accessibility, localization, RTL, responsive behavior, and browser acceptance; Stage 1 tokens/shared components; Stage 2 composition conventions; visual reference guidance.
-- Implementation commit: pending final commit.
+- Implementation commit: `a3dd5b20234fc22ebdd44729e7cd81c4a11ebc41`.
 
 ## Scope and protected contracts
 
