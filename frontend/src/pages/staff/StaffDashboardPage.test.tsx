@@ -41,6 +41,12 @@ describe("Staff dashboard visual composition", () => {
     expect(card.querySelector(".kpi-footer")).toHaveTextContent("Open schedule");
     expect(screen.getByRole("link", { name: "Add Appointment" })).toHaveAttribute("href", "/staff/appointments/day");
     expect(screen.getByRole("link", { name: "New Patient" })).toHaveAttribute("href", "/staff/patients/new");
+    expect(screen.getByRole("heading", { name: "Today's appointments" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Checked-in queue" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Needs Reschedule" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Unpaid or partial invoices" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Patients" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Search patients" })).toBeInTheDocument();
   });
 
   it("maps counts from live response fields instead of permanent display counts", () => {

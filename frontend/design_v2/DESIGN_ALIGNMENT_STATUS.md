@@ -9,4 +9,7 @@
 - Browser sentinels complete: Staff dashboard and appointment-create modal (1440×900 EN Light), Admin dashboard and Team (1024×900 EN Dark), Doctor dashboard and navigation drawer (768×1024 AR Light RTL). Evidence: `frontend/design_v2/design_alignment_evidence/foundation/`.
 - Final verification: frontend 68 files / 238 tests, typecheck, production build, backend 423 tests, Django check, migration drift, documentation consistency, and diff check passed.
 - Stage 1 is complete: functional changes none; backend changes none; migrations none. Implementation commit: `690230b623ad988093c8a338715bc20f140b97ae`.
-- Deferred stages: dashboard, appointment, patient, Team, billing, modal, table, and form page-level composition alignment.
+- Stage 2 dashboard composition alignment is complete for Staff, Admin, and Doctor. It preserves all dashboard contracts, routes, role boundaries, and data meanings; functional changes none, backend changes none, migrations none.
+- Stage 2 frontend verification: 69 files / 240 tests, TypeScript typecheck, and production build passed. Browser verification passed for Staff 1440x900 EN Light LTR, Admin 1024x900 EN Dark LTR, and Doctor 768x1024 AR Light RTL with all queue tabs and the No-Show selector.
+- Stage 2 evidence: `frontend/design_v2/design_alignment_evidence/dashboards/`. Implementation commit: pending final reference commit.
+- Next stage: non-dashboard page-level composition alignment for appointments, patients, Team, billing, modal, table, and form workflows.

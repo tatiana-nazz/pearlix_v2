@@ -340,6 +340,30 @@ p {
   align-items: stretch;
 }
 
+/* Stage 2 dashboard composition: operational queues lead while Stage 1 surfaces stay authoritative. */
+.dashboard-page { gap:var(--v2-space-7); }
+.dashboard-page > .page-header { margin-bottom:0; }
+.dashboard-page .dashboard-kpi-grid { gap:var(--v2-space-5); }
+.dashboard-page .kpi-link > .kpi-card { min-height:172px; border-color:var(--v2-border); box-shadow:var(--shadow-soft); }
+.dashboard-page .kpi-link:first-child > .kpi-card { border-color:var(--color-primary-border); }
+.staff-dashboard .patient-quick-find { border:1px solid var(--v2-border); border-radius:var(--v2-radius-card); background:var(--v2-surface-subtle); padding:var(--v2-space-5); }
+.staff-dashboard .dashboard-columns { grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:var(--v2-space-5); }
+.staff-dashboard .dashboard-columns > :first-child { grid-row:span 2; }
+.dashboard-supporting-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--v2-space-5); }
+.staff-dashboard > .v2-card { box-shadow:var(--shadow-soft); }
+.admin-dashboard .dashboard-columns { grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:var(--v2-space-5); }
+.admin-dashboard .dashboard-columns > :first-child { border-color:var(--color-warning-border); box-shadow:var(--v2-shadow-major); }
+.doctor-dashboard .dashboard-kpi-grid { margin-block-end:calc(var(--v2-space-2) * -1); }
+.doctor-appointment-queue { gap:var(--v2-space-5); border-color:var(--color-primary-border); box-shadow:var(--v2-shadow-major); }
+.doctor-queue-heading h2 { color:var(--v2-heading); }
+.doctor-queue-status-picker { padding:4px; border:1px solid var(--v2-border); border-radius:var(--v2-radius-small); background:var(--v2-surface-subtle); }
+.doctor-queue-status-picker button { min-height:var(--v2-control-compact); border-radius:calc(var(--v2-radius-control) - 2px); border-color:transparent; background:transparent; color:var(--v2-muted); font-weight:700; }
+.doctor-queue-status-picker button.active { border-color:var(--v2-primary); background:var(--v2-primary); color:var(--color-text-inverse); }
+.doctor-queue-record { border-color:var(--v2-border); border-radius:var(--v2-radius-small); background:var(--v2-surface); box-shadow:var(--shadow-soft); }
+.doctor-queue-record:hover,.doctor-queue-record:focus-visible { border-color:var(--color-primary-border); background:var(--v2-surface-hover); outline:3px solid var(--v2-focus); }
+@media (max-width:1023px) { .staff-dashboard .dashboard-columns { grid-template-columns:repeat(2,minmax(0,1fr)); }.staff-dashboard .dashboard-columns > :first-child { grid-row:auto; } }
+@media (max-width:767px) { .staff-dashboard .dashboard-columns,.admin-dashboard .dashboard-columns,.dashboard-supporting-grid { grid-template-columns:1fr; } .dashboard-page .kpi-link > .kpi-card { min-height:unset; } }
+
 .dashboard-grid > *,
 .dashboard-columns > *,
 .queue-grid > * {

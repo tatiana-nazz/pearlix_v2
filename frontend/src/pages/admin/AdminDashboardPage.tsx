@@ -12,7 +12,7 @@ export function AdminDashboardPage() {
   if (dashboard.isLoading) return <DashboardLoading />;
   if (dashboard.isError || !dashboard.data) return <DashboardError retry={() => { void dashboard.refetch(); }} />;
   const data = dashboard.data; const date = clinic.date ?? ""; const dated = (path: string) => date ? `${path}${path.includes("?") ? "&" : "?"}date=${date}` : path;
-  return <div className="dashboard-page"><PageHeaderV2 title={t("clinicOperations")} description={date ? `${t("clinicLocalDate")} · ${date}` : t("dateUnavailable")} action={<><Link className="v2-button secondary" to="/admin/clinic-settings">{t("clinicSettings")}</Link><Link className="v2-button secondary" to="/admin/users">{t("usersAccess")}</Link></>} />
+  return <div className="dashboard-page admin-dashboard"><PageHeaderV2 title={t("clinicOperations")} description={date ? `${t("clinicLocalDate")} · ${date}` : t("dateUnavailable")} action={<><Link className="v2-button secondary" to="/admin/clinic-settings">{t("clinicSettings")}</Link><Link className="v2-button secondary" to="/admin/users">{t("usersAccess")}</Link></>} />
     <Kpis items={[
       { label: t("activePatients"), value: data.total_active_patients, helper: t("activeRecords"), to: "/admin/patients?archive=active", icon: Icons.patients, tone: "info" },
       { label: t("todayAppointments"), value: data.today_appointments_count, helper: date ? t("clinicLocalDate") : t("dateUnavailable"), to: dated("/admin/appointments/list"), icon: Icons.appointments, tone: "success" },

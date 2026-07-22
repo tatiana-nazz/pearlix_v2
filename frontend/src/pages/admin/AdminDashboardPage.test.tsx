@@ -18,5 +18,10 @@ describe("Admin dashboard composition", () => {
     expect(cards).toHaveLength(4);
     expect(Array.from(cards).map((card) => card.querySelector(".kpi-value")?.textContent)).toEqual(["12", "7", "2", "4"]);
     expect(document.querySelector(".dashboard-page > .v2-card:last-child")?.textContent).not.toContain("Pending handoffs");
+    expect(screen.getByRole("link", { name: "Clinic settings" })).toHaveAttribute("href", "/admin/clinic-settings");
+    expect(screen.getByRole("link", { name: "Users & Access" })).toHaveAttribute("href", "/admin/users");
+    expect(screen.getByRole("heading", { name: "Needs attention" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Appointments" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Clinic summary" })).toBeInTheDocument();
   });
 });
