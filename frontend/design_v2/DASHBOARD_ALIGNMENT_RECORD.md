@@ -31,4 +31,4 @@
 
 Non-dashboard page-level composition alignment remains deferred to later medical-blue stages. Phase 14F is not reopened.
 
-Implementation commit SHA: pending final reference commit.
+Implementation commit SHA: `81c45696ed055ec62a9a44c0fc93b37f5f5079a4`.

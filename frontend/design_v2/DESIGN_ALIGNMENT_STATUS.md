@@ -11,5 +11,5 @@
 - Stage 1 is complete: functional changes none; backend changes none; migrations none. Implementation commit: `690230b623ad988093c8a338715bc20f140b97ae`.
 - Stage 2 dashboard composition alignment is complete for Staff, Admin, and Doctor. It preserves all dashboard contracts, routes, role boundaries, and data meanings; functional changes none, backend changes none, migrations none.
 - Stage 2 frontend verification: 69 files / 240 tests, TypeScript typecheck, and production build passed. Browser verification passed for Staff 1440x900 EN Light LTR, Admin 1024x900 EN Dark LTR, and Doctor 768x1024 AR Light RTL with all queue tabs and the No-Show selector.
-- Stage 2 evidence: `frontend/design_v2/design_alignment_evidence/dashboards/`. Implementation commit: pending final reference commit.
+- Stage 2 evidence: `frontend/design_v2/design_alignment_evidence/dashboards/`. Implementation commit: `81c45696ed055ec62a9a44c0fc93b37f5f5079a4`.
 - Next stage: non-dashboard page-level composition alignment for appointments, patients, Team, billing, modal, table, and form workflows.

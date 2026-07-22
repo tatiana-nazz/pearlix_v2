@@ -2,7 +2,7 @@
 
 - Branch: `post-14f-medical-blue-dashboards`
 - Baseline commit: `25ebd632d812ce68a4356479f2db24d1cbc7a88a`
-- Implementation commit: pending final reference commit.
+- Implementation commit: `81c45696ed055ec62a9a44c0fc93b37f5f5079a4`.
 - QA data: deterministic demo story seeded with reference date 2026-07-19.
 
 | Screenshot | Tested state | Role / route | Viewport | Language / theme / direction | Inner dimensions | Client / document / body widths | Overflow | Console / network | Interaction state | Result |
