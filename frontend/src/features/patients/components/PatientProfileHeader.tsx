@@ -19,8 +19,8 @@ export function PatientProfileHeader({ role, patient, onEdit, onArchive, onUnarc
   const canShowStatus = role !== "DOCTOR";
 
   return (
-    <section className="profile-header">
-      <div>
+    <section className="profile-header patient-profile-hero">
+      <div className="patient-profile-identity">
         <p className="eyebrow">{t("patientProfile")}</p>
         <h2 className="bidi-isolate">{patient.full_name}</h2>
         <p>

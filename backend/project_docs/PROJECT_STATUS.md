@@ -19,6 +19,8 @@ Phase 14F re-verified the historical 14F-FINAL-01 through 14F-FINAL-05 findings 
 
 Post-Phase-14F activity: medical-blue visual-alignment Stages 1 and 2 remain complete. Stage 3 appointment workflow alignment is complete for the Staff, Admin, and Doctor appointment experience; it made no backend change and added no migration. Frontend tests, typecheck, production build, and the appointment browser matrix passed. Evidence: `frontend/design_v2/design_alignment_evidence/appointments/`.
 
+Post-Phase-14F Stage 4 patient workflow alignment is complete for the Staff, Admin, and Doctor patient experience. It made no backend change and added no migration. The evidence and verification record are `frontend/design_v2/design_alignment_evidence/patients/` and `frontend/design_v2/PATIENT_ALIGNMENT_RECORD.md`; the implementation commit is recorded there.
+
 Remaining post-MVP limitations include real AI integration, email forgot-password, unsupported professional fields, online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.
 
 ## Historical context

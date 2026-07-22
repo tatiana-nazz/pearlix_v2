@@ -19,13 +19,13 @@ function renderTable(role: "ADMIN" | "STAFF" | "DOCTOR", rows: PatientListItem[]
 }
 
 describe("PatientTable", () => {
-  it("renders the approved patient, contact, gender, visit, and appointment composition without an action column", () => {
+  it("renders backend-derived patient identity, contact, demographic, and visit data without unsupported columns or actions", () => {
     renderTable("STAFF");
     expect(screen.getByRole("columnheader", { name: "Patient" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Contact" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Gender" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Last visit" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Next appointment" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Next appointment" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
     expect(screen.getByText("QP")).toHaveClass("patient-initials");
     expect(screen.getByText("QA Patient")).toHaveClass("bidi-isolate");
@@ -33,14 +33,14 @@ describe("PatientTable", () => {
     expect(screen.getByText("qa@example.test")).toBeInTheDocument();
     expect(screen.getByRole("row", { name: "QA Patient" })).toHaveTextContent("Female");
     expect(screen.getByRole("row", { name: "QA Patient" })).toHaveTextContent("2026");
-    expect(screen.getAllByText("Not recorded")).toHaveLength(1);
+    expect(screen.queryByText("Not recorded")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /archive|unarchive|edit|view/i })).not.toBeInTheDocument();
     expect(screen.queryByText("77")).not.toBeInTheDocument();
   });
 
   it("uses safe localized fallbacks when the list contract omits visit values", () => {
     renderTable("ADMIN", [{ ...patient, last_visit_with_me_at: null, phone_number: "", email: "" }]);
-    expect(screen.getAllByText("Not recorded")).toHaveLength(3);
+    expect(screen.getAllByText("Not recorded")).toHaveLength(2);
   });
 
   it.each(["ADMIN", "STAFF", "DOCTOR"] as const)("opens the %s profile on mouse, Enter, and Space while preserving list query state", (role) => {

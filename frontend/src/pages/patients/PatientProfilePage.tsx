@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
-import { Card } from "../../components/Card";
 import { ConfirmDialog, InOverlayAlertDialog, Modal, StatePanel } from "../../components/v2";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
@@ -52,15 +51,16 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const reloadLatestTrigger = useRef<HTMLButtonElement>(null);
   const t = useFeatureT();
   const activeTab = searchParams.get("tab") ? tabFromSearch(searchParams.get("tab")) : defaultTab;
+  const visibleTab = activeTab === "billing" && role === "DOCTOR" ? "overview" : activeTab;
   const patient = usePatient(patientId);
   const updatePatient = useUpdatePatient(patientId);
   const archivePatient = useArchivePatient();
   const unarchivePatient = useUnarchivePatient();
   const tabQueriesEnabled = Boolean(patient.data);
-  const visits = usePatientVisits(patientId, tabQueriesEnabled && activeTab === "visits");
-  const appointments = usePatientAppointments(patientId, tabQueriesEnabled && activeTab === "appointments");
-  const xrays = usePatientXrays(patientId, tabQueriesEnabled && activeTab === "xrays");
-  const aiResults = usePatientAiResults(patientId, tabQueriesEnabled && activeTab === "xrays");
+  const visits = usePatientVisits(patientId, tabQueriesEnabled && visibleTab === "visits");
+  const appointments = usePatientAppointments(patientId, tabQueriesEnabled && visibleTab === "appointments");
+  const xrays = usePatientXrays(patientId, tabQueriesEnabled && visibleTab === "xrays");
+  const aiResults = usePatientAiResults(patientId, tabQueriesEnabled && visibleTab === "xrays");
 
   useEffect(() => {
     setIsEditing(searchParams.get("edit") === "1");
@@ -136,7 +136,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const isArchiveSubmitting = archivePatient.isPending || unarchivePatient.isPending;
 
   return (
-    <div className="patient-page">
+    <div className="patient-page patient-profile-page">
       <Link className="inline-back-link" to={patientListNavigation(role, `?${searchParams.toString()}`)}>
         {t("backToPatients")}
       </Link>
@@ -173,14 +173,15 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
         <InOverlayAlertDialog open={reloadConfirm} title={t("reloadPatientPrompt")} onClose={closeReloadConfirm}><button className="v2-button secondary" type="button" onClick={closeReloadConfirm}>{t("continueReviewing")}</button><button className="v2-button danger" type="button" onClick={() => void handleReloadLatestPatient()}>{t("reloadLatest")}</button>{reloadError ? <StatePanel state="error" title={t("requestFailed")} description={reloadError instanceof Error ? reloadError.message : undefined} /> : null}</InOverlayAlertDialog>
       </Modal>
 
-      <PatientProfileTabs role={role} activeTab={activeTab === "billing" && !permissions.canViewBillingTab ? "overview" : activeTab} onTabChange={setTab} />
+      <PatientProfileTabs role={role} activeTab={visibleTab} onTabChange={setTab} />
 
-      {activeTab === "overview" ? <PatientOverview patient={patient.data} /> : null}
-      {activeTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} onEdit={openEdit} /> : null}
-      {activeTab === "visits" ? (
+      <section id={`patient-profile-panel-${visibleTab}`} role="tabpanel" aria-labelledby={`patient-profile-tab-${visibleTab}`} tabIndex={0} className="patient-profile-panel">
+      {visibleTab === "overview" ? <PatientOverview patient={patient.data} /> : null}
+      {visibleTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} onEdit={openEdit} /> : null}
+      {visibleTab === "visits" ? (
         <PatientVisitsSummary role={role} visits={visits.data} isLoading={visits.isLoading} error={visits.error} onRetry={() => void visits.refetch()} />
       ) : null}
-      {activeTab === "appointments" ? (
+      {visibleTab === "appointments" ? (
         <PatientAppointmentsSummary
           role={role}
           appointments={appointments.data}
@@ -189,7 +190,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
           onRetry={() => void appointments.refetch()}
         />
       ) : null}
-      {activeTab === "xrays" ? (
+      {visibleTab === "xrays" ? (
         <PatientXraySummary
           role={role}
           patientId={patientId}
@@ -203,12 +204,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
           }}
         />
       ) : null}
-      {activeTab === "billing" && permissions.canViewBillingTab ? <PatientBillingSummary role={role} patientId={patientId} /> : null}
-      {activeTab === "billing" && !permissions.canViewBillingTab ? (
-        <Card>
-          <EmptyState title={t("billingUnavailableDoctor")} />
-        </Card>
-      ) : null}
+      {visibleTab === "billing" && permissions.canViewBillingTab ? <PatientBillingSummary role={role} patientId={patientId} /> : null}
+      </section>
 
       <ConfirmDialog open={Boolean(archiveMode)} title={archiveMode === "archive" ? t("archivePatient") : t("unarchivePatient")} description={archiveMode === "archive" ? t("archivePatientHelp") : t("unarchivePatientPrompt")} onClose={() => setArchiveMode(null)} pending={isArchiveSubmitting}><button className={archiveMode === "archive" ? "v2-button danger" : "v2-button"} type="button" onClick={() => void handleArchiveChange()} disabled={isArchiveSubmitting}>{archiveMode === "archive" ? t("archivePatient") : t("unarchivePatient")}</button>{archiveError ? <ErrorState error={archiveError} title={t("unableArchive")} /> : null}</ConfirmDialog>
     </div>

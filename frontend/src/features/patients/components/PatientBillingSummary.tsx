@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 
 import { Card } from "../../../components/Card";
 import { SectionHeader } from "../../../components/SectionHeader";
+import { useFeatureT } from "../../../layouts/i18n";
 import type { UserRole } from "../../../types/auth";
 
 interface PatientBillingSummaryProps {
@@ -10,12 +11,13 @@ interface PatientBillingSummaryProps {
 }
 
 export function PatientBillingSummary({ role, patientId }: PatientBillingSummaryProps) {
+  const t = useFeatureT();
   if (role === "DOCTOR") {
     return (
       <Card>
-        <SectionHeader title="Billing handoffs" description="Doctors can use the My Billing Handoffs workspace for own handoff context." />
+        <SectionHeader title={t("billingHandoffs")} description={t("patientBillingDoctorDescription")} />
         <Link className="button secondary" to="/doctor/billing/handoffs">
-          My Billing Handoffs
+          {t("myBillingHandoffs")}
         </Link>
       </Card>
     );
@@ -23,9 +25,9 @@ export function PatientBillingSummary({ role, patientId }: PatientBillingSummary
 
   return (
     <Card>
-      <SectionHeader title="Billing/Handoff" description="Open the real billing workspace to review this patient's invoices and handoffs." />
+      <SectionHeader title={t("billingHandoff")} description={t("patientBillingDescription")} />
       <Link className="button secondary inline-action" to={`/${role.toLowerCase()}/billing/invoices${patientId ? `?patient_id=${patientId}` : ""}`}>
-        Patient invoices
+        {t("patientInvoices")}
       </Link>
     </Card>
   );

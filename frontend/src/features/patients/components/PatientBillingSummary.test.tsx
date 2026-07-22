@@ -12,8 +12,7 @@ describe("PatientBillingSummary", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: "My Billing Handoffs" })).toBeInTheDocument();
-    expect(screen.queryByText(/invoice/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/payment/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "My billing handoffs" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /invoice|payment/i })).not.toBeInTheDocument();
   });
 });

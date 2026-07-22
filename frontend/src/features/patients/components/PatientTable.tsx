@@ -23,7 +23,7 @@ export function PatientTable({ role, patients }: PatientTableProps) {
   const location = useLocation();
   const t = useFeatureT();
 
-  return <table className="patient-table"><thead><tr><th>{t("patient")}</th><th>{t("patientListContact")}</th><th>{t("gender")}</th><th>{t("patientListLastVisit")}</th><th>{t("patientListNextAppointment")}</th></tr></thead><tbody>{patients.map((patient) => {
+  return <table className="patient-table"><thead><tr><th>{t("patient")}</th><th>{t("patientListContact")}</th><th>{t("gender")}</th><th>{t("patientListLastVisit")}</th></tr></thead><tbody>{patients.map((patient) => {
     const demographic = patient.age !== null && patient.age !== undefined ? `${patient.age} ${t("yearsOld")} · ${genderLabel(patient, t)}` : genderLabel(patient, t);
     const lastVisit = patient.last_visit_with_me_at ? formatDateTime(patient.last_visit_with_me_at) : t("notRecorded");
     return <ClickableRow key={patient.id} ariaLabel={patient.full_name} showDisclosure={false} onOpen={() => navigate(patientDetailNavigation(role, patient.id, location.search))}>
@@ -31,7 +31,6 @@ export function PatientTable({ role, patients }: PatientTableProps) {
       <td><span className="patient-contact"><bdi>{displayText(patient.phone_number, t("notRecorded"))}</bdi>{patient.email ? <bdi>{patient.email}</bdi> : null}</span></td>
       <td>{genderLabel(patient, t)}</td>
       <td><bdi>{lastVisit}</bdi></td>
-      <td><bdi>{t("notRecorded")}</bdi></td>
     </ClickableRow>;
   })}</tbody></table>;
 }

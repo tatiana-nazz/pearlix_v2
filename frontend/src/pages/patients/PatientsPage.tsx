@@ -84,9 +84,9 @@ export function PatientsPage({ role }: PatientsPageProps) {
   function setDoctorFilter(value: DoctorWorkflowFilter) { updateParams((next) => { if (value === "all") next.delete("scope"); else next.set("scope", value); next.set("page", "1"); }); }
   function clearFilters() { pendingSearch.current = false; setSearch(""); setDebouncedSearch(""); updateParams((next) => { next.delete("search"); next.delete("archive"); next.delete("scope"); next.set("page", "1"); }); }
 
-  return <div className="patient-page">
+  return <div className="patient-page patient-directory-page">
     <PageHeader eyebrow={workspace} title={t("patients")} description={description} actions={permissions.canCreate ? <Link className="button primary" to={newPatientPath(role)}>{t("addPatient")}</Link> : null} />
-    <Card><PatientFilters role={role} search={search} archiveFilter={archiveFilter} doctorFilter={doctorFilter} hasActiveFilters={hasActiveFilters} onSearchChange={(value) => { pendingSearch.current = true; setSearch(value); }} onArchiveFilterChange={setArchiveFilter} onDoctorFilterChange={setDoctorFilter} onClear={clearFilters} /></Card>
+    <Card className="patient-filter-card"><PatientFilters role={role} search={search} archiveFilter={archiveFilter} doctorFilter={doctorFilter} hasActiveFilters={hasActiveFilters} onSearchChange={(value) => { pendingSearch.current = true; setSearch(value); }} onArchiveFilterChange={setArchiveFilter} onDoctorFilterChange={setDoctorFilter} onClear={clearFilters} /></Card>
     {patients.isLoading && !patients.data ? <LoadingState title={t("loadingPatients")} /> : null}
     {patients.isError && !patients.data ? <ErrorState error={patients.error} onRetry={() => void patients.refetch()} title={t("unableToLoadPatients")} /> : null}
     {patients.data ? <DataTableShell title={t("allPatients")} count={patients.data.count} state={!patients.data.results.length ? <StatePanel state="empty" title={hasActiveFilters ? t("patientNoMatching") : t("patientNoRecords")} /> : undefined}>

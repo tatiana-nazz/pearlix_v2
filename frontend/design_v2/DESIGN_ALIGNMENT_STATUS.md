@@ -14,3 +14,11 @@
 - Stage 2 evidence: `frontend/design_v2/design_alignment_evidence/dashboards/`. Implementation commit: `81c45696ed055ec62a9a44c0fc93b37f5f5079a4`.
 - Stage 3 appointment workflow alignment is complete: workspace, calendar views, list and Needs Reschedule worklists, filters, details, creation, availability, and rescheduling now follow the medical-blue composition while preserving all accepted contracts and role boundaries. Frontend verification, typecheck, production build, and Staff/Admin/Doctor browser matrix passed; functional changes none, backend changes none, migrations none. Evidence: `frontend/design_v2/design_alignment_evidence/appointments/`. Implementation commit: `a3dd5b20234fc22ebdd44729e7cd81c4a11ebc41`.
 - Next stage: patient workflow alignment.
+
+## Post-Phase-14F Stage 4 — Patient workflows
+
+- Stage 4 aligns the Staff, Admin, and Doctor patient directory, creation, profile, clinical-history, X-ray/AI, and billing-handoff surfaces with the medical-blue visual system.
+- Functional behavior is preserved except for removing the unsupported fabricated "Next appointment" table value, fixing Doctor billing-tab fallback selection, and adding accessible keyboard navigation for profile tabs.
+- Backend changes: none. Migrations: none. Evidence: `frontend/design_v2/design_alignment_evidence/patients/`.
+- Verification and implementation commit are recorded in `frontend/design_v2/PATIENT_ALIGNMENT_RECORD.md`.
+- Next recommended stage: Team and staff-management alignment.

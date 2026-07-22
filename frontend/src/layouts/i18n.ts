@@ -245,6 +245,19 @@ const appointmentDetailSummaryMessages = {
   },
 } as const;
 
+const patientAlignmentMessages = {
+  EN: {
+    patientBillingDescription: "Open the billing workspace to review this patient's real invoices and handoffs.",
+    patientBillingDoctorDescription: "Doctors can review their own billing handoff context without invoice or payment controls.",
+    patientInvoices: "Patient invoices",
+  },
+  AR: {
+    patientBillingDescription: "افتح مساحة عمل الفوترة لمراجعة فواتير هذا المريض وتحويلاته الفعلية.",
+    patientBillingDoctorDescription: "يمكن للأطباء مراجعة سياق تحويلات الفوترة الخاصة بهم دون عناصر تحكم بالفواتير أو المدفوعات.",
+    patientInvoices: "فواتير المريض",
+  },
+} as const;
+
 const taskMMessages = {
   EN: { finalCharge: "Final charge", finalChargeGuidance: "This final charge creates the official invoice immediately.", billingNoteOptional: "Billing note (optional)", createInvoice: "Create invoice", finalChargeFailed: "Unable to create the invoice. Review the final charge and try again." },
   AR: { finalCharge: "المبلغ النهائي", finalChargeGuidance: "يؤدي إرسال المبلغ النهائي إلى إنشاء الفاتورة الرسمية فورًا.", billingNoteOptional: "ملاحظة فوترة (اختيارية)", createInvoice: "إنشاء الفاتورة", finalChargeFailed: "تعذر إنشاء الفاتورة. راجع المبلغ النهائي وحاول مرة أخرى." },
@@ -285,6 +298,7 @@ const teamDirectoryMessageKeysMatch: SameKeys<typeof teamDirectoryMessages.EN, t
 const professionalScheduleMessageKeysMatch: SameKeys<typeof professionalScheduleMessages.EN, typeof professionalScheduleMessages.AR> = true;
 const leavePolishMessageKeysMatch: SameKeys<typeof leavePolishMessages.EN, typeof leavePolishMessages.AR> = true;
 const appointmentDetailSummaryMessageKeysMatch: SameKeys<typeof appointmentDetailSummaryMessages.EN, typeof appointmentDetailSummaryMessages.AR> = true;
+const patientAlignmentMessageKeysMatch: SameKeys<typeof patientAlignmentMessages.EN, typeof patientAlignmentMessages.AR> = true;
 const taskKMessageKeysMatch: SameKeys<typeof taskKMessages.EN, typeof taskKMessages.AR> = true;
 
 void baseMessageKeysMatch;
@@ -307,13 +321,14 @@ void teamDirectoryMessageKeysMatch;
 void professionalScheduleMessageKeysMatch;
 void leavePolishMessageKeysMatch;
 void appointmentDetailSummaryMessageKeysMatch;
+void patientAlignmentMessageKeysMatch;
 void taskKMessageKeysMatch;
 
 function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is keyof Value {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN | keyof typeof appointmentDetailSummaryMessages.EN | keyof typeof taskKMessages.EN | keyof typeof taskMMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN | keyof typeof appointmentDetailSummaryMessages.EN | keyof typeof patientAlignmentMessages.EN | keyof typeof taskKMessages.EN | keyof typeof taskMMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -363,6 +378,9 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
   if (hasOwnKey(leavePolishDictionary, key)) return leavePolishDictionary[key];
   const appointmentDetailSummaryDictionary = appointmentDetailSummaryMessages[language];
   if (hasOwnKey(appointmentDetailSummaryDictionary, key)) return appointmentDetailSummaryDictionary[key];
+
+  const patientAlignmentDictionary = patientAlignmentMessages[language];
+  if (hasOwnKey(patientAlignmentDictionary, key)) return patientAlignmentDictionary[key];
   const taskKDictionary = taskKMessages[language];
   if (hasOwnKey(taskKDictionary, key)) return taskKDictionary[key];
 

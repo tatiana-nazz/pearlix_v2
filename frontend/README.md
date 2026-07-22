@@ -93,7 +93,7 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 
 ## Patient Management
 
-Phase 13E adds real patient management routes. Phase 13E.1 upgrades the patient schema and frontend contract:
+Phase 13E adds real patient management routes. Phase 13E.1 upgrades the patient schema and frontend contract. Post-Phase-14F Stage 4 aligns the Staff, Admin, and Doctor patient workflow surfaces with the medical-blue system while preserving backend contracts; evidence is in `frontend/design_v2/design_alignment_evidence/patients/`.
 
 - Admin: `/admin/patients`, `/admin/patients/:patientId`
 - Staff: `/staff/patients`, `/staff/patients/new`, `/staff/patients/:patientId`
@@ -197,6 +197,6 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-Phase 14D automated acceptance and Phase 14E supporting operations automated acceptance are complete. Phase 14F browser visual/UAT acceptance is complete. Frontend verification: 68 test files, 236 tests; TypeScript typecheck and production build passed. Focused protected-media backend verification: 50 passed; full backend verification: 423 passed; Django check passed; migration drift: no changes detected; backend runtime modified in Phase 14F: no; migrations: none. Current-head browser evidence is `frontend/design_v2/phase14f_evidence/current_head_acceptance/`.
+Phase 14D automated acceptance and Phase 14E supporting operations automated acceptance are complete. Phase 14F browser visual/UAT acceptance is complete. Post-Phase-14F Stage 4 patient alignment is complete. Its final frontend verification count and implementation commit are recorded in `frontend/design_v2/PATIENT_ALIGNMENT_RECORD.md`; backend changes: none; migrations: none. Current-head browser evidence is `frontend/design_v2/phase14f_evidence/current_head_acceptance/` and patient evidence is `frontend/design_v2/design_alignment_evidence/patients/`.
 
 `backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D, Phase 14E, and Phase 14F browser visual/UAT acceptance are complete. See `frontend/design_v2/PHASE_14F_BROWSER_AUDIT.md`.

@@ -1,4 +1,4 @@
-"""Validate Phase 14F current-head closure documentation and evidence."""
+"""Validate Phase 14F closure and post-Phase-14F patient evidence."""
 from pathlib import Path
 import sys
 
@@ -21,6 +21,22 @@ EVIDENCE_FILES = (
     "admin-team-setup-required-1024x900-en-dark.png",
     "doctor-active-visit-empty-768x1024-ar-light-rtl.png",
     "doctor-xray-ai-detail-768x1024-ar-light-rtl.png",
+)
+PATIENT_STATUS_FILES = (
+    "frontend/design_v2/PATIENT_ALIGNMENT_RECORD.md",
+    "frontend/design_v2/design_alignment_evidence/patients/EVIDENCE_INDEX.md",
+)
+PATIENT_EVIDENCE_FILES = (
+    "staff-patients-directory-1440x900-en-light.png",
+    "staff-patient-profile-overview-1440x900-en-light.png",
+    "admin-patients-directory-1024x900-en-dark.png",
+    "doctor-patients-directory-768x1024-ar-light-rtl.png",
+)
+PATIENT_REQUIREMENTS = (
+    "stage 4",
+    "patient",
+    "backend changes: none",
+    "migrations: none",
 )
 STALE_CURRENT_AUTHORITY = (
     "phase 14f browser visual/uat acceptance is next",
@@ -54,10 +70,22 @@ def main() -> int:
         if not (ROOT / "frontend/design_v2/phase14f_evidence/current_head_acceptance" / filename).is_file():
             errors.append(f"missing current-head evidence screenshot: {filename}")
 
+    for relative in PATIENT_STATUS_FILES:
+        source = read(relative, errors)
+        lowered = source.lower()
+        for requirement in PATIENT_REQUIREMENTS:
+            if requirement not in lowered:
+                errors.append(f"{relative} missing Stage 4 fact: {requirement!r}")
+
+    patient_evidence = ROOT / "frontend/design_v2/design_alignment_evidence/patients"
+    for filename in PATIENT_EVIDENCE_FILES:
+        if not (patient_evidence / filename).is_file():
+            errors.append(f"missing patient evidence screenshot: {filename}")
+
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
         return 1
-    print("Documentation consistency check passed for Phase 14F current-head closure.")
+    print("Documentation consistency check passed for Phase 14F closure and Stage 4 patient evidence.")
     return 0
 
 

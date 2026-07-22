@@ -80,9 +80,9 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
     blocker.proceed();
   }
 
-  return <div className="patient-page narrow">
+  return <div className="patient-page patient-form-page narrow">
     <PageHeaderV2 title={t("addPatient")} description={t("createPatientDescription")} />
-    <SurfaceCard major>
+    <SurfaceCard major className="patient-form-surface">
       <PatientForm mode="create" role={role} submitLabel={t("createPatient")} isSubmitting={createPatient.isPending} error={createPatient.error} onSubmit={handleSubmit} onDirtyChange={setFormDirty} onCancel={() => navigate(patientListPath(role))} />
     </SurfaceCard>
     <ConfirmDialog open={confirmLeave} title={t("discardChanges")} description={t("discardChanges")} onClose={keepEditing} pending={createPatient.isPending}>
