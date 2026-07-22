@@ -28,3 +28,113 @@
 
 /* Directory metadata must remain readable beside names and status badges. */
 .team-directory-role,.team-directory-card-fields small,.team-directory-card-metrics { font-size:var(--v2-font-size-body); line-height:1.45; }
+
+/* Stage 5: Team and staff-management composition.  These are intentionally
+   page-oriented layers on the shared medical-blue primitives, not a second
+   component system. */
+.team-directory-page > .page-header,
+.users-access-page > .page-header,
+.schedule-management-page > .page-header,
+.own-profile-page > .page-header {
+  position:relative;
+  overflow:hidden;
+  align-items:end;
+  min-block-size:132px;
+  border:1px solid var(--v2-border-strong);
+  border-radius:var(--v2-radius-card);
+  padding:var(--v2-space-6);
+  background:var(--color-info-bg);
+  box-shadow:var(--v2-shadow-major);
+}
+.team-directory-page > .page-header::after,
+.users-access-page > .page-header::after,
+.schedule-management-page > .page-header::after,
+.own-profile-page > .page-header::after {
+  position:absolute;
+  inset-block:0;
+  inset-inline-end:0;
+  inline-size:31%;
+  border-inline-start:1px solid var(--color-info-border);
+  background:var(--v2-surface);
+  content:"";
+  opacity:.74;
+}
+.team-directory-page > .page-header > *,
+.users-access-page > .page-header > *,
+.schedule-management-page > .page-header > *,
+.own-profile-page > .page-header > * { position:relative; z-index:1; }
+.team-directory-page > .page-header h2,
+.users-access-page > .page-header h2,
+.schedule-management-page > .page-header h2,
+.own-profile-page > .page-header h2 { font-size:clamp(1.7rem,2.5vw,2.35rem); letter-spacing:-.035em; }
+
+.team-directory-page > .v2-tabs { inline-size:max-content; max-inline-size:100%; margin-block:-4px var(--v2-space-2); box-shadow:var(--shadow-soft); }
+.team-directory-shell { border-color:var(--v2-border-strong); padding:0; overflow:hidden; box-shadow:var(--v2-shadow-major); }
+.team-directory-toolbar { align-items:stretch; padding:var(--v2-space-5); background:var(--v2-surface-subtle); border-block-end:1px solid var(--v2-border); }
+.team-directory-toolbar h3 { display:grid; align-content:center; min-inline-size:10rem; color:var(--v2-primary-strong); font-size:1.08rem; }
+.team-directory-toolbar .v2-table-toolbar { flex:1; }
+.team-directory-toolbar input { flex:1 1 17rem; }
+.team-directory-toolbar select { flex:0 1 11rem; }
+.team-directory-grid { padding:var(--v2-space-5); background:var(--v2-surface-subtle); }
+.team-directory-card { grid-template-rows:auto 1fr auto auto; min-block-size:318px; border-block-start:4px solid var(--v2-primary); border-radius:var(--v2-radius-card); padding:var(--v2-space-5); box-shadow:0 1px 0 rgba(15, 56, 96, .04); }
+.team-directory-card:nth-child(3n + 2) { border-block-start-color:var(--v2-info); }
+.team-directory-card:nth-child(3n) { border-block-start-color:var(--v2-success); }
+.team-directory-avatar { inline-size:52px; block-size:52px; border-radius:var(--v2-radius-small); border:1px solid var(--color-info-border); }
+.team-directory-card-header strong { color:var(--v2-primary-strong); font-size:1.08rem; }
+.team-directory-card-fields { align-content:start; padding-block:var(--v2-space-3); border-block:1px solid var(--v2-border); }
+.team-directory-card-status { justify-content:space-between; border-radius:var(--v2-radius-control); padding:var(--v2-space-2) var(--v2-space-3); background:var(--v2-surface-subtle); }
+.team-directory-card-metrics { display:grid; grid-template-columns:1fr 1fr; gap:var(--v2-space-2); color:var(--v2-text); }
+.team-directory-card-metrics > span { min-inline-size:0; padding:var(--v2-space-2); border-inline-start:2px solid var(--color-info-border); background:var(--v2-surface-subtle); overflow-wrap:anywhere; }
+.team-directory-card-metrics > span:last-child { grid-column:span 2; }
+
+.users-access-page > .v2-table-shell { border:1px solid var(--v2-border-strong); border-radius:var(--v2-radius-card); padding:var(--v2-space-5); box-shadow:var(--v2-shadow-major); }
+.users-access-page .v2-table-shell th { border-block-end:2px solid var(--v2-border-strong); background:var(--color-info-bg); color:var(--v2-primary-strong); font-weight:800; }
+.users-access-page .v2-table-shell td:first-child strong { color:var(--v2-primary-strong); font-size:1rem; }
+.users-access-page .v2-table-shell td:first-child small { color:var(--v2-muted); }
+.users-access-page .v2-table-shell tbody tr { border-inline-start:3px solid transparent; }
+.users-access-page .v2-table-shell tbody tr:hover { border-inline-start-color:var(--v2-primary); }
+.user-account-detail .dashboard-columns { grid-template-columns:1.25fr .85fr; gap:var(--v2-space-5); }
+.user-account-detail .dashboard-columns > .v2-card { min-block-size:170px; border-block-start:4px solid var(--v2-primary); }
+.user-account-detail .dashboard-columns > .v2-card:nth-child(2) { border-block-start-color:var(--v2-warning); background:var(--color-warning-bg); }
+.user-account-detail .dashboard-columns > .v2-card:nth-child(3) { border-block-start-color:var(--v2-info); }
+.user-account-detail .dashboard-columns > .v2-card:nth-child(4) { border-block-start-color:var(--v2-success); }
+.user-account-detail > .v2-card:last-of-type { border-color:var(--color-danger-border); background:var(--color-danger-bg); }
+
+.schedule-management-page > .schedule-grid { grid-template-columns:minmax(0,.92fr) minmax(0,1.28fr); gap:var(--v2-space-6); }
+.schedule-management-page .schedule-grid > .v2-card { display:grid; align-content:start; gap:var(--v2-space-4); min-block-size:620px; border-color:var(--v2-border-strong); box-shadow:var(--v2-shadow-major); }
+.schedule-management-page .schedule-grid > .v2-card:first-child { border-block-start:5px solid var(--v2-info); }
+.schedule-management-page .schedule-grid > .v2-card:last-child { border-block-start:5px solid var(--v2-primary); }
+.schedule-management-page .v2-table-toolbar { align-items:end; padding:var(--v2-space-3); border:1px solid var(--v2-border); border-radius:var(--v2-radius-small); background:var(--v2-surface-subtle); }
+.schedule-management-page .schedule-list { gap:var(--v2-space-3); }
+.schedule-management-page .schedule-list li { min-block-size:86px; border-inline-start:4px solid var(--v2-info); border-radius:var(--v2-radius-small); background:var(--v2-surface-subtle); padding:var(--v2-space-4); }
+.schedule-management-page .schedule-grid > .v2-card:last-child .schedule-list li { border-inline-start-color:var(--v2-primary); }
+.schedule-management-page .schedule-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:var(--v2-space-2); }
+
+.leave-list-header { padding:var(--v2-space-4); border-radius:var(--v2-radius-small); background:var(--color-info-bg); }
+.leave-filter-grid { padding:var(--v2-space-4); border:1px solid var(--v2-border); border-radius:var(--v2-radius-card); background:var(--v2-surface-subtle); }
+.leave-record-table tbody tr { border-inline-start:4px solid var(--v2-info); }
+.leave-record-table tbody tr:nth-child(even) { border-inline-start-color:var(--v2-primary); }
+.leave-record-table tbody td:first-child strong { color:var(--v2-primary-strong); }
+.own-profile-page > .workspace-tabs { border:1px solid var(--v2-border); border-radius:var(--v2-radius-small); background:var(--v2-surface-subtle); padding-inline:var(--v2-space-2); }
+.own-profile-page .own-profile-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--v2-space-4); }
+.own-profile-page .own-profile-grid > div { min-block-size:104px; border-block-start:4px solid var(--v2-primary); background:var(--v2-surface); box-shadow:var(--shadow-soft); }
+.own-profile-page .own-profile-grid > div:nth-child(3n + 2) { border-block-start-color:var(--v2-info); }
+.own-profile-page .own-profile-grid > div:nth-child(3n) { border-block-start-color:var(--v2-success); }
+.own-profile-page .v2-card.major { border-color:var(--v2-border-strong); box-shadow:var(--v2-shadow-major); }
+
+@media (max-width:1023px) {
+  .team-directory-page > .page-header,.users-access-page > .page-header,.schedule-management-page > .page-header,.own-profile-page > .page-header { min-block-size:112px; }
+  .schedule-management-page > .schedule-grid,.user-account-detail .dashboard-columns { grid-template-columns:1fr; }
+  .schedule-management-page .schedule-grid > .v2-card { min-block-size:auto; }
+  .own-profile-page .own-profile-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:720px) {
+  .team-directory-page > .page-header,.users-access-page > .page-header,.schedule-management-page > .page-header,.own-profile-page > .page-header { min-block-size:auto; padding:var(--v2-space-5); }
+  .team-directory-page > .page-header::after,.users-access-page > .page-header::after,.schedule-management-page > .page-header::after,.own-profile-page > .page-header::after { inline-size:22%; }
+  .team-directory-toolbar { padding:var(--v2-space-4); }
+  .team-directory-card-metrics { grid-template-columns:1fr; }
+  .team-directory-card-metrics > span:last-child { grid-column:auto; }
+  .schedule-management-page .v2-table-toolbar { align-items:stretch; flex-direction:column; }
+  .schedule-management-page .v2-table-toolbar .v2-button { inline-size:100%; }
+  .own-profile-page .own-profile-grid { grid-template-columns:1fr; }
+}

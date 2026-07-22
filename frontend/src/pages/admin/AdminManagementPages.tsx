@@ -66,7 +66,7 @@ export function AdminUserListPage() {
   const navigate = useNavigate();
   const t = useFeatureT();
 
-  return <div className="admin-page"><PageHeaderV2 title={t("usersAccess")} description={t("usersDescription")} action={<Link className="v2-button" to="/admin/users/new">{t("newUser")}</Link>} />
+  return <div className="admin-page users-access-page"><PageHeaderV2 title={t("usersAccess")} description={t("usersDescription")} action={<Link className="v2-button" to="/admin/users/new">{t("newUser")}</Link>} />
     <DataTableShell title={t("accounts")} count={users.data?.count} state={users.isLoading ? <StatePanel state="loading" title={t("loadingAccounts")} /> : users.isError ? <StatePanel state="error" title={t("unableLoadAccounts")} description={getErrorMessage(users.error)} action={<Button variant="secondary" onClick={() => void users.refetch()}>{t("retry")}</Button>} /> : undefined}>
       {users.data ? <table><thead><tr><th>{t("user")}</th><th>{t("role")}</th><th>{t("loginStatus")}</th><th>{t("passwordState")}</th><th>{t("profileState")}</th><th>{t("created")}</th><th>{t("updated")}</th><th /></tr></thead><tbody>{users.data.results.map((user) => <ClickableRow key={user.id} onOpen={() => navigate(`/admin/users/${user.id}`)}><td><strong className="bidi-isolate">{user.full_name}</strong><br /><small className="bidi-isolate">{user.email}</small></td><td>{roleLabel(user.role, t)}</td><td><StatusBadge status={user.is_active ? "ACTIVE" : "INACTIVE"} /></td><td>{user.must_change_password ? t("mustChangePassword") : t("passwordCurrent")}</td><td>{user.team_member_id ? <Link data-row-action to={`/admin/team/${user.team_member_id}`}>{profileState(user, t)}</Link> : profileState(user, t)}</td><td className="bidi-isolate">{formatDateTime(user.created_at)}</td><td className="bidi-isolate">{formatDateTime(user.updated_at)}</td></ClickableRow>)}</tbody></table> : null}
     </DataTableShell>{users.data ? <Pagination page={page} hasPrevious={Boolean(users.data.previous)} hasNext={Boolean(users.data.next)} onPrevious={() => setPage(page - 1)} onNext={() => setPage(page + 1)} /> : null}</div>;
@@ -92,7 +92,7 @@ function NewUserForm() {
   </form>;
 }
 
-export function AdminNewUserPage() { const t = useFeatureT(); return <div className="admin-page"><PageHeaderV2 title={t("newUser")} description={t("newUserDescription")} /><SurfaceCard major><NewUserForm /></SurfaceCard></div>; }
+export function AdminNewUserPage() { const t = useFeatureT(); return <div className="admin-page users-access-page"><PageHeaderV2 title={t("newUser")} description={t("newUserDescription")} /><SurfaceCard major><NewUserForm /></SurfaceCard></div>; }
 
 function RoleTransition({ user, onClose }: { user: UserManagementRecord; onClose: () => void }) {
   const t = useFeatureT();
@@ -135,7 +135,7 @@ export function AdminUserDetailPage() {
   if (user.isError || !user.data) return <StatePanel state="error" title={t("accountUnavailable")} description={user.error ? getErrorMessage(user.error) : undefined} />;
   const item = user.data;
 
-  return <div className="admin-page"><Link className="inline-back-link" to="/admin/users">{t("usersAccess")}</Link><PageHeaderV2 title={item.full_name} description={t("authenticationAuthority")} /><div className="dashboard-columns">
+  return <div className="admin-page users-access-page user-account-detail"><Link className="inline-back-link" to="/admin/users">{t("usersAccess")}</Link><PageHeaderV2 title={item.full_name} description={t("authenticationAuthority")} /><div className="dashboard-columns">
     <SurfaceCard><SectionHeading title={t("accountIdentity")} /><dl className="detail-grid"><div><dt>{t("loginEmail")}</dt><dd className="bidi-isolate">{item.email}</dd></div><div><dt>{t("created")}</dt><dd className="bidi-isolate">{formatDateTime(item.created_at)}</dd></div><div><dt>{t("updated")}</dt><dd className="bidi-isolate">{formatDateTime(item.updated_at)}</dd></div></dl></SurfaceCard>
     <SurfaceCard><SectionHeading title={t("securityPassword")} /><p><StatusBadge status={item.is_active ? "ACTIVE" : "INACTIVE"} /> · {item.must_change_password ? t("mustChangePassword") : t("passwordCurrent")}</p><Button variant="secondary" onClick={() => setResetOpen(true)}><KeyRound size={16} />{t("resetPassword")}</Button></SurfaceCard>
     <SurfaceCard><SectionHeading title={t("roleAccess")} /><p>{roleLabel(item.role, t)}</p><Button variant="secondary" onClick={() => setTransitionOpen(true)}><UserRoundCog size={16} />{t("changeRole")}</Button></SurfaceCard>

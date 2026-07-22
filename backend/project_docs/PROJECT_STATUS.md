@@ -21,6 +21,8 @@ Post-Phase-14F activity: medical-blue visual-alignment Stages 1 and 2 remain com
 
 Post-Phase-14F Stage 4 patient workflow alignment is complete for the Staff, Admin, and Doctor patient experience. It made no backend change and added no migration. Frontend verification passed: 71 test files / 246 tests, typecheck, and production build; Django check, migration drift, documentation consistency, and diff check passed. The evidence and verification record are `frontend/design_v2/design_alignment_evidence/patients/` and `frontend/design_v2/PATIENT_ALIGNMENT_RECORD.md`; implementation commit: `2e2309cc278a86bceaa78d2da3166fb12c127231`.
 
+Post-Phase-14F Stage 5 team and staff-management visual alignment is complete for Team, Users & Access, schedules, leave, and own-profile surfaces. It preserves backend contracts, permissions, query state, security flows, and routes; backend changes: none; migrations: none. Evidence and visual-delta record: `frontend/design_v2/design_alignment_evidence/team-management/`, `frontend/design_v2/TEAM_MANAGEMENT_ALIGNMENT_RECORD.md`, and `frontend/design_v2/TEAM_MANAGEMENT_VISUAL_DELTA.md`. The next recommended stage is billing and financial workflow alignment.
+
 Remaining post-MVP limitations include real AI integration, email forgot-password, unsupported professional fields, online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.
 
 ## Historical context

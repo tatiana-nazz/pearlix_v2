@@ -67,6 +67,17 @@ describe("Admin Team acceptance additions", () => {
     expect(await screen.findByText("Doctors professional record")).toBeInTheDocument();
   });
 
+  it("keeps the visual directory regions semantic and the selected presentation explicit", async () => {
+    vi.mocked(teamApi.list).mockResolvedValue({ count: 1, next: null, previous: null, results: [member] });
+    renderPage();
+    const card = await screen.findByRole("button", { name: "Doctors Dr Maya" });
+    expect(card).toHaveClass("team-directory-card");
+    expect(card.querySelector(".team-directory-card-status")).not.toBeNull();
+    expect(card.querySelector(".team-directory-card-metrics")).not.toBeNull();
+    expect(screen.getByRole("group", { name: "Directory presentation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cards" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("creates a Doctor with the exact production payload and keeps values after a failed create", async () => {
     vi.mocked(teamApi.list).mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
     vi.mocked(teamApi.create).mockRejectedValueOnce(new Error("Email already exists"));

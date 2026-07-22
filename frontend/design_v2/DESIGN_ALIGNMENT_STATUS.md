@@ -22,3 +22,10 @@
 - Backend changes: none. Migrations: none. Evidence: `frontend/design_v2/design_alignment_evidence/patients/`.
 - Verification passed: 71 frontend test files / 246 tests, TypeScript typecheck, production build, Django check, migration drift, documentation consistency, and diff check. Implementation commit: `2e2309cc278a86bceaa78d2da3166fb12c127231`; detailed evidence is recorded in `frontend/design_v2/PATIENT_ALIGNMENT_RECORD.md`.
 - Next recommended stage: Team and staff-management alignment.
+
+## Post-Phase-14F Stage 5 â€” Team and staff-management workflows
+
+- Stage 5 aligns Team, Users & Access, schedule management, leave management, and Staff/Doctor self-service profile workflows to the medical-blue composition.
+- Functional/backend changes: none. Migrations: none. Evidence: `frontend/design_v2/design_alignment_evidence/team-management/`.
+- The Stage 5 visual-delta assessment passed: `frontend/design_v2/TEAM_MANAGEMENT_VISUAL_DELTA.md`.
+- Next recommended stage: billing and financial workflow alignment.

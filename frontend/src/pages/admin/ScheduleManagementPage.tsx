@@ -86,7 +86,7 @@ export function ScheduleManagementPage() {
   const defaultRows = defaults.data?.results ?? [];
   const employeeRows = shifts.data?.results ?? [];
 
-  return <div className="admin-page">
+  return <div className="admin-page schedule-management-page">
     <PageHeaderV2 title={t("schedules")} description={t("scheduleHelp")} />
     {invariantError ? <StatePanel state="error" title={t("cannotRemoveFinalShift")} description={`${t("deactivateProfessionalFirst")} · ${t("addAnotherActiveShift")}`} /> : null}
     <div className="schedule-grid">
