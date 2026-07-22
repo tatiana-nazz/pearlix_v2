@@ -29,9 +29,10 @@ export function ClinicalNotesForm({ values, disabled, isSaving, error, onChange,
         onSave();
       }}
     >
-      {clinicalNoteFields.map((field) => (
-        <label key={field.key}>
-          {t(field.label)}
+      <div className="clinical-notes-grid">
+      {clinicalNoteFields.map((field, index) => (
+        <label key={field.key} className={index === 3 ? "clinical-note-field wide" : "clinical-note-field"}>
+          <span>{t(field.label)}</span>
           <textarea
             name={field.key}
             rows={field.rows}
@@ -41,8 +42,9 @@ export function ClinicalNotesForm({ values, disabled, isSaving, error, onChange,
           />
         </label>
       ))}
+      </div>
       {error ? <p className="form-error" role="alert">{t("unableToSaveNotes")}</p> : null}
-      <div className="form-actions">
+      <div className="form-actions clinical-notes-actions">
         <Button type="submit" loading={isSaving} disabled={disabled}>{isSaving ? t("savingNotes") : t("saveNotes")}</Button>
       </div>
     </form>

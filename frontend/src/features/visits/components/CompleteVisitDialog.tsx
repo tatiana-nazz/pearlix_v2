@@ -14,7 +14,11 @@ export function CompleteVisitDialog({ patientName, hasUnsavedNotes, isSubmitting
   const t = useFeatureT();
   return (
     <ConfirmDialog open title={t("completeVisit")} description={`${t("completeVisitDescription")} ${patientName}`} onClose={onCancel} pending={isSubmitting}>
-      {hasUnsavedNotes ? <p className="form-note">{t("dirtyNotesComplete")}</p> : null}
+      <div className="visit-completion-summary">
+        <span className="visit-completion-label">{t("patient")}</span>
+        <strong className="bidi-isolate">{patientName}</strong>
+        {hasUnsavedNotes ? <p className="form-note">{t("dirtyNotesComplete")}</p> : null}
+      </div>
       {error ? <StatePanel state="error" title={t("unableToCompleteVisit")} /> : null}
       <div className="form-actions">
         <Button variant="secondary" type="button" disabled={isSubmitting} onClick={onCancel}>{t("keepVisitActive")}</Button>

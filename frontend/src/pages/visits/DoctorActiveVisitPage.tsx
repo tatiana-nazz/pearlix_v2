@@ -10,10 +10,10 @@ export function DoctorActiveVisitPage() {
   const t = useFeatureT();
   const activeVisit = useActiveVisit();
   const denied = activeVisit.error instanceof ApiClientError && activeVisit.error.code === "PERMISSION_DENIED";
-  return <div className="visit-page"><PageHeaderV2 title={t("activeVisit")} description={t("activeVisitDescription")} />
+  return <div className="visit-page visit-active-page"><PageHeaderV2 title={t("activeVisit")} description={t("activeVisitDescription")} />
     {activeVisit.isLoading ? <StatePanel state="loading" title={t("loadingVisit")} /> : null}
     {activeVisit.isError ? <StatePanel state={denied ? "denied" : "error"} title={denied ? t("visitAccessDenied") : t("visitUnavailable")} action={<Button type="button" variant="secondary" onClick={() => void activeVisit.refetch()}>{t("retry")}</Button>} /> : null}
     {activeVisit.data ? <VisitWorkspace role="DOCTOR" visit={activeVisit.data} /> : null}
-    {activeVisit.data === null ? <StatePanel state="empty" title={t("noActiveVisit")} description={t("noActiveVisitDescription")} action={<Link className="button primary" to="/doctor/appointments/day">{t("openDayAppointments")}</Link>} /> : null}
+    {activeVisit.data === null ? <div className="visit-empty-state"><StatePanel state="empty" title={t("noActiveVisit")} description={t("noActiveVisitDescription")} action={<Link className="button primary" to="/doctor/appointments/day">{t("openDayAppointments")}</Link>} /></div> : null}
   </div>;
 }

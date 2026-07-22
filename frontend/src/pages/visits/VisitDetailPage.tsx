@@ -16,7 +16,7 @@ export function VisitDetailPage({ role }: VisitDetailPageProps) {
   const code = visit.error instanceof ApiClientError ? visit.error.code : undefined;
   const state = code === "PERMISSION_DENIED" ? "denied" : code === "NOT_FOUND" ? "notFound" : "error";
   const title = state === "denied" ? t("visitAccessDenied") : state === "notFound" ? t("visitNotFound") : t("visitUnavailable");
-  return <div className="visit-page"><PageHeaderV2 title={t("visitDetails")} description={t("visitDetailsDescription")} />
+  return <div className="visit-page visit-detail-page"><PageHeaderV2 title={t("visitDetails")} description={t("visitDetailsDescription")} />
     {visit.isLoading ? <StatePanel state="loading" title={t("loadingVisit")} /> : null}
     {visit.isError ? <StatePanel state={state} title={title} action={<Button type="button" variant="secondary" onClick={() => void visit.refetch()}>{t("retry")}</Button>} /> : null}
     {visit.data ? <VisitWorkspace role={role} visit={visit.data} /> : null}
