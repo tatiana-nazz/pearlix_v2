@@ -1,6 +1,6 @@
 # Team management visual delta — Stage 5
 
-Source: `post-14f-medical-blue-patients` at `03f012d7b489a8adb61c80da0f6a830d8f24059a`.
+Source: `post-14f-medical-blue-patients` at `03f012d7b489a8adb61c80da0f6a830d8f24059a`. Implementation: `9177f5eb404b922fbac1969447767ea0e7f31dc8`.
 
 | Pair | Composition change | Result |
 | --- | --- | --- |

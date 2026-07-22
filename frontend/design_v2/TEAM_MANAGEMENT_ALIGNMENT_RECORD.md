@@ -11,5 +11,5 @@ Accessibility is preserved through existing tab, button, table, status, focus, a
 - Focused checks: Team, Users & Access, schedule/leave, and own-profile tests.
 - Evidence: `frontend/design_v2/design_alignment_evidence/team-management/`.
 - Visual delta: `frontend/design_v2/TEAM_MANAGEMENT_VISUAL_DELTA.md`.
-- Implementation commit: pending finalization.
+- Implementation commit: `9177f5eb404b922fbac1969447767ea0e7f31dc8`.
 - Next recommended stage: billing and financial workflow alignment.

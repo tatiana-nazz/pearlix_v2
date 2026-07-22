@@ -27,5 +27,5 @@
 
 - Stage 5 aligns Team, Users & Access, schedule management, leave management, and Staff/Doctor self-service profile workflows to the medical-blue composition.
 - Functional/backend changes: none. Migrations: none. Evidence: `frontend/design_v2/design_alignment_evidence/team-management/`.
-- The Stage 5 visual-delta assessment passed: `frontend/design_v2/TEAM_MANAGEMENT_VISUAL_DELTA.md`.
+- The Stage 5 visual-delta assessment passed: `frontend/design_v2/TEAM_MANAGEMENT_VISUAL_DELTA.md`. Implementation commit: `9177f5eb404b922fbac1969447767ea0e7f31dc8`.
 - Next recommended stage: billing and financial workflow alignment.

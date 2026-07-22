@@ -2,6 +2,7 @@
 
 Branch: `post-14f-medical-blue-team-management`  
 Source commit: `03f012d7b489a8adb61c80da0f6a830d8f24059a`  
+Implementation commit: `9177f5eb404b922fbac1969447767ea0e7f31dc8`  
 Deterministic state: `seed_demo_clinic_story --reset-demo --include-must-change-user --reference-date 2026-07-19`.
 
 All captures use real local browser rendering. No page-level horizontal overflow occurred: document and body widths were at or below client width. Console/network: no blocking errors observed. Mutations: none; destructive dialogs were not confirmed.
