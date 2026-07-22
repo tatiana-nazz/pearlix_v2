@@ -2,7 +2,7 @@
 
 ## Scope
 
-Post-Phase-14F Stage 4 patient evidence. Backend changes: none. Migrations: none. Implementation commit: pending initial implementation commit; documentation amendment will replace this marker.
+Post-Phase-14F Stage 4 patient evidence. Backend changes: none. Migrations: none. Implementation commit: `2e2309cc278a86bceaa78d2da3166fb12c127231`; documentation amendment commit: pending.
 
 ## Capture Method
 

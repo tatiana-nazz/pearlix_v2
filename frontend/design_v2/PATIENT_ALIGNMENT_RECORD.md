@@ -154,11 +154,11 @@ Added keyboard-profile-tab, X-ray summary, and billing-presentation coverage; up
 
 ## Test Results
 
-Focused patient tests, full frontend tests, typecheck, and production build are recorded after final verification below.
+Focused patient tests passed: 17 files / 66 tests. Full frontend verification passed: 71 files / 246 tests. Typecheck and production build passed.
 
 ## Backend Verification
 
-Backend baseline remained unchanged. Django check and migration-drift verification are recorded after final verification below; no backend source or migration changed.
+Backend baseline remained unchanged. Django check passed and migration drift reported no changes detected; no backend source or migration changed.
 
 ## Documentation Changes
 
@@ -182,7 +182,7 @@ The documentation checker now requires the Stage 4 record, evidence index, and k
 
 ## Final Repository State
 
-Implementation commit: pending initial implementation commit. Documentation amendment commit: pending. Working tree is checked clean after final verification and commit.
+Implementation commit: `2e2309cc278a86bceaa78d2da3166fb12c127231`. Documentation amendment commit: pending. Working tree is checked clean after final verification and commit.
 
 ## Commit And Push
 

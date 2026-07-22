@@ -20,5 +20,5 @@
 - Stage 4 aligns the Staff, Admin, and Doctor patient directory, creation, profile, clinical-history, X-ray/AI, and billing-handoff surfaces with the medical-blue visual system.
 - Functional behavior is preserved except for removing the unsupported fabricated "Next appointment" table value, fixing Doctor billing-tab fallback selection, and adding accessible keyboard navigation for profile tabs.
 - Backend changes: none. Migrations: none. Evidence: `frontend/design_v2/design_alignment_evidence/patients/`.
-- Verification and implementation commit are recorded in `frontend/design_v2/PATIENT_ALIGNMENT_RECORD.md`.
+- Verification passed: 71 frontend test files / 246 tests, TypeScript typecheck, production build, Django check, migration drift, documentation consistency, and diff check. Implementation commit: `2e2309cc278a86bceaa78d2da3166fb12c127231`; detailed evidence is recorded in `frontend/design_v2/PATIENT_ALIGNMENT_RECORD.md`.
 - Next recommended stage: Team and staff-management alignment.
