@@ -1,6 +1,6 @@
 # Medical-blue foundation browser evidence
 
-Tested state: `post-14f-medical-blue-foundation pre-commit working tree based on 324a0377161fa1d83e3d1eed702cfc105488b7c8`.
+Tested state: `post-14f-medical-blue-foundation pre-commit working tree based on 324a0377161fa1d83e3d1eed702cfc105488b7c8`; implementation commit: `690230b623ad988093c8a338715bc20f140b97ae`.
 
 | Screenshot | Role / route | Requested viewport | Language / theme / direction | Client / document / body widths | Result |
 | --- | --- | --- | --- | --- | --- |
