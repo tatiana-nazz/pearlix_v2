@@ -17,6 +17,8 @@ This is the canonical current-phase tracker for the Dental Clinic Management Sys
 
 Phase 14F re-verified the historical 14F-FINAL-01 through 14F-FINAL-05 findings against the runtime-and-evidence commit above. The responsive geometry, Staff-safe Team access, setup-required Team cards, Arabic/RTL status copy, and documented no-active-visit empty state all passed. The pass also corrected protected-media requests whose API-rooted serializer links otherwise produced a doubled `/api/api/` path in the browser. No schema or backend contract change was required.
 
+Post-Phase-14F activity: medical-blue visual-alignment Stage 1 is limited to frontend global tokens and shared components; Phase 14F remains complete. No backend behavior or migration is in scope.
+
 Remaining post-MVP limitations include real AI integration, email forgot-password, unsupported professional fields, online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.
 
 ## Historical context
