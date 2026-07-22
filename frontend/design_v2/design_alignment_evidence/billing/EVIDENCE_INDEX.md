@@ -1,8 +1,8 @@
 # Stage 6 billing evidence
 
-Branch: `post-14f-medical-blue-billing`  
-Source commit: `c46c3b000873593623fdb588dab09ff52523dabe`  
-Implementation commit: pending finalization  
+Branch: `post-14f-medical-blue-billing`
+Source commit: `c46c3b000873593623fdb588dab09ff52523dabe`
+Implementation commit: `97566c0e3f79ada7ae9fe004025d2451b785779f`
 Deterministic state: `seed_demo_clinic_story --reset-demo --include-must-change-user --reference-date 2026-07-19`.
 
 The recorded captures use isolated Staff and Admin local sessions. No confirmation mutation was performed. Local table scrolling is acceptable; document and body width did not exceed client width in recorded desktop routes.

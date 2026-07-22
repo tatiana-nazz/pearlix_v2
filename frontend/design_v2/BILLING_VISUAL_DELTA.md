@@ -1,6 +1,6 @@
 # Billing visual delta — Stage 6
 
-Source: `post-14f-medical-blue-team-management` at `c46c3b000873593623fdb588dab09ff52523dabe`. Implementation: pending finalization.
+Source: `post-14f-medical-blue-team-management` at `c46c3b000873593623fdb588dab09ff52523dabe`. Implementation: `97566c0e3f79ada7ae9fe004025d2451b785779f`.
 
 | Pair | Composition change | Result |
 | --- | --- | --- |

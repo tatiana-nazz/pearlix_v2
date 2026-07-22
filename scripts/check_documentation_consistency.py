@@ -45,6 +45,7 @@ STAGE6_FILES = (
     "frontend/design_v2/BILLING_VISUAL_DELTA.md",
     "frontend/design_v2/design_alignment_evidence/billing/EVIDENCE_INDEX.md",
 )
+STAGE6_IMPLEMENTATION_SHA = "97566c0e3f79ada7ae9fe004025d2451b785779f"
 STALE_CURRENT_AUTHORITY = (
     "phase 14f browser visual/uat acceptance is next",
     "phase 14f complete — blocked",
@@ -102,6 +103,11 @@ def main() -> int:
         errors.append("project status missing Stage 6 billing activity note")
     if "9177f5eb404b922fbac1969447767ea0e7f31dc8" in "\n".join(stage6_sources.values()).lower():
         errors.append("Stage 6 documentation retains invalid Stage 5 SHA")
+    for relative, source in stage6_sources.items():
+        if relative.endswith("DOCUMENT_AUTHORITY.md"):
+            continue
+        if STAGE6_IMPLEMENTATION_SHA not in source:
+            errors.append(f"{relative} missing validated Stage 6 implementation SHA")
 
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))

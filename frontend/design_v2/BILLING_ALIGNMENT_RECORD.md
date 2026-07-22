@@ -1,6 +1,6 @@
 # Stage 6 — Billing alignment
 
-Source branch and commit: `post-14f-medical-blue-team-management` / `c46c3b000873593623fdb588dab09ff52523dabe`. Stage branch: `post-14f-medical-blue-billing`. Implementation commit: pending finalization.
+Source branch and commit: `post-14f-medical-blue-team-management` / `c46c3b000873593623fdb588dab09ff52523dabe`. Stage branch: `post-14f-medical-blue-billing`. Implementation commit: `97566c0e3f79ada7ae9fe004025d2451b785779f`.
 
 Active authority was `DOCUMENT_AUTHORITY.md`, runtime code/tests, backend billing contracts, and the v2 design sources. Historical QA and completed-stage records were intentionally excluded unless needed for route/evidence continuity.
 
