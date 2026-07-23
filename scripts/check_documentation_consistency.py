@@ -46,6 +46,28 @@ STAGE6_FILES = (
     "frontend/design_v2/design_alignment_evidence/billing/EVIDENCE_INDEX.md",
 )
 STAGE6_IMPLEMENTATION_SHA = "97566c0e3f79ada7ae9fe004025d2451b785779f"
+STAGE7_FILES = (
+    "frontend/design_v2/VISIT_ALIGNMENT_RECORD.md",
+    "frontend/design_v2/VISIT_VISUAL_DELTA.md",
+    "frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md",
+    "frontend/design_v2/DESIGN_ALIGNMENT_HISTORY.md",
+    "frontend/design_v2/design_alignment_evidence/visits/EVIDENCE_INDEX.md",
+    "backend/project_docs/PROJECT_STATUS.md",
+)
+STAGE7_IMPLEMENTATION_SHA = "1cc67e199473d662859c21c76127093f6ab555b7"
+STAGE7_EVIDENCE_FILES = (
+    "before/doctor-visit-history-before-1440x900-en-light.png",
+    "before/doctor-visit-xrays-before-1440x900-en-light.png",
+    "before/doctor-visit-appointment-before-1440x900-en-light.png",
+    "before/doctor-complete-visit-before-1440x900-en-light.png",
+    "before/staff-visit-readonly-before-1024x900-en-dark.png",
+    "before/admin-visit-readonly-before-1024x900-en-dark.png",
+    "before/doctor-visit-before-768x1024-ar-light-rtl.png",
+    "before/doctor-no-active-visit-before-768x1024-en-light.png",
+    "after/doctor-visit-dirty-notes-after-1440x900-en-light.png",
+    "after/doctor-completed-visit-after-1440x900-en-light.png",
+    "after/doctor-visit-responsive-after-768x1024-en-light.png",
+)
 STALE_CURRENT_AUTHORITY = (
     "phase 14f browser visual/uat acceptance is next",
     "phase 14f complete — blocked",
@@ -93,9 +115,6 @@ def main() -> int:
     stage6_sources = {relative: read(relative, errors) for relative in STAGE6_FILES}
     status = sources["status"].lower()
     design_status = read("frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md", errors).lower()
-    for requirement in ("latest completed stage: stage 6", "next stage: visits and clinical workflows"):
-        if requirement not in design_status:
-            errors.append(f"design alignment status missing Stage 6 snapshot fact: {requirement!r}")
     for stale in ("pending stage 1", "next stage: patient", "next recommended stage: team", "next recommended stage: billing"):
         if stale in design_status:
             errors.append(f"design alignment status retains stale marker: {stale!r}")
@@ -109,10 +128,30 @@ def main() -> int:
         if STAGE6_IMPLEMENTATION_SHA not in source:
             errors.append(f"{relative} missing validated Stage 6 implementation SHA")
 
+    stage7_sources = {relative: read(relative, errors) for relative in STAGE7_FILES}
+    for relative, source in stage7_sources.items():
+        if STAGE7_IMPLEMENTATION_SHA not in source:
+            errors.append(f"{relative} missing validated Stage 7 implementation SHA")
+    stage7_status = stage7_sources["frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md"].lower()
+    if "latest completed stage: stage 7 visits and clinical workflows" not in stage7_status:
+        errors.append("design alignment status does not identify Stage 7 as latest completed stage")
+    if stage7_status.count("next stage:") != 1 or "next stage: x-rays and ai workspace" not in stage7_status:
+        errors.append("design alignment status must contain exactly one Stage 7 next-stage statement")
+    stage7_text = "\n".join(stage7_sources.values()).lower()
+    for stale in ("pending implementation", "pending verification", "pending finalization", "implementation commit: pending", "next stage: visits", "next stage: billing"):
+        if stale in stage7_text:
+            errors.append(f"Stage 7 documentation retains stale marker: {stale!r}")
+    if "9177f5eb404b922fbac1969447767ea0e7f31dc8" in stage7_text:
+        errors.append("Stage 7 documentation retains invalid Stage 5 SHA")
+    stage7_evidence = ROOT / "frontend/design_v2/design_alignment_evidence/visits"
+    for filename in STAGE7_EVIDENCE_FILES:
+        if not (stage7_evidence / filename).is_file():
+            errors.append(f"missing Stage 7 evidence screenshot: {filename}")
+
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
         return 1
-    print("Documentation consistency check passed for Phase 14F closure and Stage 4 patient evidence.")
+    print("Documentation consistency check passed for Phase 14F closure and completed Stage 7 visit evidence.")
     return 0
 
 
