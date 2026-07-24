@@ -9,3 +9,4 @@
 | 5 Team management | `post-14f-medical-blue-patients` / `03f012d7b489a8adb61c80da0f6a830d8f24059a` | `9177f5ea46f9779de762c7776b6b443c293d77bd` | `design_alignment_evidence/team-management/` | Frontend visual only; no backend or migrations |
 | 6 Billing | `post-14f-medical-blue-team-management` / `c46c3b000873593623fdb588dab09ff52523dabe` | `97566c0e3f79ada7ae9fe004025d2451b785779f` | `design_alignment_evidence/billing/` | Frontend visual only; no backend or migrations |
 | 7 Visits and clinical workflows | `post-14f-medical-blue-billing` / `7e048bfc11d6fef6aeabe393c4a1c7a43e945885` | `1cc67e199473d662859c21c76127093f6ab555b7` | `design_alignment_evidence/visits/` | Frontend visual only; no backend or migrations |
+| 8 X-rays and AI | `post-14f-medical-blue-visits` / `a9cdd031f6f2a4b220993c57331c1bef627763cb` | `5cdd84c30f7668b9710832f411230c7560d33d0e` | `design_alignment_evidence/xrays-ai/`; visual delta PASS | Frontend visual only; no backend or migrations |

@@ -49,7 +49,6 @@ STAGE6_IMPLEMENTATION_SHA = "97566c0e3f79ada7ae9fe004025d2451b785779f"
 STAGE7_FILES = (
     "frontend/design_v2/VISIT_ALIGNMENT_RECORD.md",
     "frontend/design_v2/VISIT_VISUAL_DELTA.md",
-    "frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md",
     "frontend/design_v2/DESIGN_ALIGNMENT_HISTORY.md",
     "frontend/design_v2/design_alignment_evidence/visits/EVIDENCE_INDEX.md",
     "backend/project_docs/PROJECT_STATUS.md",
@@ -68,6 +67,15 @@ STAGE7_EVIDENCE_FILES = (
     "after/doctor-completed-visit-after-1440x900-en-light.png",
     "after/doctor-visit-responsive-after-768x1024-en-light.png",
 )
+STAGE8_FILES = (
+    "frontend/design_v2/XRAY_AI_ALIGNMENT_RECORD.md",
+    "frontend/design_v2/XRAY_AI_VISUAL_DELTA.md",
+    "frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md",
+    "frontend/design_v2/DESIGN_ALIGNMENT_HISTORY.md",
+    "frontend/design_v2/design_alignment_evidence/xrays-ai/EVIDENCE_INDEX.md",
+    "backend/project_docs/PROJECT_STATUS.md",
+)
+STAGE8_IMPLEMENTATION_SHA = "5cdd84c30f7668b9710832f411230c7560d33d0e"
 STALE_CURRENT_AUTHORITY = (
     "phase 14f browser visual/uat acceptance is next",
     "phase 14f complete — blocked",
@@ -132,11 +140,15 @@ def main() -> int:
     for relative, source in stage7_sources.items():
         if STAGE7_IMPLEMENTATION_SHA not in source:
             errors.append(f"{relative} missing validated Stage 7 implementation SHA")
-    stage7_status = stage7_sources["frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md"].lower()
-    if "latest completed stage: stage 7 visits and clinical workflows" not in stage7_status:
-        errors.append("design alignment status does not identify Stage 7 as latest completed stage")
-    if stage7_status.count("next stage:") != 1 or "next stage: x-rays and ai workspace" not in stage7_status:
-        errors.append("design alignment status must contain exactly one Stage 7 next-stage statement")
+    stage8_sources = {relative: read(relative, errors) for relative in STAGE8_FILES}
+    for relative, source in stage8_sources.items():
+        if STAGE8_IMPLEMENTATION_SHA not in source:
+            errors.append(f"{relative} missing validated Stage 8 implementation SHA")
+    stage8_status = stage8_sources["frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md"].lower()
+    if "latest completed stage: stage 8 x-rays and ai" not in stage8_status:
+        errors.append("design alignment status does not identify Stage 8 as latest completed stage")
+    if stage8_status.count("next stage:") != 1 or "next stage: remaining admin and supporting screens" not in stage8_status:
+        errors.append("design alignment status must contain exactly one Stage 8 next-stage statement")
     stage7_text = "\n".join(stage7_sources.values()).lower()
     for stale in ("pending implementation", "pending verification", "pending finalization", "implementation commit: pending", "next stage: visits", "next stage: billing"):
         if stale in stage7_text:
@@ -151,7 +163,7 @@ def main() -> int:
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
         return 1
-    print("Documentation consistency check passed for Phase 14F closure and completed Stage 7 visit evidence.")
+    print("Documentation consistency check passed for Phase 14F closure and completed Stage 8 X-ray/AI evidence.")
     return 0
 
 
