@@ -76,6 +76,24 @@ STAGE8_FILES = (
     "backend/project_docs/PROJECT_STATUS.md",
 )
 STAGE8_IMPLEMENTATION_SHA = "5cdd84c30f7668b9710832f411230c7560d33d0e"
+STAGE9_FILES = (
+    "frontend/design_v2/ADMIN_SUPPORTING_ALIGNMENT_RECORD.md",
+    "frontend/design_v2/ADMIN_SUPPORTING_VISUAL_DELTA.md",
+    "frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md",
+    "frontend/design_v2/DESIGN_ALIGNMENT_HISTORY.md",
+    "frontend/design_v2/design_alignment_evidence/admin-supporting/EVIDENCE_INDEX.md",
+    "backend/project_docs/PROJECT_STATUS.md",
+)
+STAGE9_IMPLEMENTATION_SHA = "d5fe795fb291bdd50b22626b25caaf70f3f4d5e6"
+STAGE9_EVIDENCE_FILES = (
+    "before/admin-clinic-settings-before-1440x900-en-light.png",
+    "before/admin-audit-log-before-1440x900-en-light.png",
+    "after/admin-clinic-settings-after-1440x900-en-light.png",
+    "after/admin-audit-log-after-1440x900-en-light.png",
+    "after/admin-clinic-settings-validation-after-1440x900-en-light.png",
+    "after/supporting-permission-denied-staff-after-768x1024-en-light.png",
+    "after/supporting-not-found-after-768x1024-en-light.png",
+)
 STALE_CURRENT_AUTHORITY = (
     "phase 14f browser visual/uat acceptance is next",
     "phase 14f complete — blocked",
@@ -145,10 +163,8 @@ def main() -> int:
         if STAGE8_IMPLEMENTATION_SHA not in source:
             errors.append(f"{relative} missing validated Stage 8 implementation SHA")
     stage8_status = stage8_sources["frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md"].lower()
-    if "latest completed stage: stage 8 x-rays and ai" not in stage8_status:
-        errors.append("design alignment status does not identify Stage 8 as latest completed stage")
-    if stage8_status.count("next stage:") != 1 or "next stage: remaining admin and supporting screens" not in stage8_status:
-        errors.append("design alignment status must contain exactly one Stage 8 next-stage statement")
+    if "latest completed stage: stage 8 x-rays and ai" in stage8_status or "next stage: remaining admin and supporting screens" in stage8_status:
+        errors.append("design alignment status retains stale Stage 8 current-status wording")
     stage7_text = "\n".join(stage7_sources.values()).lower()
     for stale in ("pending implementation", "pending verification", "pending finalization", "implementation commit: pending", "next stage: visits", "next stage: billing"):
         if stale in stage7_text:
@@ -159,6 +175,24 @@ def main() -> int:
     for filename in STAGE7_EVIDENCE_FILES:
         if not (stage7_evidence / filename).is_file():
             errors.append(f"missing Stage 7 evidence screenshot: {filename}")
+
+    stage9_sources = {relative: read(relative, errors) for relative in STAGE9_FILES}
+    for relative, source in stage9_sources.items():
+        if STAGE9_IMPLEMENTATION_SHA not in source:
+            errors.append(f"{relative} missing validated Stage 9 implementation SHA")
+    stage9_status = stage9_sources["frontend/design_v2/DESIGN_ALIGNMENT_STATUS.md"].lower()
+    if "latest completed stage: stage 9 admin and supporting screens" not in stage9_status:
+        errors.append("design alignment status does not identify Stage 9 as latest completed stage")
+    if stage9_status.count("next stage:") != 1 or "next stage: final medical-blue audit and closure" not in stage9_status:
+        errors.append("design alignment status must contain exactly one final-audit next-stage statement")
+    stage9_text = "\n".join(stage9_sources.values()).lower()
+    for stale in ("pending implementation", "pending verification", "pending finalization", "implementation commit: pending", "next stage: admin", "next stage: x-rays", "next stage: visits", "9177f5eb404b922fbac1969447767ea0e7f31dc8"):
+        if stale in stage9_text:
+            errors.append(f"Stage 9 documentation retains stale marker: {stale!r}")
+    stage9_evidence = ROOT / "frontend/design_v2/design_alignment_evidence/admin-supporting"
+    for filename in STAGE9_EVIDENCE_FILES:
+        if not (stage9_evidence / filename).is_file():
+            errors.append(f"missing Stage 9 evidence screenshot: {filename}")
 
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
