@@ -8,6 +8,7 @@ const shell = readFileSync(resolve(root, "src/layouts/Shell.css"), "utf8");
 const navigation = readFileSync(resolve(root, "src/layouts/navigation.tsx"), "utf8");
 const utilities = readFileSync(resolve(root, "src/styles/v2/utilities.css"), "utf8");
 const components = readFileSync(resolve(root, "src/styles/v2/components.css"), "utf8");
+const globals = readFileSync(resolve(root, "src/styles/globals.css"), "utf8");
 
 describe("Medical-blue global foundation contracts", () => {
   it("defines the accepted light and dark semantic token values", () => {
@@ -42,6 +43,8 @@ describe("Medical-blue global foundation contracts", () => {
     expect(components).toContain(".v2-status.info");
     expect(components).toContain(".v2-status.ai");
     expect(components).not.toContain("linear-gradient");
+    expect(globals).toContain(".xray-canvas");
+    expect(globals).not.toContain(".xray-canvas { display:grid; place-items:center; min-block-size:360px; overflow:hidden; border:1px solid var(--v2-border,var(--color-border)); border-radius:var(--v2-radius-card,16px); background:linear-gradient");
     expect(overlay).toContain("border-radius:var(--v2-radius-dialog)");
     expect(overlay).toContain("box-shadow:var(--v2-shadow-modal)");
     expect(compatibility).toContain(".form-stack input:focus-visible");
@@ -58,7 +61,6 @@ describe("Medical-blue global foundation contracts", () => {
 
   it("keeps readable shared typography, simple sidebar controls, and aligned card grids without a global overflow workaround", () => {
     const typography = readFileSync(resolve(root, "src/styles/v2/typography.css"), "utf8");
-    const globals = readFileSync(resolve(root, "src/styles/globals.css"), "utf8");
     expect(typography).toContain("--v2-font-size-nav:15px");
     expect(typography).toContain("--v2-font-size-label:14px");
     expect(typography).toContain("--v2-font-size-helper:13px");
