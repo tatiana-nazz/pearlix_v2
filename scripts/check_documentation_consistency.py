@@ -1,4 +1,4 @@
-"""Fail fast on Phase 14R regression-gate documentation drift (standard library only)."""
+"""Fail fast on Phase 14D.2 dashboard and Phase 14R regression-gate documentation drift."""
 
 from pathlib import Path
 import sys
@@ -9,6 +9,8 @@ FILES = {
     "status": "backend/project_docs/PROJECT_STATUS.md",
     "audit": "backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md",
     "record": "backend/project_docs/PHASE_14R_BACKEND_REGRESSION_STABILIZATION.md",
+    "dashboard_record": "frontend/design_v2/PHASE_14D2_ROLE_DASHBOARD_IMPLEMENTATION_RECORD.md",
+    "dashboard_qa": "frontend/QA_14D2_ROLE_DASHBOARDS.md",
 }
 
 
@@ -23,10 +25,11 @@ def main() -> int:
 
     checks = {
         "status": (
-            "current completed phase: 14r backend regression stabilization",
+            "current completed phase: 14d.2 role dashboard redesign and runtime alignment",
             "final backend full regression: 418 passed",
-            "final frontend regression: 84 passed in 34 files",
+            "final frontend regression: 94 passed in 35 files",
             "backend regression gate: closed",
+            "remaining phase 14d ui redesign scope is appointments and patients",
         ),
         "audit": (
             "phase 14r regression-gate update",
@@ -37,6 +40,20 @@ def main() -> int:
             "backend complete suite: 418 passed, 0 failed",
             "no migrations or database schema changes",
             "browser/manual qa was not executed",
+        ),
+        "dashboard_record": (
+            "phase 14d.2",
+            "clinic_date",
+            "clinic_timezone",
+            "frontend regression: 94 passed in 35 files",
+            "browser qa was not executed",
+        ),
+        "dashboard_qa": (
+            "browser qa status: pending execution",
+            "admin",
+            "staff",
+            "doctor",
+            "arabic",
         ),
     }
     for key, phrases in checks.items():

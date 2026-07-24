@@ -2,14 +2,14 @@
 
 ## Phase 14R regression-gate update
 
-Phase 14D.1 delivered the Admin Team and Users & Access routes using the existing Team/account APIs. Phase 14R changed backend scheduling and clinic-timezone runtime behavior without changing external endpoint shapes or migrations. The complete backend suite now passes (418 tests); the regression gate is closed. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract.
+Phase 14D.1 delivered the Admin Team and Users & Access routes using the existing Team/account APIs. Phase 14D.2 delivers the three role dashboard compositions and adds clinic-local `clinic_date` and `clinic_timezone` response metadata to their existing endpoints. Phase 14R changed backend scheduling and clinic-timezone runtime behavior without changing external endpoint shapes or migrations. The complete backend suite now passes (418 tests); the regression gate is closed. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract.
 
 The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Browser QA remains pending.
 
-Phase: Originally created for 13A; capability audit through Phase 14D.1 Team and Users & Access runtime alignment and Phase 14R backend stabilization. See `PROJECT_STATUS.md` for canonical current/next phase status.
+Phase: Originally created for 13A; capability audit through Phase 14D.2 role dashboard runtime alignment, Phase 14D.1 Team and Users & Access runtime alignment, and Phase 14R backend stabilization. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, Phase 14C.0 Team/account-linkage API foundation, Phase 14C shell/token/icon/shared-component foundation, Phase 14D.1 Team and Users & Access routes, and Phase 14R backend stabilization are complete. The remaining Phase 14D UI work is dashboards, appointments, and patients; deployment remains paused.
+Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, Phase 14C.0 Team/account-linkage API foundation, Phase 14C shell/token/icon/shared-component foundation, Phase 14D.1 Team and Users & Access routes, Phase 14D.2 role dashboards, and Phase 14R backend stabilization are complete. The remaining Phase 14D UI work is appointments and patients; deployment remains paused.
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -242,6 +242,7 @@ Invoice query params: `status`, `patient_id`, `visit_id`, `appointment_id`, `cur
 - `GET /api/dashboard/admin/` - Admin only.
 - `GET /api/dashboard/staff/` - Staff only.
 - `GET /api/dashboard/doctor/` - Doctor only.
+- All three responses include `clinic_date` (`YYYY-MM-DD`) and `clinic_timezone` (IANA timezone) from clinic settings. They are additive fields; role permissions and existing payload fields are unchanged.
 
 ### Audit Logs
 
@@ -553,19 +554,19 @@ Hidden actions:
 ### Admin Dashboard
 
 - Endpoint: `GET /api/dashboard/admin/`
-- Response: counts for active patients, today's appointments, checked-in, needs-reschedule, active visits, pending handoffs, unpaid invoices; arrays `recent_appointments`, `recent_invoices`.
+- Response: `clinic_date`, `clinic_timezone`, counts for active patients, today's appointments, checked-in, needs-reschedule, active visits, pending handoffs, unpaid invoices; arrays `recent_appointments`, `recent_invoices`.
 - Errors: 403 if not Admin.
 
 ### Staff Dashboard
 
 - Endpoint: `GET /api/dashboard/staff/`
-- Response: today counts and arrays for `upcoming_today_appointments`, `checked_in_appointments`, `needs_reschedule_appointments`, `pending_billing_handoffs`, `unpaid_or_partially_paid_invoices`, `recent_patients`, `own_working_schedule`, `own_availability_exceptions`, `doctor_unavailable_exceptions`.
+- Response: `clinic_date`, `clinic_timezone`, today counts and arrays for `upcoming_today_appointments`, `checked_in_appointments`, `needs_reschedule_appointments`, `pending_billing_handoffs`, `unpaid_or_partially_paid_invoices`, `recent_patients`, `own_working_schedule`, `own_availability_exceptions`, `doctor_unavailable_exceptions`.
 - Errors: 403 if not Staff.
 
 ### Doctor Dashboard
 
 - Endpoint: `GET /api/dashboard/doctor/`
-- Response: `today_own_appointments`, `own_checked_in_appointments`, `own_needs_reschedule_appointments`, `own_active_visit`, `own_completed_visits_today_count`, `own_recent_visits`, `own_pending_billing_handoffs`, `own_working_schedule`, `own_availability_exceptions`.
+- Response: `clinic_date`, `clinic_timezone`, `today_own_appointments`, `own_checked_in_appointments`, `own_needs_reschedule_appointments`, `own_active_visit`, `own_completed_visits_today_count`, `own_recent_visits`, `own_pending_billing_handoffs`, `own_working_schedule`, `own_availability_exceptions`.
 - Errors: 403 if not Doctor.
 
 ### Users
@@ -635,7 +636,7 @@ Hidden actions:
 - Phase 14A completed the deterministic, development-only integrated demo story across the implemented frontend views. Browser QA remains pending.
 - Phase 14B completed the UI refocus design freeze.
 - Phase 14C.0 completed the Admin-only Team/account-linkage API foundation: transactional onboarding, linked-profile states, protected role transitions, reactivation, and frontend contract wrappers. Phase 14D.1 subsequently delivered the Team and Users & Access runtime routes.
-- Remaining Phase 14D work is dashboards, appointments, and patients; deployment remains paused.
+- Phase 14D.2 dashboards are complete; remaining Phase 14D work is appointments and patients; deployment remains paused.
 
 ### Needs Reschedule Tab
 
@@ -989,7 +990,7 @@ Network/offline fallback:
 
 ## N. Backend Gaps or Frontend Risks
 
-- Team and Users & Access runtime alignment was delivered in Phase 14D.1; dashboards, appointments, and patients remain Phase 14D work.
+- Team and Users & Access runtime alignment was delivered in Phase 14D.1 and dashboards in Phase 14D.2; appointments and patients remain Phase 14D work.
 - Unsupported professional fields remain absent: gender, qualifications, license, profile photo, Staff biography, and activity notes.
 - Browser QA remains pending.
 
@@ -1019,4 +1020,4 @@ No critical backend blocker was found for frontend integration planning.
 
 ## Historical Phase 13A Completion Criterion
 
-Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production contract through Phase 14D.1 and the Phase 14R scheduling/availability corrections.
+Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production contract through Phase 14D.2 and the Phase 14R scheduling/availability corrections.

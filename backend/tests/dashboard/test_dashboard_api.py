@@ -4,6 +4,7 @@ import pytest
 from django.utils import timezone
 
 from apps.billing.models import BillingHandoff, Invoice
+from apps.clinic.models import ClinicSettings
 from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
 from apps.visits.models import Visit
 
@@ -27,6 +28,8 @@ def test_dashboard_role_permissions(request, api_client, path, allowed_client, d
 
     allowed_response = request.getfixturevalue(allowed_client).get(path)
     assert allowed_response.status_code == 200
+    assert allowed_response.data["clinic_date"] == timezone.localdate().isoformat()
+    assert allowed_response.data["clinic_timezone"] == ClinicSettings.get_solo().timezone
 
     for client_fixture in denied_clients:
         response = request.getfixturevalue(client_fixture).get(path)

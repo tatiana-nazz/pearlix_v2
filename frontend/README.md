@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phase 14D.1 adds separate Admin Team and Users & Access runtime workflows. Team onboarding uses `/api/team-members/`; `/admin/users/new` creates Admin accounts only. See `QA_14D1_TEAM_USERS_ACCESS.md` and `design_v2/PHASE_14D1_TEAM_USERS_ACCESS_IMPLEMENTATION_RECORD.md`.
+Phase 14D.2 redesigns the role dashboards with shared v2 compositions and real role-specific dashboard endpoints. The API now supplies `clinic_date` and `clinic_timezone` so dashboard dates are clinic-local. See `QA_14D2_ROLE_DASHBOARDS.md` and `design_v2/PHASE_14D2_ROLE_DASHBOARD_IMPLEMENTATION_RECORD.md`.
 
 The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, billing, Admin management, clinic-settings, and audit-log workflows. Phase 14A adds a deterministic development-only integrated demo story for all implemented views. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
 
@@ -63,7 +63,7 @@ npm run build
 
 ## Browser QA
 
-Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Use `frontend/QA_13K.md` for the final regression and browser UAT checklist, `frontend/QA_14A.md` for the integrated demo-story checklist, `frontend/QA_14B.md` for the design-freeze review, `frontend/QA_14C0.md` for Team API contract verification, and `frontend/QA_14C.md` for the shell foundation. Browser QA execution is still pending.
+Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_14D2_ROLE_DASHBOARDS.md` for role-dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Use `frontend/QA_13K.md` for the final regression and browser UAT checklist, `frontend/QA_14A.md` for the integrated demo-story checklist, `frontend/QA_14B.md` for the design-freeze review, `frontend/QA_14C0.md` for Team API contract verification, and `frontend/QA_14C.md` for the shell foundation. Browser QA execution is still pending.
 Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, `frontend/QA_13H.md` for X-rays and AI, and `frontend/QA_13I.md` for billing handoffs, invoices, payments, and print-data QA.
 
 ## Local QA Accounts
@@ -90,6 +90,9 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 - Staff dashboard uses `GET /dashboard/staff/`.
 - Doctor dashboard uses `GET /dashboard/doctor/`.
 - Dashboards render real backend data only; no permanent demo dashboard data is hardcoded.
+- Each response includes `clinic_date` and `clinic_timezone`; the dashboard heading formats the backend clinic date rather than a browser-local date.
+- The Admin dashboard is supervisory and read-only; Staff shortcuts stay operational; Doctor content stays own-scope and has no billing or appointment-creation action.
+- Loading, empty queue, retryable error, refresh, EN/AR status labels, RTL, light/dark tokens, and 1440–768 responsive layouts are implemented. Browser QA remains pending.
 - Patient workflows are implemented through Phase 13E.1; appointment/rescheduling through 13F; shift/availability through 13F.1; active visits through 13G; X-ray/AI through 13H; billing through 13I; Admin user management, clinic settings, and audit logs through 13J; and final regression/release-readiness polish through 13K. See `backend/project_docs/PROJECT_STATUS.md` for canonical current/next phase status.
 - Browser QA is still pending execution with the seeded local QA accounts to verify live role data, 401 refresh behavior, and backend 403 handling.
 
@@ -199,4 +202,4 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14C is complete with 75 frontend tests. Next is Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access. Deployment remains paused pending Phase 14D–14F and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14C.md`.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D.2 dashboards and Phase 14D.1 Team/Users & Access are complete; remaining Phase 14D work is appointments and patients. Deployment remains paused pending Phase 14D–14F and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14D2_ROLE_DASHBOARDS.md`.

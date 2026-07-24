@@ -14,9 +14,9 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | SH-02 | shell collapsed, Staff seed | 84 px Lucide rail, tooltip/name, persisted state | 1024 dark/EN; no letter labels | 14C |
 | SH-03 | tablet drawer, Doctor seed | labelled focus-trapped drawer, closes after navigation | 768 light/AR; no page overflow | 14C |
 | SH-04 | header utilities | theme, EN/AR, profile/role menu update preferences | interaction test + both themes/languages | 14C |
-| DB-ADM | `/admin/dashboard`, Phase 14A data | five ordered KPIs, 4→8 previews and filtered links/read-only | 1440/1024/768 populated + empty/error | 14D |
-| DB-STF | `/staff/dashboard`, Phase 14A data | exact five KPI/queue order and two quick actions | 1440/1024/768, queue click preserves filter | 14D |
-| DB-DOC | `/doctor/dashboard`, active visit seed | banner only when active; own-only KPI/queues | 1440/1024/768, no billing action | 14D |
+| DB-ADM | `/admin/dashboard`, role dashboard data | four supervisory KPIs, attention/activity previews, management-only links; no operational mutation | automated role/link/state/Arabic coverage; browser 1440/1280/1024/768 populated + empty/error | 14D.2 |
+| DB-STF | `/staff/dashboard`, role dashboard data | appointment, checked-in, reschedule, unpaid-invoice KPIs; operational links only | automated role/link/state/Arabic coverage; browser 1440/1280/1024/768 queue click and empty state | 14D.2 |
+| DB-DOC | `/doctor/dashboard`, own active visit data | own-only appointment KPIs, active/next patient, no billing/check-in/create action | automated role/link/state/Arabic coverage; browser 1440/1280/1024/768, no billing action | 14D.2 |
 | TEAM-L | `/admin/team`, Doctor/Staff seeds | tabs, search, paged rich rows, only supported fields | 1440/1024/768 + Team API/RBAC test | 14C.0/14D |
 | TEAM-D | `/admin/team/:memberId` | ordered profile/schedule/leave/workload/account; no fake activity | supported-field/error/readonly evidence | 14C.0/14D |
 | USER-L | `/admin/users` | account columns, profile-setup state, row detail | pagination/filter/RBAC test + tablet card | 14D |

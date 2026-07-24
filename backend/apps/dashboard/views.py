@@ -1,11 +1,13 @@
 from django.db.models import Q
 from django.utils import timezone
+from zoneinfo import ZoneInfo
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
 from apps.billing.models import BillingHandoff, Invoice
+from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
@@ -20,6 +22,12 @@ def _role_required(request, role):
             status_code=status.HTTP_403_FORBIDDEN,
         )
     return None
+
+
+def _clinic_context():
+    settings = ClinicSettings.get_solo()
+    now = timezone.localtime(timezone.now(), ZoneInfo(settings.timezone))
+    return settings, now
 
 
 def _patient_summary(patient):
@@ -112,11 +120,14 @@ def admin_dashboard(request):
     if denied:
         return denied
 
-    today = timezone.localdate()
+    settings, now = _clinic_context()
+    today = now.date()
     recent_appointments = Appointment.objects.select_related("patient", "doctor").order_by("-start_datetime", "-id")[:5]
     recent_invoices = Invoice.objects.select_related("patient").order_by("-created_at", "-id")[:5]
     return Response(
         {
+            "clinic_date": today.isoformat(),
+            "clinic_timezone": settings.timezone,
             "total_active_patients": Patient.objects.filter(is_archived=False).count(),
             "today_appointments_count": Appointment.objects.filter(start_datetime__date=today).count(),
             "checked_in_appointments_count": Appointment.objects.filter(status=Appointment.Status.CHECKED_IN).count(),
@@ -137,7 +148,8 @@ def staff_dashboard(request):
     if denied:
         return denied
 
-    today = timezone.localdate()
+    settings, now = _clinic_context()
+    today = now.date()
     upcoming_today = Appointment.objects.select_related("patient", "doctor").filter(
         start_datetime__date=today,
         status=Appointment.Status.UPCOMING,
@@ -157,6 +169,8 @@ def staff_dashboard(request):
     )
     return Response(
         {
+            "clinic_date": today.isoformat(),
+            "clinic_timezone": settings.timezone,
             "today_appointments_count": Appointment.objects.filter(start_datetime__date=today).count(),
             "upcoming_today_appointments": [_appointment_summary(item) for item in upcoming_today],
             "checked_in_appointments": [_appointment_summary(item) for item in checked_in],
@@ -178,7 +192,8 @@ def doctor_dashboard(request):
     if denied:
         return denied
 
-    today = timezone.localdate()
+    settings, now = _clinic_context()
+    today = now.date()
     own_appointments = Appointment.objects.select_related("patient", "doctor").filter(doctor=request.user)
     active_visit = (
         Visit.objects.select_related("patient", "appointment")
@@ -195,6 +210,8 @@ def doctor_dashboard(request):
     own_leave = AvailabilityException.objects.select_related("doctor").filter(doctor=request.user).order_by("-start_datetime", "-id")[:10]
     return Response(
         {
+            "clinic_date": today.isoformat(),
+            "clinic_timezone": settings.timezone,
             "today_own_appointments": [_appointment_summary(item) for item in own_appointments.filter(start_datetime__date=today)[:10]],
             "own_checked_in_appointments": [_appointment_summary(item) for item in own_appointments.filter(status=Appointment.Status.CHECKED_IN)[:10]],
             "own_needs_reschedule_appointments": [

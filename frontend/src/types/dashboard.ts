@@ -81,6 +81,8 @@ export interface DashboardInvoiceSummary {
 }
 
 export interface AdminDashboardResponse {
+  clinic_date: string;
+  clinic_timezone: string;
   total_active_patients: number;
   today_appointments_count: number;
   checked_in_appointments_count: number;
@@ -93,6 +95,8 @@ export interface AdminDashboardResponse {
 }
 
 export interface StaffDashboardResponse {
+  clinic_date: string;
+  clinic_timezone: string;
   today_appointments_count: number;
   upcoming_today_appointments: DashboardAppointmentSummary[];
   checked_in_appointments: DashboardAppointmentSummary[];
@@ -106,6 +110,8 @@ export interface StaffDashboardResponse {
 }
 
 export interface DoctorDashboardResponse {
+  clinic_date: string;
+  clinic_timezone: string;
   today_own_appointments: DashboardAppointmentSummary[];
   own_checked_in_appointments: DashboardAppointmentSummary[];
   own_needs_reschedule_appointments: DashboardAppointmentSummary[];

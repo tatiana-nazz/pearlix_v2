@@ -15,7 +15,7 @@ No v2 primitive may coexist indefinitely with one-off CSS. Each old component is
 | forms/native selects | Replace | `Field`, `Select/Combobox`, `FormSection`, sticky bar 14C | before feature forms; high payload risk; validation/payload/keyboard tests; no raw-ID/select CSS left. |
 | dialog backdrops | Replace | `Modal`, `Drawer`, `ConfirmDialog` 14C | overlay primitive; high focus risk; Escape/outside/dirty/focus-return tests; delete all local backdrop panels after migration. |
 | Loading/Empty/Error | Refactor | `StatePanel`, `Skeleton` 14C | parallel primitives; low; state snapshots; deprecate old states after pages convert. |
-| dashboard pages | Refactor | role dashboard compositions 14D | after 14C primitives; high route-data risk; seeded KPI/link/preview tests; remove technical copy/components after all 3 accepted. |
+| dashboard pages | Refactored | shared `features/dashboard` role compositions 14D.2 | uses `DashboardHeader`, metrics, lists, state panels, and links over the three existing role endpoints; focused role/RBAC/state/EN-AR tests; legacy page implementations replaced by compatibility re-exports. |
 | appointment components | Refactor/split | toolbar, timeline/grid/list, appointment drawer, reschedule workspace 14D | after tables/overlay; high availability risk; role/action/date tests; delete current view-specific CSS after all views migrate. |
 | patient components | Refactor | profile header/tabs/row/form 14D | after patient shell; high versioning risk; edit/archive/conflict tests; remove old profile grids on acceptance. |
 | visit pages | Refactor | clinical workspace/read-only detail 14E | after form/overlay; high ownership risk; save/complete/read-only tests; remove old workspace CSS after tests. |
@@ -31,6 +31,10 @@ No v2 primitive may coexist indefinitely with one-off CSS. Each old component is
 ## Phase 14C implementation note
 
 `AppShell` is implemented by `src/layouts/WorkspaceLayout.tsx`; `SidebarNav` is implemented by `src/layouts/Sidebar.tsx`; and `WorkspaceHeader` is implemented by `src/layouts/Topbar.tsx`. The legacy `Card`, `PageHeader`, `StatusPill`, and state components are Phase 14C compatibility adapters over `src/components/v2.tsx`; Phase 14F owns their removal after feature consumers complete their 14D–14E migrations.
+
+## Phase 14D.2 dashboard implementation note
+
+`features/dashboard/DashboardShared.tsx` owns the common header, clinic-local date formatting, query states, KPI shell, preview list, and shortcut navigation. `AdminDashboard`, `StaffDashboard`, and `DoctorDashboard` compose only their permitted data and actions. The legacy route modules remain as re-exports so router contracts stay stable; the former generic dashboard compositions are removed.
 
 ## Remaining feature-specific overlays
 
