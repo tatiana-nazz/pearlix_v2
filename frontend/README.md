@@ -197,6 +197,6 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-Phase 14D automated acceptance and Phase 14E supporting operations automated acceptance are complete. Phase 14F browser visual/UAT acceptance is complete. Post-Phase-14F Stage 4 patient alignment is complete: 71 frontend test files / 246 tests, typecheck, and production build passed; backend changes: none; migrations: none; implementation commit `2e2309cc278a86bceaa78d2da3166fb12c127231`. Current-head browser evidence is `frontend/design_v2/phase14f_evidence/current_head_acceptance/` and patient evidence is `frontend/design_v2/design_alignment_evidence/patients/`.
+Phase 14D automated acceptance, Phase 14E supporting operations acceptance, Phase 14F browser visual/UAT acceptance, and the post-Phase-14F medical-blue alignment initiative are complete. Stage 10 final audit verified 76 frontend test files / 260 tests, typecheck, production build, browser, accessibility, RTL, responsive, dark mode, and permissions; backend changes: none; migrations: none. Final evidence is `frontend/design_v2/design_alignment_evidence/final-audit/` and the closure records are `frontend/design_v2/MEDICAL_BLUE_FINAL_AUDIT.md` and `frontend/design_v2/MEDICAL_BLUE_CLOSURE_RECORD.md`.
 
 `backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D, Phase 14E, and Phase 14F browser visual/UAT acceptance are complete. See `frontend/design_v2/PHASE_14F_BROWSER_AUDIT.md`.
