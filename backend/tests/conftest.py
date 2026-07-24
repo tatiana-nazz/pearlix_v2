@@ -1,4 +1,7 @@
 import pytest
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
@@ -10,6 +13,17 @@ from apps.patients.models import Patient
 from apps.scheduling.models import Appointment, AvailabilityException, Weekday, WorkingShift
 from apps.visits.models import Visit
 from apps.xrays.models import ExternalXrayCase, XrayAttachment
+
+
+# Scheduling fixtures intentionally use July 2026.  Keep their temporal
+# relationship deterministic rather than allowing the wall clock to turn
+# otherwise-valid appointment scenarios into past-date validation cases.
+TEST_NOW = datetime(2026, 7, 15, 9, 0, 0, tzinfo=ZoneInfo("UTC"))
+
+
+@pytest.fixture(autouse=True)
+def deterministic_test_clock(monkeypatch):
+    monkeypatch.setattr(timezone, "now", lambda: TEST_NOW)
 
 
 @pytest.fixture

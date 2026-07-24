@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from django.db import transaction
 from django.utils import timezone
@@ -30,6 +31,18 @@ def calculate_end_datetime(start_datetime, duration_minutes): return start_datet
 def get_clinic_settings(): return ClinicSettings.get_solo()
 
 
+def get_clinic_timezone(settings=None):
+    return ZoneInfo((settings or get_clinic_settings()).timezone)
+
+
+def clinic_localtime(value, settings=None):
+    return timezone.localtime(value, get_clinic_timezone(settings))
+
+
+def clinic_now(settings=None):
+    return clinic_localtime(timezone.now(), settings)
+
+
 def require_version(instance, submitted_version):
     if submitted_version is None:
         raise AppointmentRuleError("VERSION_REQUIRED", "A version is required.", {"version": ["This field is required."]})
@@ -44,14 +57,31 @@ def validate_duration(duration_minutes):
     return settings
 
 
-def validate_start_not_past(start_datetime):
-    if start_datetime < timezone.now():
+def validate_start_not_past(start_datetime, settings=None):
+    if clinic_localtime(start_datetime, settings) < clinic_now(settings):
         raise AppointmentRuleError("VALIDATION_ERROR", "Some fields are invalid.", {"start_datetime": ["Start datetime cannot be in the past."]})
 
 
-def validate_working_hours(doctor, start_datetime, end_datetime):
-    start, end = timezone.localtime(start_datetime), timezone.localtime(end_datetime)
-    if start.date() != end.date() or not WorkingShift.objects.filter(employee=doctor, weekday=start.weekday(), is_active=True, start_time__lte=start.time(), end_time__gte=end.time()).exists():
+def has_available_override(doctor, start_datetime, end_datetime):
+    return AvailabilityException.objects.filter(
+        doctor=doctor,
+        type=AvailabilityException.Type.AVAILABLE_OVERRIDE,
+        is_cancelled=False,
+        start_datetime__lte=start_datetime,
+        end_datetime__gte=end_datetime,
+    ).exists()
+
+
+def validate_working_hours(doctor, start_datetime, end_datetime, settings=None):
+    start, end = clinic_localtime(start_datetime, settings), clinic_localtime(end_datetime, settings)
+    fits_shift = start.date() == end.date() and WorkingShift.objects.filter(
+        employee=doctor,
+        weekday=start.weekday(),
+        is_active=True,
+        start_time__lte=start.time(),
+        end_time__gte=end.time(),
+    ).exists()
+    if not fits_shift and not has_available_override(doctor, start_datetime, end_datetime):
         raise AppointmentRuleError("OUTSIDE_WORKING_HOURS", "Appointment must fit inside doctor working hours.", status_code=status.HTTP_409_CONFLICT)
 
 
@@ -66,9 +96,10 @@ def _candidate_appointments(exclude_id=None):
     return queryset.exclude(id=exclude_id) if exclude_id else queryset
 
 
-def validate_capacity(start_datetime, exclude_id=None):
-    settings = get_clinic_settings(); count = _candidate_appointments(exclude_id).filter(start_datetime=start_datetime).count()
-    if count >= settings.capacity_per_slot: raise AppointmentRuleError("CAPACITY_FULL", "Clinic capacity is full for this start time.", {"capacity": settings.capacity_per_slot, "current_count": count}, status.HTTP_409_CONFLICT)
+def validate_capacity(start_datetime, end_datetime, exclude_id=None, settings=None):
+    settings = settings or get_clinic_settings()
+    count = _candidate_appointments(exclude_id).filter(start_datetime__lt=end_datetime, end_datetime__gt=start_datetime).count()
+    if count >= settings.capacity_per_slot: raise AppointmentRuleError("CAPACITY_FULL", "Clinic capacity is full for this time range.", {"capacity": settings.capacity_per_slot, "current_count": count}, status.HTTP_409_CONFLICT)
 
 
 def validate_doctor_conflict(doctor, start_datetime, end_datetime, exclude_id=None):
@@ -76,27 +107,42 @@ def validate_doctor_conflict(doctor, start_datetime, end_datetime, exclude_id=No
         raise AppointmentRuleError("DOCTOR_ALREADY_BOOKED", "Doctor already has an appointment in this time range.", status_code=status.HTTP_409_CONFLICT)
 
 
-def validate_appointment_slot(doctor, start_datetime, duration_minutes, exclude_id=None, ignore_exception_id=None):
-    validate_duration(duration_minutes); validate_start_not_past(start_datetime); end_datetime = calculate_end_datetime(start_datetime, duration_minutes)
-    validate_working_hours(doctor, start_datetime, end_datetime); validate_unavailable_exception(doctor, start_datetime, end_datetime, ignore_exception_id=ignore_exception_id)
-    validate_capacity(start_datetime, exclude_id); validate_doctor_conflict(doctor, start_datetime, end_datetime, exclude_id)
+def validate_appointment_slot(doctor, start_datetime, duration_minutes, exclude_id=None, ignore_exception_id=None, settings=None):
+    settings = settings or validate_duration(duration_minutes)
+    validate_duration(duration_minutes); validate_start_not_past(start_datetime, settings); end_datetime = calculate_end_datetime(start_datetime, duration_minutes)
+    validate_working_hours(doctor, start_datetime, end_datetime, settings); validate_unavailable_exception(doctor, start_datetime, end_datetime, ignore_exception_id=ignore_exception_id)
+    validate_capacity(start_datetime, end_datetime, exclude_id, settings); validate_doctor_conflict(doctor, start_datetime, end_datetime, exclude_id)
     return end_datetime
 
 
 def create_appointment(*, serializer, user):
     with transaction.atomic():
-        data = serializer.validated_data; end = validate_appointment_slot(data["doctor"], data["start_datetime"], data["duration_minutes"])
+        settings = ClinicSettings.get_solo()
+        settings = ClinicSettings.objects.select_for_update().get(pk=settings.pk)
+        data = serializer.validated_data; end = validate_appointment_slot(data["doctor"], data["start_datetime"], data["duration_minutes"], settings=settings)
         return serializer.save(end_datetime=end, created_by=user, updated_by=user)
 
 
 def update_appointment(*, appointment, serializer, user):
     if appointment.status in LOCKED_EDIT_STATUSES: raise AppointmentRuleError("INVALID_STATUS_TRANSITION", "Locked appointments cannot be edited.", status_code=status.HTTP_409_CONFLICT)
     with transaction.atomic():
-        data = serializer.validated_data; doctor = data.get("doctor", appointment.doctor); start = data.get("start_datetime", appointment.start_datetime); duration = data.get("duration_minutes", appointment.duration_minutes)
-        end = validate_appointment_slot(doctor, start, duration, exclude_id=appointment.id)
-        if appointment.status == Appointment.Status.NEEDS_RESCHEDULE and RESCHEDULE_FIELDS.intersection(data):
-            return serializer.save(end_datetime=end, status=Appointment.Status.UPCOMING, checked_in_at=None, reschedule_source_exception=None, reschedule_source_working_shift=None, reschedule_previous_status=None, updated_by=user)
-        return serializer.save(end_datetime=end, updated_by=user)
+        settings = ClinicSettings.get_solo()
+        settings = ClinicSettings.objects.select_for_update().get(pk=settings.pk)
+        locked = Appointment.objects.select_for_update().get(pk=appointment.pk)
+        data = serializer.validated_data; doctor = data.get("doctor", locked.doctor); start = data.get("start_datetime", locked.start_datetime); duration = data.get("duration_minutes", locked.duration_minutes)
+        end = validate_appointment_slot(doctor, start, duration, exclude_id=locked.id, settings=settings)
+        for field, value in data.items():
+            setattr(locked, field, value)
+        locked.end_datetime = end
+        locked.updated_by = user
+        if locked.status == Appointment.Status.NEEDS_RESCHEDULE and RESCHEDULE_FIELDS.intersection(data):
+            locked.status = Appointment.Status.UPCOMING
+            locked.checked_in_at = None
+            locked.reschedule_source_exception = None
+            locked.reschedule_source_working_shift = None
+            locked.reschedule_previous_status = None
+        locked.save()
+        return locked
 
 
 def _overlap(queryset, weekday, start_time, end_time, exclude_id=None):
@@ -120,7 +166,7 @@ def _impacted_appointments(employee, proposed_shifts):
     if employee.role != "DOCTOR": return []
     now = timezone.now(); impacted = []
     for appointment in Appointment.objects.select_for_update().select_related("patient").filter(doctor=employee, status__in=NEEDS_RESCHEDULE_SOURCE_STATUSES, start_datetime__gte=now).order_by("start_datetime", "id"):
-        start, end = timezone.localtime(appointment.start_datetime), timezone.localtime(appointment.end_datetime)
+        start, end = clinic_localtime(appointment.start_datetime), clinic_localtime(appointment.end_datetime)
         if not any(row["is_active"] and row["weekday"] == start.weekday() and row["start_time"] <= start.time() and row["end_time"] >= end.time() for row in proposed_shifts):
             impacted.append(appointment)
     return impacted
@@ -262,17 +308,33 @@ def cancel_availability_exception(*, availability_exception, user, version, requ
         return instance, restored, still_blocked
 
 
-def appointment_count_at(start_datetime): return Appointment.objects.filter(status__in=ACTIVE_COUNTING_STATUSES, start_datetime=start_datetime).count()
+def appointment_count_at(start_datetime, end_datetime):
+    return Appointment.objects.filter(
+        status__in=ACTIVE_COUNTING_STATUSES,
+        start_datetime__lt=end_datetime,
+        end_datetime__gt=start_datetime,
+    ).count()
 def has_doctor_conflict(doctor, start_datetime, end_datetime): return Appointment.objects.filter(doctor=doctor, status__in=ACTIVE_COUNTING_STATUSES, start_datetime__lt=end_datetime, end_datetime__gt=start_datetime).exists()
 def has_unavailable_exception(doctor, start_datetime, end_datetime): return AvailabilityException.objects.filter(doctor=doctor, type=AvailabilityException.Type.UNAVAILABLE, is_cancelled=False, start_datetime__lt=end_datetime, end_datetime__gt=start_datetime).exists()
 
 
 def build_availability_slots(*, doctor, date_value, duration_minutes):
-    settings = validate_duration(duration_minutes); tz = timezone.get_current_timezone(); slots = []; step = timedelta(minutes=15); duration = timedelta(minutes=duration_minutes)
-    for block in WorkingShift.objects.filter(employee=doctor, weekday=date_value.weekday(), is_active=True).order_by("start_time"):
-        cursor = timezone.make_aware(datetime.combine(date_value, block.start_time), tz); block_end = timezone.make_aware(datetime.combine(date_value, block.end_time), tz)
+    settings = validate_duration(duration_minutes); tz = get_clinic_timezone(settings); slots = []; step = timedelta(minutes=15); duration = timedelta(minutes=duration_minutes)
+    day_start = timezone.make_aware(datetime.combine(date_value, time.min), tz)
+    day_end = day_start + timedelta(days=1)
+    blocks = [
+        (timezone.make_aware(datetime.combine(date_value, block.start_time), tz), timezone.make_aware(datetime.combine(date_value, block.end_time), tz))
+        for block in WorkingShift.objects.filter(employee=doctor, weekday=date_value.weekday(), is_active=True).order_by("start_time")
+    ]
+    for override in AvailabilityException.objects.filter(doctor=doctor, type=AvailabilityException.Type.AVAILABLE_OVERRIDE, is_cancelled=False, start_datetime__lt=day_end, end_datetime__gt=day_start).order_by("start_datetime"):
+        blocks.append((max(override.start_datetime.astimezone(tz), day_start), min(override.end_datetime.astimezone(tz), day_end)))
+    seen = set()
+    for block_start, block_end in blocks:
+        cursor = block_start
         while cursor + duration <= block_end:
-            end = cursor + duration; count = appointment_count_at(cursor)
-            if count < settings.capacity_per_slot and not has_doctor_conflict(doctor, cursor, end) and not has_unavailable_exception(doctor, cursor, end): slots.append({"start_datetime": cursor.isoformat(), "end_datetime": end.isoformat(), "current_count": count, "capacity": settings.capacity_per_slot})
+            end = cursor + duration; count = appointment_count_at(cursor, end)
+            if cursor not in seen and (date_value != clinic_now(settings).date() or cursor > clinic_now(settings)) and count < settings.capacity_per_slot and not has_doctor_conflict(doctor, cursor, end) and not has_unavailable_exception(doctor, cursor, end):
+                slots.append({"start_datetime": cursor.isoformat(), "end_datetime": end.isoformat(), "current_count": count, "capacity": settings.capacity_per_slot})
+                seen.add(cursor)
             cursor += step
     return slots

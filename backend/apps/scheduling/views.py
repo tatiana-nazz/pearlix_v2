@@ -228,6 +228,16 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if not doctor_id or not date_text: return error_response("VALIDATION_ERROR", "Some fields are invalid.", {"doctor_id": ["This field is required."], "date": ["This field is required."]})
         doctor = get_object_or_404(User, id=doctor_id, role=User.Role.DOCTOR, is_active=True)
         if request.user.role == "DOCTOR" and request.user.id != doctor.id: return error_response("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
-        try: value = date.fromisoformat(date_text); minutes = int(duration) if duration else get_clinic_settings().default_appointment_duration_minutes; slots = build_availability_slots(doctor=doctor, date_value=value, duration_minutes=minutes)
-        except (ValueError, AppointmentRuleError) as exc: return _rule_error(exc) if isinstance(exc, AppointmentRuleError) else error_response("VALIDATION_ERROR", "Some fields are invalid.", {"duration_minutes": ["Invalid duration."]})
+        try:
+            value = date.fromisoformat(date_text)
+        except ValueError:
+            return error_response("VALIDATION_ERROR", "Some fields are invalid.", {"date": ["Invalid date."]})
+        try:
+            minutes = int(duration) if duration else get_clinic_settings().default_appointment_duration_minutes
+        except ValueError:
+            return error_response("VALIDATION_ERROR", "Some fields are invalid.", {"duration_minutes": ["Invalid duration."]})
+        try:
+            slots = build_availability_slots(doctor=doctor, date_value=value, duration_minutes=minutes)
+        except AppointmentRuleError as exc:
+            return _rule_error(exc)
         settings = get_clinic_settings(); return Response({"doctor_id": doctor.id, "date": value.isoformat(), "duration_minutes": minutes, "capacity_per_slot": settings.capacity_per_slot, "available_slots": slots})

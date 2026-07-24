@@ -1,15 +1,15 @@
 # Frontend/Backend Integration Audit
 
-## Phase 14C shell foundation
+## Phase 14R regression-gate update
 
-Phase 14C changes frontend shell and shared UI foundations only. Backend runtime changed: no; migrations: none. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract. Team and Users & Access runtime UI remains assigned to Phase 14D; no `/admin/team` runtime route is introduced in Phase 14C.
+Phase 14D.1 delivered the Admin Team and Users & Access routes using the existing Team/account APIs. Phase 14R changed backend scheduling and clinic-timezone runtime behavior without changing external endpoint shapes or migrations. The complete backend suite now passes (418 tests); the regression gate is closed. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract.
 
 The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Browser QA remains pending.
 
-Phase: Originally created for 13A; capability audit through completed Phase 14C shell/token/icon/shared-component foundation. See `PROJECT_STATUS.md` for canonical current/next phase status.
+Phase: Originally created for 13A; capability audit through Phase 14D.1 Team and Users & Access runtime alignment and Phase 14R backend stabilization. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, Phase 14C.0 Team/account-linkage API foundation, and Phase 14C shell/token/icon/shared-component foundation are complete. The next phase is Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access; deployment remains paused.
+Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, Phase 14C.0 Team/account-linkage API foundation, Phase 14C shell/token/icon/shared-component foundation, Phase 14D.1 Team and Users & Access routes, and Phase 14R backend stabilization are complete. The remaining Phase 14D UI work is dashboards, appointments, and patients; deployment remains paused.
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -274,8 +274,8 @@ Recommended React route structure:
 
 /admin
 /admin/dashboard
-/admin/team (planned Phase 14D; not exposed by the runtime router)
-/admin/team/:memberId (planned Phase 14D; not exposed by the runtime router)
+/admin/team
+/admin/team/:teamMemberId
 /admin/users
 /admin/users/new
 /admin/users/:userId
@@ -364,7 +364,7 @@ Needs Reschedule must be a tab/view inside appointment pages, not a side panel.
 Visible sidebar items:
 
 - Dashboard
-- Team (planned Phase 14D; API foundation is ready)
+- Team (Phase 14D.1 delivered)
 - Users
 - Doctors and schedules
 - Clinic settings
@@ -634,8 +634,8 @@ Hidden actions:
 - Phase 13K completed the functional frontend: final regression, route/navigation cleanup, accessibility polish, and documentation consistency validation required no backend runtime or migration changes.
 - Phase 14A completed the deterministic, development-only integrated demo story across the implemented frontend views. Browser QA remains pending.
 - Phase 14B completed the UI refocus design freeze.
-- Phase 14C.0 completed the Admin-only Team/account-linkage API foundation: transactional onboarding, linked-profile states, protected role transitions, reactivation, and frontend contract wrappers. Runtime Team and Users & Access pages remain Phase 14D.
-- Next is Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access; deployment remains paused.
+- Phase 14C.0 completed the Admin-only Team/account-linkage API foundation: transactional onboarding, linked-profile states, protected role transitions, reactivation, and frontend contract wrappers. Phase 14D.1 subsequently delivered the Team and Users & Access runtime routes.
+- Remaining Phase 14D work is dashboards, appointments, and patients; deployment remains paused.
 
 ### Needs Reschedule Tab
 
@@ -989,7 +989,7 @@ Network/offline fallback:
 
 ## N. Backend Gaps or Frontend Risks
 
-- Final Team and Users & Access runtime UI is not yet built; it remains Phase 14D work.
+- Team and Users & Access runtime alignment was delivered in Phase 14D.1; dashboards, appointments, and patients remain Phase 14D work.
 - Unsupported professional fields remain absent: gender, qualifications, license, profile photo, Staff biography, and activity notes.
 - Browser QA remains pending.
 
@@ -1019,4 +1019,4 @@ No critical backend blocker was found for frontend integration planning.
 
 ## Historical Phase 13A Completion Criterion
 
-Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production contract through completed Phase 14C.
+Historically, Phase 13A completed when this document was reviewed and accepted as the frontend implementation contract. This document now reflects the production contract through Phase 14D.1 and the Phase 14R scheduling/availability corrections.

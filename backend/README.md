@@ -2,6 +2,10 @@
 
 Django REST Framework backend for the Pearl Dental Clinic management system.
 
+## Current verification status
+
+Phase 14R closed the backend regression gate with 418 passing tests. Scheduling evaluates clinic capacity by overlapping appointment intervals, uses the validated clinic IANA timezone for availability, excludes past same-day slots, and supports available overrides while unavailable exceptions take precedence. Browser/manual QA remains pending.
+
 The API base path is `/api/`; the foundation health endpoint is:
 
 ```text

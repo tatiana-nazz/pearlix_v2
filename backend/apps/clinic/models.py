@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from apps.common.models import TimeStampedModel
 
@@ -53,6 +54,10 @@ class ClinicSettings(TimeStampedModel):
             errors["default_currency"] = "Default currency must be in supported currencies."
         if self.default_language not in {"EN", "AR"}:
             errors["default_language"] = "Default language must be EN or AR."
+        try:
+            ZoneInfo(self.timezone)
+        except ZoneInfoNotFoundError:
+            errors["timezone"] = "Use a valid IANA timezone identifier."
 
         if errors:
             raise ValidationError(errors)

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.core.exceptions import ValidationError
 
 from apps.clinic.models import ClinicSettings
 
@@ -28,10 +29,8 @@ class ClinicSettingsSerializer(serializers.ModelSerializer):
             setattr(instance, field, value)
         try:
             instance.clean()
-        except Exception as exc:
-            if hasattr(exc, "message_dict"):
-                raise serializers.ValidationError(exc.message_dict)
-            raise
+        except ValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict)
         return attrs
 
 
