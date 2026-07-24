@@ -100,5 +100,5 @@ function ClinicSettingsForm() {
 export function AdminClinicSettingsPage() {
   const t = useFeatureT();
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
-  return <div className="admin-page" lang={language === "AR" ? "ar" : "en"} dir={language === "AR" ? "rtl" : "ltr"}><PageHeaderV2 title={t("clinicSettings")} description={t("clinicSettingsHelp")} /><SurfaceCard major><ClinicSettingsForm /></SurfaceCard></div>;
+  return <div className="admin-page clinic-settings-page" lang={language === "AR" ? "ar" : "en"} dir={language === "AR" ? "rtl" : "ltr"}><PageHeaderV2 title={t("clinicSettings")} description={t("clinicSettingsHelp")} /><SurfaceCard major><ClinicSettingsForm /></SurfaceCard></div>;
 }
