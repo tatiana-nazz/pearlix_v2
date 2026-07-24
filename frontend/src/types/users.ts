@@ -14,10 +14,10 @@ export interface UserCreatePayload {
   role: UserRole;
   password?: string;
   temporary_password?: string;
-  is_active?: boolean;
 }
 
-export type UserUpdatePayload = Partial<UserCreatePayload>;
+/** The generic update endpoint deliberately excludes role and activation. */
+export type UserUpdatePayload = Partial<Pick<UserCreatePayload, "email" | "full_name">>;
 
 export interface ResetPasswordPayload {
   temporary_password: string;

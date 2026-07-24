@@ -1,5 +1,7 @@
 # Pearlix Frontend
 
+Phase 14D.1 adds separate Admin Team and Users & Access runtime workflows. Team onboarding uses `/api/team-members/`; `/admin/users/new` creates Admin accounts only. See `QA_14D1_TEAM_USERS_ACCESS.md` and `design_v2/PHASE_14D1_TEAM_USERS_ACCESS_IMPLEMENTATION_RECORD.md`.
+
 The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, billing, Admin management, clinic-settings, and audit-log workflows. Phase 14A adds a deterministic development-only integrated demo story for all implemented views. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
 
 ## Install

@@ -6,6 +6,7 @@ import { roleLabel } from "../utils/roles";
 import { useAuthStore } from "../auth/authStore";
 import { navigationByRole, type NavigationGroup } from "./navigation";
 import { t } from "./i18n";
+import { teamUsersCopy } from "../features/teamUsers/i18n";
 export { navigationByRole } from "./navigation";
 
 interface SidebarProps {
@@ -21,6 +22,8 @@ interface SidebarProps {
 export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerClose = () => undefined, onCollapse = () => undefined, onNavigate = () => undefined, onLogout = () => undefined }: SidebarProps) {
   const groups: NavigationGroup[] = ["workspace", "clinical", "administration", "personal"];
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
+  const featureCopy = teamUsersCopy(language);
+  const itemLabel = (label: string) => label === "Team" ? featureCopy.team : label === "Users & Access" ? featureCopy.usersAccess : label;
   return (
     <aside className="app-sidebar">
       <div className="app-sidebar-brand">
@@ -34,7 +37,7 @@ export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerC
         {groups.map((group) => {
           const items = navigationByRole[role].filter((item) => item.group === group);
           if (!items.length) return null;
-          return <section className="nav-group" key={group}><h2 className="nav-group-label">{t(language, group)}</h2>{items.map((item) => { const Icon = item.icon; return <NavLink key={item.path} to={item.path} onClick={onNavigate} aria-label={item.label} className={({ isActive }) => isActive ? "v2-nav-link active" : "v2-nav-link"}><Icon aria-hidden="true" size={collapsed ? 22 : 20} strokeWidth={1.75} /><span className="nav-label">{item.label}</span></NavLink>; })}</section>;
+          return <section className="nav-group" key={group}><h2 className="nav-group-label">{t(language, group)}</h2>{items.map((item) => { const Icon = item.icon; const label = itemLabel(item.label); return <NavLink key={item.path} to={item.path} onClick={onNavigate} aria-label={label} className={({ isActive }) => isActive ? "v2-nav-link active" : "v2-nav-link"}><Icon aria-hidden="true" size={collapsed ? 22 : 20} strokeWidth={1.75} /><span className="nav-label">{label}</span></NavLink>; })}</section>;
         })}
       </nav>
       <footer className="app-sidebar-footer"><button className="sidebar-logout" type="button" aria-label={t(language, "logout")} data-tooltip={t(language, "logout")} onClick={onLogout}><LogOut size={20} aria-hidden="true" /><span className="nav-label">{t(language, "logout")}</span></button></footer>

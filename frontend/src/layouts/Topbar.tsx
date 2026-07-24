@@ -1,6 +1,6 @@
 import { Languages, Menu, Moon, Sun } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../auth/authStore";
 import { roleLabel } from "../utils/roles";
@@ -39,7 +39,7 @@ export function Topbar({ onMenu }: { onMenu: (trigger: HTMLElement) => void }) {
       <div className="workspace-header-utilities">
         <button className="v2-icon-button theme-toggle" type="button" aria-label={effectiveTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"} data-tooltip={preference === "SYSTEM" ? `System: ${effectiveTheme}` : effectiveTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"} aria-pressed={effectiveTheme === "dark"} onClick={() => setTheme(effectiveTheme === "dark" ? "LIGHT" : "DARK")}>{effectiveTheme === "dark" ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}</button>
         <div className="shell-segment language-toggle" role="group" aria-label={t(language, "language")}><button type="button" aria-pressed={language === "EN"} onClick={() => setLanguage("EN")}>EN</button><button type="button" aria-pressed={language === "AR"} onClick={() => setLanguage("AR")}><Languages size={16} aria-hidden="true" /> AR</button></div>
-        <details className="user-menu"><summary><span className="user-avatar" aria-hidden="true">{user?.full_name?.slice(0, 2).toUpperCase() ?? "P"}</span><span>{user?.full_name ?? "Pearlix"}</span></summary><div className="user-menu-panel"><span>{role ? roleLabel(role) : ""}</span>{role === "STAFF" || role === "DOCTOR" ? <><a href={`/${role.toLowerCase()}/profile/schedule`}>{t(language, "schedule")}</a><a href={`/${role.toLowerCase()}/profile/leave`}>{t(language, "leave")}</a></> : null}<button type="button" onClick={handleLogout}>{t(language, "logout")}</button><button type="button" onClick={() => setTheme("SYSTEM")}>{t(language, "system")}</button></div></details>
+        <details className="user-menu"><summary><span className="user-avatar" aria-hidden="true">{user?.full_name?.slice(0, 2).toUpperCase() ?? "P"}</span><span>{user?.full_name ?? "Pearlix"}</span></summary><div className="user-menu-panel"><span>{role ? roleLabel(role) : ""}</span>{role === "STAFF" || role === "DOCTOR" ? <><Link to={`/${role.toLowerCase()}/profile/schedule`}>{t(language, "schedule")}</Link><Link to={`/${role.toLowerCase()}/profile/leave`}>{t(language, "leave")}</Link></> : null}<button type="button" onClick={handleLogout}>{t(language, "logout")}</button><button type="button" onClick={() => setTheme("SYSTEM")}>{t(language, "system")}</button></div></details>
       </div>
     </header>
   );

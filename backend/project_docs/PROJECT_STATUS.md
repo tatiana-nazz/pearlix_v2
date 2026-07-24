@@ -4,6 +4,8 @@ This is the canonical current-phase tracker. Other project documents describe ca
 
 Project: Dental Clinic Management System Website
 
+Phase 14D.1 Team and Users & Access contract alignment is implemented as a bounded slice: separate runtime routes use the existing Team and account-linkage APIs; backend runtime and migrations are unchanged. Clean `origin/main` and the Phase 14D.1 feature branch both have the same 28 backend regression failures (386 passed); this unrelated stabilization backlog remains open. Remaining Phase 14D dashboard, appointment, and patient redesign work is pending.
+
 - Current completed phase: 14C Shell, Tokens, Lucide Icons, and Shared Components
 - Phase 13 series: complete
 - Next phase: Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access

@@ -1,43 +1,14 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { auditApi } from "../../api/endpoints/audit";
 import { clinicApi } from "../../api/endpoints/clinic";
-import { usersApi } from "../../api/endpoints/users";
 import { Card } from "../../components/Card";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
 import { StatusPill } from "../../components/StatusPill";
-import type { UserCreatePayload, UserManagementRecord } from "../../types/users";
-
-function useUsers() { return useQuery({ queryKey: ["users"], queryFn: () => usersApi.list() }); }
-function useUser(id: number) { return useQuery({ queryKey: ["user", id], queryFn: () => usersApi.detail(id), enabled: id > 0 }); }
-function UserForm({ user, onSubmit, pending, error }: { user?: UserManagementRecord; onSubmit: (payload: UserCreatePayload) => void; pending: boolean; error?: unknown }) {
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [fullName, setFullName] = useState(user?.full_name ?? "");
-  const [role, setRole] = useState(user?.role ?? "STAFF");
-  const [password, setPassword] = useState("");
-  const [roleChangeConfirmed, setRoleChangeConfirmed] = useState(false);
-  const requiresRoleConfirmation = Boolean(user && role !== user.role);
-
-  return <form className="clinical-notes-form" onSubmit={(e) => { e.preventDefault(); onSubmit({ email, full_name: fullName, role, ...(user ? {} : { temporary_password: password }) }); }}>
-    <label>Full name<input required value={fullName} onChange={(e) => setFullName(e.target.value)} /></label>
-    <label>Email<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-    <label>Role<select value={role} onChange={(e) => { setRole(e.target.value as UserManagementRecord["role"]); setRoleChangeConfirmed(false); }}><option value="ADMIN">Admin</option><option value="STAFF">Staff</option><option value="DOCTOR">Doctor</option></select></label>
-    {!user ? <label>Temporary password<input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label> : null}
-    {requiresRoleConfirmation ? <label><input type="checkbox" checked={roleChangeConfirmed} onChange={(e) => setRoleChangeConfirmed(e.target.checked)} /> I confirm this changes the user's workspace access.</label> : null}
-    {error ? <ErrorState error={error} title="Unable to save user" /> : null}
-    <div className="form-actions"><button className="button primary" disabled={pending || (requiresRoleConfirmation && !roleChangeConfirmed)}>{user ? "Save user" : "Create user"}</button></div>
-  </form>;
-}
-
-export function AdminUserListPage() { const users = useUsers(); return <div className="admin-page"><PageHeader eyebrow="admin workspace" title="Users" description="Admin-managed clinic accounts." actions={<Link className="button primary" to="/admin/users/new">New user</Link>} />{users.isLoading ? <LoadingState title="Loading users..." /> : null}{users.isError ? <ErrorState error={users.error} onRetry={() => void users.refetch()} title="Unable to load users" /> : null}{users.data ? <Card><div className="table-scroll"><table className="billing-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Account</th><th>Password state</th><th /></tr></thead><tbody>{users.data.results.map((user) => <tr key={user.id}><td>{user.full_name}</td><td>{user.email}</td><td>{user.role}</td><td><StatusPill status={user.is_active ? "ACTIVE" : "INACTIVE"} /></td><td>{user.must_change_password ? "Must change password" : "Password current"}</td><td><Link className="button secondary compact-button" to={`/admin/users/${user.id}`}>Open</Link></td></tr>)}</tbody></table></div></Card> : null}</div>; }
-
-export function AdminNewUserPage() { const navigate = useNavigate(); const client = useQueryClient(); const mutation = useMutation({ mutationFn: usersApi.create, onSuccess: (user) => { void client.invalidateQueries({ queryKey: ["users"] }); navigate(`/admin/users/${user.id}`); } }); return <div className="admin-page"><PageHeader eyebrow="admin workspace" title="New User" description="Create an account with a temporary password." /><Card><UserForm pending={mutation.isPending} error={mutation.error} onSubmit={(payload) => mutation.mutate(payload)} /></Card></div>; }
-
-export function AdminUserDetailPage() { const id = Number(useParams().userId); const user = useUser(id); const client = useQueryClient(); const [resetOpen, setResetOpen] = useState(false); const [password, setPassword] = useState(""); const update = useMutation({ mutationFn: (payload: UserCreatePayload) => usersApi.update(id, payload), onSuccess: () => { void client.invalidateQueries({ queryKey: ["user", id] }); void client.invalidateQueries({ queryKey: ["users"] }); } }); const deactivate = useMutation({ mutationFn: () => usersApi.deactivate(id), onSuccess: () => { void client.invalidateQueries({ queryKey: ["user", id] }); void client.invalidateQueries({ queryKey: ["users"] }); } }); const reset = useMutation({ mutationFn: () => usersApi.resetPassword(id, { temporary_password: password }), onSuccess: () => { setPassword(""); setResetOpen(false); void client.invalidateQueries({ queryKey: ["user", id] }); } }); if (user.isLoading) return <LoadingState title="Loading user..." />; if (user.isError || !user.data) return <ErrorState error={user.error} title="User unavailable" />; const item = user.data; return <div className="admin-page"><PageHeader eyebrow="admin workspace" title={item.full_name} description="Account fields supported by the backend serializer." /><Card><UserForm user={item} pending={update.isPending} error={update.error} onSubmit={(payload) => update.mutate(payload)} /><div className="xray-run-ai"><button type="button" className="button secondary" onClick={() => setResetOpen(true)}>Reset temporary password</button>{item.is_active ? <button type="button" className="button secondary" onClick={() => deactivate.mutate()} disabled={deactivate.isPending}>Deactivate</button> : null}</div>{deactivate.error ? <ErrorState error={deactivate.error} title="Unable to deactivate user" /> : null}</Card>{resetOpen ? <div className="dialog-backdrop"><section className="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="reset-password-title"><h3 id="reset-password-title">Reset temporary password</h3><label className="dialog-field">Temporary password<input autoFocus type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>{reset.error ? <ErrorState error={reset.error} title="Unable to reset password" /> : null}<div className="form-actions"><button type="button" className="button secondary" onClick={() => { setPassword(""); setResetOpen(false); }}>Cancel</button><button type="button" className="button primary" disabled={!password || reset.isPending} onClick={() => reset.mutate()}>Reset password</button></div></section></div> : null}</div>; }
 
 export function AdminClinicSettingsPage() { const settings = useQuery({ queryKey: ["clinic-settings"], queryFn: clinicApi.getSettings }); const client = useQueryClient(); const mutation = useMutation({ mutationFn: clinicApi.updateSettings, onSuccess: () => void client.invalidateQueries({ queryKey: ["clinic-settings"] }) }); const [values, setValues] = useState<Record<string, unknown> | null>(null); if (settings.isLoading) return <LoadingState title="Loading clinic settings..." />; if (settings.isError || !settings.data) return <ErrorState error={settings.error} title="Settings unavailable" />; const data = values ?? settings.data; return <div className="admin-page"><PageHeader eyebrow="admin workspace" title="Clinic Settings" description="Full Admin settings, including technical AI configuration." /><Card><form className="clinical-notes-form" onSubmit={(e) => { e.preventDefault(); mutation.mutate(data); }}>{Object.entries(data).map(([key, value]) => <label key={key}>{key.replace(/_/g, " ")}{Array.isArray(value) ? <input value={value.join(", ")} onChange={(e) => setValues({ ...data, [key]: e.target.value.split(",").map((part) => part.trim()).filter(Boolean) })} /> : <input value={String(value ?? "")} onChange={(e) => setValues({ ...data, [key]: typeof value === "number" ? Number(e.target.value) : e.target.value })} />}</label>)}{mutation.error ? <ErrorState error={mutation.error} title="Unable to update settings" /> : null}<div className="form-actions"><button className="button primary" disabled={mutation.isPending}>Save settings</button></div></form></Card></div>; }
 

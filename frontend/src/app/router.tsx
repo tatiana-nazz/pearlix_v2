@@ -11,6 +11,7 @@ import { ChangePasswordPage } from "../pages/ChangePasswordPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { AdminDashboardPage } from "../pages/admin/AdminDashboardPage";
+import { TeamDetailPage, TeamListPage, TeamNewPage } from "../pages/admin/team/TeamPages";
 import { ScheduleManagementPage } from "../pages/admin/ScheduleManagementPage";
 import { LeaveManagementPage } from "../pages/admin/LeaveManagementPage";
 import { AppointmentsPage } from "../pages/appointments/AppointmentsPage";
@@ -27,7 +28,8 @@ import { VisitDetailPage } from "../pages/visits/VisitDetailPage";
 import { ExternalXrayDetailPage, ExternalXrayListPage } from "../pages/xrays/ExternalXrayPages";
 import { XrayDetailPage } from "../pages/xrays/XrayDetailPage";
 import { XrayListPage } from "../pages/xrays/XrayListPage";
-import { AdminAuditLogDetailPage, AdminAuditLogListPage, AdminClinicSettingsPage, AdminNewUserPage, AdminUserDetailPage, AdminUserListPage } from "../pages/admin/AdminManagementPages";
+import { AdminAuditLogDetailPage, AdminAuditLogListPage, AdminClinicSettingsPage } from "../pages/admin/AdminManagementPages";
+import { AdminNewUserPage, AdminUserDetailPage, AdminUserListPage } from "../pages/admin/users/UserPages";
 import { BillingHandoffDetailPage, BillingHandoffListPage, InvoiceDetailPage, InvoiceListPage, InvoicePrintPage, NewInvoicePage } from "../pages/billing/BillingPages";
 import type { UserRole } from "../types/auth";
 import { dashboardPathForRole } from "../utils/roles";
@@ -98,6 +100,9 @@ export const router = createBrowserRouter([
               { path: "users", element: <AdminUserListPage /> },
               { path: "users/new", element: <AdminNewUserPage /> },
               { path: "users/:userId", element: <AdminUserDetailPage /> },
+              { path: "team", element: <TeamListPage /> },
+              { path: "team/new", element: <TeamNewPage /> },
+              { path: "team/:teamMemberId", element: <TeamDetailPage /> },
               { path: "clinic-settings", element: <AdminClinicSettingsPage /> },
               { path: "audit-logs", element: <AdminAuditLogListPage /> },
               { path: "audit-logs/:auditLogId", element: <AdminAuditLogDetailPage /> },
