@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phase 14D.3A closes the appointments creation contract: Staff select active patients through a bounded, debounced server search rather than entering a raw patient ID. The workspace retains Day, Week, Month, List, and Needs Reschedule views with clinic-local metadata. See `QA_14D3_APPOINTMENTS_WORKSPACE.md`, `design_v2/PHASE_14D3_APPOINTMENTS_IMPLEMENTATION_RECORD.md`, and `design_v2/PHASE_14D3A_APPOINTMENTS_CLOSURE_RECORD.md`.
+Phase 14D.4 delivers the patient workspace refinement: server-backed directory state, Staff-only General Information creation, read-first patient detail, explicit medical-history editing, archive/reactivation, and accessible URL-backed tabs. See `QA_14D4_PATIENT_WORKSPACE.md` and `design_v2/PHASE_14D4_PATIENT_WORKSPACE_IMPLEMENTATION_RECORD.md`.
 
 The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, billing, Admin management, clinic-settings, and audit-log workflows. Phase 14A adds a deterministic development-only integrated demo story for all implemented views. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
 

@@ -11,6 +11,8 @@ import { PatientTable } from "../../features/patients/components/PatientTable";
 import { useArchivePatient, useUnarchivePatient } from "../../features/patients/hooks/usePatientMutations";
 import { usePatients } from "../../features/patients/hooks/usePatients";
 import { getPatientPermissions, newPatientPath } from "../../features/patients/utils/patientPermissions";
+import { patientCopy } from "../../features/patients/i18n";
+import { useAuthStore } from "../../auth/authStore";
 import type { UserRole } from "../../types/auth";
 import type { PatientListFilters, PatientListItem } from "../../types/patients";
 
@@ -45,6 +47,7 @@ export function PatientsPage({ role }: PatientsPageProps) {
   const [dialogPatient, setDialogPatient] = useState<PatientListItem | null>(null);
   const [dialogMode, setDialogMode] = useState<"archive" | "unarchive">("archive");
   const permissions = getPatientPermissions(role);
+  const c = patientCopy(useAuthStore((state) => state.user?.language_preference));
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -90,6 +93,12 @@ export function PatientsPage({ role }: PatientsPageProps) {
     setSearchParams(next);
   }
 
+  function clearFilters() {
+    setSearch("");
+    setDebouncedSearch("");
+    setSearchParams(new URLSearchParams());
+  }
+
   function openArchiveDialog(patient: PatientListItem) {
     setDialogPatient(patient);
     setDialogMode("archive");
@@ -117,12 +126,12 @@ export function PatientsPage({ role }: PatientsPageProps) {
     <div className="patient-page">
       <PageHeader
         eyebrow={`${role.toLowerCase()} workspace`}
-        title="Patients"
-        description={roleDescription(role)}
+        title={c.patientDirectory}
+        description={c.patientDirectoryDescription}
         actions={
           permissions.canCreate ? (
             <Link className="button primary" to={newPatientPath(role)}>
-              Add Patient
+              {c.newPatient}
             </Link>
           ) : null
         }
@@ -137,15 +146,16 @@ export function PatientsPage({ role }: PatientsPageProps) {
           onSearchChange={setSearch}
           onArchiveFilterChange={setArchiveFilter}
           onDoctorFilterChange={setDoctorFilter}
+          onClear={clearFilters}
         />
       </Card>
 
       <Card>
-        {patients.isLoading ? <LoadingState title="Loading patients..." /> : null}
-        {patients.isError ? <ErrorState error={patients.error} onRetry={() => void patients.refetch()} title="Unable to load patients" /> : null}
+        {patients.isLoading ? <LoadingState title={c.loading} /> : null}
+        {patients.isError ? <ErrorState error={patients.error} onRetry={() => void patients.refetch()} title={c.loadError} /> : null}
         {patients.data ? (
           <>
-            {patients.isFetching ? <p className="panel-note">Refreshing patient results...</p> : null}
+            {patients.isFetching ? <p className="panel-note" aria-live="polite">{c.refresh}</p> : null}
             <PatientTable
               role={role}
               patients={patients.data.results}
@@ -154,14 +164,14 @@ export function PatientsPage({ role }: PatientsPageProps) {
               onUnarchive={openUnarchiveDialog}
             />
             <div className="pagination-bar">
-              <span>{patients.data.count} records</span>
+              <span>{patients.data.count} {c.records}</span>
               <div>
                 <button className="button secondary" type="button" disabled={!patients.data.previous || currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
-                  Previous
+                  {c.previous}
                 </button>
-                <span>Page {currentPage}</span>
+                <span>{c.page} {currentPage}</span>
                 <button className="button secondary" type="button" disabled={!patients.data.next} onClick={() => setPage(currentPage + 1)}>
-                  Next
+                  {c.next}
                 </button>
               </div>
             </div>

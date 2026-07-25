@@ -15,6 +15,7 @@ import { PatientProfileHeader } from "../../features/patients/components/Patient
 import { PatientProfileTab, PatientProfileTabs } from "../../features/patients/components/PatientProfileTabs";
 import { PatientVisitsSummary } from "../../features/patients/components/PatientVisitsSummary";
 import { PatientXraySummary } from "../../features/patients/components/PatientXraySummary";
+import { patientCopy } from "../../features/patients/i18n";
 import {
   usePatient,
   usePatientAiResults,
@@ -26,6 +27,7 @@ import { useArchivePatient, useUnarchivePatient, useUpdatePatient } from "../../
 import { getPatientPermissions, patientListPath } from "../../features/patients/utils/patientPermissions";
 import type { PatientFormValues } from "../../features/patients/utils/patientFormMapping";
 import type { UserRole } from "../../types/auth";
+import { useAuthStore } from "../../auth/authStore";
 
 interface PatientProfilePageProps {
   role: UserRole;
@@ -42,10 +44,11 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const patientId = Number(params.patientId);
-  const [isEditing, setIsEditing] = useState(searchParams.get("edit") === "1");
+  const [isEditing, setIsEditing] = useState(Boolean(searchParams.get("edit")));
   const [archiveMode, setArchiveMode] = useState<"archive" | "unarchive" | null>(null);
   const activeTab = searchParams.get("tab") ? tabFromSearch(searchParams.get("tab")) : defaultTab;
   const patient = usePatient(patientId);
+  const c = patientCopy(useAuthStore((state) => state.user?.language_preference));
   const updatePatient = useUpdatePatient(patientId);
   const archivePatient = useArchivePatient();
   const unarchivePatient = useUnarchivePatient();
@@ -76,9 +79,9 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
     setSearchParams(next);
   }
 
-  function openEdit() {
+  function openEdit(section: "general" | "medical" = "general") {
     const next = new URLSearchParams(searchParams);
-    next.set("edit", "1");
+    next.set("edit", section);
     setSearchParams(next);
   }
 
@@ -120,7 +123,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
       <PatientProfileHeader
         role={role}
         patient={patient.data}
-        onEdit={openEdit}
+        onEdit={() => openEdit("general")}
         onArchive={() => {
           archivePatient.reset();
           setArchiveMode("archive");
@@ -134,12 +137,13 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
       {isEditing && permissions.canEdit ? (
         <div className="dialog-backdrop" role="presentation">
           <section className="dialog-panel wide" role="dialog" aria-modal="true" aria-labelledby="edit-patient-title">
-            <h3 id="edit-patient-title">Edit Patient</h3>
+            <h3 id="edit-patient-title">{searchParams.get("edit") === "medical" ? c.medicalHistory : c.editPatient}</h3>
             <PatientForm
               mode="edit"
+              section={searchParams.get("edit") === "medical" ? "medical" : "general"}
               role={role}
               patient={patient.data}
-              submitLabel="Save changes"
+              submitLabel={c.saveChanges}
               isSubmitting={updatePatient.isPending}
               error={updatePatient.error}
               onSubmit={handleUpdate}
@@ -153,8 +157,9 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
 
       <PatientProfileTabs role={role} activeTab={activeTab === "billing" && !permissions.canViewBillingTab ? "overview" : activeTab} onTabChange={setTab} />
 
+      <div id={`patient-profile-panel-${activeTab}`} role="tabpanel" aria-labelledby={`patient-profile-tab-${activeTab}`} tabIndex={0}>
       {activeTab === "overview" ? <PatientOverview patient={patient.data} /> : null}
-      {activeTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} onEdit={openEdit} /> : null}
+      {activeTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} onEdit={() => openEdit("medical")} /> : null}
       {activeTab === "visits" ? (
         <PatientVisitsSummary role={role} visits={visits.data} isLoading={visits.isLoading} error={visits.error} onRetry={() => void visits.refetch()} />
       ) : null}
@@ -187,6 +192,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
           <EmptyState title="Billing and invoices are not available in the Doctor workspace." />
         </Card>
       ) : null}
+      </div>
 
       <ArchivePatientDialog
         patient={archiveMode ? patient.data : null}

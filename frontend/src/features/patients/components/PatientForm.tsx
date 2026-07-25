@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 
+import { useAuthStore } from "../../../auth/authStore";
 import type { UserRole } from "../../../types/auth";
 import type { PatientBloodGroup, PatientDetail, PatientGender } from "../../../types/patients";
 import {
@@ -12,9 +13,11 @@ import {
   updatePayloadFromForm,
   validatePatientForm,
 } from "../utils/patientFormMapping";
+import { patientCopy } from "../i18n";
 
 interface PatientFormProps {
   mode: "create" | "edit";
+  section?: "general" | "medical";
   role: UserRole;
   patient?: PatientDetail | null;
   submitLabel?: string;
@@ -34,6 +37,7 @@ function hasErrors(errors: PatientFormErrors) {
 
 export function PatientForm({
   mode,
+  section,
   role,
   patient,
   submitLabel,
@@ -44,6 +48,8 @@ export function PatientForm({
   onReloadLatest,
   onContinueReviewing,
 }: PatientFormProps) {
+  const language = useAuthStore((state) => state.user?.language_preference);
+  const c = patientCopy(language);
   const [values, setValues] = useState<PatientFormValues>(() => (mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues));
   const [errors, setErrors] = useState<PatientFormErrors>({});
 
@@ -72,6 +78,10 @@ export function PatientForm({
 
   const fieldPrefix = mode === "create" ? "create-patient" : "edit-patient";
 
+  const isMedicalOnly = section === "medical";
+  const showGeneralInformation = !isMedicalOnly;
+  const showMedicalInformation = mode === "edit";
+
   return (
     <form className="patient-form" onSubmit={handleSubmit} noValidate>
       {errors.form ? <div className="form-error">{errors.form}</div> : null}
@@ -80,20 +90,21 @@ export function PatientForm({
           <p>{errors.conflict}</p>
           <div className="form-actions">
             <button className="button secondary compact-button" type="button" onClick={onContinueReviewing}>
-              Continue reviewing my changes
+              {c.continueReviewing}
             </button>
             <button className="button primary compact-button" type="button" onClick={onReloadLatest}>
-              Reload latest record
+              {c.reloadLatest}
             </button>
           </div>
         </div>
       ) : null}
 
+      {showGeneralInformation ? <>
       <section className="patient-form-section">
-        <h4>Identity</h4>
+        <h4>{c.identity}</h4>
         <div className="patient-form-grid">
           <label>
-            First name <span aria-hidden="true">*</span>
+            {c.firstName} <span aria-hidden="true">*</span>
             <input
               id={`${fieldPrefix}-first-name`}
               value={values.first_name}
@@ -105,7 +116,7 @@ export function PatientForm({
           </label>
 
           <label>
-            Last name <span aria-hidden="true">*</span>
+            {c.lastName} <span aria-hidden="true">*</span>
             <input
               id={`${fieldPrefix}-last-name`}
               value={values.last_name}
@@ -117,15 +128,15 @@ export function PatientForm({
           </label>
 
           <label>
-            Gender <span aria-hidden="true">*</span>
+            {c.gender} <span aria-hidden="true">*</span>
             <select value={values.gender} onChange={(event) => updateField("gender", event.target.value as PatientGender)}>
-              <option value="Female">Female</option>
-              <option value="Male">Male</option>
+              <option value="Female">{c.female}</option>
+              <option value="Male">{c.male}</option>
             </select>
           </label>
 
           <label>
-            Date of birth
+            {c.dateOfBirth}
             <input
               type="date"
               value={values.date_of_birth}
@@ -138,44 +149,44 @@ export function PatientForm({
       </section>
 
       <section className="patient-form-section">
-        <h4>Contact and identifiers</h4>
+        <h4>{c.contactDetails}</h4>
         <div className="patient-form-grid">
           <label>
-            Phone
+            {c.phone}
             <input id={`${fieldPrefix}-phone-number`} value={values.phone_number} onChange={(event) => updateField("phone_number", event.target.value)} />
             {errors.phone_number ? <span className="field-error">{errors.phone_number}</span> : null}
           </label>
           <label>
-            Email
+            {c.email}
             <input type="email" value={values.email} onChange={(event) => updateField("email", event.target.value)} />
             {errors.email ? <span className="field-error">{errors.email}</span> : null}
           </label>
           <label>
-            National ID or passport
+            {c.nationalId}
             <input value={values.national_id_or_passport} onChange={(event) => updateField("national_id_or_passport", event.target.value)} />
             {errors.national_id_or_passport ? <span className="field-error">{errors.national_id_or_passport}</span> : null}
           </label>
           <label>
-            Emergency contact
+            {c.emergencyContact}
             <input value={values.emergency_contact} onChange={(event) => updateField("emergency_contact", event.target.value)} />
             {errors.emergency_contact ? <span className="field-error">{errors.emergency_contact}</span> : null}
           </label>
         </div>
         <label>
-          Address
+          {c.address}
           <textarea value={values.address} onChange={(event) => updateField("address", event.target.value)} rows={3} />
         </label>
-      </section>
+      </section></> : null}
 
-      <section className="patient-form-section">
-        <h4>Clinical profile</h4>
+      {showMedicalInformation ? <section className="patient-form-section">
+        <h4>{c.clinicalProfile}</h4>
         <div className="patient-form-grid">
           <label>
-            Blood group
+            {c.bloodGroup}
             <select value={values.blood_group} onChange={(event) => updateField("blood_group", event.target.value as PatientBloodGroup)}>
               {bloodGroups.map((group) => (
                 <option key={group || "none"} value={group}>
-                  {group || "Not recorded"}
+                  {group || c.noBloodGroup}
                 </option>
               ))}
             </select>
@@ -183,29 +194,29 @@ export function PatientForm({
           </label>
         </div>
         <label>
-          Medical conditions history
+          {c.medicalConditions}
           <textarea value={values.medical_conditions_history} onChange={(event) => updateField("medical_conditions_history", event.target.value)} rows={5} />
         </label>
         <label>
-          Insurance information
+          {c.insurance}
           <textarea value={values.insurance_info} onChange={(event) => updateField("insurance_info", event.target.value)} rows={4} />
         </label>
         <label>
-          General notes
+          {c.generalNotes}
           <textarea value={values.general_notes} onChange={(event) => updateField("general_notes", event.target.value)} rows={5} />
         </label>
-      </section>
+      </section> : null}
 
-      {role === "DOCTOR" ? <p className="form-note">Doctors can update patient profile fields for active patients only. Archive controls are hidden.</p> : null}
+      {role === "DOCTOR" ? <p className="form-note">{c.staffOnlyNote}</p> : null}
 
       <div className="form-actions">
         {onCancel ? (
           <button className="button secondary" type="button" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            {c.cancel}
           </button>
         ) : null}
         <button className="button primary" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : submitLabel ?? "Save patient"}
+          {isSubmitting ? c.saving : submitLabel ?? c.save}
         </button>
       </div>
     </form>

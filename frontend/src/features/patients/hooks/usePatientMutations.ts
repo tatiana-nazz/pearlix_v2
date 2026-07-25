@@ -6,6 +6,8 @@ import { patientKey } from "./usePatient";
 
 function invalidatePatients(queryClient: ReturnType<typeof useQueryClient>, patientId?: number) {
   void queryClient.invalidateQueries({ queryKey: ["patients"] });
+  void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  void queryClient.invalidateQueries({ queryKey: ["appointment-availability"] });
   if (patientId) void queryClient.invalidateQueries({ queryKey: patientKey(patientId) });
 }
 

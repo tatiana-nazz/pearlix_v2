@@ -24,6 +24,7 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | USER-D | `/admin/users/:id` | separate role/reset/deactivate confirmations | transition/deactivation test + evidence | 14C.0/14D |
 | PAT-L | all role patient lists | rich row columns, role filters, server pagination | role/row keyboard/tablet tests | 14D |
 | PAT-P | all role profiles | ordered header/tabs; billing only Admin/Staff | ownership/archive/billing tests | 14D |
+| PAT-14D4 | patient directory/create/detail | server paging/filter state, Staff-only General Information create, read-first profile, explicit medical-history edit, version/archive boundaries | focused keyboard/form/role tests; browser evidence pending | 14D.4 |
 | AP-D | appointment Day | focused header, clinic-local date, role actions, semantic appointment rows | focused date/role/state tests; browser 1440/768 pending | 14D.3 |
 | AP-W | appointment Week | readable seven-day contained columns and single-action day selection | focused range/keyboard test; RTL evidence pending | 14D.3 |
 | AP-M | appointment Month | concise count/previews with localized overflow | focused day selection/overflow test; browser evidence pending | 14D.3 |

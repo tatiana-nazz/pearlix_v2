@@ -37,4 +37,11 @@ describe("PatientForm", () => {
     expect(screen.getByText(/Doctors can update patient profile fields/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Archived/)).not.toBeInTheDocument();
   });
+
+  it("keeps medical-history fields out of the General Information creation form", () => {
+    render(<PatientForm mode="create" role="STAFF" onSubmit={vi.fn()} />);
+    expect(screen.queryByLabelText("Medical conditions history")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Insurance information")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("General notes")).not.toBeInTheDocument();
+  });
 });

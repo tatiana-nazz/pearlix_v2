@@ -14,6 +14,8 @@ FILES = {
     "appointments_record": "frontend/design_v2/PHASE_14D3_APPOINTMENTS_IMPLEMENTATION_RECORD.md",
     "appointments_qa": "frontend/QA_14D3_APPOINTMENTS_WORKSPACE.md",
     "appointments_closure": "frontend/design_v2/PHASE_14D3A_APPOINTMENTS_CLOSURE_RECORD.md",
+    "patient_record": "frontend/design_v2/PHASE_14D4_PATIENT_WORKSPACE_IMPLEMENTATION_RECORD.md",
+    "patient_qa": "frontend/QA_14D4_PATIENT_WORKSPACE.md",
 }
 
 
@@ -28,11 +30,11 @@ def main() -> int:
 
     checks = {
         "status": (
-            "current completed phase: 14d.3a appointments contract and test-coverage closure",
+            "current completed phase: 14d.4 patient workspace redesign and contract alignment",
             "final backend full regression: 420 passed",
-            "final frontend regression: 104 passed in 38 files",
+            "final frontend regression: 106 passed in 38 files",
             "backend regression gate: closed",
-            "remaining phase 14d ui redesign scope is patients",
+            "phase 14d priority workspace redesigns are delivered",
         ),
         "audit": (
             "phase 14r regression-gate update",
@@ -75,6 +77,17 @@ def main() -> int:
             "is_archived=false",
             "browser qa was not executed",
             "420 complete backend tests passed",
+        ),
+        "patient_record": (
+            "phase 14d.4",
+            "106 frontend tests in 38 files",
+            "no backend runtime or external api contract changed",
+            "browser qa was not executed",
+        ),
+        "patient_qa": (
+            "browser qa status: pending execution",
+            "arabic rtl",
+            "archive/reactivate",
         ),
     }
     for key, phrases in checks.items():

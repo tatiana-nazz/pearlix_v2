@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 
+import { useAuthStore } from "../../../auth/authStore";
 import { EmptyState } from "../../../components/EmptyState";
 import type { UserRole } from "../../../types/auth";
 import type { PatientListItem } from "../../../types/patients";
@@ -7,6 +8,7 @@ import { formatDateTime } from "../../../utils/dates";
 import { displayText } from "../../../utils/formatters";
 import { getPatientPermissions, patientProfilePath } from "../utils/patientPermissions";
 import { PatientStatusBadge } from "./PatientStatusBadge";
+import { patientCopy } from "../i18n";
 
 interface PatientTableProps {
   role: UserRole;
@@ -18,21 +20,18 @@ interface PatientTableProps {
 
 export function PatientTable({ role, patients, showArchivedStatus, onArchive, onUnarchive }: PatientTableProps) {
   const navigate = useNavigate();
+  const c = patientCopy(useAuthStore((state) => state.user?.language_preference));
 
-  if (!patients.length) return <EmptyState title="No patients found for this filter." />;
+  if (!patients.length) return <EmptyState title={c.noPatients} />;
 
   return (
     <div className="table-scroll">
       <table className="patient-table">
         <thead>
           <tr>
-            <th>Patient</th>
-            <th>Contact</th>
-            <th>Gender</th>
-            <th>Age</th>
-            {showArchivedStatus ? <th>Status</th> : null}
-            {role === "DOCTOR" ? <th>Last Visit With Me</th> : null}
-            <th>Actions</th>
+            <th>{c.patient}</th><th>{c.contact}</th><th>{c.gender}</th><th>{c.age}</th>
+            {showArchivedStatus ? <th>{c.status}</th> : null}
+            {role === "DOCTOR" ? <th>{c.visits}</th> : null}<th>{c.actions}</th>
           </tr>
         </thead>
         <tbody>
@@ -40,37 +39,39 @@ export function PatientTable({ role, patients, showArchivedStatus, onArchive, on
             const permissions = getPatientPermissions(role, patient);
             const profilePath = patientProfilePath(role, patient.id);
             return (
-              <tr key={patient.id} onClick={() => navigate(profilePath)}>
+              <tr key={patient.id} tabIndex={0} className="clickable-row" onClick={() => navigate(profilePath)} onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") { event.preventDefault(); navigate(profilePath); }
+              }}>
                 <td>
                   <strong>{patient.full_name}</strong>
                 </td>
                 <td>{displayText(patient.phone_number || patient.email)}</td>
                 <td>{patient.gender}</td>
-                <td>{patient.age ?? "Not recorded"}</td>
+                <td>{patient.age ?? c.notRecorded}</td>
                 {showArchivedStatus ? (
                   <td>
                     <PatientStatusBadge patient={patient} />
                   </td>
                 ) : null}
-                {role === "DOCTOR" ? <td>{patient.last_visit_with_me_at ? formatDateTime(patient.last_visit_with_me_at) : "Not recorded"}</td> : null}
+                {role === "DOCTOR" ? <td>{patient.last_visit_with_me_at ? formatDateTime(patient.last_visit_with_me_at) : c.notRecorded}</td> : null}
                 <td>
                   <div className="row-actions" onClick={(event) => event.stopPropagation()}>
                     <Link className="button secondary compact-button" to={profilePath}>
-                      View
+                      {c.view}
                     </Link>
                     {permissions.canEdit ? (
                       <Link className="button secondary compact-button" to={`${profilePath}?edit=1`}>
-                        Edit
+                        {c.edit}
                       </Link>
                     ) : null}
                     {permissions.canArchive ? (
                       <button className="button secondary compact-button" type="button" onClick={() => onArchive(patient)}>
-                        Archive
+                        {c.archive}
                       </button>
                     ) : null}
                     {permissions.canUnarchive ? (
                       <button className="button secondary compact-button" type="button" onClick={() => onUnarchive(patient)}>
-                        Unarchive
+                        {c.reactivate}
                       </button>
                     ) : null}
                   </div>

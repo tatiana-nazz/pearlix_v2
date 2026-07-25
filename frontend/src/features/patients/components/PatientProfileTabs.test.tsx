@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { PatientProfileTabs } from "./PatientProfileTabs";
@@ -17,5 +18,13 @@ describe("PatientProfileTabs", () => {
   it("marks active tab selected", () => {
     render(<PatientProfileTabs role="STAFF" activeTab="medical" onTabChange={vi.fn()} />);
     expect(screen.getByRole("tab", { name: "Medical Summary" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("activates the next tab with keyboard navigation", async () => {
+    const onTabChange = vi.fn();
+    render(<PatientProfileTabs role="STAFF" activeTab="overview" onTabChange={onTabChange} />);
+    screen.getByRole("tab", { name: "Overview" }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(onTabChange).toHaveBeenCalledWith("medical");
   });
 });
