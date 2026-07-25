@@ -66,6 +66,12 @@ def login_view(request):
 
     email = serializer.validated_data["email"]
     password = serializer.validated_data["password"]
+    if User.objects.filter(email__iexact=email, is_active=False).exists():
+        return error_response(
+            "ACCOUNT_DISABLED",
+            "This account is disabled.",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
     user = authenticate(request=request, username=email, password=password)
     if user is None:
         return error_response(

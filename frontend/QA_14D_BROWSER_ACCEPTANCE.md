@@ -34,6 +34,10 @@ No Blocker, Critical, or High defects remain. BA-001 was the only High defect fo
 
 `npm run test:e2e` executes three Playwright browser smoke cases against seeded local demo accounts supplied through `PEARLIX_E2E_PASSWORD`. It covers Admin Team/Users, Staff scheduling/patients, and Doctor patient action boundaries without hardcoding credentials.
 
+## Local login connectivity
+
+The canonical browser QA origin is `http://127.0.0.1:5173`, paired with `http://127.0.0.1:8000/api`. See `design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md` for the strict-port and CORS repair.
+
 ## Deferred Phase 14E findings
 
 None from the executed Phase 14D acceptance scope.

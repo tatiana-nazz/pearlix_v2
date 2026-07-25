@@ -19,6 +19,7 @@ FILES = {
     "patient_qa": "frontend/QA_14D4_PATIENT_WORKSPACE.md",
     "browser_qa": "frontend/QA_14D_BROWSER_ACCEPTANCE.md",
     "browser_record": "frontend/design_v2/PHASE_14D_BROWSER_ACCEPTANCE_RECORD.md",
+    "local_login_record": "frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md",
     "backend_phase_tracker": "backend/project_docs/BACKEND_PHASE_TRACKER.md",
 }
 
@@ -110,6 +111,11 @@ def main() -> int:
         "browser_record": (
             "phase 14d browser acceptance gate is closed",
             "no backend endpoint, serializer, permission, api contract, or migration changed",
+        ),
+        "local_login_record": (
+            "vite's default port fallback silently moved the frontend",
+            "strictport: true",
+            "account_disabled",
         ),
         "backend_phase_tracker": (
             "phase 14d.4a",

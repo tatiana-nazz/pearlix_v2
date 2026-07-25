@@ -27,6 +27,27 @@ The frontend API client reads `import.meta.env.VITE_API_BASE_URL`. Do not hardco
 npm run dev
 ```
 
+## Deterministic local login
+
+Use `127.0.0.1` consistently for the local frontend and API:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+
+cd ..\frontend
+npm run dev
+```
+
+- Frontend: `http://127.0.0.1:5173/login`
+- API: `http://127.0.0.1:8000/api`
+- `frontend/.env.local` must set `VITE_API_BASE_URL=http://127.0.0.1:8000/api`.
+- `backend/.env` must use the matching `http://127.0.0.1:5173` values from `backend/.env.example` for `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`, and `FRONTEND_URL`.
+- Vite uses `strictPort`; if port 5173 is occupied, it exits with an explicit error. Stop the conflicting process rather than opening an automatically selected port.
+- Verify the API is reachable with `curl.exe -i http://127.0.0.1:8000/api/auth/login/`; a `405 Method Not Allowed` response confirms that the route is running and only accepts `POST`.
+
+To reset local demo QA data, see `backend/project_docs/DEMO_STORY.md`. Do not commit `.env` files or local credentials.
+
 Useful checks:
 
 ```bash

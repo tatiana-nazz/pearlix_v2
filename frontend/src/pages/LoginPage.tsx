@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../auth/authStore";
-import { getErrorMessage } from "../utils/apiErrors";
+import { loginErrorMessage } from "../utils/apiErrors";
 import { dashboardPathForRole } from "../utils/roles";
 
 export function LoginPage() {
@@ -12,6 +12,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const language = document.documentElement.lang.toLowerCase().startsWith("ar") ? "AR" : "EN";
 
   useEffect(() => {
     if (accessToken && authStatus === "unknown") {
@@ -39,7 +40,7 @@ export function LoginPage() {
       const user = await login({ email, password });
       navigate(user.must_change_password ? "/change-password" : dashboardPathForRole(user.role), { replace: true });
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(loginErrorMessage(err, language));
     } finally {
       setIsSubmitting(false);
     }
@@ -61,7 +62,7 @@ export function LoginPage() {
           required
         />
       </label>
-      {error ? <div className="form-error">{error}</div> : null}
+      {error ? <div className="form-error" role="alert" aria-live="assertive">{error}</div> : null}
       <button className="button primary" type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Signing in..." : "Sign in"}
       </button>

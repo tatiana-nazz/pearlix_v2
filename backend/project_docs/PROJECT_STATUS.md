@@ -6,6 +6,8 @@ Project: Dental Clinic Management System Website
 
 Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace contract closure. Live Admin, Staff, and Doctor browser execution closed responsive RTL overflow and static shell-navigation localization defects without changing backend runtime contracts. The backend regression gate remains closed with 420 passing tests.
 
+Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
+
 - Current completed phase: 14D Browser Acceptance Gate
 - Phase 13 series: complete
 - Next phase: Phase 14E workflow redesigns

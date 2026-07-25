@@ -86,7 +86,7 @@ def test_deactivated_user_cannot_log_in(api_client, admin_client, staff_user):
     )
 
     assert response.status_code == 401
-    assert response.data["code"] == "INVALID_CREDENTIALS"
+    assert response.data["code"] == "ACCOUNT_DISABLED"
 
 
 @pytest.mark.django_db
