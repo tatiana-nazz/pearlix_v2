@@ -11,18 +11,21 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current completed phase: 14E.1A Collection Action Closure
+- Current completed phase: 14E.2 Active Visit and Clinical Workspace Design Alignment
 - Phase 13 series: complete
 - Next phase: Remaining explicitly approved workflow refinements
 - Next step: plan only the next explicitly approved Phase 14E scope
 - Final backend full regression: 420 passed
-- Final frontend regression: 113 passed in 40 files
+- Final frontend regression: 124 passed in 43 files
 - Backend runtime changes in Phase 14C: no
 - Migrations in Phase 14C: none
 - Backend runtime changes in Phase 14C.0: yes
 - Frontend visible UI changes in Phase 14C: shell/token/shared-component foundation
 - Frontend visible UI changes in Phase 14E.1: shared action menu, row-action consolidation, and primary/secondary/danger hierarchy
 - Frontend visible UI changes in Phase 14E.1A: collection records have no mutation or overflow controls; record actions are available only after opening detail
+- Frontend visible UI changes in Phase 14E.2: active visit patient/visit summary, one accessible clinical tab workspace, localized notes and state feedback, read-first patient context, protected X-ray access, and existing billing handoff alignment
+- Backend runtime changes in Phase 14E.2: none
+- Migrations in Phase 14E.2: none
 - Backend runtime changes in Phase 14E.1: none
 - Migrations in Phase 14E.1: none
 - Frontend contract types, wrappers, and tests changed in Phase 14C.0: yes

@@ -6,20 +6,23 @@ import { LoadingState } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
 import { useActiveVisit } from "../../features/visits/hooks/useVisits";
 import { VisitWorkspace } from "../../features/visits/components/VisitWorkspace";
+import { visitCopy } from "../../features/visits/i18n";
+import { useAuthStore } from "../../auth/authStore";
 
 export function DoctorActiveVisitPage() {
   const activeVisit = useActiveVisit();
+  const c = visitCopy(useAuthStore((state) => state.user?.language_preference));
 
   return (
     <div className="visit-page">
-      <PageHeader eyebrow="doctor workspace" title="Active Visit" description="Document the current clinical encounter and complete it when care is finished." />
-      {activeVisit.isLoading ? <LoadingState title="Loading active visit..." /> : null}
-      {activeVisit.isError ? <ErrorState error={activeVisit.error} onRetry={() => void activeVisit.refetch()} title="Unable to load active visit" /> : null}
-      {activeVisit.data ? <VisitWorkspace role="DOCTOR" visit={activeVisit.data} /> : null}
+      <PageHeader eyebrow="doctor workspace" title={activeVisit.data?.patient.full_name ?? c.activeVisit} description={c.activeVisitDescription} />
+      {activeVisit.isLoading ? <LoadingState title={c.loadingActive} /> : null}
+      {activeVisit.isError ? <ErrorState error={activeVisit.error} onRetry={() => void activeVisit.refetch()} title={c.loadActiveError} /> : null}
+      {activeVisit.data ? <VisitWorkspace role="DOCTOR" visit={activeVisit.data} onReloadVisit={() => activeVisit.refetch()} /> : null}
       {activeVisit.data === null ? (
         <div className="state-panel">
-          <div><h3>No active visit</h3><EmptyState title="Start a checked-in appointment to begin documenting a visit." /></div>
-          <Link className="button primary" to="/doctor/appointments/day">Open appointments</Link>
+          <div><h3>{c.noActive}</h3><EmptyState title={c.noActiveDescription} /></div>
+          <Link className="button primary" to="/doctor/appointments/day">{c.openAppointments}</Link>
         </div>
       ) : null}
     </div>

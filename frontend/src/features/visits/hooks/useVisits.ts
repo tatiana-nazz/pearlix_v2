@@ -31,7 +31,7 @@ export function useActiveVisit() {
       try {
         return await visitsApi.active();
       } catch (error) {
-        if (error instanceof ApiClientError && error.code === "NOT_FOUND") return null;
+        if (error instanceof ApiClientError && (error.code === "NOT_FOUND" || error.status === 404)) return null;
         throw error;
       }
     },

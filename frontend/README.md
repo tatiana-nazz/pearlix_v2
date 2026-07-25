@@ -231,3 +231,5 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 ## Project Status
 
 `backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14E.1A closes collection-level record actions: collection records expose no mutation or overflow controls before detail is opened; whole rows/cards open detail; record-specific actions remain inside the detail surface. Pages retain one dominant primary operation, quieter secondary controls, and visually separated confirmed destructive actions. Remaining work requires its own approved scope. See `frontend/design_v2/PHASE_14E1A_COLLECTION_ACTION_CLOSURE_RECORD.md`.
+
+Phase 14E.2 aligns the opened Active Visit with the current clinical visual system: a compact patient/visit summary, one accessible tab workspace, localized save/conflict feedback, read-first patient context, protected X-ray access, and the existing Doctor-only billing handoff. It preserves responsive behavior, role ownership, collection-action closure, and the payment-free Doctor boundary. See `design_v2/PHASE_14E2_ACTIVE_VISIT_CLINICAL_WORKSPACE_IMPLEMENTATION_RECORD.md`.

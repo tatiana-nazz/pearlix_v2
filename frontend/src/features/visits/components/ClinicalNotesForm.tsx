@@ -1,4 +1,6 @@
 import type { ClinicalNotesValues } from "../utils/visitForm";
+import { useAuthStore } from "../../../auth/authStore";
+import { visitCopy } from "../i18n";
 
 interface ClinicalNotesFormProps {
   values: ClinicalNotesValues;
@@ -9,15 +11,11 @@ interface ClinicalNotesFormProps {
   onSave: () => void;
 }
 
-const fields: Array<{ key: keyof ClinicalNotesValues; label: string; rows: number }> = [
-  { key: "symptoms", label: "Symptoms", rows: 3 },
-  { key: "diagnosis", label: "Diagnosis", rows: 3 },
-  { key: "treatment", label: "Treatment", rows: 3 },
-  { key: "clinical_notes", label: "Clinical notes", rows: 6 },
-  { key: "follow_up_notes", label: "Follow-up notes", rows: 3 },
-];
-
 export function ClinicalNotesForm({ values, disabled, isSaving, error, onChange, onSave }: ClinicalNotesFormProps) {
+  const c = visitCopy(useAuthStore((state) => state.user?.language_preference));
+  const fields: Array<{ key: keyof ClinicalNotesValues; label: string; rows: number }> = [
+    { key: "symptoms", label: c.symptoms, rows: 3 }, { key: "diagnosis", label: c.diagnosis, rows: 3 }, { key: "treatment", label: c.treatment, rows: 3 }, { key: "clinical_notes", label: c.clinicalNotesField, rows: 6 }, { key: "follow_up_notes", label: c.followUp, rows: 3 },
+  ];
   return (
     <form
       className="clinical-notes-form"
@@ -38,10 +36,10 @@ export function ClinicalNotesForm({ values, disabled, isSaving, error, onChange,
           />
         </label>
       ))}
-      {error ? <p className="form-error" role="alert">Unable to save clinical notes. Review the entries and try again.</p> : null}
+      {error ? <p className="form-error" role="alert">{c.saveError}</p> : null}
       <div className="form-actions">
         <button className="button primary" type="submit" disabled={disabled || isSaving}>
-          {isSaving ? "Saving..." : "Save Notes"}
+          {isSaving ? c.saving : c.saveNotes}
         </button>
       </div>
     </form>

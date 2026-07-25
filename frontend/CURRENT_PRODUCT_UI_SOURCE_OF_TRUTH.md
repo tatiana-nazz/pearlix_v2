@@ -21,6 +21,10 @@ Pearlix is a professional medical SaaS for dental-clinic operations. The accepte
 
 The action-button treatment is delivered in Phase 14E.1 and refined by Phase 14E.1A. This is not an authorization to restore the pre-v2 interface or remove functionality: one dominant primary action per page/modal/action area; quieter secondary actions; and visually separated, confirmed destructive actions. Collection records expose no mutation or overflow controls before the record is opened. Whole-row/card selection opens detail. Record-specific actions exist only inside the detail surface. Core actions remain discoverable. Future UI work must preserve this system and the runtime/RBAC boundaries above.
 
+## Active Visit workspace: Phase 14E.2
+
+The opened Active Visit workflow uses a compact patient/visit summary and one accessible tab level for notes, read-first patient context, authorized X-rays/attachments, and the existing billing handoff. Save Notes is the dominant dirty-state action; completion is a separately confirmed clinical finalization. It preserves role ownership, protected media/stored AI boundaries, Doctor-only own-completed-visit handoff, and no payment/global Billing behavior. Later Phase 14E work adopts compatible reconciled visual/interaction principles from the user reference, but must not adopt stale functionality, permissions, navigation, or responsive behavior; the current responsive system is preserved unless explicitly redesigned.
+
 ## Stability and design-change rules
 
 Troubleshooting fixes the affected behavior without restoring an older shell or unrelated design. A design change needs explicit scope, reconciliation with current contracts/tests/RBAC, and an implementation/acceptance record. The next planned current-UI refinement begins with action hierarchy or an explicitly approved Phase 14E scope.
