@@ -1,5 +1,7 @@
 # Phase 14E.1 Action Hierarchy Implementation Record
 
+> **Partially superseded by Phase 14E.1A:** only the direct collection-level Check in and More/menu/action-cell allowance below is superseded. All other Phase 14E.1 hierarchy, detail, RBAC, accessibility, and verification decisions remain historical implementation evidence.
+
 ## Purpose and authority
 
 Phase 14E.1 refines the delivered v2 interface without changing routes, APIs, backend behavior, role permissions, or the rejected historical UI. Authority read before implementation: `CODEX_START_HERE.md`, the document register, project status, backend decisions, reconciled product/UI source, v2 component/table/overlay/form/responsive/token specifications, and the Phase 14D implementation and QA records.

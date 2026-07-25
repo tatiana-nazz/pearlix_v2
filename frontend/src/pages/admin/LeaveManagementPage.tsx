@@ -11,6 +11,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { StatusPill } from "../../components/StatusPill";
 import { formatDateRange } from "../../utils/dates";
 import { displayText } from "../../utils/formatters";
+import type { AvailabilityException } from "../../types/schedule";
 
 export function LeaveManagementPage() {
   const queryClient = useQueryClient();
@@ -18,6 +19,7 @@ export function LeaveManagementPage() {
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [reason, setReason] = useState("");
+  const [selectedLeave, setSelectedLeave] = useState<AvailabilityException | null>(null);
   const users = useQuery({ queryKey: ["schedule-employees"], queryFn: () => usersApi.list({ page: 1 }) });
   const leave = useQuery({ queryKey: ["availability-exceptions", "admin"], queryFn: () => scheduleApi.availabilityExceptions({ page: 1 }) });
   const employees = useMemo(() => (users.data?.results ?? []).filter((user) => user.role === "DOCTOR" || user.role === "STAFF"), [users.data]);
@@ -55,7 +57,8 @@ export function LeaveManagementPage() {
           <button className="button primary" disabled={create.isPending || !selected}>Create unavailable period</button>
         </form>
       </Card>
-      {leave.isLoading ? <LoadingState title="Loading leave records..." /> : leave.isError ? <ErrorState error={leave.error} onRetry={() => void leave.refetch()} /> : !leave.data?.results.length ? <EmptyState title="No leave or availability exceptions were returned." /> : <ul className="schedule-list">{leave.data.results.map((item) => <li key={item.id}><div><strong>{item.doctor?.full_name ?? item.staff?.full_name}</strong><span>{formatDateRange(item.start_datetime, item.end_datetime)}</span><span>{displayText(item.reason, "No reason recorded")}</span></div><div className="schedule-actions"><StatusPill status={item.is_cancelled ? "CANCELLED" : item.type} tone={item.is_cancelled ? "default" : "attention"} />{!item.is_cancelled && <button className="button ghost" onClick={() => void editReason(item.id, item.version, item.reason)}>Edit</button>}{!item.is_cancelled && <button className="button ghost" disabled={cancel.isPending} onClick={() => cancel.mutate({ id: item.id, version: item.version })}>Cancel leave</button>}</div></li>)}</ul>}
+      {leave.isLoading ? <LoadingState title="Loading leave records..." /> : leave.isError ? <ErrorState error={leave.error} onRetry={() => void leave.refetch()} /> : !leave.data?.results.length ? <EmptyState title="No leave or availability exceptions were returned." /> : <ul className="schedule-list">{leave.data.results.map((item) => <li key={item.id} className="clickable-row" tabIndex={0} onClick={() => setSelectedLeave(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedLeave(item); } }}><div><strong>{item.doctor?.full_name ?? item.staff?.full_name}</strong><span>{formatDateRange(item.start_datetime, item.end_datetime)}</span><span>{displayText(item.reason, "No reason recorded")}</span></div><StatusPill status={item.is_cancelled ? "CANCELLED" : item.type} tone={item.is_cancelled ? "default" : "attention"} /></li>)}</ul>}
+      {selectedLeave ? <div className="dialog-backdrop" role="presentation"><section className="dialog-panel" role="dialog" aria-modal="true" aria-label="Leave details"><h3>{selectedLeave.doctor?.full_name ?? selectedLeave.staff?.full_name}</h3><p>{formatDateRange(selectedLeave.start_datetime, selectedLeave.end_datetime)}</p><p>{displayText(selectedLeave.reason, "No reason recorded")}</p><StatusPill status={selectedLeave.is_cancelled ? "CANCELLED" : selectedLeave.type} tone={selectedLeave.is_cancelled ? "default" : "attention"} /><div className="form-actions">{!selectedLeave.is_cancelled ? <><button className="button secondary" onClick={() => void editReason(selectedLeave.id, selectedLeave.version, selectedLeave.reason)}>Edit</button><button className="button danger" disabled={cancel.isPending} onClick={() => cancel.mutate({ id: selectedLeave.id, version: selectedLeave.version }, { onSuccess: () => setSelectedLeave(null) })}>Cancel leave</button></> : null}<button className="button ghost" onClick={() => setSelectedLeave(null)}>Close</button></div></section></div> : null}
     </div>
   );
 }

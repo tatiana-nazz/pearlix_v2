@@ -5,16 +5,14 @@ import { Card } from "../../components/Card";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
-import { ArchivePatientDialog } from "../../features/patients/components/ArchivePatientDialog";
 import { ArchiveFilter, DoctorWorkflowFilter, PatientFilters } from "../../features/patients/components/PatientFilters";
 import { PatientTable } from "../../features/patients/components/PatientTable";
-import { useArchivePatient, useUnarchivePatient } from "../../features/patients/hooks/usePatientMutations";
 import { usePatients } from "../../features/patients/hooks/usePatients";
 import { getPatientPermissions, newPatientPath } from "../../features/patients/utils/patientPermissions";
 import { patientCopy } from "../../features/patients/i18n";
 import { useAuthStore } from "../../auth/authStore";
 import type { UserRole } from "../../types/auth";
-import type { PatientListFilters, PatientListItem } from "../../types/patients";
+import type { PatientListFilters } from "../../types/patients";
 
 interface PatientsPageProps {
   role: UserRole;
@@ -38,8 +36,6 @@ export function PatientsPage({ role }: PatientsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
-  const [dialogPatient, setDialogPatient] = useState<PatientListItem | null>(null);
-  const [dialogMode, setDialogMode] = useState<"archive" | "unarchive">("archive");
   const permissions = getPatientPermissions(role);
   const c = patientCopy(useAuthStore((state) => state.user?.language_preference));
 
@@ -63,8 +59,6 @@ export function PatientsPage({ role }: PatientsPageProps) {
   const doctorFilter = (searchParams.get("scope") ?? "all") as DoctorWorkflowFilter;
   const filters = useMemo(() => paramsToFilters(role, searchParams, debouncedSearch), [role, searchParams, debouncedSearch]);
   const patients = usePatients(filters);
-  const archive = useArchivePatient();
-  const unarchive = useUnarchivePatient();
 
   function setPage(page: number) {
     const next = new URLSearchParams(searchParams);
@@ -93,28 +87,7 @@ export function PatientsPage({ role }: PatientsPageProps) {
     setSearchParams(new URLSearchParams());
   }
 
-  function openArchiveDialog(patient: PatientListItem) {
-    setDialogPatient(patient);
-    setDialogMode("archive");
-    archive.reset();
-  }
-
-  function openUnarchiveDialog(patient: PatientListItem) {
-    setDialogPatient(patient);
-    setDialogMode("unarchive");
-    unarchive.reset();
-  }
-
-  async function confirmArchiveChange() {
-    if (!dialogPatient) return;
-    if (dialogMode === "archive") await archive.mutateAsync({ id: dialogPatient.id, version: dialogPatient.version });
-    else await unarchive.mutateAsync({ id: dialogPatient.id, version: dialogPatient.version });
-    setDialogPatient(null);
-  }
-
   const currentPage = filters.page ?? 1;
-  const isMutating = archive.isPending || unarchive.isPending;
-  const dialogError = dialogMode === "archive" ? archive.error : unarchive.error;
 
   return (
     <div className="patient-page">
@@ -154,8 +127,6 @@ export function PatientsPage({ role }: PatientsPageProps) {
               role={role}
               patients={patients.data.results}
               showArchivedStatus={role !== "DOCTOR"}
-              onArchive={openArchiveDialog}
-              onUnarchive={openUnarchiveDialog}
             />
             <div className="pagination-bar">
               <span>{patients.data.count} {c.records}</span>
@@ -172,15 +143,6 @@ export function PatientsPage({ role }: PatientsPageProps) {
           </>
         ) : null}
       </Card>
-
-      <ArchivePatientDialog
-        patient={dialogPatient}
-        mode={dialogMode}
-        isSubmitting={isMutating}
-        error={dialogError}
-        onCancel={() => setDialogPatient(null)}
-        onConfirm={() => void confirmArchiveChange()}
-      />
     </div>
   );
 }

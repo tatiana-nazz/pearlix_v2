@@ -5,9 +5,9 @@ All components inherit tokens, light/dark/EN/AR/RTL, keyboard focus, responsive 
 | Component | Target contract and measurable acceptance |
 | --- | --- |
 | `PageHeader` | Breadcrumb/context + 32 px title + one sentence; at most one primary page action; actions wrap below title at 768; no technical eyebrow/copy. |
-| `Card`/section | 16 px radius, 24/20 px padding, 1 px border, shadow only for major work surface; header/body/action slots; clickable card has keyboard activation, hover/focus elevation and `ChevronRight`. |
+| `Card`/section | 16 px radius, 24/20 px padding, 1 px border, shadow only for major work surface; header/body/action slots; clickable collection card has keyboard activation, hover/focus elevation and `ChevronRight`, while record actions remain in its detail surface. |
 | KPI | 3–5 per dashboard, 160 px minimum, 24 px icon tile, label/value/support line; entire authorized KPI links to filtered queue. |
-| Button/menu | 44 px standard, 36 px compact; primary one per scope; overflow only rare actions; destructive uses secondary placement and confirmation. |
+| Button/menu | 44 px standard, 36 px compact; primary one per scope; record-specific overflow is detail-only, never a collection control; destructive uses secondary placement and confirmation. |
 | Status | icon + text + semantic token; 12/18 label; no sole color; supports state legend in dense calendar. |
 | Tabs | 44 px target, selected indicator at logical inline end/start aware; horizontal scroll has accessible label and no nested page scroll. |
 | List/table shell | title/count, 16 px toolbar, distinct 40 px column header, separators or 2% alternating fill, row hover/focus/selected; 24 px gap between independent shells. |

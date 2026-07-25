@@ -26,7 +26,7 @@ import { useDoctors } from "../../features/appointments/hooks/useDoctors";
 import { addDays, clinicToday, formatAppointmentDate, isValidDateInput } from "../../features/appointments/utils/appointmentDates";
 import { buildAppointmentFilters } from "../../features/appointments/utils/appointmentFilters";
 import { getAppointmentPermissions } from "../../features/appointments/utils/appointmentPermissions";
-import { appointmentViewPath } from "../../features/appointments/utils/appointmentPermissions";
+import { appointmentReschedulePath, appointmentViewPath } from "../../features/appointments/utils/appointmentPermissions";
 import { appointmentCopy } from "../../features/appointments/i18n";
 import { useAuthStore } from "../../auth/authStore";
 import type { AppointmentListItem, AppointmentViewMode, CreateAppointmentPayload, UpdateAppointmentPayload } from "../../types/appointments";
@@ -161,15 +161,15 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
           <>
             {appointments.isFetching ? <p className="panel-note" aria-live="polite">{c.refreshing}</p> : null}
             {view === "day" ? (
-              <AppointmentDayView role={role} appointments={rows} timezone={clinicTimezone} onEdit={setFormAppointment} onDetails={setDetailsAppointment} onStatusAction={openStatusAction} />
+              <AppointmentDayView appointments={rows} timezone={clinicTimezone} onDetails={setDetailsAppointment} />
             ) : null}
             {view === "week" ? <AppointmentWeekView role={role} date={date} timezone={clinicTimezone} appointments={rows} onDetails={setDetailsAppointment} onDaySelect={openDay} /> : null}
             {view === "month" ? <AppointmentMonthView date={date} timezone={clinicTimezone} appointments={rows} onDetails={setDetailsAppointment} onDaySelect={openDay} /> : null}
             {view === "list" ? (
-              <AppointmentTable role={role} appointments={rows} timezone={clinicTimezone} onEdit={setFormAppointment} onDetails={setDetailsAppointment} onStatusAction={openStatusAction} />
+              <AppointmentTable appointments={rows} timezone={clinicTimezone} onDetails={setDetailsAppointment} />
             ) : null}
             {view === "needs-reschedule" ? (
-              <NeedsRescheduleView role={role} appointments={rows} onEdit={setFormAppointment} onDetails={setDetailsAppointment} />
+              <NeedsRescheduleView appointments={rows} onDetails={setDetailsAppointment} />
             ) : null}
             <div className="pagination-bar">
               <span>{appointments.data.count} {c.records}</span>
@@ -216,7 +216,15 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
           </Modal>
       ) : null}
 
-      <AppointmentDetailsDialog appointment={detailsAppointment} timezone={clinicTimezone} onClose={() => setDetailsAppointment(null)} />
+      <AppointmentDetailsDialog
+        appointment={detailsAppointment}
+        role={role}
+        timezone={clinicTimezone}
+        onClose={() => setDetailsAppointment(null)}
+        onEdit={(appointment) => { setDetailsAppointment(null); setFormAppointment(appointment); }}
+        onReschedule={(appointment) => navigate(appointmentReschedulePath(appointment.id))}
+        onStatusAction={(appointment, nextAction) => { setDetailsAppointment(null); openStatusAction(appointment, nextAction); }}
+      />
       <AppointmentConfirmDialog
         appointment={actionAppointment}
         action={action}

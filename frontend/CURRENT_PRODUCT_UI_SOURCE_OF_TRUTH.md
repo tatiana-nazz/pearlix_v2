@@ -17,9 +17,9 @@ Pearlix is a professional medical SaaS for dental-clinic operations. The accepte
 - **Billing, visits, and imaging:** Doctors have no global Billing or payment processing. They may perform only current own-visit handoff actions. Visits, X-ray/AI, protected media, and AI boundaries remain governed by current backend contracts and role tests.
 - **Accessibility and presentation:** preserve bilingual/RTL, responsive behavior, light/dark support, accessible controls, and backend-enforced RBAC.
 
-## Action hierarchy: delivered Phase 14E.1
+## Action hierarchy: Phase 14E.1A collection-action closure
 
-The action-button treatment is delivered in Phase 14E.1. This is not an authorization to restore the pre-v2 interface or remove functionality: one dominant primary action per page/modal/action area; quieter secondary actions; row click or an explicit detail control for detail; accessible More/Actions menus when appropriate; and visually separated, confirmed destructive actions. Core actions remain discoverable. Future UI work must preserve this system and the runtime/RBAC boundaries above.
+The action-button treatment is delivered in Phase 14E.1 and refined by Phase 14E.1A. This is not an authorization to restore the pre-v2 interface or remove functionality: one dominant primary action per page/modal/action area; quieter secondary actions; and visually separated, confirmed destructive actions. Collection records expose no mutation or overflow controls before the record is opened. Whole-row/card selection opens detail. Record-specific actions exist only inside the detail surface. Core actions remain discoverable. Future UI work must preserve this system and the runtime/RBAC boundaries above.
 
 ## Stability and design-change rules
 

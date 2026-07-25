@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { PatientListItem } from "../../../types/patients";
 import { PatientTable } from "./PatientTable";
@@ -27,7 +27,7 @@ const patient: PatientListItem = {
 function renderTable(role: "ADMIN" | "STAFF" | "DOCTOR", rows: PatientListItem[] = [patient]) {
   render(
     <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <PatientTable role={role} patients={rows} showArchivedStatus={role !== "DOCTOR"} onArchive={vi.fn()} onUnarchive={vi.fn()} />
+      <PatientTable role={role} patients={rows} showArchivedStatus={role !== "DOCTOR"} />
     </MemoryRouter>,
   );
 }
@@ -38,32 +38,32 @@ describe("PatientTable", () => {
     expect(screen.getByText("No patients found for this filter.")).toBeInTheDocument();
   });
 
-  it("opens Admin rows without exposing an operational action menu", () => {
+  it("opens Admin rows without exposing collection action controls", () => {
     renderTable("ADMIN");
     expect(screen.queryByRole("button", { name: /More actions/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Archive" })).not.toBeInTheDocument();
   });
 
-  it("renders Staff edit and archive actions", () => {
+  it("keeps Staff collection rows action-free", () => {
     renderTable("STAFF");
-    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
-    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Archive" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /More actions/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archive" })).not.toBeInTheDocument();
   });
 
-  it("renders Doctor edit but no archive action", () => {
+  it("keeps Doctor collection rows action-free", () => {
     renderTable("DOCTOR");
-    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
-    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: "Archive" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /More actions/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archive" })).not.toBeInTheDocument();
     expect(screen.queryByText("Status")).not.toBeInTheDocument();
   });
 
   it("opens the patient detail route from a keyboard-activated row", async () => {
     render(
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/staff/patients"]}>
-        <PatientTable role="STAFF" patients={[patient]} showArchivedStatus onArchive={vi.fn()} onUnarchive={vi.fn()} />
+        <PatientTable role="STAFF" patients={[patient]} showArchivedStatus />
         <Routes>
           <Route path="/staff/patients" element={null} />
           <Route path="/staff/patients/7" element={<p>Patient detail opened</p>} />

@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AppointmentListItem } from "../../../types/appointments";
+import { AppointmentDetailsDialog } from "./AppointmentDetailsDialog";
 import { AppointmentTable } from "./AppointmentTable";
 
 const base = {
@@ -37,18 +37,15 @@ const base = {
 } as AppointmentListItem;
 
 describe("AppointmentTable", () => {
-  it("keeps one justified Staff quick action and moves the remaining actions into More", () => {
-    render(
-      <MemoryRouter>
-        <AppointmentTable role="STAFF" appointments={[base]} onStatusAction={vi.fn()} />
-      </MemoryRouter>,
-    );
+  it("opens Staff records as a whole row without collection action controls", () => {
+    const onDetails = vi.fn();
+    render(<AppointmentTable appointments={[base]} onDetails={onDetails} />);
 
-    expect(screen.getByRole("button", { name: "Check in" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "more" }));
-    expect(screen.getByRole("menuitem", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /status/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check in" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "more" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Appointment action")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Maya Patient"));
+    expect(onDetails).toHaveBeenCalledWith(base);
   });
 
   it("renders multiple needs reschedule appointments in the full table", () => {
@@ -58,25 +55,38 @@ describe("AppointmentTable", () => {
     ] as AppointmentListItem[];
 
     render(
-      <MemoryRouter>
-        <AppointmentTable role="STAFF" appointments={rows} />
-      </MemoryRouter>,
+      <AppointmentTable appointments={rows} />,
     );
 
     expect(screen.getByText("Maya Patient")).toBeInTheDocument();
     expect(screen.getByText("Nora Patient")).toBeInTheDocument();
   });
 
-  it.each(["ADMIN", "DOCTOR"] as const)("keeps %s appointment rows read-only", (role) => {
-    render(
-      <MemoryRouter>
-        <AppointmentTable role={role} appointments={[base]} onStatusAction={vi.fn()} onEdit={vi.fn()} />
-      </MemoryRouter>,
-    );
+  it.each(["ADMIN", "DOCTOR"] as const)("keeps %s collection rows action-free", () => {
+    render(<AppointmentTable appointments={[base]} />);
 
     expect(screen.queryByRole("button", { name: "Check in" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Reschedule" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+  });
+
+  it("keeps Staff appointment actions inside the opened detail surface", () => {
+    const onEdit = vi.fn();
+    const onReschedule = vi.fn();
+    const onStatusAction = vi.fn();
+    render(<AppointmentDetailsDialog appointment={base} role="STAFF" onClose={vi.fn()} onEdit={onEdit} onReschedule={onReschedule} onStatusAction={onStatusAction} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reschedule" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mark no-show" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onEdit).toHaveBeenCalledWith(base);
+    expect(onReschedule).toHaveBeenCalledWith(base);
+    expect(onStatusAction).toHaveBeenNthCalledWith(1, base, "check-in");
+    expect(onStatusAction).toHaveBeenNthCalledWith(2, base, "no-show");
+    expect(onStatusAction).toHaveBeenNthCalledWith(3, base, "cancel");
   });
 });

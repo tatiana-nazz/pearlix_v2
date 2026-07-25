@@ -230,4 +230,4 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14E.1 action hierarchy is delivered: pages retain one dominant primary operation, quieter secondary controls, keyboard-accessible More menus where appropriate, and visually separated confirmed destructive actions. Remaining Phase 14E/14F work requires its own approved scope. See `frontend/design_v2/PHASE_14E1_ACTION_HIERARCHY_IMPLEMENTATION_RECORD.md`.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14E.1A closes collection-level record actions: collection records expose no mutation or overflow controls before detail is opened; whole rows/cards open detail; record-specific actions remain inside the detail surface. Pages retain one dominant primary operation, quieter secondary controls, and visually separated confirmed destructive actions. Remaining work requires its own approved scope. See `frontend/design_v2/PHASE_14E1A_COLLECTION_ACTION_CLOSURE_RECORD.md`.
