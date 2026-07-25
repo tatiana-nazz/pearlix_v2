@@ -4,14 +4,14 @@ This is the canonical current-phase tracker. Other project documents describe ca
 
 Project: Dental Clinic Management System Website
 
-Phase 14D.4 patient workspace refinement is delivered: the role-aware directory keeps server paging/filter state, Staff creation is General Information only, detail is read-first, medical history has an explicit edit mode, archive/reactivation stays dedicated and versioned, and tabs are keyboard accessible. Phase 14D.3A appointments contract closure, Phase 14D.2 dashboards, Phase 14D.1 Team/Users, and Phase 14R stabilization remain delivered. The current backend regression gate remains closed with 420 passing tests.
+Phase 14D.4A patient workspace contract closure is delivered: the role-aware directory keeps server paging/filter state, Staff creation is General Information only, detail is read-first, medical history has an explicit edit mode, archive/reactivation stays dedicated and versioned, tabs are keyboard accessible, and runtime EN/AR copy is centralized. Doctors can read and update every active, non-archived patient; Doctor helper filters narrow lists only. Phase 14D.3A appointments contract closure, Phase 14D.2 dashboards, Phase 14D.1 Team/Users, and Phase 14R stabilization remain delivered. The current backend regression gate remains closed with 420 passing tests.
 
-- Current completed phase: 14D.4 Patient Workspace Redesign and Contract Alignment
+- Current completed phase: 14D.4A Patient Workspace Contract Closure
 - Phase 13 series: complete
-- Next phase: remaining Phase 14D priority workflow — Patients
-- Next step: implement the remaining approved Phase 14D patient scope
+- Next phase: Phase 14E workflow redesigns and separate browser QA
+- Next step: execute browser acceptance for delivered Phase 14D work
 - Final backend full regression: 420 passed
-- Final frontend regression: 106 passed in 38 files
+- Final frontend regression: 113 passed in 40 files
 - Backend runtime changes in Phase 14C: no
 - Migrations in Phase 14C: none
 - Backend runtime changes in Phase 14C.0: yes
@@ -28,9 +28,11 @@ Phase 14D.4 patient workspace refinement is delivered: the role-aware directory 
 - Migrations in Phase 14D.3A: none
 - Backend runtime changes in Phase 14D.4: none
 - Migrations in Phase 14D.4: none
+- Backend runtime changes in Phase 14D.4A: none
+- Migrations in Phase 14D.4A: none
 - Backend regression gate: closed
 - Browser QA/UAT: pending execution with seeded local QA accounts
-- Release recommendation: deployment paused; implement Phases 14D–14F, then complete visual browser QA before controlled deployment
+- Release recommendation: deployment paused; complete Phases 14E–14F and visual browser QA before controlled deployment
 
 Completed capability summary: authenticated role workspaces; patient, scheduling, visit, X-ray/AI, and billing workflows; Admin account management, clinic settings, and audit-log visibility; deterministic development-only integrated demo story; the Phase 14B UI refocus design freeze; Phase 14C.0 Team APIs; Phase 14D.1 Team and Users & Access routes; Phase 14D.2 role dashboard redesign; and Phase 14R booking/availability stabilization. Team uses the User ID as its stable member ID, has transactional Doctor/Staff onboarding, profile optimistic locking, professional/login status separation, linkage-state reporting, protected role transitions, reactivation, and sanitized audit events. Phase 14A seed story remains available.
 

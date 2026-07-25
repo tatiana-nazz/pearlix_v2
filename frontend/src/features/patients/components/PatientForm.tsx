@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { useAuthStore } from "../../../auth/authStore";
 import type { UserRole } from "../../../types/auth";
@@ -52,9 +52,12 @@ export function PatientForm({
   const c = patientCopy(language);
   const [values, setValues] = useState<PatientFormValues>(() => (mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues));
   const [errors, setErrors] = useState<PatientFormErrors>({});
+  const initialValues = useRef(JSON.stringify(mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues));
 
   useEffect(() => {
-    if (mode === "edit") setValues(formValuesFromPatient(patient));
+    const next = mode === "edit" ? formValuesFromPatient(patient) : emptyPatientFormValues;
+    setValues(next);
+    initialValues.current = JSON.stringify(next);
   }, [mode, patient]);
 
   useEffect(() => {
@@ -81,6 +84,12 @@ export function PatientForm({
   const isMedicalOnly = section === "medical";
   const showGeneralInformation = !isMedicalOnly;
   const showMedicalInformation = mode === "edit";
+
+  function cancel() {
+    if (isSubmitting) return;
+    if (JSON.stringify(values) !== initialValues.current && !window.confirm(c.discardChanges)) return;
+    onCancel?.();
+  }
 
   return (
     <form className="patient-form" onSubmit={handleSubmit} noValidate>
@@ -145,6 +154,12 @@ export function PatientForm({
             />
             {errors.date_of_birth ? <span className="field-error">{errors.date_of_birth}</span> : null}
           </label>
+          <label>
+            {c.bloodGroup}
+            <select value={values.blood_group} onChange={(event) => updateField("blood_group", event.target.value as PatientBloodGroup)}>
+              {bloodGroups.map((group) => <option key={group || "none"} value={group}>{group || c.noBloodGroup}</option>)}
+            </select>
+          </label>
         </div>
       </section>
 
@@ -180,19 +195,6 @@ export function PatientForm({
 
       {showMedicalInformation ? <section className="patient-form-section">
         <h4>{c.clinicalProfile}</h4>
-        <div className="patient-form-grid">
-          <label>
-            {c.bloodGroup}
-            <select value={values.blood_group} onChange={(event) => updateField("blood_group", event.target.value as PatientBloodGroup)}>
-              {bloodGroups.map((group) => (
-                <option key={group || "none"} value={group}>
-                  {group || c.noBloodGroup}
-                </option>
-              ))}
-            </select>
-            {errors.blood_group ? <span className="field-error">{errors.blood_group}</span> : null}
-          </label>
-        </div>
         <label>
           {c.medicalConditions}
           <textarea value={values.medical_conditions_history} onChange={(event) => updateField("medical_conditions_history", event.target.value)} rows={5} />
@@ -211,7 +213,7 @@ export function PatientForm({
 
       <div className="form-actions">
         {onCancel ? (
-          <button className="button secondary" type="button" onClick={onCancel} disabled={isSubmitting}>
+          <button className="button secondary" type="button" onClick={cancel} disabled={isSubmitting}>
             {c.cancel}
           </button>
         ) : null}

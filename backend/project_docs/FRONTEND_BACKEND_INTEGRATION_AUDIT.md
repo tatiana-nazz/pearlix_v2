@@ -2,14 +2,14 @@
 
 ## Phase 14R regression-gate update
 
-Phase 14D.1 delivered the Admin Team and Users & Access routes, Phase 14D.2 dashboards, Phase 14D.3 appointments, and Phase 14D.3A appointment-create closure. Phase 14D.4 refines the existing patient frontend contracts without changing endpoint shapes: server-backed patient paging/filtering, Staff-only general-information creation, role-aware read-first detail, versioned edits, dedicated archive actions, and bounded related summaries. Phase 14R changed backend scheduling and clinic-timezone runtime behavior without changing external endpoint shapes or migrations. The complete backend suite now passes (420 tests); the regression gate is closed. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract.
+Phase 14D.1 delivered the Admin Team and Users & Access routes, Phase 14D.2 dashboards, Phase 14D.3 appointments, and Phase 14D.3A appointment-create closure. Phase 14D.4A closes the existing patient frontend contracts without changing endpoint shapes: server-backed patient paging/filtering, Staff-only general-information creation, role-aware read-first detail, versioned edits, dedicated archive actions, bounded related summaries, centralized EN/AR copy, and behavioral coverage. Phase 14R changed backend scheduling and clinic-timezone runtime behavior without changing external endpoint shapes or migrations. The complete backend suite now passes (420 tests); the regression gate is closed. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract.
 
 The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Browser QA remains pending.
 
 Phase: Originally created for 13A; capability audit through Phase 14D.3A appointments contract closure, Phase 14D.2 role dashboard runtime alignment, Phase 14D.1 Team and Users & Access runtime alignment, and Phase 14R backend stabilization. See `PROJECT_STATUS.md` for canonical current/next phase status.
 Backend source of truth: GitHub `Tatiana-tay/pearlix_v2`, branch `main`  
 API base URL: `/api/`  
-Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, Phase 14C.0 Team/account-linkage API foundation, Phase 14C shell/token/icon/shared-component foundation, Phase 14D.1 Team and Users & Access routes, Phase 14D.2 role dashboards, Phase 14D.3A appointments contract closure, and Phase 14R backend stabilization are complete. The remaining Phase 14D UI work is patients; deployment remains paused.
+Backend status: Phase 14A integrated development demo story, Phase 14B design documentation, Phase 14C.0 Team/account-linkage API foundation, Phase 14C shell/token/icon/shared-component foundation, Phase 14D.1 Team and Users & Access routes, Phase 14D.2 role dashboards, Phase 14D.3A appointments contract closure, Phase 14D.4A patient contract closure, and Phase 14R backend stabilization are complete. Browser QA and later Phase 14E/14F work remain; deployment remains paused.
 
 This document maps the completed Django REST Framework backend to the React + Vite + TypeScript frontend contract. It is an audit and implementation plan only; it does not change backend behavior.
 
@@ -609,7 +609,7 @@ Hidden actions:
 - Endpoint: `GET /api/patients/`
 - Query params: `page`, `is_archived`, `first_name`, `last_name`, `phone_number`, `email`, `national_id_or_passport`, `search`, Doctor helper filters `my_patients`, `upcoming_with_me`, `last_visit_with_me`.
 - Response: `Page<PatientList>`.
-- Behavior: Admin/Staff default hides archived patients; Doctors only see active/non-archived patients.
+- Behavior: Admin/Staff default hides archived patients; Doctors can read every active/non-archived patient. Doctor helper filters narrow workflows only and do not impose object-level restrictions.
 
 ### Patient Profile
 
@@ -619,7 +619,7 @@ Hidden actions:
 - Archive/unarchive payload: `{ version }`.
 - Response: `PatientDetail`.
 - Errors: required `first_name`, required `last_name`, required `gender`, future `date_of_birth`, duplicate non-null `national_id_or_passport`, `VERSION_REQUIRED` 400, `VERSION_CONFLICT` 409, `ARCHIVE_BLOCKED` 409 for blocking appointments.
-- Role notes: Admin read-only; Staff edit/archive; Doctor can update full profile fields but cannot archive/unarchive and only sees active/non-archived patients. Direct `PATCH is_archived` is rejected.
+- Role notes: Admin read-only; Staff edit/archive; Doctor can update full profile fields for every active/non-archived patient but cannot archive/unarchive. Direct `PATCH is_archived` is rejected.
 
 ### Appointment Day / Week / Month / List
 
@@ -642,7 +642,7 @@ Hidden actions:
 - Phase 14A completed the deterministic, development-only integrated demo story across the implemented frontend views. Browser QA remains pending.
 - Phase 14B completed the UI refocus design freeze.
 - Phase 14C.0 completed the Admin-only Team/account-linkage API foundation: transactional onboarding, linked-profile states, protected role transitions, reactivation, and frontend contract wrappers. Phase 14D.1 subsequently delivered the Team and Users & Access runtime routes.
-- Phase 14D.2 dashboards are complete; remaining Phase 14D work is appointments and patients; deployment remains paused.
+- Phase 14D.1 Team/Users, Phase 14D.2 dashboards, Phase 14D.3A appointments, and Phase 14D.4A patient closure are complete; deployment remains paused for browser QA and later Phase 14E/14F work.
 
 ### Needs Reschedule Tab
 
@@ -996,7 +996,7 @@ Network/offline fallback:
 
 ## N. Backend Gaps or Frontend Risks
 
-- Team and Users & Access runtime alignment was delivered in Phase 14D.1 and dashboards in Phase 14D.2; appointments and patients remain Phase 14D work.
+- Team and Users & Access runtime alignment was delivered in Phase 14D.1, dashboards in Phase 14D.2, appointments in Phase 14D.3A, and patient closure in Phase 14D.4A; browser QA and later workflow redesigns remain.
 - Unsupported professional fields remain absent: gender, qualifications, license, profile photo, Staff biography, and activity notes.
 - Browser QA remains pending.
 

@@ -28,7 +28,7 @@ export function PatientFilters({
 }: PatientFiltersProps) {
   const c = patientCopy(useAuthStore((state) => state.user?.language_preference));
   return (
-    <section className="patient-filters" aria-label="Patient filters">
+    <section className="patient-filters" aria-label={c.patientFilters}>
       <label>
         {c.search}
         <input
@@ -53,12 +53,12 @@ export function PatientFilters({
 
       {role === "DOCTOR" ? (
         <label>
-          Patient scope
+          {c.patientScope}
           <select value={doctorFilter} onChange={(event) => onDoctorFilterChange(event.target.value as DoctorWorkflowFilter)}>
-            <option value="all">All Patients</option>
-            <option value="my_patients">My Patients</option>
-            <option value="upcoming_with_me">Upcoming With Me</option>
-            <option value="last_visit_with_me">Last Visit With Me</option>
+            <option value="all">{c.allPatients}</option>
+            <option value="my_patients">{c.myPatients}</option>
+            <option value="upcoming_with_me">{c.upcomingWithMe}</option>
+            <option value="last_visit_with_me">{c.lastVisitWithMe}</option>
           </select>
         </label>
       ) : null}

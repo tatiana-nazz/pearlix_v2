@@ -15,7 +15,9 @@ FILES = {
     "appointments_qa": "frontend/QA_14D3_APPOINTMENTS_WORKSPACE.md",
     "appointments_closure": "frontend/design_v2/PHASE_14D3A_APPOINTMENTS_CLOSURE_RECORD.md",
     "patient_record": "frontend/design_v2/PHASE_14D4_PATIENT_WORKSPACE_IMPLEMENTATION_RECORD.md",
+    "patient_closure": "frontend/design_v2/PHASE_14D4A_PATIENT_CLOSURE_RECORD.md",
     "patient_qa": "frontend/QA_14D4_PATIENT_WORKSPACE.md",
+    "backend_phase_tracker": "backend/project_docs/BACKEND_PHASE_TRACKER.md",
 }
 
 
@@ -30,9 +32,9 @@ def main() -> int:
 
     checks = {
         "status": (
-            "current completed phase: 14d.4 patient workspace redesign and contract alignment",
+            "current completed phase: 14d.4a patient workspace contract closure",
             "final backend full regression: 420 passed",
-            "final frontend regression: 106 passed in 38 files",
+            "final frontend regression: 113 passed in 40 files",
             "backend regression gate: closed",
             "phase 14d priority workspace redesigns are delivered",
         ),
@@ -80,7 +82,7 @@ def main() -> int:
         ),
         "patient_record": (
             "phase 14d.4",
-            "106 frontend tests in 38 files",
+            "113 frontend tests in 40 files",
             "no backend runtime or external api contract changed",
             "browser qa was not executed",
         ),
@@ -88,6 +90,18 @@ def main() -> int:
             "browser qa status: pending execution",
             "arabic rtl",
             "archive/reactivate",
+        ),
+        "patient_closure": (
+            "phase 14d.4a",
+            "every active doctor can read and update every active, non-archived patient",
+            "113 frontend tests in 40 files",
+            "420 backend tests",
+            "browser/manual qa was not executed",
+        ),
+        "backend_phase_tracker": (
+            "phase 14d.4a",
+            "no backend runtime or api contract change",
+            "420 passed",
         ),
     }
     for key, phrases in checks.items():

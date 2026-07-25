@@ -20,12 +20,6 @@ interface PatientsPageProps {
   role: UserRole;
 }
 
-function roleDescription(role: UserRole): string {
-  if (role === "STAFF") return "Create, update, archive, and restore patient records according to backend permissions.";
-  if (role === "DOCTOR") return "Clinic-wide active patient access with profile editing where backend rules allow.";
-  return "Read-only patient access for clinic supervision.";
-}
-
 function paramsToFilters(role: UserRole, searchParams: URLSearchParams, debouncedSearch: string): PatientListFilters {
   const page = Number(searchParams.get("page") || "1");
   const filters: PatientListFilters = { page: Number.isFinite(page) && page > 0 ? page : 1 };
@@ -125,7 +119,7 @@ export function PatientsPage({ role }: PatientsPageProps) {
   return (
     <div className="patient-page">
       <PageHeader
-        eyebrow={`${role.toLowerCase()} workspace`}
+        eyebrow={`${role.toLowerCase()} ${c.workspace}`}
         title={c.patientDirectory}
         description={c.patientDirectoryDescription}
         actions={

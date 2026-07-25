@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phase 14D.4 delivers the patient workspace refinement: server-backed directory state, Staff-only General Information creation, read-first patient detail, explicit medical-history editing, archive/reactivation, and accessible URL-backed tabs. See `QA_14D4_PATIENT_WORKSPACE.md` and `design_v2/PHASE_14D4_PATIENT_WORKSPACE_IMPLEMENTATION_RECORD.md`.
+Phase 14D.4A closes the patient workspace contract: server-backed directory state, Staff-only General Information creation, read-first patient detail, explicit medical-history editing, versioned archive/reactivation, accessible URL-backed tabs, centralized English/Arabic copy, and behavioral coverage. Doctors have canonical access to every active/non-archived patient; Doctor helper filters narrow lists only. See `QA_14D4_PATIENT_WORKSPACE.md`, `design_v2/PHASE_14D4_PATIENT_WORKSPACE_IMPLEMENTATION_RECORD.md`, and `design_v2/PHASE_14D4A_PATIENT_CLOSURE_RECORD.md`.
 
 The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, billing, Admin management, clinic-settings, and audit-log workflows. Phase 14A adds a deterministic development-only integrated demo story for all implemented views. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
 
@@ -202,4 +202,4 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D.2 dashboards and Phase 14D.1 Team/Users & Access are complete; remaining Phase 14D work is appointments and patients. Deployment remains paused pending Phase 14D–14F and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14D2_ROLE_DASHBOARDS.md`.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D.1 Team/Users & Access, Phase 14D.2 dashboards, Phase 14D.3A appointments, and Phase 14D.4A patient contract closure are complete; browser QA and later Phase 14E/14F redesign work remain pending. Deployment remains paused pending those phases and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14D2_ROLE_DASHBOARDS.md`.

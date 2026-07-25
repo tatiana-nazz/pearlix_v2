@@ -46,7 +46,7 @@ export function PatientTable({ role, patients, showArchivedStatus, onArchive, on
                   <strong>{patient.full_name}</strong>
                 </td>
                 <td>{displayText(patient.phone_number || patient.email)}</td>
-                <td>{patient.gender}</td>
+                <td>{patient.gender === "Female" ? c.female : c.male}</td>
                 <td>{patient.age ?? c.notRecorded}</td>
                 {showArchivedStatus ? (
                   <td>

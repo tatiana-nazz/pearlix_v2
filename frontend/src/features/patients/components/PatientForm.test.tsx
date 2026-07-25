@@ -44,4 +44,27 @@ describe("PatientForm", () => {
     expect(screen.queryByLabelText("Insurance information")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("General notes")).not.toBeInTheDocument();
   });
+
+  it("submits the exact patient payload without a derived age", async () => {
+    const onSubmit = vi.fn();
+    render(<PatientForm mode="create" role="STAFF" onSubmit={onSubmit} />);
+    await userEvent.type(screen.getByLabelText(/First name/), "Maya");
+    await userEvent.type(screen.getByLabelText(/Last name/), "Haddad");
+    await userEvent.selectOptions(screen.getByLabelText(/Gender/), "Female");
+    await userEvent.selectOptions(screen.getByLabelText("Blood group"), "A+");
+    await userEvent.click(screen.getByRole("button", { name: "Save patient" }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ first_name: "Maya", last_name: "Haddad", gender: "Female", blood_group: "A+" }));
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty("age");
+  });
+
+  it("asks before discarding a dirty form", async () => {
+    const onCancel = vi.fn();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<PatientForm mode="create" role="STAFF" onSubmit={vi.fn()} onCancel={onCancel} />);
+    await userEvent.type(screen.getByLabelText(/First name/), "Maya");
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(confirm).toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+    confirm.mockRestore();
+  });
 });

@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PatientListItem } from "../../../types/patients";
@@ -25,7 +26,7 @@ const patient: PatientListItem = {
 
 function renderTable(role: "ADMIN" | "STAFF" | "DOCTOR", rows: PatientListItem[] = [patient]) {
   render(
-    <MemoryRouter>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <PatientTable role={role} patients={rows} showArchivedStatus={role !== "DOCTOR"} onArchive={vi.fn()} onUnarchive={vi.fn()} />
     </MemoryRouter>,
   );
@@ -55,5 +56,20 @@ describe("PatientTable", () => {
     expect(screen.getByRole("link", { name: "Edit" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Archive" })).not.toBeInTheDocument();
     expect(screen.queryByText("Status")).not.toBeInTheDocument();
+  });
+
+  it("opens the patient detail route from a keyboard-activated row", async () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/staff/patients"]}>
+        <PatientTable role="STAFF" patients={[patient]} showArchivedStatus onArchive={vi.fn()} onUnarchive={vi.fn()} />
+        <Routes>
+          <Route path="/staff/patients" element={null} />
+          <Route path="/staff/patients/7" element={<p>Patient detail opened</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    screen.getByText("QA Patient").closest("tr")?.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByText("Patient detail opened")).toBeInTheDocument();
   });
 });

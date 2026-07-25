@@ -1,73 +1,76 @@
 import { Card } from "../../../components/Card";
 import { SectionHeader } from "../../../components/SectionHeader";
+import { useAuthStore } from "../../../auth/authStore";
 import type { PatientDetail } from "../../../types/patients";
 import { formatDate, formatDateTime } from "../../../utils/dates";
 import { displayText } from "../../../utils/formatters";
+import { patientCopy } from "../i18n";
 
 interface PatientOverviewProps {
   patient: PatientDetail;
 }
 
 export function PatientOverview({ patient }: PatientOverviewProps) {
+  const c = patientCopy(useAuthStore((state) => state.user?.language_preference));
   return (
     <Card>
-      <SectionHeader title="Overview" description="Contact, demographic, and record metadata." />
+      <SectionHeader title={c.overview} description={c.overviewDescription} />
       <dl className="detail-grid">
         <div>
-          <dt>Phone</dt>
+          <dt>{c.phone}</dt>
           <dd>{displayText(patient.phone_number)}</dd>
         </div>
         <div>
-          <dt>Email</dt>
+          <dt>{c.email}</dt>
           <dd>{displayText(patient.email)}</dd>
         </div>
         <div>
-          <dt>National ID or passport</dt>
+          <dt>{c.nationalId}</dt>
           <dd>{displayText(patient.national_id_or_passport)}</dd>
         </div>
         <div>
-          <dt>Emergency contact</dt>
+          <dt>{c.emergencyContact}</dt>
           <dd>{displayText(patient.emergency_contact)}</dd>
         </div>
         <div>
-          <dt>Gender</dt>
-          <dd>{patient.gender}</dd>
+          <dt>{c.gender}</dt>
+          <dd>{patient.gender === "Female" ? c.female : c.male}</dd>
         </div>
         <div>
-          <dt>Date of birth</dt>
-          <dd>{patient.date_of_birth ? formatDate(patient.date_of_birth) : "Not recorded"}</dd>
+          <dt>{c.dateOfBirth}</dt>
+          <dd>{patient.date_of_birth ? formatDate(patient.date_of_birth) : c.notRecorded}</dd>
         </div>
         <div>
-          <dt>Age</dt>
-          <dd>{patient.age ?? "Not recorded"}</dd>
+          <dt>{c.age}</dt>
+          <dd>{patient.age ?? c.notRecorded}</dd>
         </div>
         <div>
-          <dt>Blood group</dt>
+          <dt>{c.bloodGroup}</dt>
           <dd>{displayText(patient.blood_group)}</dd>
         </div>
         <div>
-          <dt>Version</dt>
+          <dt>{c.version}</dt>
           <dd>{patient.version}</dd>
         </div>
         <div className="detail-wide">
-          <dt>Address</dt>
+          <dt>{c.address}</dt>
           <dd>{displayText(patient.address)}</dd>
         </div>
         <div>
-          <dt>Created</dt>
+          <dt>{c.created}</dt>
           <dd>{formatDateTime(patient.created_at)}</dd>
         </div>
         <div>
-          <dt>Updated</dt>
+          <dt>{c.updated}</dt>
           <dd>{formatDateTime(patient.updated_at)}</dd>
         </div>
         <div>
-          <dt>Created by</dt>
-          <dd>{patient.created_by?.full_name ?? "Not recorded"}</dd>
+          <dt>{c.createdBy}</dt>
+          <dd>{patient.created_by?.full_name ?? c.notRecorded}</dd>
         </div>
         <div>
-          <dt>Updated by</dt>
-          <dd>{patient.updated_by?.full_name ?? "Not recorded"}</dd>
+          <dt>{c.updatedBy}</dt>
+          <dd>{patient.updated_by?.full_name ?? c.notRecorded}</dd>
         </div>
       </dl>
     </Card>

@@ -27,4 +27,16 @@ describe("PatientProfileTabs", () => {
     await userEvent.keyboard("{ArrowRight}");
     expect(onTabChange).toHaveBeenCalledWith("medical");
   });
+
+  it("keeps tab and panel IDs associated and supports Home and End navigation", async () => {
+    const onTabChange = vi.fn();
+    render(<PatientProfileTabs role="STAFF" activeTab="medical" onTabChange={onTabChange} />);
+    const medical = screen.getByRole("tab", { name: "Medical Summary" });
+    expect(medical).toHaveAttribute("aria-controls", "patient-profile-panel-medical");
+    medical.focus();
+    await userEvent.keyboard("{Home}");
+    expect(onTabChange).toHaveBeenLastCalledWith("overview");
+    await userEvent.keyboard("{End}");
+    expect(onTabChange).toHaveBeenLastCalledWith("billing");
+  });
 });

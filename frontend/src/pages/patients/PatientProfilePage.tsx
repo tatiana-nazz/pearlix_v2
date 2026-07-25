@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
-import { Card } from "../../components/Card";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
@@ -63,14 +62,15 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   }, [searchParams]);
 
   const permissions = useMemo(() => getPatientPermissions(role, patient.data), [role, patient.data]);
+  const visibleTab = activeTab === "billing" && !permissions.canViewBillingTab ? "overview" : activeTab;
 
   if (!Number.isFinite(patientId)) {
-    return <EmptyState title="Patient was not found." />;
+    return <EmptyState title={c.invalidPatient} />;
   }
 
-  if (patient.isLoading) return <LoadingState title="Loading patient profile..." />;
-  if (patient.isError) return <ErrorState error={patient.error} onRetry={() => void patient.refetch()} title="Unable to load patient profile" />;
-  if (!patient.data) return <EmptyState title="Patient was not found or is unavailable to this role." />;
+  if (patient.isLoading) return <LoadingState title={c.loadingProfile} />;
+  if (patient.isError) return <ErrorState error={patient.error} onRetry={() => void patient.refetch()} title={c.loadProfileError} />;
+  if (!patient.data) return <EmptyState title={c.missingPatient} />;
 
   function setTab(tab: PatientProfileTab) {
     const next = new URLSearchParams(searchParams);
@@ -106,7 +106,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   }
 
   async function handleReloadLatestPatient() {
-    if (window.confirm("Reload the latest patient record and discard unsaved edits?")) {
+    if (window.confirm(c.reloadPatientConfirm)) {
       await patient.refetch();
       updatePatient.reset();
     }
@@ -118,7 +118,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   return (
     <div className="patient-page">
       <Link className="inline-back-link" to={patientListPath(role)}>
-        Back to patients
+        {c.backToPatients}
       </Link>
       <PatientProfileHeader
         role={role}
@@ -155,15 +155,15 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
         </div>
       ) : null}
 
-      <PatientProfileTabs role={role} activeTab={activeTab === "billing" && !permissions.canViewBillingTab ? "overview" : activeTab} onTabChange={setTab} />
+      <PatientProfileTabs role={role} activeTab={visibleTab} onTabChange={setTab} />
 
-      <div id={`patient-profile-panel-${activeTab}`} role="tabpanel" aria-labelledby={`patient-profile-tab-${activeTab}`} tabIndex={0}>
-      {activeTab === "overview" ? <PatientOverview patient={patient.data} /> : null}
-      {activeTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} onEdit={() => openEdit("medical")} /> : null}
-      {activeTab === "visits" ? (
+      <div id={`patient-profile-panel-${visibleTab}`} role="tabpanel" aria-labelledby={`patient-profile-tab-${visibleTab}`} tabIndex={0}>
+      {visibleTab === "overview" ? <PatientOverview patient={patient.data} /> : null}
+      {visibleTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} onEdit={() => openEdit("medical")} /> : null}
+      {visibleTab === "visits" ? (
         <PatientVisitsSummary role={role} visits={visits.data} isLoading={visits.isLoading} error={visits.error} onRetry={() => void visits.refetch()} />
       ) : null}
-      {activeTab === "appointments" ? (
+      {visibleTab === "appointments" ? (
         <PatientAppointmentsSummary
           role={role}
           appointments={appointments.data}
@@ -172,7 +172,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
           onRetry={() => void appointments.refetch()}
         />
       ) : null}
-      {activeTab === "xrays" ? (
+      {visibleTab === "xrays" ? (
         <PatientXraySummary
           role={role}
           patientId={patientId}
@@ -186,12 +186,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
           }}
         />
       ) : null}
-      {activeTab === "billing" && permissions.canViewBillingTab ? <PatientBillingSummary role={role} patientId={patientId} /> : null}
-      {activeTab === "billing" && !permissions.canViewBillingTab ? (
-        <Card>
-          <EmptyState title="Billing and invoices are not available in the Doctor workspace." />
-        </Card>
-      ) : null}
+      {visibleTab === "billing" ? <PatientBillingSummary role={role} patientId={patientId} /> : null}
       </div>
 
       <ArchivePatientDialog
