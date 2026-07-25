@@ -1,4 +1,5 @@
 from datetime import date
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -175,7 +176,20 @@ class AvailabilityExceptionViewSet(viewsets.ModelViewSet):
         return Response({**self.get_serializer(instance).data, "restored_appointments_count": len(restored), "still_blocked_appointments_count": len(blocked)})
 
 
-class AppointmentPagination(PageNumberPagination): page_size = 20
+class AppointmentPagination(PageNumberPagination):
+    page_size = 20
+
+    def get_paginated_response(self, data):
+        settings = get_clinic_settings()
+        now = timezone.localtime(timezone.now(), ZoneInfo(settings.timezone))
+        return Response({
+            "count": self.page.paginator.count,
+            "next": self.get_next_link(),
+            "previous": self.get_previous_link(),
+            "results": data,
+            "clinic_date": now.date().isoformat(),
+            "clinic_timezone": settings.timezone,
+        })
 class AppointmentViewSet(viewsets.ModelViewSet):
     serializer_class = AppointmentDetailSerializer; permission_classes = [AppointmentPermission]; pagination_class = AppointmentPagination; http_method_names = ["get", "post", "patch", "head", "options"]
     def get_queryset(self):
@@ -186,6 +200,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if self.request.query_params.get("date"): query = query.filter(start_datetime__date=self.request.query_params["date"])
         if self.request.query_params.get("start_from"): query = query.filter(start_datetime__gte=self.request.query_params["start_from"])
         if self.request.query_params.get("start_to"): query = query.filter(start_datetime__lte=self.request.query_params["start_to"])
+        if self.request.query_params.get("search"):
+            term = self.request.query_params["search"]
+            query = query.filter(Q(patient__first_name__icontains=term) | Q(patient__last_name__icontains=term) | Q(patient__phone_number__icontains=term))
         return query
     def get_serializer_class(self): return AppointmentListSerializer if self.action == "list" else AppointmentDetailSerializer
     def create(self, request, *args, **kwargs):

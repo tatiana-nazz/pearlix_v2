@@ -1,6 +1,6 @@
 # Pearlix Frontend
 
-Phase 14D.2 redesigns the role dashboards with shared v2 compositions and real role-specific dashboard endpoints. The API now supplies `clinic_date` and `clinic_timezone` so dashboard dates are clinic-local. See `QA_14D2_ROLE_DASHBOARDS.md` and `design_v2/PHASE_14D2_ROLE_DASHBOARD_IMPLEMENTATION_RECORD.md`.
+Phase 14D.3 redesigns the appointments workspace across Day, Week, Month, List, and Needs Reschedule views. Appointment list responses now provide clinic-local date/timezone metadata and server-backed patient search. See `QA_14D3_APPOINTMENTS_WORKSPACE.md` and `design_v2/PHASE_14D3_APPOINTMENTS_IMPLEMENTATION_RECORD.md`.
 
 The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, billing, Admin management, clinic-settings, and audit-log workflows. Phase 14A adds a deterministic development-only integrated demo story for all implemented views. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
 

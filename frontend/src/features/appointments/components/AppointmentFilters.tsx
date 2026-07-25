@@ -1,5 +1,7 @@
 import type { AppointmentStatus } from "../../../types/appointments";
 import type { DoctorListItem } from "../../../types/schedule";
+import { useAuthStore } from "../../../auth/authStore";
+import { appointmentCopy, appointmentStatusLabel } from "../i18n";
 
 export type AppointmentStatusFilter = AppointmentStatus | "ALL";
 
@@ -35,27 +37,29 @@ export function AppointmentFilters({
   onStatusChange,
   onDoctorChange,
 }: AppointmentFiltersProps) {
+  const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
+  const c = appointmentCopy(language);
   return (
     <section className="appointment-filters" aria-label="Appointment filters">
       <label>
-        Date
+        {c.date}
         <input type="date" value={date} onChange={(event) => onDateChange(event.target.value)} />
       </label>
       <label>
-        Status
+        {c.status}
         <select value={status} onChange={(event) => onStatusChange(event.target.value as AppointmentStatusFilter)}>
           {statusOptions.map((option) => (
             <option key={option} value={option}>
-              {option.split("_").join(" ")}
+              {option === "ALL" ? c.allStatuses : appointmentStatusLabel(language, option)}
             </option>
           ))}
         </select>
       </label>
       {showDoctorFilter ? (
         <label>
-          Doctor
+          {c.doctor}
           <select value={doctorId} onChange={(event) => onDoctorChange(event.target.value)}>
-            <option value="">All Doctors</option>
+            <option value="">{c.allDoctors}</option>
             {doctors.map((doctor) => (
               <option key={doctor.id} value={doctor.id}>
                 {doctor.full_name}

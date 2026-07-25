@@ -17,6 +17,29 @@ export function todayInputValue(): string {
   return toDateInputValue(new Date());
 }
 
+export function clinicToday(timezone?: string): string {
+  if (!timezone) return todayInputValue();
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+    const value = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+    return `${value.year}-${value.month}-${value.day}`;
+  } catch {
+    return todayInputValue();
+  }
+}
+
+export function isValidDateInput(value: string | null): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
+}
+
+export function formatAppointmentDate(value: string, language: "EN" | "AR", timezone?: string, options: Intl.DateTimeFormatOptions = { dateStyle: "medium" }): string {
+  return new Intl.DateTimeFormat(language === "AR" ? "ar" : "en-US", { ...options, timeZone: timezone }).format(new Date(`${value}T12:00:00Z`));
+}
+
+export function formatAppointmentDateTime(value: string, language: "EN" | "AR", timezone?: string): string {
+  return new Intl.DateTimeFormat(language === "AR" ? "ar" : "en-US", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(value));
+}
+
 export function addDays(value: string, days: number): string {
   const date = localDate(new Date(`${value}T00:00:00`));
   date.setDate(date.getDate() + days);

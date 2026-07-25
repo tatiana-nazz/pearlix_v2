@@ -10,6 +10,7 @@ interface FilterOptions {
   doctorId?: number;
   patientId?: number;
   status?: AppointmentStatus | "ALL";
+  search?: string;
 }
 
 function dayBounds(date: string) {
@@ -25,6 +26,7 @@ export function buildAppointmentFilters(options: FilterOptions): AppointmentList
   if (options.doctorId) filters.doctor_id = options.doctorId;
   if (options.patientId) filters.patient_id = options.patientId;
   if (options.status && options.status !== "ALL") filters.status = options.status;
+  if (options.search) filters.search = options.search;
 
   if (options.view === "needs-reschedule") {
     filters.status = "NEEDS_RESCHEDULE";

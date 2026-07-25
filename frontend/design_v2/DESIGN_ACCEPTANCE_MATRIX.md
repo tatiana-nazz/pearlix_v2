@@ -24,11 +24,11 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | USER-D | `/admin/users/:id` | separate role/reset/deactivate confirmations | transition/deactivation test + evidence | 14C.0/14D |
 | PAT-L | all role patient lists | rich row columns, role filters, server pagination | role/row keyboard/tablet tests | 14D |
 | PAT-P | all role profiles | ordered header/tabs; billing only Admin/Staff | ownership/archive/billing tests | 14D |
-| AP-D | appointment Day | exact toolbar/timeline/drawer and role actions | date/filter/action tests, 1440/768 | 14D |
-| AP-W | appointment Week | readable 7-day contained grid | width/scroll/RTL evidence | 14D |
-| AP-M | appointment Month | count summary then day navigation | calendar selection test/evidence | 14D |
-| AP-L | appointment List | paged clickable rows/filter preservation | pagination/keyboard/tablet test | 14D |
-| AP-R | Needs Reschedule/reschedule | queue + availability, one-record confirmation | availability/RBAC test/evidence | 14D |
+| AP-D | appointment Day | focused header, clinic-local date, role actions, semantic appointment rows | focused date/role/state tests; browser 1440/768 pending | 14D.3 |
+| AP-W | appointment Week | readable seven-day contained columns and single-action day selection | focused range/keyboard test; RTL evidence pending | 14D.3 |
+| AP-M | appointment Month | concise count/previews with localized overflow | focused day selection/overflow test; browser evidence pending | 14D.3 |
+| AP-L | appointment List | server pagination, Doctor/status/date/search filters, keyboard rows | focused filters/pagination/RBAC test; browser evidence pending | 14D.3 |
+| AP-R | Needs Reschedule/reschedule | route queue plus backend availability and Staff-only resolution | focused availability/RBAC test; browser evidence pending | 14D.3 |
 | SCH-01 | `/admin/doctors` | default/employee 5/7 weekly master-detail | impact confirmation test + 1440/768 | 14E |
 | LEAVE-01 | `/admin/leave*` | filter/list-calendar/detail/cancel no DELETE | cancel/version/RBAC test | 14E |
 | VIS-A | `/doctor/visits/active` | five notes, dirty/save/complete separation | ownership/dirty test + 1440/768 | 14E |

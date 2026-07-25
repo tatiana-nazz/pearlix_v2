@@ -1,44 +1,41 @@
 import { ErrorState } from "../../../components/ErrorState";
 import type { AppointmentListItem } from "../../../types/appointments";
+import { Modal } from "../../../components/v2";
+import { useAuthStore } from "../../../auth/authStore";
+import { appointmentCopy } from "../i18n";
 
 interface AppointmentConfirmDialogProps {
   appointment: AppointmentListItem | null;
-  action: "check-in" | "cancel" | "no-show" | "start-visit" | null;
+  action: "check-in" | "cancel" | "no-show" | null;
   isSubmitting?: boolean;
   error?: unknown;
   onCancel: () => void;
   onConfirm: () => void;
 }
 
-const labels = {
-  "check-in": "check in this appointment",
-  cancel: "cancel this appointment",
-  "no-show": "mark this appointment as no-show",
-  "start-visit": "start this visit",
-};
-
 export function AppointmentConfirmDialog({ appointment, action, isSubmitting, error, onCancel, onConfirm }: AppointmentConfirmDialogProps) {
+  const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
+  const c = appointmentCopy(language);
   if (!appointment || !action) return null;
+  const labels = { "check-in": c.actionCheckIn, cancel: c.actionCancel, "no-show": c.actionNoShow };
   return (
-    <div className="dialog-backdrop" role="presentation">
-      <section className="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="appointment-action-title">
+      <Modal open title={c.confirmAction} onClose={onCancel}>
         <div>
-          <p className="eyebrow">Appointment action</p>
-          <h3 id="appointment-action-title">Confirm action</h3>
+          <p className="eyebrow">{c.action}</p>
+          <h3>{c.confirmAction}</h3>
         </div>
         <p>
           This will {labels[action]} for {appointment.patient.full_name}.
         </p>
-        {error ? <ErrorState error={error} title="Unable to complete action" /> : null}
+        {error ? <ErrorState error={error} title={c.actionUnavailable} /> : null}
         <div className="form-actions">
           <button className="button secondary" type="button" onClick={onCancel}>
-            Keep appointment
+            {c.keepAppointment}
           </button>
           <button className="button primary" type="button" disabled={isSubmitting} onClick={onConfirm}>
-            Confirm
+            {c.confirm}
           </button>
         </div>
-      </section>
-    </div>
+      </Modal>
   );
 }

@@ -12,6 +12,6 @@ describe("AppointmentViewTabs", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: "Needs Reschedule" })).toHaveAttribute("href", "/staff/appointments/needs-reschedule");
+    expect(screen.getByRole("link", { name: "Needs reschedule" })).toHaveAttribute("href", "/staff/appointments/needs-reschedule");
   });
 });

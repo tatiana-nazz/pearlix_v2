@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { AppointmentDetail, AppointmentListItem, CreateAppointmentPayload, UpdateAppointmentPayload } from "../../../types/appointments";
 import type { DoctorListItem } from "../../../types/schedule";
+import { useAuthStore } from "../../../auth/authStore";
+import { appointmentCopy } from "../i18n";
 import {
   apiFieldErrors,
   appointmentToFormValues,
@@ -39,6 +41,8 @@ export function AppointmentForm(props: AppointmentFormProps) {
   const [values, setValues] = useState<AppointmentFormValues>(() => initialValues(props));
   const [errors, setErrors] = useState<AppointmentFormErrors>({});
   const backendErrors = useMemo(() => apiFieldErrors(props.error), [props.error]);
+  const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
+  const c = appointmentCopy(language);
 
   useEffect(() => {
     setValues(initialValues(props));
@@ -64,10 +68,10 @@ export function AppointmentForm(props: AppointmentFormProps) {
 
   return (
     <form className="appointment-form" onSubmit={(event) => void submit(event)}>
-      {props.error ? <p className="form-error">Unable to save appointment. Review the highlighted fields and try again.</p> : null}
+      {props.error ? <p className="form-error">{c.saveError}</p> : null}
       <div className="appointment-form-grid">
         <label>
-          Patient ID
+          {c.patientId}
           <input
             value={values.patientId}
             onChange={(event) => setField("patientId", event.target.value)}
@@ -77,9 +81,9 @@ export function AppointmentForm(props: AppointmentFormProps) {
           {fieldError("patientId") ? <span className="field-error">{fieldError("patientId")}</span> : null}
         </label>
         <label>
-          Doctor
+          {c.doctor}
           <select value={values.doctorId} onChange={(event) => setField("doctorId", event.target.value)} aria-invalid={Boolean(fieldError("doctorId"))}>
-            <option value="">Select doctor</option>
+            <option value="">{c.selectDoctor}</option>
             {props.doctors.map((doctor) => (
               <option key={doctor.id} value={doctor.id}>
                 {doctor.full_name}
@@ -89,17 +93,17 @@ export function AppointmentForm(props: AppointmentFormProps) {
           {fieldError("doctorId") ? <span className="field-error">{fieldError("doctorId")}</span> : null}
         </label>
         <label>
-          Date
+          {c.date}
           <input type="date" value={values.date} onChange={(event) => setField("date", event.target.value)} aria-invalid={Boolean(fieldError("date"))} />
           {fieldError("date") ? <span className="field-error">{fieldError("date")}</span> : null}
         </label>
         <label>
-          Time
+          {c.time}
           <input type="time" value={values.time} onChange={(event) => setField("time", event.target.value)} aria-invalid={Boolean(fieldError("time"))} />
           {fieldError("time") ? <span className="field-error">{fieldError("time")}</span> : null}
         </label>
         <label>
-          Duration
+          {c.duration}
           <input
             value={values.durationMinutes}
             onChange={(event) => setField("durationMinutes", event.target.value)}
@@ -109,23 +113,23 @@ export function AppointmentForm(props: AppointmentFormProps) {
           {fieldError("durationMinutes") ? <span className="field-error">{fieldError("durationMinutes")}</span> : null}
         </label>
         <label>
-          Reason
+          {c.reason}
           <input value={values.reason} onChange={(event) => setField("reason", event.target.value)} />
         </label>
       </div>
       <label>
-        Notes
+        {c.notes}
         <textarea value={values.notes} rows={4} onChange={(event) => setField("notes", event.target.value)} />
       </label>
-      <p className="form-note">Status is managed through appointment action endpoints, not the appointment form.</p>
+      <p className="form-note">{c.statusManaged}</p>
       <div className="form-actions">
         {props.onCancel ? (
           <button className="button secondary" type="button" onClick={props.onCancel}>
-            Cancel
+            {c.cancel}
           </button>
         ) : null}
         <button className="button primary" type="submit" disabled={props.isSubmitting}>
-          {props.mode === "reschedule" ? "Save reschedule" : "Save appointment"}
+          {props.mode === "reschedule" ? c.saveReschedule : c.save}
         </button>
       </div>
     </form>

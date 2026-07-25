@@ -2,7 +2,7 @@
 
 ## Phase 14R regression-gate update
 
-Phase 14D.1 delivered the Admin Team and Users & Access routes using the existing Team/account APIs. Phase 14D.2 delivers the three role dashboard compositions and adds clinic-local `clinic_date` and `clinic_timezone` response metadata to their existing endpoints. Phase 14R changed backend scheduling and clinic-timezone runtime behavior without changing external endpoint shapes or migrations. The complete backend suite now passes (418 tests); the regression gate is closed. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract.
+Phase 14D.1 delivered the Admin Team and Users & Access routes using the existing Team/account APIs. Phase 14D.2 delivers the three role dashboard compositions and adds clinic-local `clinic_date` and `clinic_timezone` response metadata to their existing endpoints. Phase 14D.3 redesigns appointment surfaces and adds the same additive clinic date/timezone metadata plus patient name/phone `search` support to appointment list pagination; archived patients are not valid appointment-create targets. Phase 14R changed backend scheduling and clinic-timezone runtime behavior without changing external endpoint shapes or migrations. The complete backend suite now passes (418 tests); the regression gate is closed. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract.
 
 The completed Phase 14C verification suite records 75 frontend tests, including shell persistence, drawer controls, theme resolution, and EN/AR root-direction behavior. Browser QA remains pending.
 
@@ -243,6 +243,12 @@ Invoice query params: `status`, `patient_id`, `visit_id`, `appointment_id`, `cur
 - `GET /api/dashboard/staff/` - Staff only.
 - `GET /api/dashboard/doctor/` - Doctor only.
 - All three responses include `clinic_date` (`YYYY-MM-DD`) and `clinic_timezone` (IANA timezone) from clinic settings. They are additive fields; role permissions and existing payload fields are unchanged.
+
+### Appointments
+
+- `GET /api/appointments/` retains pagination and existing filters, and now also returns additive `clinic_date` and `clinic_timezone` fields.
+- List query supports `search`, matching patient full name or phone number server-side. Existing role scope remains authoritative.
+- `POST /api/appointments/` continues to accept only active, non-archived patients through its write-only `patient_id` field.
 
 ### Audit Logs
 

@@ -158,7 +158,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
 
 
 class AppointmentDetailSerializer(AppointmentListSerializer):
-    patient_id = serializers.PrimaryKeyRelatedField(source="patient", queryset=Patient.objects.all(), write_only=True, required=False)
+    patient_id = serializers.PrimaryKeyRelatedField(source="patient", queryset=Patient.objects.filter(is_archived=False), write_only=True, required=False)
     doctor_id = serializers.PrimaryKeyRelatedField(source="doctor", queryset=User.objects.filter(role=User.Role.DOCTOR, is_active=True), write_only=True, required=False)
     duration_minutes = serializers.IntegerField(required=False)
     created_by = UserSummarySerializer(read_only=True)

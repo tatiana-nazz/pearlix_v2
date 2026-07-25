@@ -55,6 +55,16 @@ export interface AppointmentListFilters {
   date?: string;
   start_from?: string;
   start_to?: string;
+  search?: string;
+}
+
+export interface AppointmentPage {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: AppointmentList[];
+  clinic_date: string;
+  clinic_timezone: string;
 }
 
 export interface AppointmentAvailabilityFilters {

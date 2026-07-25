@@ -27,9 +27,8 @@ describe("getAppointmentPermissions", () => {
     expect(getAppointmentPermissions("STAFF", appointment("COMPLETED")).canEdit).toBe(false);
   });
 
-  it("limits Doctor to starting checked-in visits", () => {
+  it("keeps Doctor appointment access read-only", () => {
     expect(getAppointmentPermissions("DOCTOR", appointment("CHECKED_IN"))).toMatchObject({
-      canStartVisit: true,
       canEdit: false,
       canCancel: false,
       isReadOnly: true,

@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.audit.models import ActivityLog
@@ -528,6 +529,9 @@ def test_list_filters_and_pagination(admin_client, staff_client, doctor_client, 
     assert first_page.data["next"] is not None
     assert len(first_page.data["results"]) == 20
     assert first_page.data["results"][0]["id"] == own.id
+    assert first_page.data["clinic_date"] == timezone.localdate().isoformat()
+    assert first_page.data["clinic_timezone"] == ClinicSettings.get_solo().timezone
+    assert admin_client.get("/api/appointments/?search=Other").data["count"] == 1
 
 
 @pytest.mark.django_db

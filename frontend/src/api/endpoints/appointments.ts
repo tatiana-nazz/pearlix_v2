@@ -1,10 +1,11 @@
-import type { Page, QueryParams } from "../../types/api";
+import type { QueryParams } from "../../types/api";
 import type {
   AppointmentAvailability,
   AppointmentDetail,
   AppointmentAvailabilityFilters,
   AppointmentListFilters,
   AppointmentList,
+  AppointmentPage,
   CreateAppointmentPayload,
   UpdateAppointmentPayload,
 } from "../../types/appointments";
@@ -21,6 +22,7 @@ export function appointmentListQuery(filters?: AppointmentListFilters): QueryPar
     date: filters.date,
     start_from: filters.start_from,
     start_to: filters.start_to,
+    search: filters.search,
   };
 }
 
@@ -33,7 +35,7 @@ export function availabilityQuery(filters: AppointmentAvailabilityFilters): Quer
 }
 
 export function getAppointments(filters?: AppointmentListFilters) {
-  return api.get<Page<AppointmentList>>("/appointments/", appointmentListQuery(filters));
+  return api.get<AppointmentPage>("/appointments/", appointmentListQuery(filters));
 }
 
 export function getAppointment(id: number) {

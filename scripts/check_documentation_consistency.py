@@ -1,4 +1,4 @@
-"""Fail fast on Phase 14D.2 dashboard and Phase 14R regression-gate documentation drift."""
+"""Fail fast on Phase 14D.3 appointments, Phase 14D.2 dashboard, and Phase 14R documentation drift."""
 
 from pathlib import Path
 import sys
@@ -11,6 +11,8 @@ FILES = {
     "record": "backend/project_docs/PHASE_14R_BACKEND_REGRESSION_STABILIZATION.md",
     "dashboard_record": "frontend/design_v2/PHASE_14D2_ROLE_DASHBOARD_IMPLEMENTATION_RECORD.md",
     "dashboard_qa": "frontend/QA_14D2_ROLE_DASHBOARDS.md",
+    "appointments_record": "frontend/design_v2/PHASE_14D3_APPOINTMENTS_IMPLEMENTATION_RECORD.md",
+    "appointments_qa": "frontend/QA_14D3_APPOINTMENTS_WORKSPACE.md",
 }
 
 
@@ -25,11 +27,11 @@ def main() -> int:
 
     checks = {
         "status": (
-            "current completed phase: 14d.2 role dashboard redesign and runtime alignment",
+            "current completed phase: 14d.3 appointments workspace redesign and workflow alignment",
             "final backend full regression: 418 passed",
-            "final frontend regression: 94 passed in 35 files",
+            "final frontend regression: 97 passed in 36 files",
             "backend regression gate: closed",
-            "remaining phase 14d ui redesign scope is appointments and patients",
+            "remaining phase 14d ui redesign scope is patients",
         ),
         "audit": (
             "phase 14r regression-gate update",
@@ -54,6 +56,17 @@ def main() -> int:
             "staff",
             "doctor",
             "arabic",
+        ),
+        "appointments_record": (
+            "phase 14d.3",
+            "clinic_date",
+            "clinic_timezone",
+            "browser qa is pending",
+        ),
+        "appointments_qa": (
+            "browser qa status: pending execution",
+            "needs reschedule",
+            "arabic rtl",
         ),
     }
     for key, phrases in checks.items():
