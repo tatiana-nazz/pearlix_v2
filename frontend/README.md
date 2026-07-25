@@ -33,6 +33,7 @@ Useful checks:
 npm run typecheck
 npm run test:run
 npm run build
+npm run test:e2e
 ```
 
 ## Auth Flow
@@ -63,7 +64,7 @@ npm run build
 
 ## Browser QA
 
-Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_14D2_ROLE_DASHBOARDS.md` for role-dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Use `frontend/QA_13K.md` for the final regression and browser UAT checklist, `frontend/QA_14A.md` for the integrated demo-story checklist, `frontend/QA_14B.md` for the design-freeze review, `frontend/QA_14C0.md` for Team API contract verification, and `frontend/QA_14C.md` for the shell foundation. Browser QA execution is still pending.
+The integrated Phase 14D browser acceptance gate is closed. See `frontend/QA_14D_BROWSER_ACCEPTANCE.md` and `frontend/design_v2/PHASE_14D_BROWSER_ACCEPTANCE_RECORD.md`; earlier checklists remain historical verification references.
 Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, `frontend/QA_13H.md` for X-rays and AI, and `frontend/QA_13I.md` for billing handoffs, invoices, payments, and print-data QA.
 
 ## Local QA Accounts
@@ -202,4 +203,4 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D.1 Team/Users & Access, Phase 14D.2 dashboards, Phase 14D.3A appointments, and Phase 14D.4A patient contract closure are complete; browser QA and later Phase 14E/14F redesign work remain pending. Deployment remains paused pending those phases and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14D2_ROLE_DASHBOARDS.md`.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D browser acceptance is complete; Phase 14E/14F redesign work remains pending. See `frontend/QA_14D_BROWSER_ACCEPTANCE.md`.

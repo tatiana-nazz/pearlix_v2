@@ -1,4 +1,4 @@
-"""Fail fast on Phase 14D.3A appointments, Phase 14D.2 dashboard, and Phase 14R documentation drift."""
+"""Fail fast on Phase 14D browser-acceptance and prior phase documentation drift."""
 
 from pathlib import Path
 import sys
@@ -17,6 +17,8 @@ FILES = {
     "patient_record": "frontend/design_v2/PHASE_14D4_PATIENT_WORKSPACE_IMPLEMENTATION_RECORD.md",
     "patient_closure": "frontend/design_v2/PHASE_14D4A_PATIENT_CLOSURE_RECORD.md",
     "patient_qa": "frontend/QA_14D4_PATIENT_WORKSPACE.md",
+    "browser_qa": "frontend/QA_14D_BROWSER_ACCEPTANCE.md",
+    "browser_record": "frontend/design_v2/PHASE_14D_BROWSER_ACCEPTANCE_RECORD.md",
     "backend_phase_tracker": "backend/project_docs/BACKEND_PHASE_TRACKER.md",
 }
 
@@ -32,11 +34,11 @@ def main() -> int:
 
     checks = {
         "status": (
-            "current completed phase: 14d.4a patient workspace contract closure",
             "final backend full regression: 420 passed",
             "final frontend regression: 113 passed in 40 files",
             "backend regression gate: closed",
-            "phase 14d priority workspace redesigns are delivered",
+            "current completed phase: 14d browser acceptance gate",
+            "browser qa/uat: phase 14d integrated acceptance passed",
         ),
         "audit": (
             "phase 14r regression-gate update",
@@ -98,6 +100,17 @@ def main() -> int:
             "420 backend tests",
             "browser/manual qa was not executed",
         ),
+        "browser_qa": (
+            "phase 14d browser acceptance",
+            "admin, staff, doctor",
+            "1440x900, 1280x720, 1024x768, 768x1024",
+            "no blocker, critical, or high defects remain",
+            "ba-001",
+        ),
+        "browser_record": (
+            "phase 14d browser acceptance gate is closed",
+            "no backend endpoint, serializer, permission, api contract, or migration changed",
+        ),
         "backend_phase_tracker": (
             "phase 14d.4a",
             "no backend runtime or api contract change",
@@ -117,8 +130,6 @@ def main() -> int:
     ):
         if stale in joined:
             errors.append(f"stale regression wording: {stale!r}")
-    if "browser qa: complete" in joined or "browser acceptance complete" in joined:
-        errors.append("browser QA is falsely complete")
     if errors:
         print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
         return 1

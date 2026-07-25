@@ -2,11 +2,9 @@ import { NavLink } from "react-router-dom";
 import { LogOut, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 
 import type { UserRole } from "../types/auth";
-import { roleLabel } from "../utils/roles";
 import { useAuthStore } from "../auth/authStore";
 import { navigationByRole, type NavigationGroup } from "./navigation";
-import { t } from "./i18n";
-import { teamUsersCopy } from "../features/teamUsers/i18n";
+import { localizedRoleLabel, navigationLabel, t } from "./i18n";
 export { navigationByRole } from "./navigation";
 
 interface SidebarProps {
@@ -22,18 +20,18 @@ interface SidebarProps {
 export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerClose = () => undefined, onCollapse = () => undefined, onNavigate = () => undefined, onLogout = () => undefined }: SidebarProps) {
   const groups: NavigationGroup[] = ["workspace", "clinical", "administration", "personal"];
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
-  const featureCopy = teamUsersCopy(language);
-  const itemLabel = (label: string) => label === "Team" ? featureCopy.team : label === "Users & Access" ? featureCopy.usersAccess : label;
+  const itemLabel = (label: string) => navigationLabel(language, label as Parameters<typeof navigationLabel>[1]);
+  const workspaceLabel = `${localizedRoleLabel(language, role)} ${t(language, "workspace")}`;
   return (
     <aside className="app-sidebar">
       <div className="app-sidebar-brand">
         <div className="app-sidebar-brand-mark">P</div>
         <div className="app-sidebar-brand-copy">
           <strong>Pearlix</strong>
-          <span>{roleLabel(role)} workspace</span>
-        </div>{drawerOpen ? <button className="v2-icon-button drawer-close" type="button" aria-label={t(language, "close")} onClick={onDrawerClose}><X size={20} /></button> : null}<button className="v2-icon-button sidebar-toggle" type="button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} data-tooltip={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={onCollapse}>{collapsed ? <PanelLeftOpen className="directional-icon" size={20} /> : <PanelLeftClose className="directional-icon" size={20} />}</button>
+          <span>{workspaceLabel}</span>
+        </div>{drawerOpen ? <button className="v2-icon-button drawer-close" type="button" aria-label={t(language, "close")} onClick={onDrawerClose}><X size={20} /></button> : null}<button className="v2-icon-button sidebar-toggle" type="button" aria-label={collapsed ? t(language, "expandSidebar") : t(language, "collapseSidebar")} data-tooltip={collapsed ? t(language, "expandSidebar") : t(language, "collapseSidebar")} onClick={onCollapse}>{collapsed ? <PanelLeftOpen className="directional-icon" size={20} /> : <PanelLeftClose className="directional-icon" size={20} />}</button>
       </div>
-      <nav className="app-sidebar-nav" aria-label={`${roleLabel(role)} navigation`}>
+      <nav className="app-sidebar-nav" aria-label={`${localizedRoleLabel(language, role)} ${t(language, "navigation")}`}>
         {groups.map((group) => {
           const items = navigationByRole[role].filter((item) => item.group === group);
           if (!items.length) return null;

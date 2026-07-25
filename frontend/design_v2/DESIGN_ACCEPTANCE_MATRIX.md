@@ -48,3 +48,6 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | WIDTH-01 | all priority routes | 1440,1280,1024,768 geometry/no overflow | four screenshots each role | 14F |
 
 Any failed ID blocks the dependent phase and Phase 14G.
+# Phase 14D browser acceptance update
+
+The integrated Phase 14D browser acceptance gate is closed. The executed role, viewport, theme, language, route, workflow, accessibility, RTL, responsive, console, and network matrix is recorded in `QA_14D_BROWSER_ACCEPTANCE.md`; the durable implementation record is `PHASE_14D_BROWSER_ACCEPTANCE_RECORD.md`.

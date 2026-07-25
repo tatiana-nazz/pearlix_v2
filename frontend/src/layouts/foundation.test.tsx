@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import { Sidebar } from "./Sidebar";
 import { navigationByRole } from "./navigation";
-import { t } from "./i18n";
+import { navigationLabel, t } from "./i18n";
 
 describe("Phase 14C shell, language, and Lucide navigation contracts", () => {
   it("maps every permitted role route to a Lucide icon and exposes Team only to Admin", () => {
@@ -29,5 +29,7 @@ describe("Phase 14C shell, language, and Lucide navigation contracts", () => {
     expect(t("EN", "workspace")).toBe("Workspace");
     expect(t("AR", "workspace")).not.toBe("Workspace");
     expect(t("AR", "logout")).not.toBe("Logout");
+    expect(navigationLabel("AR", "Patients")).not.toBe("Patients");
+    expect(navigationLabel("AR", "Users & Access")).not.toBe("Users & Access");
   });
 });

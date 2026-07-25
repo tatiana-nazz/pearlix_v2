@@ -1,5 +1,9 @@
 # Frontend/Backend Integration Audit
 
+## Phase 14D browser-acceptance update
+
+Phase 14D integrated browser acceptance is complete. The local Admin, Staff, and Doctor runs exercised the role shell, dashboards, Team/Users, appointments, patients, Arabic RTL, themes, and responsive breakpoints. The browser gate repaired shell-only horizontal overflow and static navigation localization; no backend endpoint, serializer, permission, API contract, or migration changed. See `frontend/QA_14D_BROWSER_ACCEPTANCE.md` and `frontend/design_v2/PHASE_14D_BROWSER_ACCEPTANCE_RECORD.md`.
+
 ## Phase 14R regression-gate update
 
 Phase 14D.1 delivered the Admin Team and Users & Access routes, Phase 14D.2 dashboards, Phase 14D.3 appointments, and Phase 14D.3A appointment-create closure. Phase 14D.4A closes the existing patient frontend contracts without changing endpoint shapes: server-backed patient paging/filtering, Staff-only general-information creation, role-aware read-first detail, versioned edits, dedicated archive actions, bounded related summaries, centralized EN/AR copy, and behavioral coverage. Phase 14R changed backend scheduling and clinic-timezone runtime behavior without changing external endpoint shapes or migrations. The complete backend suite now passes (420 tests); the regression gate is closed. Theme and language preferences continue to persist through the existing authenticated `PATCH /api/me/preferences/` contract.
