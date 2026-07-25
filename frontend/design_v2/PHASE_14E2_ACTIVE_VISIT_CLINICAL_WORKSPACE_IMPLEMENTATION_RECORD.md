@@ -34,3 +34,7 @@ Later Phase 14E work must adopt reconciled visual and interaction principles fro
 ## Known limitations
 
 This is frontend-only alignment. It does not add real AI, payments, invoice drafting, new clinical fields, new APIs, or backend version behavior beyond the existing contracts.
+
+## Phase 14E.2A acceptance closure
+
+The deterministic browser closure established that the original empty Active Visit result came from using Doctor One while the seed's active visit belongs to Doctor Three. It also found and repaired the missing Doctor Start visit detail action. The real Staff-to-Doctor workflow, save, tabs, completion, read-only Staff/Admin protection, responsive viewports, Arabic RTL, and dark mode are recorded in `PHASE_14E2A_ACTIVE_VISIT_BROWSER_ACCEPTANCE_RECORD.md`.

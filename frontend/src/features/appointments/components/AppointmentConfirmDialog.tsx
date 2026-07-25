@@ -6,7 +6,7 @@ import { appointmentCopy } from "../i18n";
 
 interface AppointmentConfirmDialogProps {
   appointment: AppointmentListItem | null;
-  action: "check-in" | "cancel" | "no-show" | null;
+  action: "check-in" | "cancel" | "no-show" | "start-visit" | null;
   isSubmitting?: boolean;
   error?: unknown;
   onCancel: () => void;
@@ -17,7 +17,7 @@ export function AppointmentConfirmDialog({ appointment, action, isSubmitting, er
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = appointmentCopy(language);
   if (!appointment || !action) return null;
-  const labels = { "check-in": c.actionCheckIn, cancel: c.actionCancel, "no-show": c.actionNoShow };
+  const labels = { "check-in": c.actionCheckIn, cancel: c.actionCancel, "no-show": c.actionNoShow, "start-visit": c.actionStartVisit };
   return (
       <Modal open title={c.confirmAction} onClose={onCancel}>
         <div>

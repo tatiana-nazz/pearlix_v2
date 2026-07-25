@@ -75,7 +75,7 @@ describe("AppointmentTable", () => {
     const onEdit = vi.fn();
     const onReschedule = vi.fn();
     const onStatusAction = vi.fn();
-    render(<AppointmentDetailsDialog appointment={base} role="STAFF" onClose={vi.fn()} onEdit={onEdit} onReschedule={onReschedule} onStatusAction={onStatusAction} />);
+    render(<AppointmentDetailsDialog appointment={base} role="STAFF" onClose={vi.fn()} onEdit={onEdit} onReschedule={onReschedule} onStatusAction={onStatusAction} onStartVisit={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     fireEvent.click(screen.getByRole("button", { name: "Reschedule" }));
@@ -88,5 +88,13 @@ describe("AppointmentTable", () => {
     expect(onStatusAction).toHaveBeenNthCalledWith(1, base, "check-in");
     expect(onStatusAction).toHaveBeenNthCalledWith(2, base, "no-show");
     expect(onStatusAction).toHaveBeenNthCalledWith(3, base, "cancel");
+  });
+
+  it("shows Start visit only for a Doctor's opened checked-in appointment", () => {
+    const onStartVisit = vi.fn();
+    render(<AppointmentDetailsDialog appointment={{ ...base, status: "CHECKED_IN" }} role="DOCTOR" onClose={vi.fn()} onEdit={vi.fn()} onReschedule={vi.fn()} onStatusAction={vi.fn()} onStartVisit={onStartVisit} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Start visit" }));
+    expect(onStartVisit).toHaveBeenCalledWith(expect.objectContaining({ id: base.id, status: "CHECKED_IN" }));
   });
 });

@@ -19,6 +19,7 @@ import {
   useCheckInAppointment,
   useCreateAppointment,
   useNoShowAppointment,
+  useStartAppointmentVisit,
   useUpdateAppointment,
 } from "../../features/appointments/hooks/useAppointmentMutations";
 import { useAppointments } from "../../features/appointments/hooks/useAppointments";
@@ -37,7 +38,7 @@ interface AppointmentsPageProps {
   view: AppointmentViewMode;
 }
 
-type StatusAction = "check-in" | "cancel" | "no-show";
+type StatusAction = "check-in" | "cancel" | "no-show" | "start-visit";
 
 function viewsForRole(role: UserRole): AppointmentViewMode[] {
   if (role === "DOCTOR") return ["day", "week", "list"];
@@ -82,6 +83,7 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   const checkIn = useCheckInAppointment();
   const cancel = useCancelAppointment();
   const noShow = useNoShowAppointment();
+  const startVisit = useStartAppointmentVisit();
   const permissions = getAppointmentPermissions(role);
 
   function setParam(key: string, value: string) {
@@ -116,6 +118,7 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
     checkIn.reset();
     cancel.reset();
     noShow.reset();
+    startVisit.reset();
   }
 
   async function confirmStatusAction() {
@@ -123,6 +126,10 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
     if (action === "check-in") await checkIn.mutateAsync(actionAppointment.id);
     if (action === "cancel") await cancel.mutateAsync(actionAppointment.id);
     if (action === "no-show") await noShow.mutateAsync(actionAppointment.id);
+    if (action === "start-visit") {
+      await startVisit.mutateAsync(actionAppointment.id);
+      navigate("/doctor/visits/active");
+    }
     setActionAppointment(null);
     setAction(null);
   }
@@ -130,8 +137,8 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   const rows = appointments.data?.results ?? [];
   const clinicTimezone = appointments.data?.clinic_timezone ?? timezone;
   const clinicDate = appointments.data?.clinic_date ?? clinicToday(clinicTimezone);
-  const currentMutationError = checkIn.error ?? cancel.error ?? noShow.error;
-  const isActionSubmitting = checkIn.isPending || cancel.isPending || noShow.isPending;
+  const currentMutationError = checkIn.error ?? cancel.error ?? noShow.error ?? startVisit.error;
+  const isActionSubmitting = checkIn.isPending || cancel.isPending || noShow.isPending || startVisit.isPending;
 
   return (
     <main className="appointments-v2" data-role={role}>
@@ -224,6 +231,7 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
         onEdit={(appointment) => { setDetailsAppointment(null); setFormAppointment(appointment); }}
         onReschedule={(appointment) => navigate(appointmentReschedulePath(appointment.id))}
         onStatusAction={(appointment, nextAction) => { setDetailsAppointment(null); openStatusAction(appointment, nextAction); }}
+        onStartVisit={(appointment) => { setDetailsAppointment(null); openStatusAction(appointment, "start-visit"); }}
       />
       <AppointmentConfirmDialog
         appointment={actionAppointment}

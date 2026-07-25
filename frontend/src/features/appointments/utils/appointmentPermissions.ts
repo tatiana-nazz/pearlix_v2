@@ -22,6 +22,7 @@ export function getAppointmentPermissions(role: UserRole, appointment?: Appointm
     canCheckIn: role === "STAFF" && status === "UPCOMING",
     canCancel: role === "STAFF" && (status === "UPCOMING" || status === "CHECKED_IN"),
     canNoShow: role === "STAFF" && status === "UPCOMING",
+    canStartVisit: role === "DOCTOR" && status === "CHECKED_IN",
     isReadOnly: role === "ADMIN" || role === "DOCTOR",
   };
 }

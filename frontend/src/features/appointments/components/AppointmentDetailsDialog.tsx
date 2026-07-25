@@ -16,9 +16,10 @@ interface AppointmentDetailsDialogProps {
   onEdit: (appointment: AppointmentListItem) => void;
   onReschedule: (appointment: AppointmentListItem) => void;
   onStatusAction: (appointment: AppointmentListItem, action: "check-in" | "cancel" | "no-show") => void;
+  onStartVisit: (appointment: AppointmentListItem) => void;
 }
 
-export function AppointmentDetailsDialog({ appointment, role, timezone, onClose, onEdit, onReschedule, onStatusAction }: AppointmentDetailsDialogProps) {
+export function AppointmentDetailsDialog({ appointment, role, timezone, onClose, onEdit, onReschedule, onStatusAction, onStartVisit }: AppointmentDetailsDialogProps) {
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = appointmentCopy(language);
   if (!appointment) return null;
@@ -60,6 +61,7 @@ export function AppointmentDetailsDialog({ appointment, role, timezone, onClose,
             {permissions.canCancel ? <Button type="button" variant="danger" onClick={() => onStatusAction(appointment, "cancel")}>{c.cancel}</Button> : null}
           </div>
         ) : null}
+        {permissions.canStartVisit ? <div className="form-actions"><Button type="button" onClick={() => onStartVisit(appointment)}>{c.startVisit}</Button></div> : null}
       </Modal>
   );
 }
