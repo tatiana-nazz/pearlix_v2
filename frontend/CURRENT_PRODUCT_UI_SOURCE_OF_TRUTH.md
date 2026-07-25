@@ -31,6 +31,10 @@ Phase 14E.2A closes the live acceptance gap: an owning Doctor can start a visit 
 
 Billing handoffs and invoices retain their separate current routes while using backend-derived summary cards, backend-supported filtering/pagination, readable financial details, human-labelled related visit context, and whole-row detail opening. Collections remain action-free; convert, dismiss, edit, payment, cancellation, and Print are detail-only according to current RBAC. Staff performs supported billing mutations, Admin remains read-only with Print, and Doctors have no global Billing navigation or invoice/payment capability; own-completed-visit handoff context remains governed by existing visit contracts. Totals, paid amounts, balances, statuses, eligibility, and duplicate prevention remain backend-authoritative. PDF export is absent unless a real backend implementation is later approved. The responsive shell and transformations remain frozen.
 
+## X-ray and AI workspace: Phase 14E.4
+
+Saved X-ray, attachment, viewer, stored-result, and external-X-ray surfaces retain authenticated backend media access, current role contracts, and the collection-action closure. Collections open the whole record and carry no row actions. Viewer detail separates protected image, metadata, stored AI-assisted information, optional backend overlay, and authorized external temporary-case actions. No image editing, fake inference, client result generation, public media URL, or expanded role permission is authorized. The existing responsive shell and transformations remain frozen. See `design_v2/PHASE_14E4_XRAY_AI_WORKSPACE_IMPLEMENTATION_RECORD.md` for implementation evidence and its remaining object-URL-capable browser acceptance limitation.
+
 ## Stability and design-change rules
 
 Troubleshooting fixes the affected behavior without restoring an older shell or unrelated design. A design change needs explicit scope, reconciliation with current contracts/tests/RBAC, and an implementation/acceptance record. The next planned current-UI refinement begins with action hierarchy or an explicitly approved Phase 14E scope.

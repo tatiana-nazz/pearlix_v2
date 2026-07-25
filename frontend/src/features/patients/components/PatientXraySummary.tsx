@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { Card } from "../../../components/Card";
 import { EmptyState } from "../../../components/EmptyState";
@@ -28,6 +28,7 @@ interface PatientXraySummaryProps {
 }
 
 export function PatientXraySummary({ role, patientId, xrays, aiResults, isLoading, error, onRetry }: PatientXraySummaryProps) {
+  const navigate = useNavigate();
   const upload = usePatientXrayUpload(patientId);
   const [uploadOpen, setUploadOpen] = useState(false);
   if (isLoading) return <LoadingState title="Loading X-rays and AI results..." />;
@@ -41,8 +42,9 @@ export function PatientXraySummary({ role, patientId, xrays, aiResults, isLoadin
       {canUploadPatientXray(role) ? <div className="schedule-actions"><button className="button secondary" type="button" onClick={() => { upload.reset(); setUploadOpen(true); }}>Upload patient X-ray</button></div> : null}
       {xrayRows.length ? (
         <ul className="summary-list-flat">
-          {xrayRows.map((xray) => (
-            <li className="summary-row" key={xray.id}>
+          {xrayRows.map((xray) => {
+            const open = () => navigate(`/${role.toLowerCase()}/xrays/${xray.id}`);
+            return <li className="summary-row clickable-row" key={xray.id} tabIndex={0} aria-label={`Open X-ray ${displayText(xray.title, xray.original_file_name)}`} onClick={open} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } }}>
               <div>
                 <strong>{displayText(xray.title, xray.original_file_name)}</strong>
                 <span>
@@ -50,11 +52,8 @@ export function PatientXraySummary({ role, patientId, xrays, aiResults, isLoadin
                 </span>
                 <span>{xray.has_ai_result ? "AI result available" : "No AI result saved"}</span>
               </div>
-              <Link className="button secondary compact-button" to={`/${role.toLowerCase()}/xrays/${xray.id}`}>
-                Open X-ray
-              </Link>
-            </li>
-          ))}
+            </li>;
+          })}
         </ul>
       ) : (
         <EmptyState title="No X-rays have been saved for this patient." />

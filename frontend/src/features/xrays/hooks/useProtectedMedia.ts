@@ -9,6 +9,16 @@ interface ProtectedMediaState {
   error: unknown;
 }
 
+function blobUrl(blob: Blob): Promise<{ url: string; revoke: boolean }> {
+  if (typeof URL.createObjectURL === "function") return Promise.resolve({ url: URL.createObjectURL(blob), revoke: true });
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error("Unable to read protected media."));
+    reader.onload = () => resolve({ url: String(reader.result), revoke: false });
+    reader.readAsDataURL(blob);
+  });
+}
+
 export function useProtectedMedia(endpoint: string | null | undefined) {
   const [retryKey, setRetryKey] = useState(0);
   const [state, setState] = useState<ProtectedMediaState>({ url: null, contentType: null, isLoading: Boolean(endpoint), error: null });
@@ -19,10 +29,11 @@ export function useProtectedMedia(endpoint: string | null | undefined) {
     setState({ url: null, contentType: null, isLoading: Boolean(endpoint), error: null });
     if (!endpoint) return undefined;
 
-    void api.getBlob(endpoint).then((blob) => {
+    void api.getBlob(endpoint).then(async (blob) => {
+      const object = await blobUrl(blob);
       if (!active) return;
-      objectUrl = URL.createObjectURL(blob);
-      setState({ url: objectUrl, contentType: blob.type || null, isLoading: false, error: null });
+      objectUrl = object.revoke ? object.url : null;
+      setState({ url: object.url, contentType: blob.type || null, isLoading: false, error: null });
     }).catch((error) => {
       if (active) setState({ url: null, contentType: null, isLoading: false, error });
     });

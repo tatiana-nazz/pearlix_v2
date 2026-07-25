@@ -2,7 +2,7 @@
 
 ## Scope
 
-Phase 13H is complete: it integrates saved X-rays, AI results, protected media, and the external X-ray workspace with existing backend APIs. Backend runtime code and migrations are unchanged; browser QA remains pending.
+Phase 13H is complete: it integrates saved X-rays, AI results, protected media, and the external X-ray workspace with existing backend APIs. Backend runtime code and migrations are unchanged. Phase 14E.4 supplies the current refinement evidence; its remaining protected-image visual browser limitation is recorded in `design_v2/PHASE_14E4_XRAY_AI_WORKSPACE_IMPLEMENTATION_RECORD.md`.
 
 ## Routes And Roles
 
@@ -15,6 +15,7 @@ Phase 13H is complete: it integrates saved X-rays, AI results, protected media, 
 - The authenticated API client fetches `file/` and `ai-overlay/` endpoints as Blobs.
 - Components render temporary `URL.createObjectURL` values only and revoke them on endpoint change or unmount.
 - Blobs and object URLs are not persisted in local storage, Zustand, or query data. No public media URL is used.
+- When an environment lacks object-URL support, the current viewer uses an in-memory FileReader fallback only; it does not persist media bytes or change backend access.
 
 ## Automated Checks
 
@@ -47,4 +48,4 @@ Phase 13H verification results:
 
 ## Browser QA - Pending Execution
 
-Browser QA is pending execution with seeded local QA accounts; credentials are available. Verify patient and own-visit PNG/JPEG upload, protected original/overlay rendering, saved/external AI behavior, returned English/Arabic disclaimers, Admin/Staff read-only saved-X-ray behavior, Doctor external attach with and without an own visit, Admin discard, Staff external-route denial, unsupported/oversize uploads, and 1440/1280/1024/768 layouts.
+Phase 14E.4 browser evidence verified Doctor and Staff action-free saved collections, detail metadata/result presentation, Staff read-only boundary, and Admin external collection behavior against reset-safe synthetic data. The authenticated protected-media endpoint returned `200 image/png`; the in-app acceptance browser lacked object-URL support and showed the designed protected-media failure state, so visual original/overlay acceptance remains open for an object-URL-capable browser. Do not weaken protected-media access to close that gap.

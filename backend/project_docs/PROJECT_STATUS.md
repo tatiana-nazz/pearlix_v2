@@ -11,12 +11,12 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current completed phase: 14E.3A Documentation Validation Evidence Closure
+- Current phase: 14E.4 X-ray, Attachment, Viewer, and AI-Result Workspace Design Alignment
 - Phase 13 series: complete
-- Next phase: Remaining explicitly approved workflow refinements
-- Next step: plan only the next explicitly approved Phase 14E scope
+- Next phase: Close the Phase 14E.4 protected-media visual browser acceptance in an object-URL-capable browser surface
+- Next step: do not change backend media security; rerun the documented browser evidence
 - Final backend full regression: 420 passed
-- Final frontend regression: 130 passed in 45 files
+- Final frontend regression: 133 passed in 46 files
 - Backend runtime changes in Phase 14C: no
 - Migrations in Phase 14C: none
 - Backend runtime changes in Phase 14C.0: yes
@@ -31,6 +31,10 @@ Local login connectivity is now deterministic: the documented frontend uses `127
 - Phase 14E.3A: documentation validation evidence closure; `scripts/check_documentation_consistency.py` passed
 - Backend runtime changes in Phase 14E.3A: none
 - Migrations in Phase 14E.3A: none
+- Frontend visible UI changes in Phase 14E.4: action-free X-ray/attachment collections, shared upload modal, protected viewer hierarchy, structured stored-result/overlay presentation, and external temporary-case detail alignment
+- Backend runtime changes in Phase 14E.4: none
+- Migrations in Phase 14E.4: none
+- Phase 14E.4 acceptance note: authenticated synthetic protected-media endpoint verified as `200 image/png`; in-app browser lacked Blob object-URL support, so final image/overlay visual acceptance remains open
 - Backend runtime changes in Phase 14E.2A: none
 - Migrations in Phase 14E.2A: none
 - Backend runtime changes in Phase 14E.2: none

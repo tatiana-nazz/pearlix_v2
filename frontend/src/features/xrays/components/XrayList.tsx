@@ -1,23 +1,42 @@
+import { ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+import { useAuthStore } from "../../../auth/authStore";
 import { Card } from "../../../components/Card";
 import { EmptyState } from "../../../components/EmptyState";
 import { StatusPill } from "../../../components/StatusPill";
 import type { UserRole } from "../../../types/auth";
 import type { XrayAttachment } from "../../../types/xrays";
 import { formatDateTime } from "../../../utils/dates";
-import { displayText } from "../../../utils/formatters";
 import { formatFileSize } from "../utils/xrayValidation";
+import { xrayCopy } from "../i18n";
+import { aiStatusLabel, xraySourceLabel, xrayText } from "../utils/xrayPresentation";
 
 interface XrayListProps { role: UserRole; xrays: XrayAttachment[]; }
 
+function rowKeyboardOpen(event: React.KeyboardEvent<HTMLTableRowElement>, open: () => void) {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    open();
+  }
+}
+
 export function XrayList({ role, xrays }: XrayListProps) {
   const navigate = useNavigate();
-  if (!xrays.length) return <EmptyState title="No saved X-rays found." />;
-  return <Card><div className="table-scroll"><table className="xray-table"><thead><tr><th>X-ray</th><th>Patient</th><th>Visit</th><th>Source</th><th>Uploaded</th><th>AI</th></tr></thead><tbody>
+  const c = xrayCopy(useAuthStore((state) => state.user?.language_preference));
+  if (!xrays.length) return <EmptyState title={c.noXrays} />;
+  return <Card><div className="table-scroll"><table className="xray-table"><thead><tr><th>X-ray</th><th>Patient</th><th>Related visit</th><th>Uploaded</th><th>AI result</th><th aria-label="Open" /></tr></thead><tbody>
     {xrays.map((xray) => {
       const open = () => navigate(`/${role.toLowerCase()}/xrays/${xray.id}`);
-      return <tr key={xray.id} className="clickable-row" tabIndex={0} onClick={open} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } }}><td><strong>{displayText(xray.title, xray.original_file_name)}</strong><span>{xray.content_type} · {formatFileSize(xray.size_bytes)}</span></td><td>{xray.patient.full_name}</td><td>{xray.visit ? `Visit #${xray.visit.id}` : "Patient profile"}</td><td>{xray.source.replace(/_/g, " ")}</td><td>{xray.uploaded_by.full_name}<span>{formatDateTime(xray.created_at)}</span></td><td><StatusPill status={xray.has_ai_result ? "AVAILABLE" : "NOT_RUN"} /></td></tr>;
+      const label = `${xrayText(xray.title || xray.original_file_name)}. ${xray.patient.full_name}. ${aiStatusLabel(xray.has_ai_result)}.`;
+      return <tr key={xray.id} className="clickable-row" tabIndex={0} aria-label={label} onClick={open} onKeyDown={(event) => rowKeyboardOpen(event, open)}>
+        <td><strong>{xrayText(xray.title || xray.original_file_name)}</strong><span dir="ltr">{xray.content_type} · {formatFileSize(xray.size_bytes)}</span></td>
+        <td>{xray.patient.full_name}</td>
+        <td>{xray.visit ? `${xraySourceLabel(xray.source)} · ${formatDateTime(xray.visit.started_at)}` : xraySourceLabel(xray.source)}</td>
+        <td>{xray.uploaded_by.full_name}<span dir="ltr">{formatDateTime(xray.created_at)}</span></td>
+        <td><StatusPill status={xray.has_ai_result ? "AVAILABLE" : "NOT_RUN"} /></td>
+        <td aria-hidden="true"><ChevronRight size={18} /></td>
+      </tr>;
     })}
   </tbody></table></div></Card>;
 }
