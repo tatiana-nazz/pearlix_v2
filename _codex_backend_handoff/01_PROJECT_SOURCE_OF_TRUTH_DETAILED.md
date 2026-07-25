@@ -1,5 +1,9 @@
 # Project Source of Truth — Detailed
 
+# HISTORICAL / SUPERSEDED — NOT CURRENT IMPLEMENTATION AUTHORITY
+
+Replacement: [`../CODEX_START_HERE.md`](../CODEX_START_HERE.md). Authority register: [`../backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md`](../backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md). Useful as Phase 12 historical evidence only.
+
 ## 1. Project Identity
 
 Project name: Dental Clinic Management System Website  

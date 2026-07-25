@@ -1,3 +1,7 @@
+# HISTORICAL / SUPERSEDED — NOT CURRENT IMPLEMENTATION AUTHORITY
+
+Replacement: [`../CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](../CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md) and [`../../backend/project_docs/PROJECT_STATUS.md`](../../backend/project_docs/PROJECT_STATUS.md). Authority register: [`../../backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md`](../../backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md). This frozen Phase 14B sequence remains useful implementation history only.
+
 # Frozen Implementation Sequence
 
 1. **14C.0 — Doctor/Staff professional profile API and account linkage:** mandatory because current serializers/endpoints cannot deliver or edit a complete Team directory. Implement only the dependency work defined in `TEAM_USERS_ACCESS_SPEC_V2.md`, with migration and regression coverage.

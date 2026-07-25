@@ -1,3 +1,7 @@
+# HISTORICAL / SUPERSEDED — NOT CURRENT IMPLEMENTATION AUTHORITY
+
+Replacement: [`../CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](../CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md) and the registered v2 supporting specifications. Authority register: [`../../backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md`](../../backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md). This file remains useful as Phase 13 historical design evidence only.
+
 # Pearlix Design System
 
 Phase 13B.1 defines the frontend visual contract for Pearlix. This is the source of truth for future UI work unless a later design phase explicitly replaces it.

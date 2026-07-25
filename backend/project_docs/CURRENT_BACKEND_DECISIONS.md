@@ -1,10 +1,13 @@
 # Current Backend Decisions
 
+**Authority marker:** `CURRENT_CANONICAL_BACKEND_DECISIONS`
+Read [`../../CODEX_START_HERE.md`](../../CODEX_START_HERE.md) first. This is the current backend/role summary; affected models, serializers, views, endpoints, permissions, and tests remain the runtime authority for a change. Authority cleanup is documentation governance only. The current UI continues from `e54a85842f1c683b27f12e0da93987ae128c861d`; `preview-pre-v2-ui` / `bdd5f6f` are rejected historical references, never restoration targets. Team and Users & Access remain distinct.
+
 Project: Dental Clinic Management System Website
 Backend: Django + Django REST Framework + PostgreSQL
 API base path: `/api/`
 
-This document summarizes the current accepted backend decisions for human developers. The detailed correction source of truth is `_codex_backend_handoff/25_POST_12K_CORRECTIONS_SOURCE_OF_TRUTH.md`.
+This document summarizes current accepted backend decisions for human developers. Phase-12 handoff material is historical evidence only and cannot override the root authority chain.
 
 ## Password Lifecycle
 

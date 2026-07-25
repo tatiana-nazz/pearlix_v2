@@ -1,5 +1,9 @@
 # CODEX START HERE — Backend Implementation Handoff V2
 
+# HISTORICAL / SUPERSEDED — NOT CURRENT IMPLEMENTATION AUTHORITY
+
+Replacement: [`../CODEX_START_HERE.md`](../CODEX_START_HERE.md). Authority register: [`../backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md`](../backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md). This folder remains useful Phase 12 historical evidence only; it must not override current project, role, UI, or runtime decisions.
+
 Project: Dental Clinic Management System Website  
 Backend: Django + Django REST Framework + PostgreSQL  
 API base path: `/api/`  

@@ -1,5 +1,11 @@
 # Pearlix Frontend
 
+Read [`../CODEX_START_HERE.md`](../CODEX_START_HERE.md) before frontend work. This README provides setup and supporting implementation context, not product/role authority. Current UI authority is [`CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md); current status is [`../backend/project_docs/PROJECT_STATUS.md`](../backend/project_docs/PROJECT_STATUS.md). The implementation continues from `e54a85842f1c683b27f12e0da93987ae128c861d`; `preview-pre-v2-ui` / `bdd5f6f` are rejected historical material. Team and Users & Access are separate, and active Doctors are authorized for all active/non-archived patients (workflow filters do not limit access). Documentation cleanup is not a runtime change; next UI work begins only with approved action hierarchy or Phase 14E scope.
+
+Read [`../CODEX_START_HERE.md`](../CODEX_START_HERE.md) before frontend work. This README provides setup and supporting implementation context, not product/role authority. Current UI authority is [`CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md); current status is [`../backend/project_docs/PROJECT_STATUS.md`](../backend/project_docs/PROJECT_STATUS.md). The implementation continues from `e54a85842f1c683b27f12e0da93987ae128c861d`; `preview-pre-v2-ui` / `bdd5f6f` are rejected historical material. Team and Users & Access are separate, and active Doctors are authorized for all active/non-archived patients (workflow filters do not limit access). Documentation cleanup is not a runtime change; next UI work begins only with approved action hierarchy or Phase 14E scope.
+
+Read [`../CODEX_START_HERE.md`](../CODEX_START_HERE.md) before frontend work. This README provides setup and supporting implementation context, not product/role authority. Current UI authority is [`CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md); current status is [`../backend/project_docs/PROJECT_STATUS.md`](../backend/project_docs/PROJECT_STATUS.md). The implementation continues from `e54a85842f1c683b27f12e0da93987ae128c861d`; `preview-pre-v2-ui` / `bdd5f6f` are rejected historical material. Team and Users & Access are separate, and active Doctors are authorized for all active/non-archived patients (workflow filters do not limit access). Documentation cleanup is not a runtime change; next UI work begins only with approved action hierarchy or Phase 14E scope.
+
 Phase 14D.4A closes the patient workspace contract: server-backed directory state, Staff-only General Information creation, read-first patient detail, explicit medical-history editing, versioned archive/reactivation, accessible URL-backed tabs, centralized English/Arabic copy, and behavioral coverage. Doctors have canonical access to every active/non-archived patient; Doctor helper filters narrow lists only. See `QA_14D4_PATIENT_WORKSPACE.md`, `design_v2/PHASE_14D4_PATIENT_WORKSPACE_IMPLEMENTATION_RECORD.md`, and `design_v2/PHASE_14D4A_PATIENT_CLOSURE_RECORD.md`.
 
 The React + Vite + TypeScript frontend implements authentication and role workspaces; patient, scheduling, visit, X-ray/AI, billing, Admin management, clinic-settings, and audit-log workflows. Phase 14A adds a deterministic development-only integrated demo story for all implemented views. See `backend/project_docs/PROJECT_STATUS.md` for canonical project status.
@@ -209,9 +215,9 @@ Phase 13G adds real visit and clinical note routes:
 
 ## Design Contract
 
-`frontend/design_v2/` is the authoritative UI refocus and implementation contract for Phases 14C.0 through 14F. It supersedes the old Phase 13B.1 documentation under `frontend/design/`, which remains historical reference only. When they conflict, `frontend/design_v2/` wins.
+`frontend/design_v2/` is supporting UI implementation context. The reconciled current product/UI authority is `CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`; it supersedes stale functional, role, navigation, and phase assertions in any older specification. The old Phase 13B.1 material under `frontend/design/` remains historical reference only.
 
-Mandatory implementation gates are `UI_REFOCUS_MANIFEST.md`, `SCREEN_BLUEPRINTS_V2.md`, `TEAM_USERS_ACCESS_SPEC_V2.md`, and `DESIGN_ACCEPTANCE_MATRIX.md`.
+Read affected v2 specifications only after the root authority chain and relevant runtime contracts/tests; they are supporting gates, not independent global authority.
 
 The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPEC.md`, `COMPONENT_CONTRACT.md`, `SCREEN_BLUEPRINTS.md`, `INTERACTION_STATES.md`) must not be treated as the ongoing authoritative contract.
 

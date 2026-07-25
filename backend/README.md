@@ -1,5 +1,7 @@
 # Dental Clinic Management System Backend
 
+Read [`../CODEX_START_HERE.md`](../CODEX_START_HERE.md) before backend work. This is setup guidance, not product/role authority. Current status is [`project_docs/PROJECT_STATUS.md`](project_docs/PROJECT_STATUS.md), current backend decisions are [`project_docs/CURRENT_BACKEND_DECISIONS.md`](project_docs/CURRENT_BACKEND_DECISIONS.md), and the current UI continues from `e54a85842f1c683b27f12e0da93987ae128c861d`, never the rejected `preview-pre-v2-ui` preview. Team and Users & Access remain distinct; doctor patient filters are not object-level authorization.
+
 Django REST Framework backend for the Pearl Dental Clinic management system.
 
 ## Current verification status

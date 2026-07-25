@@ -1,5 +1,8 @@
 # Project Status
 
+**Authority marker:** `CURRENT_CANONICAL_PROJECT_STATUS`
+Read [`../../CODEX_START_HERE.md`](../../CODEX_START_HERE.md) before using this tracker. Authority reconciliation is documentation governance only; it changes no runtime behavior. The current implementation continues from `e54a85842f1c683b27f12e0da93987ae128c861d`. The rejected pre-v2 preview (`preview-pre-v2-ui`, `bdd5f6f`) is not an implementation source. Team and Users & Access remain separate; active Doctors have all-active/non-archived patient access as summarized in `CURRENT_BACKEND_DECISIONS.md`. Next work is current-UI refinement beginning with approved action hierarchy or explicitly approved Phase 14E scope.
+
 This is the canonical current-phase tracker. Other project documents describe capabilities and defer current/next-phase status to this file.
 
 Project: Dental Clinic Management System Website
