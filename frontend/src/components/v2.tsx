@@ -21,7 +21,125 @@ export function DetailHeader({ title, summary, action }: { title:string; summary
 
 export function Field({ label, error, help, ...props }: InputHTMLAttributes<HTMLInputElement> & { label:string; error?:string; help?:string }) { const id = useId(); const descriptionId = error || help ? `${id}-description` : undefined; return <div className="v2-field"><label htmlFor={id}>{label}</label><input {...props} id={id} aria-invalid={Boolean(error)} aria-describedby={descriptionId} />{error ? <span id={descriptionId} className="v2-field-error" role="alert">{error}</span> : help ? <span id={descriptionId}>{help}</span> : null}</div>; }
 export function SelectField({ label, error, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label:string; error?:string; children:ReactNode }) { const id = useId(); return <div className="v2-field"><label htmlFor={id}>{label}</label><select {...props} id={id} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined}>{children}</select>{error ? <span id={`${id}-error`} className="v2-field-error" role="alert">{error}</span> : null}</div>; }
-export function Combobox({ label, value, onChange, options, placeholder = "Search" }: { label:string; value:string; onChange:(value:string)=>void; options:{ value:string; label:string }[]; placeholder?:string }) { const id = useId(); const [open, setOpen] = useState(false); const [active, setActive] = useState(0); const choose = (option:{ value:string; label:string }) => { onChange(option.value); setOpen(false); }; return <div className="v2-field"><label htmlFor={id}>{label}</label><div className="combobox"><Search size={18} aria-hidden="true" /><input id={id} role="combobox" aria-autocomplete="list" aria-controls={`${id}-options`} aria-expanded={open} value={value} placeholder={placeholder} onFocus={() => setOpen(true)} onChange={(event) => { onChange(event.target.value); setOpen(true); }} onKeyDown={(event) => { if (event.key === "ArrowDown") { event.preventDefault(); setOpen(true); setActive((index) => Math.min(index + 1, options.length - 1)); } if (event.key === "ArrowUp") { event.preventDefault(); setActive((index) => Math.max(index - 1, 0)); } if (event.key === "Enter" && open && options[active]) { event.preventDefault(); choose(options[active]); } if (event.key === "Escape") setOpen(false); }} />{open ? <ul id={`${id}-options`} role="listbox">{options.map((option, index) => <li key={option.value} role="option" aria-selected={index === active}><button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => choose(option)}>{option.label}</button></li>)}</ul> : null}</div></div>; }
+export interface ComboboxOption {
+  value: string;
+  label: string;
+  description?: string;
+}
+
+export function Combobox({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "Search",
+  onSelect,
+  selectedLabel,
+  onClear,
+  clearLabel = "Clear selection",
+  loading = false,
+  loadingMessage = "Loading...",
+  error,
+  onRetry,
+  noOptionsMessage,
+  help,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: ComboboxOption[];
+  placeholder?: string;
+  onSelect?: (option: ComboboxOption) => void;
+  selectedLabel?: string;
+  onClear?: () => void;
+  clearLabel?: string;
+  loading?: boolean;
+  loadingMessage?: string;
+  error?: string;
+  onRetry?: () => void;
+  noOptionsMessage?: string;
+  help?: string;
+  disabled?: boolean;
+}) {
+  const id = useId();
+  const listboxId = `${id}-options`;
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const hasPopupContent = loading || Boolean(error) || options.length > 0 || Boolean(noOptionsMessage);
+
+  useEffect(() => {
+    setActive((current) => (current < 0 ? -1 : Math.min(current, Math.max(0, options.length - 1))));
+  }, [options.length]);
+
+  function choose(option: ComboboxOption) {
+    if (onSelect) onSelect(option);
+    else onChange(option.value);
+    setOpen(false);
+  }
+
+  function moveActive(delta: number) {
+    if (!options.length) return;
+    setOpen(true);
+    setActive((current) => current < 0 ? (delta > 0 ? 0 : options.length - 1) : (current + delta + options.length) % options.length);
+  }
+
+  return (
+    <div className="v2-field">
+      <label htmlFor={id}>{label}</label>
+      {selectedLabel ? (
+        <div className="v2-combobox-selected" role="status">
+          <span>{selectedLabel}</span>
+          {onClear ? <button type="button" className="v2-combobox-clear" aria-label={clearLabel} onClick={onClear} disabled={disabled}><X size={16} aria-hidden="true" /></button> : null}
+        </div>
+      ) : null}
+      <div className="v2-combobox">
+        <Search size={18} aria-hidden="true" />
+        <input
+          id={id}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          aria-expanded={open && hasPopupContent}
+          aria-activedescendant={open && options[active] ? `${id}-option-${active}` : undefined}
+          value={value}
+          placeholder={placeholder}
+          disabled={disabled}
+          onFocus={() => { if (!disabled) setOpen(true); }}
+          onChange={(event) => { onChange(event.target.value); setOpen(true); setActive(-1); }}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") { event.preventDefault(); moveActive(1); }
+            if (event.key === "ArrowUp") { event.preventDefault(); moveActive(-1); }
+            if (event.key === "Enter" && open && options[active]) { event.preventDefault(); choose(options[active]); }
+            if (event.key === "Escape") setOpen(false);
+          }}
+        />
+        {open && hasPopupContent ? (
+          <div id={listboxId} className="v2-combobox-popup" role="listbox" aria-label={label}>
+            {loading ? <p role="status">{loadingMessage}</p> : null}
+            {error ? <p role="alert">{error}{onRetry ? <button type="button" onClick={onRetry}>Retry</button> : null}</p> : null}
+            {!loading && !error && options.map((option, index) => (
+              <div
+                id={`${id}-option-${index}`}
+                key={option.value}
+                role="option"
+                aria-selected={index === active}
+                className={index === active ? "active" : undefined}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => choose(option)}
+              >
+                <strong>{option.label}</strong>
+                {option.description ? <span dir="ltr">{option.description}</span> : null}
+              </div>
+            ))}
+            {!loading && !error && !options.length && noOptionsMessage ? <p role="status">{noOptionsMessage}</p> : null}
+          </div>
+        ) : null}
+      </div>
+      {help ? <span>{help}</span> : null}
+    </div>
+  );
+}
 export function FormSection({ title, children }: PropsWithChildren<{ title:string }>) { return <section className="v2-form-section"><h3>{title}</h3><div className="v2-form-grid">{children}</div></section>; }
 export function StickyActionBar({ children }: PropsWithChildren) { return <div className="v2-sticky-actions">{children}</div>; }
 

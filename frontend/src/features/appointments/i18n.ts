@@ -11,8 +11,33 @@ const copy = {
   },
 } as const;
 
-export type AppointmentCopy = { [Key in keyof typeof copy.EN]: string };
-export const appointmentCopy = (language: "EN" | "AR"): AppointmentCopy => copy[language];
+const pickerCopy = {
+  EN: {
+    searchPatients: "Search patients",
+    typeToSearchPatients: "Type at least 2 characters to search active patients.",
+    searchingPatients: "Searching patients...",
+    noPatientsFound: "No patients found.",
+    unableToLoadPatients: "Unable to load patients.",
+    clearPatient: "Clear selected patient",
+    selectedPatient: "Selected patient",
+    patientRequired: "Patient is required.",
+    patientUnavailable: "This patient is unavailable or archived. Choose another patient.",
+  },
+  AR: {
+    searchPatients: "\u0627\u0628\u062d\u062b \u0639\u0646 \u0645\u0631\u0636\u0649",
+    typeToSearchPatients: "\u0627\u0643\u062a\u0628 \u062d\u0631\u0641\u064a\u0646 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0644\u0644\u0628\u062d\u062b \u0639\u0646 \u0627\u0644\u0645\u0631\u0636\u0649 \u0627\u0644\u0646\u0634\u0637\u064a\u0646.",
+    searchingPatients: "\u062c\u0627\u0631\u064d \u0627\u0644\u0628\u062d\u062b \u0639\u0646 \u0627\u0644\u0645\u0631\u0636\u0649...",
+    noPatientsFound: "\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0631\u0636\u0649.",
+    unableToLoadPatients: "\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0645\u0631\u0636\u0649.",
+    clearPatient: "\u0645\u0633\u062d \u0627\u0644\u0645\u0631\u064a\u0636 \u0627\u0644\u0645\u062d\u062f\u062f",
+    selectedPatient: "\u0627\u0644\u0645\u0631\u064a\u0636 \u0627\u0644\u0645\u062d\u062f\u062f",
+    patientRequired: "\u0627\u0644\u0645\u0631\u064a\u0636 \u0645\u0637\u0644\u0648\u0628.",
+    patientUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0645\u0631\u064a\u0636 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u0623\u0648 \u0645\u0624\u0631\u0634\u0641. \u0627\u062e\u062a\u0631 \u0645\u0631\u064a\u0636\u0627 \u0622\u062e\u0631.",
+  },
+} as const;
+
+export type AppointmentCopy = { [Key in keyof typeof copy.EN | keyof typeof pickerCopy.EN]: string };
+export const appointmentCopy = (language: "EN" | "AR"): AppointmentCopy => ({ ...copy[language], ...pickerCopy[language] });
 
 const statuses: Record<"EN" | "AR", Record<AppointmentStatus, string>> = {
   EN: { UPCOMING: "Upcoming", CHECKED_IN: "Checked in", ACTIVE: "Active", COMPLETED: "Completed", CANCELLED: "Cancelled", NO_SHOW: "No-show", NEEDS_RESCHEDULE: "Needs reschedule" },

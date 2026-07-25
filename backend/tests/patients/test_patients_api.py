@@ -303,6 +303,19 @@ def test_default_list_hides_archived_for_admin_and_staff(staff_client, patient_f
     assert [item["id"] for item in archived_response.data["results"]] == [archived.id]
 
 
+def test_active_patient_search_is_bounded_and_excludes_archived_results(staff_client, patient_factory):
+    active = patient_factory(first_name="Searchable", last_name="Patient", phone_number="0912000001")
+    patient_factory(first_name="Searchable", last_name="Archived", phone_number="0912000002", is_archived=True)
+
+    response = staff_client.get("/api/patients/?search=Searchable&is_archived=false")
+
+    assert response.status_code == 200
+    assert response.data["count"] == 1
+    assert response.data["results"][0]["id"] == active.id
+    assert len(response.data["results"]) <= 20
+    assert response.data["results"][0]["is_archived"] is False
+
+
 def test_doctor_helper_filters_remain_available(doctor_client, doctor_user, patient_factory, appointment_factory, visit_factory):
     accessible = patient_factory(first_name="Shared", last_name="Search", phone_number="0912345678")
     unrelated = patient_factory(first_name="Hidden", last_name="Search", phone_number="0912349999")

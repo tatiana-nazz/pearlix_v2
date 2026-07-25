@@ -146,6 +146,19 @@ def test_create_validation_rejects_invalid_payloads(staff_client, patient, docto
 
 
 @pytest.mark.django_db
+def test_staff_cannot_create_an_appointment_for_an_archived_patient(staff_client, patient, doctor_user):
+    add_working_hour(doctor_user)
+    patient.is_archived = True
+    patient.save(update_fields=["is_archived", "updated_at"])
+
+    response = staff_client.post("/api/appointments/", appointment_payload(patient, doctor_user), format="json")
+
+    assert response.status_code == 400
+    assert response.data["code"] == "VALIDATION_ERROR"
+    assert "patient_id" in response.data["details"]
+
+
+@pytest.mark.django_db
 def test_non_doctor_and_inactive_doctor_rejected(staff_client, patient, staff_user):
     inactive_doctor = User.objects.create_user(
         email="inactive-doctor2@example.com",

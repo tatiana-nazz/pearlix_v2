@@ -4,6 +4,8 @@ import type { AppointmentDetail, AppointmentListItem, CreateAppointmentPayload, 
 import type { DoctorListItem } from "../../../types/schedule";
 import { useAuthStore } from "../../../auth/authStore";
 import { appointmentCopy } from "../i18n";
+import type { PatientListItem } from "../../../types/patients";
+import { PatientPicker } from "./PatientPicker";
 import {
   apiFieldErrors,
   appointmentToFormValues,
@@ -39,6 +41,7 @@ function initialValues(props: AppointmentFormProps): AppointmentFormValues {
 
 export function AppointmentForm(props: AppointmentFormProps) {
   const [values, setValues] = useState<AppointmentFormValues>(() => initialValues(props));
+  const [selectedPatient, setSelectedPatient] = useState<PatientListItem | null>(() => props.appointment?.patient ?? null);
   const [errors, setErrors] = useState<AppointmentFormErrors>({});
   const backendErrors = useMemo(() => apiFieldErrors(props.error), [props.error]);
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
@@ -46,6 +49,7 @@ export function AppointmentForm(props: AppointmentFormProps) {
 
   useEffect(() => {
     setValues(initialValues(props));
+    setSelectedPatient(props.appointment?.patient ?? null);
   }, [props.appointment, props.initialDate, props.initialDoctorId]);
 
   function setField(field: keyof AppointmentFormValues, value: string) {
@@ -66,20 +70,30 @@ export function AppointmentForm(props: AppointmentFormProps) {
     return errors[field] ?? backendErrors[field];
   }
 
+  function patientError() {
+    const message = fieldError("patientId");
+    if (!message) return undefined;
+    if (!values.patientId) return c.patientRequired;
+    return backendErrors.patientId ? c.patientUnavailable : message;
+  }
+
   return (
     <form className="appointment-form" onSubmit={(event) => void submit(event)}>
       {props.error ? <p className="form-error">{c.saveError}</p> : null}
       <div className="appointment-form-grid">
-        <label>
-          {c.patientId}
-          <input
-            value={values.patientId}
-            onChange={(event) => setField("patientId", event.target.value)}
-            inputMode="numeric"
-            aria-invalid={Boolean(fieldError("patientId"))}
-          />
-          {fieldError("patientId") ? <span className="field-error">{fieldError("patientId")}</span> : null}
-        </label>
+        <PatientPicker
+          selectedPatient={selectedPatient}
+          error={patientError()}
+          disabled={props.mode !== "create"}
+          onSelect={(patient) => {
+            setSelectedPatient(patient);
+            setField("patientId", String(patient.id));
+          }}
+          onClear={() => {
+            setSelectedPatient(null);
+            setField("patientId", "");
+          }}
+        />
         <label>
           {c.doctor}
           <select value={values.doctorId} onChange={(event) => setField("doctorId", event.target.value)} aria-invalid={Boolean(fieldError("doctorId"))}>

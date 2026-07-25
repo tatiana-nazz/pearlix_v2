@@ -7,9 +7,11 @@ export function patientListKey(filters: PatientListFilters) {
   return ["patients", filters] as const;
 }
 
-export function usePatients(filters: PatientListFilters) {
+export function usePatients(filters: PatientListFilters, enabled = true) {
   return useQuery({
     queryKey: patientListKey(filters),
     queryFn: () => getPatients(filters),
+    enabled,
+    retry: false,
   });
 }

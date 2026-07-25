@@ -29,6 +29,7 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | AP-M | appointment Month | concise count/previews with localized overflow | focused day selection/overflow test; browser evidence pending | 14D.3 |
 | AP-L | appointment List | server pagination, Doctor/status/date/search filters, keyboard rows | focused filters/pagination/RBAC test; browser evidence pending | 14D.3 |
 | AP-R | Needs Reschedule/reschedule | route queue plus backend availability and Staff-only resolution | focused availability/RBAC test; browser evidence pending | 14D.3 |
+| AP-C | Staff New Appointment | active-patient combobox uses bounded debounced server search; full name/phone/age only; selected result maps to `patient_id` only | focused minimum-query/loading/empty/error/stale/keyboard/pointer/clear/payload/archived-boundary tests; browser evidence pending | 14D.3A |
 | SCH-01 | `/admin/doctors` | default/employee 5/7 weekly master-detail | impact confirmation test + 1440/768 | 14E |
 | LEAVE-01 | `/admin/leave*` | filter/list-calendar/detail/cancel no DELETE | cancel/version/RBAC test | 14E |
 | VIS-A | `/doctor/visits/active` | five notes, dirty/save/complete separation | ownership/dirty test + 1440/768 | 14E |
@@ -40,7 +41,7 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | SET-01 | clinic settings | four sections, controlled fields, sticky save | settings payload/error/tablet test | 14E |
 | AUD-01 | audit list/detail | filters/paging/safe key-value/no mutation | masking/RBAC/tablet test | 14E |
 | OVR-01 | all modals/drawers | safe outside/Escape, dirty/submitting lock/focus return | overlay keyboard test/video | 14C |
-| FORM-01 | controlled forms | no raw IDs, help/error/focus/44 px controls | payload/accessibility tests | 14C |
+| FORM-01 | controlled forms | no raw IDs, help/error/focus/44 px controls | payload/accessibility tests | 14C/14D.3A |
 | THEME-01 | all target routes | tokenized light/dark including hover/focus/status | visual regression matrix | 14F |
 | RTL-01 | all target routes Arabic seed | Arabic type/bidi/logical mirroring | visual regression matrix | 14F |
 | WIDTH-01 | all priority routes | 1440,1280,1024,768 geometry/no overflow | four screenshots each role | 14F |

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button, Modal, SurfaceCard } from "../../components/v2";
 import { ErrorState } from "../../components/ErrorState";
@@ -26,6 +26,7 @@ import { useDoctors } from "../../features/appointments/hooks/useDoctors";
 import { addDays, clinicToday, formatAppointmentDate, isValidDateInput } from "../../features/appointments/utils/appointmentDates";
 import { buildAppointmentFilters } from "../../features/appointments/utils/appointmentFilters";
 import { getAppointmentPermissions } from "../../features/appointments/utils/appointmentPermissions";
+import { appointmentViewPath } from "../../features/appointments/utils/appointmentPermissions";
 import { appointmentCopy } from "../../features/appointments/i18n";
 import { useAuthStore } from "../../auth/authStore";
 import type { AppointmentListItem, AppointmentViewMode, CreateAppointmentPayload, UpdateAppointmentPayload } from "../../types/appointments";
@@ -50,6 +51,7 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   const [detailsAppointment, setDetailsAppointment] = useState<AppointmentListItem | null>(null);
   const [actionAppointment, setActionAppointment] = useState<AppointmentListItem | null>(null);
   const [action, setAction] = useState<StatusAction | null>(null);
+  const navigate = useNavigate();
 
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = appointmentCopy(language);
@@ -88,6 +90,13 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
     else next.delete(key);
     next.set("page", "1");
     setSearchParams(next);
+  }
+
+  function openDay(day: string) {
+    const next = new URLSearchParams(searchParams);
+    next.set("date", day);
+    next.set("page", "1");
+    navigate(`${appointmentViewPath(role, "day")}?${next.toString()}`);
   }
 
   async function submitCreate(payload: CreateAppointmentPayload | UpdateAppointmentPayload) {
@@ -154,8 +163,8 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
             {view === "day" ? (
               <AppointmentDayView role={role} appointments={rows} timezone={clinicTimezone} onEdit={setFormAppointment} onDetails={setDetailsAppointment} onStatusAction={openStatusAction} />
             ) : null}
-            {view === "week" ? <AppointmentWeekView role={role} date={date} appointments={rows} onDetails={setDetailsAppointment} /> : null}
-            {view === "month" ? <AppointmentMonthView date={date} appointments={rows} onDetails={setDetailsAppointment} /> : null}
+            {view === "week" ? <AppointmentWeekView role={role} date={date} timezone={clinicTimezone} appointments={rows} onDetails={setDetailsAppointment} onDaySelect={openDay} /> : null}
+            {view === "month" ? <AppointmentMonthView date={date} timezone={clinicTimezone} appointments={rows} onDetails={setDetailsAppointment} onDaySelect={openDay} /> : null}
             {view === "list" ? (
               <AppointmentTable role={role} appointments={rows} timezone={clinicTimezone} onEdit={setFormAppointment} onDetails={setDetailsAppointment} onStatusAction={openStatusAction} />
             ) : null}

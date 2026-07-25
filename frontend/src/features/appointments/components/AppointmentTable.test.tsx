@@ -64,4 +64,17 @@ describe("AppointmentTable", () => {
     expect(screen.getByText("Maya Patient")).toBeInTheDocument();
     expect(screen.getByText("Nora Patient")).toBeInTheDocument();
   });
+
+  it.each(["ADMIN", "DOCTOR"] as const)("keeps %s appointment rows read-only", (role) => {
+    render(
+      <MemoryRouter>
+        <AppointmentTable role={role} appointments={[base]} onStatusAction={vi.fn()} onEdit={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("button", { name: "Check in" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Reschedule" })).not.toBeInTheDocument();
+  });
 });

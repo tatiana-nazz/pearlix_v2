@@ -58,6 +58,15 @@ export function buildAppointmentFilters(options: FilterOptions): AppointmentList
   return filters;
 }
 
-export function dateFromAppointment(value: string): string {
+export function dateFromAppointment(value: string, timezone?: string): string {
+  if (timezone) {
+    try {
+      const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(value));
+      const date = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+      return `${date.year}-${date.month}-${date.day}`;
+    } catch {
+      // Fall through to the API timestamp date when an invalid timezone is supplied.
+    }
+  }
   return value.slice(0, 10);
 }

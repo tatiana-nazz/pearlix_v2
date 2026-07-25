@@ -53,7 +53,7 @@ describe("Phase 14C shared primitives", () => {
     expect(screen.getByLabelText("Role")).toHaveValue("STAFF");
     const combo = screen.getByRole("combobox", { name:"Doctor" });
     fireEvent.focus(combo); fireEvent.keyDown(combo, { key:"ArrowDown" }); fireEvent.keyDown(combo, { key:"Enter" });
-    expect(combo).toHaveValue("2");
+    expect(combo).toHaveValue("1");
     fireEvent.keyDown(combo, { key:"Escape" }); expect(combo).toHaveAttribute("aria-expanded", "false");
   });
 

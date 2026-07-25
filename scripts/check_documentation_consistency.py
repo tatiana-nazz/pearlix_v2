@@ -1,4 +1,4 @@
-"""Fail fast on Phase 14D.3 appointments, Phase 14D.2 dashboard, and Phase 14R documentation drift."""
+"""Fail fast on Phase 14D.3A appointments, Phase 14D.2 dashboard, and Phase 14R documentation drift."""
 
 from pathlib import Path
 import sys
@@ -13,6 +13,7 @@ FILES = {
     "dashboard_qa": "frontend/QA_14D2_ROLE_DASHBOARDS.md",
     "appointments_record": "frontend/design_v2/PHASE_14D3_APPOINTMENTS_IMPLEMENTATION_RECORD.md",
     "appointments_qa": "frontend/QA_14D3_APPOINTMENTS_WORKSPACE.md",
+    "appointments_closure": "frontend/design_v2/PHASE_14D3A_APPOINTMENTS_CLOSURE_RECORD.md",
 }
 
 
@@ -27,16 +28,16 @@ def main() -> int:
 
     checks = {
         "status": (
-            "current completed phase: 14d.3 appointments workspace redesign and workflow alignment",
-            "final backend full regression: 418 passed",
-            "final frontend regression: 97 passed in 36 files",
+            "current completed phase: 14d.3a appointments contract and test-coverage closure",
+            "final backend full regression: 420 passed",
+            "final frontend regression: 104 passed in 38 files",
             "backend regression gate: closed",
             "remaining phase 14d ui redesign scope is patients",
         ),
         "audit": (
             "phase 14r regression-gate update",
             "phase 14d.1 delivered the admin team and users & access routes",
-            "complete backend suite now passes (418 tests)",
+            "complete backend suite now passes (420 tests)",
         ),
         "record": (
             "backend complete suite: 418 passed, 0 failed",
@@ -67,6 +68,13 @@ def main() -> int:
             "browser qa status: pending execution",
             "needs reschedule",
             "arabic rtl",
+        ),
+        "appointments_closure": (
+            "phase 14d.3a",
+            "patient_id",
+            "is_archived=false",
+            "browser qa was not executed",
+            "420 complete backend tests passed",
         ),
     }
     for key, phrases in checks.items():
