@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
@@ -37,7 +37,7 @@ const base = {
 } as AppointmentListItem;
 
 describe("AppointmentTable", () => {
-  it("shows Staff actions without status patch controls", () => {
+  it("keeps one justified Staff quick action and moves the remaining actions into More", () => {
     render(
       <MemoryRouter>
         <AppointmentTable role="STAFF" appointments={[base]} onStatusAction={vi.fn()} />
@@ -45,7 +45,9 @@ describe("AppointmentTable", () => {
     );
 
     expect(screen.getByRole("button", { name: "Check in" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.getByRole("menuitem", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /status/i })).not.toBeInTheDocument();
   });
 

@@ -230,4 +230,4 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D browser acceptance is complete; Phase 14E/14F redesign work remains pending. See `frontend/QA_14D_BROWSER_ACCEPTANCE.md`.
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14E.1 action hierarchy is delivered: pages retain one dominant primary operation, quieter secondary controls, keyboard-accessible More menus where appropriate, and visually separated confirmed destructive actions. Remaining Phase 14E/14F work requires its own approved scope. See `frontend/design_v2/PHASE_14E1_ACTION_HIERARCHY_IMPLEMENTATION_RECORD.md`.

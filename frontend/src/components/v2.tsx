@@ -1,9 +1,62 @@
-import { AlertCircle, CheckCircle2, ChevronRight, Circle, Info, Lock, Search, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronRight, Circle, Info, Lock, MoreHorizontal, Search, X } from "lucide-react";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, PropsWithChildren, ReactNode, SelectHTMLAttributes } from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 
-export function Button({ children, variant = "primary", compact, loading = false, disabled, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger"; compact?: boolean; loading?: boolean }) { return <button {...props} disabled={disabled || loading} aria-busy={loading || undefined} className={["v2-button", variant === "primary" ? "" : variant, compact ? "compact" : "", props.className].filter(Boolean).join(" ")}>{children}</button>; }
+export function Button({ children, variant = "primary", compact, loading = false, disabled, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger"; compact?: boolean; loading?: boolean }) { return <button {...props} disabled={disabled || loading} aria-busy={loading || undefined} className={["v2-button", variant === "primary" ? "" : variant, compact ? "compact" : "", props.className].filter(Boolean).join(" ")}>{children}</button>; }
 export function IconButton({ label, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) { return <button {...props} className={["v2-icon-button", props.className].filter(Boolean).join(" ")} aria-label={label} data-tooltip={label}>{children}</button>; }
+type ActionMenuProps = PropsWithChildren<{ label: string; children: ReactNode }>;
+const ActionMenuContext = createContext<(() => void) | null>(null);
+
+export function ActionMenu({ label, children }: ActionMenuProps) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number }>();
+  const trigger = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const placeMenu = () => {
+      const triggerElement = trigger.current;
+      if (!triggerElement) return;
+      const bounds = triggerElement.getBoundingClientRect();
+      const menuWidth = 220;
+      const isRtl = getComputedStyle(triggerElement).direction === "rtl";
+      const preferredLeft = isRtl ? bounds.left + bounds.width - menuWidth : bounds.right - menuWidth;
+      setPosition({ top: Math.min(bounds.bottom + 6, window.innerHeight - 48), left: Math.max(16, Math.min(preferredLeft, window.innerWidth - menuWidth - 16)) });
+    };
+    placeMenu();
+    const closeForOutsideClick = (event: PointerEvent) => {
+      if (!menu.current?.contains(event.target as Node) && !trigger.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeForEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); setOpen(false); }
+    };
+    document.addEventListener("pointerdown", closeForOutsideClick);
+    document.addEventListener("keydown", closeForEscape);
+    window.addEventListener("resize", placeMenu);
+    window.addEventListener("scroll", placeMenu, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeForOutsideClick);
+      document.removeEventListener("keydown", closeForEscape);
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+      window.setTimeout(() => trigger.current?.focus(), 0);
+    };
+  }, [open]);
+
+  function focusFirstItem() { menu.current?.querySelector<HTMLElement>("[role='menuitem']")?.focus(); }
+  return <ActionMenuContext.Provider value={() => setOpen(false)}><div className="v2-action-menu" onClick={(event) => event.stopPropagation()}>
+    <button ref={trigger} type="button" className="v2-icon-button v2-action-menu-trigger" aria-label={label} data-tooltip={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)} onKeyDown={(event) => { if (event.key === "ArrowDown") { event.preventDefault(); setOpen(true); window.setTimeout(focusFirstItem, 0); } }}><MoreHorizontal size={20} aria-hidden="true" /></button>
+    {open ? <div ref={menu} className="v2-action-menu-popover" style={position} role="menu" aria-label={label} onKeyDown={(event) => { if (event.key === "ArrowDown" || event.key === "ArrowUp") { const items = Array.from(menu.current?.querySelectorAll<HTMLElement>("[role='menuitem']") ?? []); const index = items.indexOf(document.activeElement as HTMLElement); if (items.length) { event.preventDefault(); items[(index + (event.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus(); } } }}>{children}</div> : null}
+  </div></ActionMenuContext.Provider>;
+}
+
+export function ActionMenuItem({ children, danger = false, onSelect, disabled = false }: { children: ReactNode; danger?: boolean; onSelect: () => void; disabled?: boolean }) {
+  const close = useContext(ActionMenuContext);
+  return <button type="button" role="menuitem" className={["v2-action-menu-item", danger ? "danger" : ""].filter(Boolean).join(" ")} disabled={disabled} onClick={() => { onSelect(); close?.(); }}>{children}</button>;
+}
+
+export function ActionMenuSeparator() { return <div className="v2-action-menu-separator" role="separator" />; }
 export function PageHeaderV2({ title, description, action }: { title:string; description?:string; action?:ReactNode }) { return <div className="page-header"><div><h2>{title}</h2>{description ? <p>{description}</p> : null}</div>{action ? <div className="page-header-actions">{action}</div> : null}</div>; }
 export function SectionHeading({ title, description }: { title:string; description?:string }) { return <div className="section-header"><h3>{title}</h3>{description ? <p>{description}</p> : null}</div>; }
 export function SurfaceCard({ children, major = false, className }: PropsWithChildren<{ major?:boolean; className?:string }>) { return <section className={["v2-card", major ? "major" : "", className].filter(Boolean).join(" ")}>{children}</section>; }

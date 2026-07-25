@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -38,23 +38,25 @@ describe("PatientTable", () => {
     expect(screen.getByText("No patients found for this filter.")).toBeInTheDocument();
   });
 
-  it("renders Admin row with View only", () => {
+  it("opens Admin rows without exposing an operational action menu", () => {
     renderTable("ADMIN");
-    expect(screen.getByRole("link", { name: "View" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /More actions/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Archive" })).not.toBeInTheDocument();
   });
 
   it("renders Staff edit and archive actions", () => {
     renderTable("STAFF");
-    expect(screen.getByRole("link", { name: "Edit" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Archive" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Archive" })).toBeInTheDocument();
   });
 
   it("renders Doctor edit but no archive action", () => {
     renderTable("DOCTOR");
-    expect(screen.getByRole("link", { name: "Edit" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Archive" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Archive" })).not.toBeInTheDocument();
     expect(screen.queryByText("Status")).not.toBeInTheDocument();
   });
 

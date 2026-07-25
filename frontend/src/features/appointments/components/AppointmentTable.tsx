@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
+import { ActionMenu, ActionMenuItem, ActionMenuSeparator, Button } from "../../../components/v2";
 import { EmptyState } from "../../../components/EmptyState";
 import type { AppointmentListItem } from "../../../types/appointments";
 import type { UserRole } from "../../../types/auth";
@@ -22,6 +23,7 @@ interface AppointmentTableProps {
 export function AppointmentTable({ role, appointments, timezone, onEdit, onDetails, onStatusAction }: AppointmentTableProps) {
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = appointmentCopy(language);
+  const navigate = useNavigate();
   if (!appointments.length) return <EmptyState title={c.noAppointments} />;
 
   return (
@@ -29,7 +31,7 @@ export function AppointmentTable({ role, appointments, timezone, onEdit, onDetai
       <table className="appointment-table">
         <thead>
           <tr>
-            <th>{c.time}</th><th>{c.patient}</th><th>{c.doctor}</th><th>{c.reason}</th><th>{c.status}</th><th>{c.details}</th>
+            <th>{c.time}</th><th>{c.patient}</th><th>{c.doctor}</th><th>{c.reason}</th><th>{c.status}</th>{role === "STAFF" ? <th>{c.action}</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -47,38 +49,15 @@ export function AppointmentTable({ role, appointments, timezone, onEdit, onDetai
                 <td>
                   <AppointmentStatusBadge status={appointment.status} />
                 </td>
-                <td>
-                  <div className="row-actions">
-                    <button className="button secondary compact-button" type="button" onClick={(event) => { event.stopPropagation(); onDetails?.(appointment); }}>
-                      {c.details}
-                    </button>
-                    {permissions.canEdit ? (
-                      <button className="button secondary compact-button" type="button" onClick={(event) => { event.stopPropagation(); onEdit?.(appointment); }}>
-                        {c.edit}
-                      </button>
-                    ) : null}
-                    {permissions.canReschedule ? (
-                      <Link className="button secondary compact-button" to={appointmentReschedulePath(appointment.id)} onClick={(event) => event.stopPropagation()}>
-                        {c.reschedule}
-                      </Link>
-                    ) : null}
-                    {permissions.canCheckIn ? (
-                      <button className="button secondary compact-button" type="button" onClick={(event) => { event.stopPropagation(); onStatusAction?.(appointment, "check-in"); }}>
-                        {c.checkIn}
-                      </button>
-                    ) : null}
-                    {permissions.canCancel ? (
-                      <button className="button secondary compact-button" type="button" onClick={(event) => { event.stopPropagation(); onStatusAction?.(appointment, "cancel"); }}>
-                        {c.cancel}
-                      </button>
-                    ) : null}
-                    {permissions.canNoShow ? (
-                      <button className="button secondary compact-button" type="button" onClick={(event) => { event.stopPropagation(); onStatusAction?.(appointment, "no-show"); }}>
-                        {c.noShow}
-                      </button>
-                    ) : null}
-                  </div>
-                </td>
+                {role === "STAFF" ? <td><div className="row-actions">
+                  {permissions.canCheckIn ? <Button type="button" compact variant="secondary" onClick={(event) => { event.stopPropagation(); onStatusAction?.(appointment, "check-in"); }}>{c.checkIn}</Button> : null}
+                  {(permissions.canEdit || permissions.canReschedule || permissions.canNoShow || permissions.canCancel) ? <ActionMenu label={c.more}>
+                    {permissions.canEdit ? <ActionMenuItem onSelect={() => onEdit?.(appointment)}>{c.edit}</ActionMenuItem> : null}
+                    {permissions.canReschedule ? <ActionMenuItem onSelect={() => navigate(appointmentReschedulePath(appointment.id))}>{c.reschedule}</ActionMenuItem> : null}
+                    {permissions.canNoShow ? <ActionMenuItem onSelect={() => onStatusAction?.(appointment, "no-show")}>{c.noShow}</ActionMenuItem> : null}
+                    {permissions.canCancel ? <><ActionMenuSeparator /><ActionMenuItem danger onSelect={() => onStatusAction?.(appointment, "cancel")}>{c.cancel}</ActionMenuItem></> : null}
+                  </ActionMenu> : null}
+                </div></td> : null}
               </tr>
             );
           })}

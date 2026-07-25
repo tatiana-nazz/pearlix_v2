@@ -11,16 +11,19 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current completed phase: 14D Browser Acceptance Gate
+- Current completed phase: 14E.1 App-wide Action Hierarchy and Button-System Cleanup
 - Phase 13 series: complete
-- Next phase: Phase 14E workflow redesigns
-- Next step: begin Phase 14E workflow redesign planning
+- Next phase: Remaining approved Phase 14E workflow refinements
+- Next step: plan only the next explicitly approved Phase 14E scope
 - Final backend full regression: 420 passed
 - Final frontend regression: 113 passed in 40 files
 - Backend runtime changes in Phase 14C: no
 - Migrations in Phase 14C: none
 - Backend runtime changes in Phase 14C.0: yes
 - Frontend visible UI changes in Phase 14C: shell/token/shared-component foundation
+- Frontend visible UI changes in Phase 14E.1: shared action menu, row-action consolidation, and primary/secondary/danger hierarchy
+- Backend runtime changes in Phase 14E.1: none
+- Migrations in Phase 14E.1: none
 - Frontend contract types, wrappers, and tests changed in Phase 14C.0: yes
 - Migrations in Phase 14C.0: accounts.0005 adds User/DoctorProfile/StaffProfile optimistic-lock versions
 - Backend runtime changes in Phase 14R: yes

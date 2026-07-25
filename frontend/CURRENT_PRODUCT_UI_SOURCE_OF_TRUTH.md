@@ -17,9 +17,9 @@ Pearlix is a professional medical SaaS for dental-clinic operations. The accepte
 - **Billing, visits, and imaging:** Doctors have no global Billing or payment processing. They may perform only current own-visit handoff actions. Visits, X-ray/AI, protected media, and AI boundaries remain governed by current backend contracts and role tests.
 - **Accessibility and presentation:** preserve bilingual/RTL, responsive behavior, light/dark support, accessible controls, and backend-enforced RBAC.
 
-## Action hierarchy: approved pending design work
+## Action hierarchy: delivered Phase 14E.1
 
-The current action-button treatment is an approved design issue, pending implementation. It is not an authorization to restore the pre-v2 interface or remove functionality. Future approved UI work should use one dominant primary action per page/modal/action area; quieter secondary actions; row click or an explicit detail control for detail; accessible More/Actions menus when appropriate; and visually separated, confirmed destructive actions. Core actions must remain discoverable and no functionality may be removed simply to reduce visible buttons.
+The action-button treatment is delivered in Phase 14E.1. This is not an authorization to restore the pre-v2 interface or remove functionality: one dominant primary action per page/modal/action area; quieter secondary actions; row click or an explicit detail control for detail; accessible More/Actions menus when appropriate; and visually separated, confirmed destructive actions. Core actions remain discoverable. Future UI work must preserve this system and the runtime/RBAC boundaries above.
 
 ## Stability and design-change rules
 
@@ -34,4 +34,4 @@ Troubleshooting fixes the affected behavior without restoring an older shell or 
 
 ## Unresolved future work
 
-Action hierarchy implementation; any approved Phase 14E supporting-workspace refinement; remaining responsive/dark/RTL visual validation; real AI; and other post-MVP limits recorded in project status. None is authorization for a runtime change without an approved scope.
+Any approved Phase 14E supporting-workspace refinement; remaining responsive/dark/RTL visual validation; real AI; and other post-MVP limits recorded in project status. None is authorization for a runtime change without an approved scope.

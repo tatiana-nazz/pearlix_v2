@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { Button, ClickableRow, Combobox, DataTableShell, Field, Modal, PreviewList, SelectField, StatePanel, StatusBadge, Tabs } from "./v2";
+import { ActionMenu, ActionMenuItem, ActionMenuSeparator, Button, ClickableRow, Combobox, DataTableShell, Field, Modal, PreviewList, SelectField, StatePanel, StatusBadge, Tabs } from "./v2";
 
 describe("Phase 14C shared primitives", () => {
   it("keeps buttons identifiable while loading and disables duplicate submission", () => {
@@ -33,6 +33,19 @@ describe("Phase 14C shared primitives", () => {
     fireEvent.click(row); fireEvent.keyDown(row, { key:"Enter" }); fireEvent.keyDown(row, { key:" " });
     fireEvent.click(screen.getByRole("button", { name:"Edit" }));
     expect(open).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps overflow actions keyboard accessible, dismissible, and focused on their trigger", async () => {
+    render(<ActionMenu label="More actions"><ActionMenuItem onSelect={() => undefined}>Edit</ActionMenuItem><ActionMenuSeparator /><ActionMenuItem danger onSelect={() => undefined}>Archive</ActionMenuItem></ActionMenu>);
+    const trigger = screen.getByRole("button", { name: "More actions" });
+    trigger.focus(); fireEvent.keyDown(trigger, { key: "ArrowDown" });
+    expect(await screen.findByRole("menu", { name: "More actions" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toHaveFocus();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+    fireEvent.click(trigger); fireEvent.pointerDown(document.body);
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });
 
   it("limits previews then expands and collapses without hiding View all", () => {
