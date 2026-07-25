@@ -11,12 +11,12 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current completed phase: 14E.2A Deterministic Active Visit Browser Acceptance Closure
+- Current completed phase: 14E.3 Billing, Invoice, Payment, and Handoff Workspace Design Alignment
 - Phase 13 series: complete
 - Next phase: Remaining explicitly approved workflow refinements
 - Next step: plan only the next explicitly approved Phase 14E scope
 - Final backend full regression: 420 passed
-- Final frontend regression: 125 passed in 43 files
+- Final frontend regression: 130 passed in 45 files
 - Backend runtime changes in Phase 14C: no
 - Migrations in Phase 14C: none
 - Backend runtime changes in Phase 14C.0: yes
@@ -25,6 +25,9 @@ Local login connectivity is now deterministic: the documented frontend uses `127
 - Frontend visible UI changes in Phase 14E.1A: collection records have no mutation or overflow controls; record actions are available only after opening detail
 - Frontend visible UI changes in Phase 14E.2: active visit patient/visit summary, one accessible clinical tab workspace, localized notes and state feedback, read-first patient context, protected X-ray access, and existing billing handoff alignment
 - Frontend visible UI changes in Phase 14E.2A: Doctor Start visit action connected to the opened checked-in appointment detail; real browser acceptance closure completed
+- Frontend visible UI changes in Phase 14E.3: action-free billing handoff/invoice collections, backend-derived visible-page financial summaries, detail-first Staff operations, readable payment/print detail, Doctor global Billing navigation removal, and browser billing acceptance
+- Backend runtime changes in Phase 14E.3: none
+- Migrations in Phase 14E.3: none
 - Backend runtime changes in Phase 14E.2A: none
 - Migrations in Phase 14E.2A: none
 - Backend runtime changes in Phase 14E.2: none

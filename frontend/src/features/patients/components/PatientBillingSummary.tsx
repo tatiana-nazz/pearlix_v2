@@ -13,10 +13,7 @@ export function PatientBillingSummary({ role, patientId }: PatientBillingSummary
   if (role === "DOCTOR") {
     return (
       <Card>
-        <SectionHeader title="Billing handoffs" description="Doctors can use the My Billing Handoffs workspace for own handoff context." />
-        <Link className="button secondary" to="/doctor/billing/handoffs">
-          My Billing Handoffs
-        </Link>
+        <SectionHeader title="Billing handoffs" description="Invoice and payment operations are not available in the Doctor workspace. Completed-visit handoffs remain available from the related visit." />
       </Card>
     );
   }

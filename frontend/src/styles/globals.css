@@ -630,6 +630,32 @@ p {
 .billing-table { width: 100%; min-width: 780px; border-collapse: collapse; }
 .billing-table th, .billing-table td { border-bottom: 1px solid var(--color-border); padding: var(--space-3); text-align: left; }
 .billing-table th { color: var(--color-muted); font-size: var(--font-size-xs); text-transform: uppercase; }
+.billing-collection-card { padding: 0; overflow: hidden; }
+.billing-collection-card .table-scroll { padding: 0 var(--space-4); }
+.billing-collection-card .billing-table th { background: var(--color-surface-muted); }
+.billing-table .amount-cell { text-align: end; white-space: nowrap; }
+.billing-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-4); }
+.billing-summary-card { display: grid; min-height: 156px; align-content: space-between; gap: var(--space-2); }
+.billing-summary-card > span, .billing-summary-card small { color: var(--color-muted); }
+.billing-summary-card > strong { color: var(--color-text); font-size: var(--font-size-xl); line-height: 1.2; overflow-wrap: anywhere; }
+.billing-filter-card { padding: var(--space-4); }
+.billing-filter-grid { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: var(--space-4); }
+.billing-filter-grid label { display: grid; min-width: min(100%, 240px); gap: var(--space-2); color: var(--color-text); font-weight: 650; }
+.billing-filter-grid select { min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius); padding-inline: var(--space-3); background: var(--color-surface); color: var(--color-text); }
+.billing-filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); color: var(--color-muted); }
+.billing-detail-card { display: grid; gap: var(--space-5); }
+.billing-detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.invoice-financial-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.invoice-financial-summary div { display: grid; gap: var(--space-1); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-3); background: var(--color-surface-muted); }
+.invoice-financial-summary span { color: var(--color-muted); font-size: var(--font-size-xs); font-weight: 800; text-transform: uppercase; }
+.invoice-financial-summary strong { font-size: var(--font-size-lg); overflow-wrap: anywhere; }
+.billing-payment-history { display: grid; align-content: start; gap: var(--space-4); }
+.billing-payment-history > p { margin: 0; color: var(--color-muted); }
+.billing-success { margin: 0; color: var(--color-success); font-weight: 700; }
+.invoice-print-card { display: grid; gap: var(--space-5); }
+.invoice-print-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); }
+.invoice-print-card > header p { margin: 0 0 var(--space-1); color: var(--color-muted); }
+.invoice-print-card h2 { margin: 0; }
 .print-data { overflow: auto; white-space: pre-wrap; color: var(--color-text); font-family: var(--font-sans); }
 .xray-detail-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr); gap: var(--space-6); align-items: start; }
 .xray-table { width: 100%; min-width: 900px; border-collapse: collapse; }

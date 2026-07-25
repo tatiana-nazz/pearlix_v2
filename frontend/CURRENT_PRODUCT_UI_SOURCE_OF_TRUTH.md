@@ -27,6 +27,10 @@ The opened Active Visit workflow uses a compact patient/visit summary and one ac
 
 Phase 14E.2A closes the live acceptance gap: an owning Doctor can start a visit only from an opened checked-in appointment detail, then enters the existing Active Visit workspace. Appointment collection rows remain action-free, and the current Staff/Admin read-only clinical boundary is unchanged.
 
+## Billing workspace: Phase 14E.3
+
+Billing handoffs and invoices retain their separate current routes while using backend-derived summary cards, backend-supported filtering/pagination, readable financial details, human-labelled related visit context, and whole-row detail opening. Collections remain action-free; convert, dismiss, edit, payment, cancellation, and Print are detail-only according to current RBAC. Staff performs supported billing mutations, Admin remains read-only with Print, and Doctors have no global Billing navigation or invoice/payment capability; own-completed-visit handoff context remains governed by existing visit contracts. Totals, paid amounts, balances, statuses, eligibility, and duplicate prevention remain backend-authoritative. PDF export is absent unless a real backend implementation is later approved. The responsive shell and transformations remain frozen.
+
 ## Stability and design-change rules
 
 Troubleshooting fixes the affected behavior without restoring an older shell or unrelated design. A design change needs explicit scope, reconciliation with current contracts/tests/RBAC, and an implementation/acceptance record. The next planned current-UI refinement begins with action hierarchy or an explicitly approved Phase 14E scope.
