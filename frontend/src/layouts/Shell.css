@@ -86,8 +86,11 @@ body {
 }
 
 .app-shell[data-collapsed="true"] .app-sidebar-brand {
+  display: grid;
+  grid-template-columns: 42px 18px;
   justify-content: center;
-  padding-inline: 8px;
+  gap: 2px;
+  padding-inline: 4px;
 }
 
 .app-shell[data-collapsed="true"] .app-sidebar-brand-mark {
@@ -200,9 +203,10 @@ body {
 }
 
 .app-shell[data-collapsed="true"] .sidebar-toggle {
-  position: absolute;
-  inset-block-start: 74px;
-  inset-inline-start: 24px;
+  position: static;
+  inline-size: 18px;
+  block-size: 42px;
+  margin: 0;
 }
 
 .app-sidebar-footer {
@@ -458,9 +462,17 @@ body {
   }
 
   .app-shell .sidebar-toggle {
-    position: absolute;
-    inset-block-start: 74px;
-    inset-inline-start: 24px;
+    position: static;
+    inline-size: 18px;
+    block-size: 42px;
+    margin: 0;
+  }
+
+  .app-shell .app-sidebar-brand {
+    display: grid;
+    grid-template-columns: 42px 18px;
+    gap: 2px;
+    padding-inline: 4px;
   }
 
   .app-shell .v2-nav-link::after {

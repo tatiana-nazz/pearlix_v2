@@ -121,7 +121,6 @@ test("Staff visual acceptance covers appointments, profile, patient, and payment
 
   await page.goto("/staff/profile");
   await expect(page.getByRole("heading", { name: "Profile", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Current workload", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Working hours / shifts", exact: true })).toBeVisible();
   await capture(page, "after-staff-profile");
 

@@ -18,8 +18,8 @@ describe("AppointmentViewTabs", () => {
   });
 
   it("keeps the reschedule queue beside the calendar as a sibling workspace tab", () => {
-    render(<MemoryRouter initialEntries={["/staff/appointments/needs-reschedule?date=2026-07-26"]}><AppointmentWorkspaceTabs role="STAFF" queue /></MemoryRouter>);
-    expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute("href", "/staff/appointments/week?date=2026-07-26");
+    render(<MemoryRouter initialEntries={["/staff/appointments/needs-reschedule?date=2026-07-26&calendar_view=month"]}><AppointmentWorkspaceTabs role="STAFF" queue view="needs-reschedule" /></MemoryRouter>);
+    expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute("href", "/staff/appointments/month?date=2026-07-26");
     expect(screen.getByRole("link", { name: "Reschedule Queue" })).toHaveClass("active");
   });
 });

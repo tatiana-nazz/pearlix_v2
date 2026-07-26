@@ -17,7 +17,7 @@ The authoritative document inventory and classifications are in [`DOCUMENT_AUTHO
 
 ## Current decisions that must not drift
 
-- Team and Users & Access are distinct: Team is the professional-profile/availability workspace; Users & Access is account, login, security, and role management. They are related, not one "Doctors & Staff" screen.
+- Team and Users & Access are distinct: Team is the professional-profile/availability workspace; Users & Access is account, login, security, and role management. Admin manages Team; Staff has a safe read-only Team projection; Doctor has no Team access. They are related, not one "Doctors & Staff" screen.
 - Every active Doctor can read all active, non-archived patients, update approved demographics and Medical Conditions History, and read permitted clinical history. "My patients" and similar labels are workflow filters, never object-level authorization.
 - Doctors cannot archive/reactivate patients, process payments, or receive global Billing.
 - The current v2 UI continues from `e54a858`. The rejected `preview-pre-v2-ui` branch, its worktree, and `bdd5f6f` are **never** implementation sources.

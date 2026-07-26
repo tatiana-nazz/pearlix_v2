@@ -10,6 +10,7 @@ from apps.patients.models import Patient
 from apps.patients.permissions import PatientPermission
 from apps.patients.serializers import PatientDetailSerializer, PatientListSerializer
 from apps.patients.selectors import (
+    annotate_patient_directory,
     get_doctor_related_patients,
     get_doctor_upcoming_patients,
     get_patients_for_user,
@@ -40,6 +41,8 @@ class PatientViewSet(
 
     def get_queryset(self):
         queryset = get_patients_for_user(self.request.user)
+        if self.action == "list":
+            queryset = annotate_patient_directory(queryset)
         user = self.request.user
 
         is_archived = self.request.query_params.get("is_archived")

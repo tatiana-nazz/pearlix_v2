@@ -36,7 +36,7 @@ export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerC
         {groups.map((group) => {
           const items = navigationByRole[role].filter((item) => item.group === group);
           if (!items.length) return null;
-          return <section className="nav-group" key={group}><h2 className="nav-group-label">{t(language, group)}</h2>{items.map((item) => { const Icon = item.icon; const label = itemLabel(item.label); const isAppointmentsRoot = item.path.endsWith("/appointments"); return <NavLink key={item.path} to={item.path} end={isAppointmentsRoot} onClick={onNavigate} aria-label={label} className={({ isActive }) => isActive ? "v2-nav-link active" : "v2-nav-link"}><Icon aria-hidden="true" size={collapsed ? 22 : 20} strokeWidth={1.75} /><span className="nav-label">{label}</span></NavLink>; })}</section>;
+          return <section className="nav-group" key={group}><h2 className="nav-group-label">{t(language, group)}</h2>{items.map((item) => { const Icon = item.icon; const label = itemLabel(item.label); return <NavLink key={item.path} to={item.path} onClick={onNavigate} aria-label={label} className={({ isActive }) => isActive ? "v2-nav-link active" : "v2-nav-link"}><Icon aria-hidden="true" size={collapsed ? 22 : 20} strokeWidth={1.75} /><span className="nav-label">{label}</span></NavLink>; })}</section>;
         })}
       </nav>
       <footer className="app-sidebar-footer"><button className="sidebar-logout" type="button" aria-label={t(language, "logout")} data-tooltip={t(language, "logout")} onClick={onLogout}><LogOut size={20} aria-hidden="true" /><span className="nav-label">{t(language, "logout")}</span></button></footer>

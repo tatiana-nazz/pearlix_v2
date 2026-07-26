@@ -9,6 +9,8 @@ class PatientListSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
     age = serializers.IntegerField(read_only=True)
     last_visit_with_me_at = serializers.DateTimeField(read_only=True, required=False)
+    last_visit_at = serializers.DateTimeField(read_only=True, required=False)
+    next_appointment_at = serializers.DateTimeField(read_only=True, required=False)
 
     class Meta:
         model = Patient
@@ -27,6 +29,8 @@ class PatientListSerializer(serializers.ModelSerializer):
             "is_archived",
             "version",
             "last_visit_with_me_at",
+            "last_visit_at",
+            "next_appointment_at",
             "created_at",
             "updated_at",
         )
@@ -39,6 +43,8 @@ class PatientListSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "last_visit_with_me_at",
+            "last_visit_at",
+            "next_appointment_at",
         )
 
 

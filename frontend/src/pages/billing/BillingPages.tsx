@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { Card } from "../../components/Card";
 import { EmptyState } from "../../components/EmptyState";
@@ -19,6 +19,13 @@ import type { PatientListItem } from "../../types/patients";
 
 const invoiceStatuses = ["", "UNPAID", "PARTIALLY_PAID", "PAID", "CANCELLED"];
 const handoffStatuses = ["", "PENDING", "CONVERTED_TO_INVOICE", "DISMISSED"];
+
+function BillingWorkspaceHeader({ role }: { role: Exclude<UserRole, "DOCTOR"> }) {
+  const location = useLocation();
+  const search = location.search;
+  const base = `/${role.toLowerCase()}/billing`;
+  return <header className="billing-workspace-header"><div><p>{role.toLowerCase()} workspace</p><h1>Billing</h1><span>Handoffs and invoices in one financial workspace.</span></div><nav className="billing-workspace-tabs" aria-label="Billing sections"><NavLink to={`${base}/handoffs${search}`}>Handoffs</NavLink><NavLink to={`${base}/invoices${search}`}>Invoices</NavLink></nav></header>;
+}
 
 function queryFromSearch(searchParams: URLSearchParams) {
   const status = searchParams.get("status") || undefined;
@@ -66,7 +73,7 @@ export function BillingHandoffListPage({ role }: { role: UserRole }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const handoffs = useHandoffs(queryFromSearch(searchParams));
   const results = handoffs.data?.results ?? [];
-  return <div className="billing-page"><PageHeader eyebrow={`${role.toLowerCase()} workspace`} title={role === "DOCTOR" ? "My Billing Handoffs" : "Billing Handoffs"} description={role === "DOCTOR" ? "Handoffs from your completed visits." : "Review completed-visit handoffs before invoice creation."} />
+  return <div className="billing-page">{role === "DOCTOR" ? <PageHeader eyebrow="doctor workspace" title="My Billing Handoffs" description="Handoffs from your completed visits." /> : <BillingWorkspaceHeader role={role} />}
     {handoffs.data ? <HandoffSummaryCards pending={results.filter((handoff) => handoff.status === "PENDING").length} count={handoffs.data.count} /> : null}
     <Card className="billing-filter-card"><div className="billing-filter-grid"><label>Status<select aria-label="Handoff status" value={searchParams.get("status") || ""} onChange={(event) => updateSearch(setSearchParams, searchParams, "status", event.target.value)}>{handoffStatuses.map((status) => <option key={status} value={status}>{status ? status.split("_").join(" ") : "All statuses"}</option>)}</select></label><div className="billing-filter-actions"><span>{handoffs.data ? `${handoffs.data.count} handoff${handoffs.data.count === 1 ? "" : "s"}` : ""}</span>{searchParams.size ? <button className="button secondary" type="button" onClick={() => setSearchParams({})}>Clear filters</button> : null}</div></div></Card>
     {handoffs.isLoading ? <LoadingState title="Loading handoffs..." /> : null}{handoffs.isError ? <ErrorState error={handoffs.error} title="Unable to load handoffs" onRetry={() => void handoffs.refetch()} /> : null}{handoffs.data ? <><HandoffList role={role} handoffs={results} /><PaginationControls count={handoffs.data.count} next={handoffs.data.next} previous={handoffs.data.previous} /></> : null}</div>;
@@ -82,7 +89,7 @@ export function BillingHandoffDetailPage({ role }: { role: UserRole }) {
 export function InvoiceListPage({ role }: { role: UserRole }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const invoices = useInvoices(queryFromSearch(searchParams)); const results = invoices.data?.results ?? [];
-  return <div className="billing-page"><PageHeader eyebrow={`${role.toLowerCase()} workspace`} title="Invoices" description={role === "ADMIN" ? "Read-only invoice visibility and print access." : "Review invoices, balances, and payment state."} actions={role === "STAFF" ? <Link className="button primary" to="/staff/billing/invoices/new">New invoice</Link> : null} />
+  return <div className="billing-page"><BillingWorkspaceHeader role={role as Exclude<UserRole, "DOCTOR">} />{role === "STAFF" ? <div className="billing-page-action"><Link className="button primary" to="/staff/billing/invoices/new">New invoice</Link></div> : null}
     {invoices.data ? <SummaryCards invoices={results} /> : null}
     <Card className="billing-filter-card"><div className="billing-filter-grid"><label>Status<select aria-label="Invoice status" value={searchParams.get("status") || ""} onChange={(event) => updateSearch(setSearchParams, searchParams, "status", event.target.value)}>{invoiceStatuses.map((status) => <option key={status} value={status}>{status ? status.split("_").join(" ") : "All statuses"}</option>)}</select></label><div className="billing-filter-actions"><span>{invoices.data ? `${invoices.data.count} invoice${invoices.data.count === 1 ? "" : "s"}` : ""}</span>{searchParams.size ? <button className="button secondary" type="button" onClick={() => setSearchParams({})}>Clear filters</button> : null}</div></div></Card>
     {invoices.isLoading ? <LoadingState title="Loading invoices..." /> : null}{invoices.isError ? <ErrorState error={invoices.error} title="Unable to load invoices" onRetry={() => void invoices.refetch()} /> : null}{invoices.data ? <><InvoiceList role={role} invoices={results} /><PaginationControls count={invoices.data.count} next={invoices.data.next} previous={invoices.data.previous} /></> : null}</div>;

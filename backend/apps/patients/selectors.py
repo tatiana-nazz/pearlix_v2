@@ -1,8 +1,9 @@
-from django.db.models import Q, QuerySet
+from django.db.models import OuterRef, Q, QuerySet, Subquery
 from django.utils import timezone
 
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment
+from apps.visits.models import Visit
 
 
 ARCHIVE_BLOCKING_APPOINTMENT_STATUSES = (
@@ -24,6 +25,24 @@ def get_patients_for_user(user) -> QuerySet[Patient]:
             return queryset.none()
         return queryset.filter(is_archived=False)
     return queryset.none()
+
+
+def annotate_patient_directory(queryset: QuerySet[Patient]) -> QuerySet[Patient]:
+    """Add read-only directory dates without per-row frontend requests."""
+    last_visit = Visit.objects.filter(patient_id=OuterRef("pk")).order_by("-started_at", "-id").values("started_at")[:1]
+    next_appointment = Appointment.objects.filter(
+        patient_id=OuterRef("pk"),
+        start_datetime__gte=timezone.now(),
+        status__in=(
+            Appointment.Status.UPCOMING,
+            Appointment.Status.CHECKED_IN,
+            Appointment.Status.NEEDS_RESCHEDULE,
+        ),
+    ).order_by("start_datetime", "id").values("start_datetime")[:1]
+    return queryset.annotate(
+        last_visit_at=Subquery(last_visit),
+        next_appointment_at=Subquery(next_appointment),
+    )
 
 
 def get_doctor_related_patients(user) -> QuerySet[Patient]:

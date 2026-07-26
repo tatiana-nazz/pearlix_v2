@@ -3,7 +3,7 @@
 **Authority marker:** `CURRENT_CANONICAL_PROJECT_STATUS`
 Read [`../../CODEX_START_HERE.md`](../../CODEX_START_HERE.md) before using this tracker. Authority reconciliation is documentation governance only; it changes no runtime behavior. The reconciled v2 runtime lineage continues from `e54a858`. Phase 14F was implemented but rejected at direct user acceptance; Phase 14F.1 corrects it from starting commit `2f7070fca7fbf84d3c2578285416b5ae5f52453b` while preserving current runtime authority. The rejected pre-v2 preview (`preview-pre-v2-ui`, `bdd5f6f`) is not an implementation source. Team and Users & Access remain separate; active Doctors have all-active/non-archived patient access as summarized in `CURRENT_BACKEND_DECISIONS.md`.
 
-This is the canonical current-phase tracker. Other project documents describe capabilities and defer current/next-phase status to this file.
+This is the canonical current-phase tracker. Other project documents describe capabilities and defer current/next-phase status to this file. Phase 14F.2 closes Staff Team read-only access, Staff/Admin Billing information architecture, profile schedule/leave semantics, appointment toolbar and period summaries, Team/patient/account directory presentation, shared status semantics, and responsive overflow without migrations.
 
 Project: Dental Clinic Management System Website
 
@@ -11,13 +11,13 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current phase: 14F.1 UI Acceptance Correction and Rich Demo Story — delivered
+- Current phase: 14F.2 Information Architecture, Permission, and Responsive Closure — delivered
 - Phase 13 series: complete
 - Next phase: no phase is implicitly authorized; use a new approved scope
-- Next step: preserve the Phase 14F.1 corrected visual system and current runtime/RBAC contracts
-- Final backend full regression: 420 passed
-- Final frontend regression: 140 passed in 47 files
-- Final browser regression: 8 passed in Chromium, including 5 Phase 14F.1 visual and real-workflow acceptance tests
+- Next step: preserve the Phase 14F.2 closure and current runtime/RBAC contracts
+- Final backend full regression: 422 passed
+- Final frontend regression: 143 passed in 48 files
+- Final browser regression: 7 non-destructive Phase 14F/14F.2 Chromium scenarios passed, including 3 new IA/permission/responsive scenarios
 - Backend runtime changes in Phase 14C: no
 - Migrations in Phase 14C: none
 - Backend runtime changes in Phase 14C.0: yes
@@ -43,6 +43,7 @@ Local login connectivity is now deterministic: the documented frontend uses `127
 - API changes in Phase 14F.1: none
 - Migrations in Phase 14F.1: none
 - Demo story in Phase 14F.1: enhanced with inactive/must-change accounts, Staff/Doctor leave, split shifts, domain-derived leave and shift conflicts, completed rescheduling, returning-patient history, connected financial/imaging relationships, and realistic deterministic synthetic media
+- Phase 14F.2: Staff Team GET list/detail is authorized through a safe professional projection; Team mutations stay Admin-only; Doctor/unauthenticated access stays denied. Patient list adds read-only last-visit and next-eligible-appointment dates. No migration was added.
 - Phase 14F protected-media acceptance: authenticated original pixels rendered with non-zero natural width and stored AI result in Chromium; accidental duplicated `/api/api/...` media paths are normalized in the frontend Blob client without public media URLs
 - Backend runtime changes in Phase 14F: none
 - API changes in Phase 14F: none

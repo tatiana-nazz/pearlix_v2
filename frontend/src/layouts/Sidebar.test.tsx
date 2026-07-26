@@ -19,6 +19,9 @@ describe("Sidebar", () => {
     }
 
     expect(navigationByRole.STAFF.some((item) => item.path.includes("external-xrays"))).toBe(false);
+    expect(navigationByRole.STAFF.filter((item) => item.label === "Billing")).toHaveLength(1);
+    expect(navigationByRole.STAFF.some((item) => item.label === "Team")).toBe(true);
+    expect(navigationByRole.STAFF.some((item) => ["Billing handoffs", "Invoices"].includes(item.label))).toBe(false);
     expect(navigationByRole.DOCTOR.some((item) => item.path.includes("billing/invoices"))).toBe(false);
     expect(navigationByRole.ADMIN.filter((item) => item.path.includes("profile"))).toHaveLength(1);
     for (const role of ["STAFF", "DOCTOR"] as const) {

@@ -19,6 +19,8 @@ export interface PatientListItem extends Timestamped {
   is_archived: boolean;
   version: number;
   last_visit_with_me_at?: string | null;
+  last_visit_at?: string | null;
+  next_appointment_at?: string | null;
 }
 
 export type PatientList = PatientListItem;

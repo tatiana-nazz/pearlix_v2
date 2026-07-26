@@ -47,6 +47,42 @@ def assert_patient_summary_shape(data):
     assert "version" in data
 
 
+def test_patient_list_includes_last_visit_and_next_eligible_appointment(staff_client, patient, appointment_factory, visit_factory):
+    now = timezone.now()
+    completed_appointment = appointment_factory(
+        patient=patient,
+        status=Appointment.Status.COMPLETED,
+        start_datetime=now - timedelta(days=8),
+        end_datetime=now - timedelta(days=8) + timedelta(minutes=30),
+    )
+    visit_factory(
+        appointment=completed_appointment,
+        status=Visit.Status.COMPLETED,
+        started_at=now - timedelta(days=8),
+        completed_at=now - timedelta(days=8) + timedelta(minutes=30),
+    )
+    appointment_factory(
+        patient=patient,
+        status=Appointment.Status.CANCELLED,
+        start_datetime=now + timedelta(hours=2),
+        end_datetime=now + timedelta(hours=2, minutes=30),
+    )
+    eligible = appointment_factory(
+        patient=patient,
+        status=Appointment.Status.UPCOMING,
+        start_datetime=now + timedelta(days=2),
+        end_datetime=now + timedelta(days=2, minutes=30),
+    )
+
+    response = staff_client.get("/api/patients/")
+
+    assert response.status_code == 200
+    row = next(item for item in response.data["results"] if item["id"] == patient.id)
+    assert row["last_visit_at"] is not None
+    from django.utils.dateparse import parse_datetime
+    assert parse_datetime(row["next_appointment_at"]) == eligible.start_datetime
+
+
 def test_staff_can_create_patient_with_final_schema(staff_client, staff_user):
     response = staff_client.post("/api/patients/", patient_payload(), format="json")
 

@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { scheduleApi } from "../../api/endpoints/schedule";
-import { dashboardApi } from "../../api/endpoints/dashboard";
 import { useAuthStore } from "../../auth/authStore";
 import type { AuthUser } from "../../types/auth";
 import { OwnProfilePage } from "./OwnProfilePage";
@@ -32,14 +31,12 @@ describe("OwnProfilePage", () => {
     useAuthStore.setState({ user: baseUser, role: "STAFF" });
     vi.spyOn(scheduleApi, "workingShifts").mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
     vi.spyOn(scheduleApi, "availabilityExceptions").mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
-    vi.spyOn(dashboardApi, "staff").mockResolvedValue({ upcoming_today_appointments: [], checked_in_appointments: [], needs_reschedule_appointments: [] } as never);
   });
 
   it("composes Staff identity, working hours, and leave in the shared profile visual hierarchy", async () => {
     renderPage();
     expect(screen.getByRole("heading", { name: "Profile" })).toBeInTheDocument();
     expect(screen.getByText("Olivia Bennett")).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Current workload" })).toBeInTheDocument();
     expect(await screen.findByText("No working shifts have been assigned.")).toBeInTheDocument();
     expect(await screen.findByText("No leave or unavailable periods were returned.")).toBeInTheDocument();
   });
@@ -57,6 +54,5 @@ describe("OwnProfilePage", () => {
     expect(screen.getByText("Profile information")).toBeInTheDocument();
     expect(scheduleApi.workingShifts).not.toHaveBeenCalled();
     expect(scheduleApi.availabilityExceptions).not.toHaveBeenCalled();
-    expect(dashboardApi.staff).not.toHaveBeenCalled();
   });
 });

@@ -22,12 +22,14 @@ export function PatientTable({ role, patients, showArchivedStatus }: PatientTabl
 
   if (!patients.length) return <EmptyState title={c.noPatients} />;
 
+  const lastVisit = c.lastVisit ?? "Last visit";
+  const nextAppointment = c.nextAppointment ?? "Next appointment";
   return (
     <div className="table-scroll">
       <table className="patient-table">
         <thead>
           <tr>
-            <th>{c.patient}</th><th>{c.contact}</th><th>{c.gender}</th><th>{c.age}</th>
+            <th>{c.patient}</th><th>{c.contact}</th><th>{c.gender}</th><th>{lastVisit}</th><th>{nextAppointment}</th>
             {showArchivedStatus ? <th>{c.status}</th> : null}
             {role === "DOCTOR" ? <th>{c.visits}</th> : null}
           </tr>
@@ -39,12 +41,11 @@ export function PatientTable({ role, patients, showArchivedStatus }: PatientTabl
               <tr key={patient.id} tabIndex={0} className="clickable-row" onClick={() => navigate(profilePath)} onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") { event.preventDefault(); navigate(profilePath); }
               }}>
-                <td>
-                  <strong>{patient.full_name}</strong>
-                </td>
-                <td>{displayText(patient.phone_number || patient.email)}</td>
+                <td><div className="patient-identity-cell"><span className="patient-avatar" aria-hidden="true">{patientInitials(patient.full_name)}</span><span><strong>{patient.full_name}</strong><small>{patient.age ?? c.notRecorded} {patient.age === null ? "" : c.years}</small></span></div></td>
+                <td><span className="patient-contact-cell"><strong dir="ltr">{displayText(patient.phone_number)}</strong><small dir="ltr">{displayText(patient.email)}</small></span></td>
                 <td>{patient.gender === "Female" ? c.female : c.male}</td>
-                <td>{patient.age ?? c.notRecorded}</td>
+                <td dir="ltr">{patient.last_visit_at ? formatDateTime(patient.last_visit_at) : c.notRecorded}</td>
+                <td dir="ltr">{patient.next_appointment_at ? formatDateTime(patient.next_appointment_at) : c.notRecorded}</td>
                 {showArchivedStatus ? (
                   <td>
                     <PatientStatusBadge patient={patient} />
@@ -59,3 +60,5 @@ export function PatientTable({ role, patients, showArchivedStatus }: PatientTabl
     </div>
   );
 }
+
+function patientInitials(name: string) { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P"; }

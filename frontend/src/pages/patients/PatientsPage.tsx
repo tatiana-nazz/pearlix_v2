@@ -118,6 +118,7 @@ export function PatientsPage({ role }: PatientsPageProps) {
       </Card>
 
       <Card>
+        {patients.data ? <div className="patient-table-heading"><div><h2>{c.allPatients ?? c.patientDirectory}</h2><p>{patients.data.count} {c.records}</p></div></div> : null}
         {patients.isLoading ? <LoadingState title={c.loading} /> : null}
         {patients.isError ? <ErrorState error={patients.error} onRetry={() => void patients.refetch()} title={c.loadError} /> : null}
         {patients.data ? (

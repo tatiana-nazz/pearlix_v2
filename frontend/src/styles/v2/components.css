@@ -95,6 +95,7 @@
 .v2-status.danger { background: color-mix(in srgb, var(--v2-danger) 12%, var(--v2-surface)); }
 .v2-status.info { background: var(--v2-primary-soft); }
 .v2-status.ai { background: color-mix(in srgb, var(--v2-ai) 12%, var(--v2-surface)); }
+.v2-status.neutral { background: var(--v2-surface-subtle); color: var(--v2-neutral); }
 .v2-tabs {
   gap: 8px;
   border-block-end-color: var(--v2-divider);
@@ -510,4 +511,20 @@
   .appointment-workspace-tabs,
   .appointments-filter-card .appointment-filters { overflow-x: auto; flex-wrap: nowrap; }
   .appointments-filter-card .appointment-filters label { min-width: 180px; }
+}
+
+/* Phase 14F.2 appointment toolbar and honest period summary. */
+.appointments-control-bar { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 14px; }
+.appointments-view-controls { display: flex; min-width: 0; align-items: center; justify-content: flex-end; gap: 10px; }
+.appointments-control-bar .appointment-workspace-tabs,.appointments-control-bar .appointment-tabs { box-sizing: border-box; height: 44px; min-height: 44px; align-items: center; flex-wrap: nowrap; margin: 0; }
+.appointments-control-bar .appointment-workspace-tabs a,.appointments-control-bar .appointment-tabs a { box-sizing: border-box; display: inline-flex; height: 34px; min-height: 34px; align-items: center; padding-block: 0; white-space: nowrap; }
+.appointments-control-bar .appointments-date-navigation { min-height: 44px; }
+.appointments-summary-scope { margin: 0; color: var(--v2-muted); font-size: 12px; }
+@media (max-width:1279px) {
+  .appointments-control-bar { align-items: stretch; flex-direction: column; }
+  .appointments-view-controls { justify-content: space-between; }
+}
+@media (max-width:767px) {
+  .appointments-view-controls { align-items: stretch; flex-direction: column; }
+  .appointments-view-controls > nav { max-width: 100%; overflow-x: auto; }
 }

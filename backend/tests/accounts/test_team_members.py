@@ -3,7 +3,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
 from apps.audit.models import ActivityLog
-from apps.scheduling.models import Appointment
+from apps.scheduling.models import Appointment, WorkingShift
 
 
 @pytest.mark.django_db
@@ -55,10 +55,40 @@ def test_team_list_excludes_admin_and_unlinked_professional_accounts(admin_clien
 
 
 @pytest.mark.django_db
-def test_team_endpoints_require_admin(api_client, staff_client, doctor_client):
-    for client in (api_client, staff_client, doctor_client):
-        response = client.get("/api/team-members/")
-        assert response.status_code in {401, 403}
+def test_team_directory_requires_authentication_and_a_permitted_role(api_client, staff_client, doctor_client):
+    assert api_client.get("/api/team-members/").status_code == 401
+    assert staff_client.get("/api/team-members/").status_code == 200
+    assert doctor_client.get("/api/team-members/").status_code == 403
+
+
+@pytest.mark.django_db
+def test_staff_team_directory_is_read_only_and_uses_safe_projection(api_client, admin_client, staff_client, doctor_client, doctor_user, staff_user):
+    DoctorProfile.objects.create(user=doctor_user, specialty="Endodontics", phone="+963-11")
+    StaffProfile.objects.create(user=staff_user, position="Reception", phone="+963-22")
+    WorkingShift.objects.create(employee=doctor_user, name="Morning", weekday=0, start_time="08:00", end_time="12:00")
+
+    admin_list = admin_client.get("/api/team-members/")
+    admin_detail = admin_client.get(f"/api/team-members/{doctor_user.id}/")
+    staff_list = staff_client.get("/api/team-members/")
+    staff_detail = staff_client.get(f"/api/team-members/{doctor_user.id}/")
+
+    assert admin_list.status_code == 200 and admin_detail.status_code == 200
+    assert staff_list.status_code == 200 and staff_detail.status_code == 200
+    staff_row = next(row for row in staff_list.data["results"] if row["id"] == doctor_user.id)
+    assert staff_row["email"] == doctor_user.email
+    assert staff_row["schedule_summary"] == [{"name": "Morning", "weekday": 0, "start_time": "08:00:00", "end_time": "12:00:00"}]
+    assert "account" not in staff_row
+    assert "account" not in staff_detail.data
+    assert "today_appointments" not in staff_detail.data
+    assert "version" not in staff_detail.data["active_shifts"][0]
+    assert admin_detail.data["account"]["must_change_password"] is False
+
+    assert staff_client.post("/api/team-members/", {}, format="json").status_code == 403
+    assert staff_client.patch(f"/api/team-members/{doctor_user.id}/", {"specialty": "Other"}, format="json").status_code == 403
+    assert staff_client.post(f"/api/team-members/{doctor_user.id}/set-professional-status/", {}, format="json").status_code == 403
+    assert doctor_client.get("/api/team-members/").status_code == 403
+    assert doctor_client.get(f"/api/team-members/{doctor_user.id}/").status_code == 403
+    assert api_client.get("/api/team-members/").status_code == 401
 
 
 @pytest.mark.django_db
