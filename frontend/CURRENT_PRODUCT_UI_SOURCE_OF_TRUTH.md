@@ -49,6 +49,10 @@ Saved X-ray, attachment, viewer, stored-result, and external-X-ray surfaces reta
 
 Status badges are one content-sized shared primitive: machine status selects semantic tone while an optional localized label supplies presentation. Repeated Dashboard KPI, Team, Billing summary, and Clinic Settings cards stretch only within their grid row and return to natural height on mobile. Protected original and stored overlay bytes render in one authenticated viewer canvas with a localized `aria-pressed` toggle; textual stored findings remain available and no client inference is authorized. See `design_v3/PHASE_14F3_VISUAL_STABILITY_ACTIVE_VISIT_AI_OVERLAY_CLEANUP_RECORD.md`.
 
+### Phase 14F.4 clinical workspace closure
+
+Month appointment items visibly reuse canonical semantic status tones and include localized status text. The individual Patient Profile keeps one sticky logical-start identity rail on desktop and stacks it at 1023px and below. Active Visit keeps a static patient-and-visit summary followed by exactly Visit Notes, Patient Profile, X-rays / Attachments, and Billing / Invoice Handoff. The X-ray tab owns a large inline authenticated viewer, saved selection, authorized visit upload, the existing saved-X-ray AI mutation, same-canvas overlay, real viewer controls, backend-derived AI result panel, and explicit research-only/non-diagnostic language. No production backend, API, model, migration, role, billing, appointment, or protected-media contract changes. See `design_v3/PHASE_14F4_ACTIVE_VISIT_PATIENT_RAIL_MONTH_XRAY_WORKSPACE_RECORD.md`.
+
 Troubleshooting fixes the affected behavior without restoring an older shell or unrelated design. A design change needs explicit scope, reconciliation with current contracts/tests/RBAC, and an implementation/acceptance record. The next planned current-UI refinement begins with action hierarchy or an explicitly approved Phase 14E scope.
 
 ## Rejected historical directions

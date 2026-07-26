@@ -37,6 +37,31 @@ type XrayCopy = {
   uploaded: string;
   updated: string;
   noXrays: string;
+  selectedXray: string;
+  runAi: string;
+  runningAi: string;
+  aiServiceUnavailable: string;
+  aiRequestFailed: string;
+  loadingAiResult: string;
+  aiResultUnavailable: string;
+  zoomIn: string;
+  zoomOut: string;
+  reset: string;
+  fitToView: string;
+  fullscreen: string;
+  exitFullscreen: string;
+  overallConfidence: string;
+  modelVersion: string;
+  researchOnly: string;
+  requiresInterpretation: string;
+  notDiagnosis: string;
+  overlayAvailability: string;
+  available: string;
+  notAvailable: string;
+  fdi: string;
+  finding: string;
+  created: string;
+  uploadFailed: string;
 };
 
 const en: XrayCopy = {
@@ -53,12 +78,12 @@ const en: XrayCopy = {
   cancel: "Cancel",
   upload: "Upload",
   uploading: "Uploading…",
-  aiResult: "AI-assisted result",
+  aiResult: "AI Result",
   noResult: "No stored AI result is available for this X-ray.",
   unavailable: "AI analysis is unavailable in this environment. Stored results, when present, remain available for review.",
   disclaimer: "AI-assisted information requires professional interpretation and is not a clinical diagnosis.",
-  showOverlay: "Show AI overlay",
-  hideOverlay: "Hide AI overlay",
+  showOverlay: "Show AI Overlay",
+  hideOverlay: "Hide AI Overlay",
   originalImage: "Protected original image",
   protectedUnavailable: "The protected image is unavailable. Check your access and try again.",
   loadingOriginal: "Loading protected original image…",
@@ -76,6 +101,31 @@ const en: XrayCopy = {
   uploaded: "Uploaded",
   updated: "Updated",
   noXrays: "No X-rays have been saved yet.",
+  selectedXray: "Selected X-ray",
+  runAi: "Run AI Analysis",
+  runningAi: "Running AI Analysis…",
+  aiServiceUnavailable: "AI analysis is not configured for this environment. The saved X-ray remains available for review.",
+  aiRequestFailed: "Unable to run AI analysis. Review the message and try again.",
+  loadingAiResult: "Loading AI result…",
+  aiResultUnavailable: "AI result unavailable",
+  zoomIn: "Zoom In",
+  zoomOut: "Zoom Out",
+  reset: "Reset",
+  fitToView: "Fit to View",
+  fullscreen: "Fullscreen",
+  exitFullscreen: "Exit Fullscreen",
+  overallConfidence: "Overall Confidence",
+  modelVersion: "Model Version",
+  researchOnly: "Research-only AI analysis",
+  requiresInterpretation: "Requires professional interpretation",
+  notDiagnosis: "Not a clinical diagnosis",
+  overlayAvailability: "Overlay availability",
+  available: "Available",
+  notAvailable: "Unavailable",
+  fdi: "FDI",
+  finding: "Finding",
+  created: "Created",
+  uploadFailed: "Unable to upload X-ray",
 };
 
 const ar: XrayCopy = {
@@ -92,7 +142,7 @@ const ar: XrayCopy = {
   cancel: "إلغاء",
   upload: "رفع",
   uploading: "جارٍ الرفع…",
-  aiResult: "نتيجة مدعومة بالذكاء الاصطناعي",
+  aiResult: "نتيجة الذكاء الاصطناعي",
   noResult: "لا توجد نتيجة محفوظة للذكاء الاصطناعي لهذه الأشعة.",
   unavailable: "تحليل الذكاء الاصطناعي غير متاح في هذه البيئة. تبقى النتائج المحفوظة، إن وجدت، متاحة للمراجعة.",
   disclaimer: "تتطلب المعلومات المدعومة بالذكاء الاصطناعي تفسيراً مهنياً وليست تشخيصاً طبياً.",
@@ -115,6 +165,31 @@ const ar: XrayCopy = {
   uploaded: "تاريخ الرفع",
   updated: "آخر تحديث",
   noXrays: "لا توجد أشعة محفوظة بعد.",
+  selectedXray: "الأشعة المحددة",
+  runAi: "تشغيل تحليل الذكاء الاصطناعي",
+  runningAi: "جارٍ تشغيل تحليل الذكاء الاصطناعي…",
+  aiServiceUnavailable: "تحليل الذكاء الاصطناعي غير مهيأ لهذه البيئة. تبقى الأشعة المحفوظة متاحة للمراجعة.",
+  aiRequestFailed: "تعذر تشغيل تحليل الذكاء الاصطناعي. راجع الرسالة وحاول مجدداً.",
+  loadingAiResult: "جارٍ تحميل نتيجة الذكاء الاصطناعي…",
+  aiResultUnavailable: "نتيجة الذكاء الاصطناعي غير متاحة",
+  zoomIn: "تكبير",
+  zoomOut: "تصغير",
+  reset: "إعادة ضبط",
+  fitToView: "ملاءمة للعرض",
+  fullscreen: "ملء الشاشة",
+  exitFullscreen: "إنهاء ملء الشاشة",
+  overallConfidence: "الثقة الإجمالية",
+  modelVersion: "إصدار النموذج",
+  researchOnly: "تحليل ذكاء اصطناعي للبحث فقط",
+  requiresInterpretation: "يتطلب تفسيراً مهنياً",
+  notDiagnosis: "ليس تشخيصاً سريرياً",
+  overlayAvailability: "توفر الطبقة",
+  available: "متاحة",
+  notAvailable: "غير متاحة",
+  fdi: "FDI",
+  finding: "النتيجة",
+  created: "تاريخ الإنشاء",
+  uploadFailed: "تعذر رفع الأشعة",
 };
 
 export function xrayCopy(language?: LanguagePreference | null): XrayCopy {

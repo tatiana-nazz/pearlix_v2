@@ -82,16 +82,16 @@ test("Doctor One exposes the split schedule, editable active visit, and one laye
   await page.goto("/doctor/visits/active");
   await expect(page.getByRole("heading", { name: "Lina Mansour", exact: true }).first()).toBeVisible();
   await expect(page.getByLabel("Clinical notes")).toBeEditable();
-  await expect(page.getByRole("button", { name: "Save Notes" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save Notes" }).last()).toBeVisible();
 
   await page.goto("/doctor/xrays");
-  await page.getByRole("row", { name: /Synthetic demo X-ray with mock AI/ }).click();
+  await page.getByRole("row", { name: /Active visit panoramic X-ray with mock AI/ }).click();
   await expect(page.locator(".protected-xray-viewer")).toHaveCount(1);
   await expect(page.locator(".protected-xray-canvas")).toHaveCount(1);
-  const toggle = page.getByRole("button", { name: "Show AI overlay" });
+  const toggle = page.getByRole("button", { name: "Show AI Overlay" });
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   await toggle.click();
-  await expect(page.getByRole("button", { name: "Hide AI overlay" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Hide AI Overlay" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".protected-xray-overlay")).toBeVisible();
   const geometry = await page.evaluate(() => {
     const original = document.querySelector(".protected-xray-original")!.getBoundingClientRect();

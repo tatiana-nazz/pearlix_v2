@@ -4,6 +4,8 @@
 
 **Starting authority:** `5aee3b4a9d8cdfd1139e2823e795e8bd7f1faea5` on `phase-14f2-information-architecture-permission-responsive-closure`
 
+**Phase 14F.4 note:** the compact Active Visit/X-ray presentation described here is superseded by the Phase 14F.4 static summary, exact four-tab composition, and full inline selected-X-ray analysis workspace. Phase 14F.3 protected-media and production-runtime boundaries remain in force.
+
 ## Delivered closure
 
 - Consolidated status presentation on the shared `StatusBadge` implementation. Badges size to content, do not stretch in flex/grid/table contexts, retain machine-status semantics independently from localized labels, and are protected from broad descendant selectors.

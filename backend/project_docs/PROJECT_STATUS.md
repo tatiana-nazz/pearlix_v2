@@ -11,13 +11,16 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current phase: 14F.3 Visual Stability, Active Visit, AI Overlay, and Cleanup — delivered
+- Current phase: 14F.4 Active Visit, Patient Rail, Month Status, and Inline X-ray Workspace — delivered
 - Phase 13 series: complete
 - Next phase: no phase is implicitly authorized; use a new approved scope
-- Next step: preserve the Phase 14F.2 closure and current runtime/RBAC contracts
+- Next step: preserve the Phase 14F.4 closure and current runtime/RBAC contracts
 - Final backend full regression: 425 passed
-- Final frontend regression: 147 passed in 49 files
-- Final browser regression: 14 serial Phase 14D/14F/14F.2/14F.3 Chromium scenarios passed, including 3 new stability/demo/overlay scenarios
+- Final frontend regression: 155 passed in 50 files
+- Final browser regression: 17 serial Phase 14D/14F/14F.2/14F.3/14F.4 Chromium scenarios passed, including 3 new role and responsive clinical-workspace scenarios
+- Phase 14F.4 production backend behavior changes: none; only the DEBUG-only seed command and tests changed
+- Phase 14F.4 API/model/migration changes: none
+- Phase 14F.4 frontend closure: semantic Month status items, sticky Patient Profile identity rail, static Active Visit patient/visit summary, exact four tabs, and inline selected-X-ray upload/existing AI-run/overlay/result workspace
 - Phase 14F.3 production backend behavior changes: none; only the DEBUG-only seed command and tests changed
 - Phase 14F.3 API/model/migration changes: none
 - Backend runtime changes in Phase 14C: no

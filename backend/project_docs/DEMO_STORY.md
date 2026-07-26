@@ -41,6 +41,8 @@ The seeded Admin, Staff, and Doctor dashboards are non-empty and their related r
 
 Phase 14F.3 makes the clinical demo state explicit: Doctor One has named Morning (08:00–12:00) and Evening (14:00–18:00) shifts Monday–Friday with weekends Off; Doctor Two and Staff One have different valid split-shift examples. Exactly one Doctor One visit is started through the normal service transition, while a separate Doctor Two appointment remains checked in and eligible for Start Visit. Eligible appointments fit active shifts; explicit leave/shift-impact records remain intentionally marked Needs Reschedule.
 
+Phase 14F.4 keeps that active visit populated with two visit-owned synthetic X-rays: an active-visit panoramic image with stored structured mock result and protected overlay, plus an active-visit bitewing image without a result so the existing authorized MOCK_ADAPTER run can be exercised. This remains DEBUG-only seed tooling and changes no production model, API, permission, protected-media, or AI behavior.
+
 The mock-AI record uses a distinct transparent 320×180 overlay over a same-size synthetic original and retains structured stored findings. These bytes remain non-clinical demo media; no inference is performed.
 
 Focused command coverage is in `tests/accounts/test_seed_demo_clinic_story_command.py`. It verifies first seed, idempotency, reset preservation, deterministic reference dates, account/profile creation, scheduling/reschedule relationships, visits, imaging/external states, billing reconciliation, audit sanitization, role dashboards, and demo media naming.

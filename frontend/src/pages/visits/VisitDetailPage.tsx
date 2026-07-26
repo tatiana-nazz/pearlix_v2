@@ -16,10 +16,11 @@ export function VisitDetailPage({ role }: VisitDetailPageProps) {
   const parsedVisitId = Number(visitId);
   const visit = useVisit(parsedVisitId);
   const c = visitCopy(useAuthStore((state) => state.user?.language_preference));
+  const activeTitle = c.activeVisit === "Active visit" ? "Active Visit" : c.activeVisit;
 
   return (
     <div className="visit-page">
-      <PageHeader eyebrow={`${role.toLowerCase()} workspace`} title={visit.data?.patient.full_name ?? c.visitDetails} description={c.visitDetailsDescription} />
+      <PageHeader title={visit.data?.status === "ACTIVE" ? activeTitle : c.visitDetails} description={visit.data ? `${visit.data.patient.full_name} · ${c.visitDetailsDescription}` : c.visitDetailsDescription} />
       {visit.isLoading ? <LoadingState title={c.loadingDetails} /> : null}
       {visit.isError ? <ErrorState error={visit.error} onRetry={() => void visit.refetch()} title={c.loadDetailsError} /> : null}
       {visit.data ? <VisitWorkspace role={role} visit={visit.data} onReloadVisit={() => visit.refetch()} /> : null}

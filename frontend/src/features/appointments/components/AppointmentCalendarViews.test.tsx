@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -48,5 +48,30 @@ describe("appointment calendar views", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Open day 2026-07-13" }));
     expect(onDaySelect).toHaveBeenCalledWith("2026-07-13");
+  });
+
+  it("uses shared semantic tones and status-inclusive accessible labels for every Month status", async () => {
+    const statuses = ["UPCOMING", "CHECKED_IN", "ACTIVE", "COMPLETED", "NEEDS_RESCHEDULE", "CANCELLED", "NO_SHOW"] as const;
+    const expectedTone = ["status-info", "status-teal", "status-ai", "status-success", "status-warning", "status-danger", "status-danger"];
+    const appointments = statuses.map((status, index) => ({
+      ...appointment,
+      id: index + 10,
+      status,
+      patient: { ...appointment.patient, full_name: `Long Patient Name ${index}` },
+      start_datetime: `2026-07-${String(index + 6).padStart(2, "0")}T08:00:00Z`,
+      end_datetime: `2026-07-${String(index + 6).padStart(2, "0")}T08:30:00Z`,
+    }));
+    const onDetails = vi.fn();
+    const { container } = render(<AppointmentMonthView date="2026-07-01" timezone="UTC" appointments={appointments} onDetails={onDetails} onDaySelect={vi.fn()} />);
+
+    statuses.forEach((status, index) => {
+      const item = container.querySelector<HTMLButtonElement>(`.appointment-month-item[data-status="${status}"]`);
+      expect(item).toHaveClass(expectedTone[index]);
+      expect(item).toHaveAttribute("aria-label", expect.stringContaining(`Long Patient Name ${index}`));
+      expect(item).toHaveAttribute("aria-label", expect.stringContaining(status === "NO_SHOW" ? "No-show" : status === "CHECKED_IN" ? "Checked in" : status === "NEEDS_RESCHEDULE" ? "Needs reschedule" : status.charAt(0) + status.slice(1).toLowerCase()));
+    });
+    expect(within(container).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    await userEvent.click(container.querySelector<HTMLButtonElement>('[data-status="UPCOMING"]')!);
+    expect(onDetails).toHaveBeenCalledWith(expect.objectContaining({ status: "UPCOMING" }));
   });
 });

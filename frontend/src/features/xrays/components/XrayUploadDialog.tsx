@@ -48,7 +48,7 @@ export function XrayUploadDialog({ title, isSubmitting, error, onCancel, onSubmi
         </div>
         <label className="v2-field">{c.optionalTitle}<input value={titleValue} onChange={(event) => setTitleValue(event.target.value)} disabled={isSubmitting} /></label>
         <label className="v2-field">{c.description}<textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSubmitting} /></label>
-        {error ? <ErrorState error={error} title="Unable to upload X-ray" /> : null}
+        {error ? <ErrorState error={error} title={c.uploadFailed} /> : null}
         <div className="xray-dialog-actions">
           <Button variant="secondary" type="button" onClick={onCancel} disabled={isSubmitting}>{c.cancel}</Button>
           <Button type="submit" loading={isSubmitting}>{isSubmitting ? c.uploading : c.upload}</Button>

@@ -61,3 +61,7 @@ No live browser result is claimed in this record.
 Post-MVP limitations remain real AI service integration, email forgot-password, online payments, invoice itemization, tax, discounts, insurance, automatic notifications, expanded DoctorProfile/StaffProfile CRUD, multi-clinic tenancy, and full mobile-first optimization.
 
 There are no automated regression blockers. Recommendation: proceed with controlled deployment/UAT after environment configuration; live browser UAT is the remaining release gate.
+
+## Phase 14F.4 X-ray viewer addendum
+
+The current Active Visit X-ray surface selects saved images inline, uses authenticated Blob URLs for original and optional overlay, and never navigates away for review. Original and overlay share one transform layer. Show/Hide AI Overlay, Zoom In, Zoom Out, Reset, Fit to View, and Fullscreen/enlarged fallback are verified controls. The dedicated side panel renders backend-provided stored result fields only and retains explicit research-only, professional-interpretation, and non-diagnostic language.

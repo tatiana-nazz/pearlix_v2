@@ -10,7 +10,7 @@ import { VisitWorkspace } from "./VisitWorkspace";
 vi.mock("../../patients/hooks/usePatient", () => ({
   usePatient: () => ({ isLoading: false, isError: false, data: { phone_number: "555-0100", blood_group: "O+", insurance_info: "Clinic plan", medical_conditions_history: "Penicillin allergy" } }),
 }));
-vi.mock("../../xrays/components/VisitXraySection", () => ({ VisitXraySection: () => <p>Attachment panel</p> }));
+vi.mock("../../xrays/components/ActiveVisitXrayWorkspace", () => ({ ActiveVisitXrayWorkspace: () => <p>Attachment panel</p> }));
 vi.mock("../../billing/components/VisitBillingSection", () => ({ VisitBillingSection: () => <p>Billing panel</p> }));
 
 const visit = {
@@ -38,7 +38,9 @@ describe("VisitWorkspace", () => {
     expect(screen.getByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
     expect(screen.queryByText("Visit #91")).not.toBeInTheDocument();
     expect(screen.getAllByRole("tab")).toHaveLength(4);
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Visit Notes", "Patient Profile", "X-rays / Attachments", "Billing / Invoice Handoff"]);
     expect(screen.getByRole("tab", { name: "Visit Notes" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Doctor One")).toBeInTheDocument();
   });
 
   it("keeps the patient context read-first and opens it with keyboard tabs", () => {
@@ -47,7 +49,7 @@ describe("VisitWorkspace", () => {
     fireEvent.keyDown(notes, { key: "ArrowRight" });
     expect(screen.getByRole("tab", { name: "Patient Profile" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Penicillin allergy")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open full patient profile" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Open full patient profile" })).toHaveLength(2);
     expect(screen.queryByText(/archive|reactivate/i)).not.toBeInTheDocument();
   });
 
@@ -64,6 +66,15 @@ describe("VisitWorkspace", () => {
     setUser("DOCTOR", "AR");
     renderWorkspace();
     expect(screen.getByRole("tab", { name: "ملاحظات الزيارة" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "حفظ الملاحظات" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "حفظ الملاحظات" })).toHaveLength(2);
+  });
+
+  it("keeps unsaved clinical notes and the static summary while switching tabs", () => {
+    renderWorkspace();
+    fireEvent.change(screen.getByLabelText("Clinical notes"), { target: { value: "Unsaved tab-safe note" } });
+    fireEvent.click(screen.getByRole("tab", { name: "Patient Profile" }));
+    expect(screen.getByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Visit Notes" }));
+    expect(screen.getByLabelText("Clinical notes")).toHaveValue("Unsaved tab-safe note");
   });
 });

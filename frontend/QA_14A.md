@@ -28,3 +28,7 @@ No browser result is claimed in this document.
 - Full backend regression: 407 passed.
 - Django check and migration-drift check: passed.
 - Frontend source/package files were unchanged; frontend tests and build were not rerun.
+
+## Phase 14F.4 Active Visit addendum
+
+The current deterministic story keeps Doctor One's active visit populated with editable notes and two visit-owned protected X-rays. One has a stored structured mock result/overlay; one remains eligible for the existing `POST /api/xrays/{id}/run-ai/` endpoint. Active Visit retains exact four-tab semantics, owning-Doctor notes/upload/AI-run permissions, Staff/Admin read-only behavior, confirmed completion, and payment-free Doctor billing handoff.

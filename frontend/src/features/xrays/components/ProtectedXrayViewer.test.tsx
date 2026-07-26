@@ -18,21 +18,21 @@ describe("ProtectedXrayViewer", () => {
 
   it("layers the protected overlay on the original canvas and exposes an accessible toggle", () => {
     const { container } = render(<ProtectedXrayViewer originalEndpoint="/original/" overlayEndpoint="/overlay/" overlayAvailable originalLabel="Protected original image" originalAlt="Dental X-ray" />);
-    const button = screen.getByRole("button", { name: "Show AI overlay" });
+    const button = screen.getByRole("button", { name: "Show AI Overlay" });
     expect(button).toHaveAttribute("aria-pressed", "false");
     expect(container.querySelectorAll(".protected-xray-canvas")).toHaveLength(1);
     expect(container.querySelector(".protected-xray-original")).toBeInTheDocument();
     expect(container.querySelector(".protected-xray-overlay")).not.toBeInTheDocument();
 
     fireEvent.click(button);
-    expect(screen.getByRole("button", { name: "Hide AI overlay" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Hide AI Overlay" })).toHaveAttribute("aria-pressed", "true");
     const canvas = container.querySelector(".protected-xray-canvas")!;
     expect(canvas.querySelector(".protected-xray-original")).toBeInTheDocument();
     expect(canvas.querySelector(".protected-xray-overlay")).toBeInTheDocument();
     expect(container.querySelectorAll("figure")).toHaveLength(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "Hide AI overlay" }));
-    expect(screen.getByRole("button", { name: "Show AI overlay" })).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(screen.getByRole("button", { name: "Hide AI Overlay" }));
+    expect(screen.getByRole("button", { name: "Show AI Overlay" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("keeps the original visible and reports a recoverable overlay failure", async () => {
@@ -40,16 +40,38 @@ describe("ProtectedXrayViewer", () => {
       ? { ...ready(null), error: new Error("denied") }
       : ready(endpoint ? `blob:${endpoint}` : null));
     const { container } = render(<ProtectedXrayViewer originalEndpoint="/original/" overlayEndpoint="/overlay/" overlayAvailable originalLabel="Protected original image" originalAlt="Dental X-ray" />);
-    fireEvent.click(screen.getByRole("button", { name: "Show AI overlay" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show AI Overlay" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("original image remains available"));
     expect(container.querySelector(".protected-xray-original")).toBeInTheDocument();
     expect(container.querySelector(".protected-xray-overlay")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Show AI overlay" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Show AI Overlay" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("localizes the overlay control in Arabic", () => {
     useAuthStore.setState((state) => ({ user: state.user ? { ...state.user, language_preference: "AR" } : null }));
     render(<ProtectedXrayViewer originalEndpoint="/original/" overlayEndpoint="/overlay/" overlayAvailable originalLabel="الصورة الأصلية" originalAlt="أشعة أسنان" />);
     expect(screen.getByRole("button", { name: "إظهار طبقة الذكاء الاصطناعي" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("shares bounded zoom transforms and provides reset, fit, and enlarged fallback controls", () => {
+    const { container } = render(<ProtectedXrayViewer originalEndpoint="/original/" overlayEndpoint="/overlay/" overlayAvailable originalLabel="Protected original image" originalAlt="Dental X-ray" />);
+    const mediaLayer = container.querySelector(".protected-xray-media");
+    expect(mediaLayer).toHaveAttribute("data-scale", "1.00");
+    fireEvent.click(screen.getByRole("button", { name: "Show AI Overlay" }));
+    fireEvent.click(screen.getByRole("button", { name: "Zoom In" }));
+    expect(mediaLayer).toHaveAttribute("data-scale", "1.25");
+    expect(mediaLayer?.querySelectorAll("img")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "Zoom Out" }));
+    expect(mediaLayer).toHaveAttribute("data-scale", "1.00");
+    fireEvent.click(screen.getByRole("button", { name: "Zoom In" }));
+    fireEvent.click(screen.getByRole("button", { name: "Fit to View" }));
+    expect(mediaLayer).toHaveAttribute("data-scale", "1.00");
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(container.querySelector(".protected-xray-overlay")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Fullscreen" }));
+    expect(screen.getByRole("dialog", { name: "Protected original image" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Exit Fullscreen" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Protected original image" })).not.toBeInTheDocument();
   });
 });

@@ -214,7 +214,7 @@ test("Doctor visual acceptance covers appointments, active visit, and protected 
   await capture(page, "after-doctor-active-visit");
 
   await page.goto("/doctor/xrays");
-  await page.getByRole("row", { name: "Synthetic demo X-ray with mock AI. Hala Sabbagh. Result available." }).click();
+  await page.getByRole("row", { name: "Active visit panoramic X-ray with mock AI. Lina Mansour. Result available." }).click();
   await expect(page).toHaveURL(/\/doctor\/xrays\/\d+$/);
   const protectedImage = page.getByRole("img", { name: "Protected dental X-ray for clinical review" });
   await expect(protectedImage).toBeVisible();

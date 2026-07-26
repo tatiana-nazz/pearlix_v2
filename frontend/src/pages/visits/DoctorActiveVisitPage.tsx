@@ -12,10 +12,11 @@ import { useAuthStore } from "../../auth/authStore";
 export function DoctorActiveVisitPage() {
   const activeVisit = useActiveVisit();
   const c = visitCopy(useAuthStore((state) => state.user?.language_preference));
+  const title = c.activeVisit === "Active visit" ? "Active Visit" : c.activeVisit;
 
   return (
     <div className="visit-page">
-      <PageHeader eyebrow="doctor workspace" title={activeVisit.data?.patient.full_name ?? c.activeVisit} description={c.activeVisitDescription} />
+      <PageHeader title={title} description={activeVisit.data ? `${activeVisit.data.patient.full_name} · ${c.activeVisitDescription}` : c.activeVisitDescription} />
       {activeVisit.isLoading ? <LoadingState title={c.loadingActive} /> : null}
       {activeVisit.isError ? <ErrorState error={activeVisit.error} onRetry={() => void activeVisit.refetch()} title={c.loadActiveError} /> : null}
       {activeVisit.data ? <VisitWorkspace role="DOCTOR" visit={activeVisit.data} onReloadVisit={() => activeVisit.refetch()} /> : null}

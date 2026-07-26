@@ -225,6 +225,8 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 Phase 14F.3 closes content-sized status presentation, repeated-card row stability, a deterministic Doctor One active visit, and a same-canvas authenticated stored AI overlay. It adds no client inference, public media URL, API contract, model, migration, or production backend behavior. See `design_v3/PHASE_14F3_VISUAL_STABILITY_ACTIVE_VISIT_AI_OVERLAY_CLEANUP_RECORD.md`.
 
+Phase 14F.4 gives Month items shared semantic appointment-status tones, makes the Patient Profile identity rail sticky on desktop, and recomposes Active Visit around a static patient/visit summary plus the exact four approved tabs. The X-ray tab now selects protected visit X-rays inline, supports the owning Doctor's existing upload and `POST /api/xrays/{id}/run-ai/` workflows, layers the stored overlay on the original transform, exposes working viewer controls, and shows only backend-provided research-only result data. Production backend behavior, API contracts, models, migrations, and RBAC are unchanged. See `design_v3/PHASE_14F4_ACTIVE_VISIT_PATIENT_RAIL_MONTH_XRAY_WORKSPACE_RECORD.md` and `QA_14F4_ACTIVE_VISIT_PATIENT_RAIL_MONTH_XRAY_WORKSPACE.md`.
+
 - Real AI integration beyond the MVP `MOCK_ADAPTER`.
 - Email forgot-password. Gender, qualifications, license, profile photo, Staff biography, and activity notes remain intentionally unsupported professional fields.
 - Online payments, invoice itemization, tax, discount, and insurance workflows.

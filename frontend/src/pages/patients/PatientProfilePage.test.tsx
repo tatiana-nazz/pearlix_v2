@@ -94,4 +94,17 @@ describe("PatientProfilePage", () => {
     expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "patient-profile-tab-overview");
     expect(screen.getByText("Contact, demographic, and record metadata.")).toBeInTheDocument();
   });
+
+  it("keeps one static identity rail mounted while patient tabs change", () => {
+    const { container } = render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/doctor/patients/12"]}>
+        <Routes><Route path="/doctor/patients/:patientId" element={<PatientProfilePage role="DOCTOR" />} /></Routes>
+      </MemoryRouter>,
+    );
+    const rail = container.querySelector(".patient-identity-rail");
+    expect(rail).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Medical Summary" }));
+    expect(container.querySelector(".patient-identity-rail")).toBe(rail);
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "patient-profile-tab-medical");
+  });
 });

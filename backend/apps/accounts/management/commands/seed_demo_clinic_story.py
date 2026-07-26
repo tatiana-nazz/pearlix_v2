@@ -348,13 +348,13 @@ class Command(BaseCommand):
 
     def _create_imaging_story(self, accounts, patients, story):
         d1, d2 = accounts["doctor.one"], accounts["doctor.two"]
-        completed = story["completed_visits"]
-        xray = create_xray_attachment(patient=patients[4], visit=completed[1], uploaded_by=completed[1].doctor, uploaded_file=self._upload("demo14a-original-ai.png"), stored_file_name="demo14a-original-ai.png", title="Synthetic demo X-ray with mock AI", notes="Non-clinical synthetic image.")
-        result = run_ai_for_xray(xray_attachment=xray, user=completed[1].doctor)
+        active_visit = story["active_visit"]
+        xray = create_xray_attachment(patient=active_visit.patient, visit=active_visit, uploaded_by=d1, uploaded_file=self._upload("demo14a-active-visit-ai.png"), stored_file_name="demo14a-active-visit-ai.png", title="Active visit panoramic X-ray with mock AI", notes="Non-clinical synthetic active-visit image.")
+        result = run_ai_for_xray(xray_attachment=xray, user=d1)
         result.overlay_file.save("demo14a-overlay.png", ContentFile(OVERLAY_PNG_BYTES), save=False)
         result.result_summary = "Mock/supportive only — synthetic markers, not a diagnosis."
         result.save()
-        create_xray_attachment(patient=patients[5], visit=completed[2], uploaded_by=completed[2].doctor, uploaded_file=self._upload("demo14a-original-no-ai.png"), stored_file_name="demo14a-original-no-ai.png", title="Synthetic demo X-ray without AI", notes="Non-clinical synthetic image.")
+        create_xray_attachment(patient=active_visit.patient, visit=active_visit, uploaded_by=d1, uploaded_file=self._upload("demo14a-active-visit-no-ai.png"), stored_file_name="demo14a-active-visit-no-ai.png", title="Active visit bitewing X-ray without AI", notes="Non-clinical synthetic active-visit image eligible for AI-run testing.")
         temporary = create_external_xray_case(uploaded_by=d1, uploaded_file=self._upload("demo14a-external-temporary.png"), stored_file_name="demo14a-external-temporary.png", title="Temporary synthetic external image", notes="Non-clinical synthetic image.")
         attached = create_external_xray_case(uploaded_by=d2, uploaded_file=self._upload("demo14a-external-attached.png"), stored_file_name="demo14a-external-attached.png", title="Attached synthetic external image", notes="Non-clinical synthetic image.")
         attach_external_case_to_patient(external_case=attached, patient=patients[7], visit=None, user=d2, title="Attached synthetic external image", notes="Synthetic demo attachment.")

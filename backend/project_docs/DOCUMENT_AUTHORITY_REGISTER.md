@@ -2,7 +2,7 @@
 
 **Authority marker:** `CURRENT_CANONICAL_AUTHORITY_REGISTER`
 **Last reconciled:** 2026-07-26
-**Owner / next responsibility:** Phase 14F.2 information-architecture, permission, and responsive closure governance; every future feature owner updates only the rows affected by approved work.
+**Owner / next responsibility:** Phase 14F.4 Active Visit, Patient Profile rail, Month status, and inline X-ray workspace governance; every future feature owner updates only the rows affected by approved work.
 
 Read [`../../CODEX_START_HERE.md`](../../CODEX_START_HERE.md) first. This register is the sole index of documents allowed to claim project-wide binding/current authority. Current Doctor authorization is all active/non-archived patients; it is not narrow object-level scoped-patient access.
 
@@ -22,6 +22,7 @@ Latest user-approved decisions > `CODEX_START_HERE.md` > `PROJECT_STATUS.md` > c
 | `frontend/design_v3/PHASE_14F1_UI_ACCEPTANCE_CORRECTION_RECORD.md` | IMPLEMENTATION_RECORD | Phase 14F.1 accepted correction | Supersedes conflicting Phase 14F presentation after direct user rejection; preserves runtime/RBAC boundaries. |
 | `frontend/design_v3/PHASE_14F2_INFORMATION_ARCHITECTURE_PERMISSION_RESPONSIVE_CLOSURE_RECORD.md` | IMPLEMENTATION_RECORD | Phase 14F.2 accepted closure | Current Team read-projection, navigation, schedule/leave, Billing, identity-directory, status, and responsive evidence. |
 | `frontend/design_v3/PHASE_14F3_VISUAL_STABILITY_ACTIVE_VISIT_AI_OVERLAY_CLEANUP_RECORD.md` | IMPLEMENTATION_RECORD | Phase 14F.3 accepted closure | Content-sized status, repeated-card, deterministic clinical demo, layered protected viewer, cleanup, and acceptance evidence. |
+| `frontend/design_v3/PHASE_14F4_ACTIVE_VISIT_PATIENT_RAIL_MONTH_XRAY_WORKSPACE_RECORD.md` | IMPLEMENTATION_RECORD | Phase 14F.4 accepted closure | Month status semantics, static patient rail, Active Visit composition, inline protected X-ray selection/upload/existing AI run, controls, and acceptance evidence. |
 | `backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md` | CURRENT_SUPPORTING | Integration changes | Contract evidence, not product authority. |
 | `backend/project_docs/BACKEND_PHASE_TRACKER.md` | CURRENT_SUPPORTING | Backend phase work | Phase evidence; defer status to `PROJECT_STATUS.md`. |
 | `backend/project_docs/PHASE_14R_BACKEND_REGRESSION_STABILIZATION.md` | IMPLEMENTATION_RECORD | Scheduling regression work | Historical implementation/QA evidence. |

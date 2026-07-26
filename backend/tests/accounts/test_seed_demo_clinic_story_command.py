@@ -71,6 +71,11 @@ def test_demo_story_relationships_dashboards_and_media_are_coherent(tmp_path):
         assert AvailabilityException.objects.filter(staff__isnull=False, reason="Demo staff personal leave").exists()
         assert WorkingShift.objects.filter(employee__email="doctor.four@pearlix-demo.local", start_time="13:00").exists()
         assert Visit.objects.filter(status=Visit.Status.ACTIVE).count() == 1
+        active_visit = Visit.objects.get(status=Visit.Status.ACTIVE)
+        active_visit_xrays = XrayAttachment.objects.filter(visit=active_visit)
+        assert active_visit_xrays.count() == 2
+        assert active_visit_xrays.filter(ai_result__status=AIResult.Status.COMPLETED, ai_result__overlay_file__gt="").count() == 1
+        assert active_visit_xrays.filter(ai_result__isnull=True).count() == 1
         assert Visit.objects.filter(status=Visit.Status.COMPLETED, symptoms__gt="", diagnosis__gt="", treatment__gt="", clinical_notes__gt="", follow_up_notes__gt="").exists()
         assert Visit.objects.filter(patient__national_id_or_passport=f"{PREFIX}004", status=Visit.Status.COMPLETED).count() >= 2
         assert not Visit.objects.filter(status=Visit.Status.COMPLETED).exclude(appointment__status=Appointment.Status.COMPLETED).exists()
