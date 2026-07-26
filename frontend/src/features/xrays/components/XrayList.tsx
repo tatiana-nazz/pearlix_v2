@@ -30,7 +30,7 @@ export function XrayList({ role, xrays }: XrayListProps) {
       const open = () => navigate(`/${role.toLowerCase()}/xrays/${xray.id}`);
       const label = `${xrayText(xray.title || xray.original_file_name)}. ${xray.patient.full_name}. ${aiStatusLabel(xray.has_ai_result)}.`;
       return <tr key={xray.id} className="clickable-row" tabIndex={0} aria-label={label} onClick={open} onKeyDown={(event) => rowKeyboardOpen(event, open)}>
-        <td><strong>{xrayText(xray.title || xray.original_file_name)}</strong><span dir="ltr">{xray.content_type} · {formatFileSize(xray.size_bytes)}</span></td>
+        <td><strong>{xrayText(xray.title || xray.original_file_name)}</strong><span className="table-secondary-text" dir="ltr">{xray.content_type} · {formatFileSize(xray.size_bytes)}</span></td>
         <td>{xray.patient.full_name}</td>
         <td>{xray.visit ? `${xraySourceLabel(xray.source)} · ${formatDateTime(xray.visit.started_at)}` : xraySourceLabel(xray.source)}</td>
         <td>{xray.uploaded_by.full_name}<span dir="ltr">{formatDateTime(xray.created_at)}</span></td>

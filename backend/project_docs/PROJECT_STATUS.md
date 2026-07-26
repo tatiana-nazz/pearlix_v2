@@ -11,13 +11,15 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current phase: 14F.2 Information Architecture, Permission, and Responsive Closure — delivered
+- Current phase: 14F.3 Visual Stability, Active Visit, AI Overlay, and Cleanup — delivered
 - Phase 13 series: complete
 - Next phase: no phase is implicitly authorized; use a new approved scope
 - Next step: preserve the Phase 14F.2 closure and current runtime/RBAC contracts
-- Final backend full regression: 422 passed
-- Final frontend regression: 143 passed in 48 files
-- Final browser regression: 7 non-destructive Phase 14F/14F.2 Chromium scenarios passed, including 3 new IA/permission/responsive scenarios
+- Final backend full regression: 425 passed
+- Final frontend regression: 147 passed in 49 files
+- Final browser regression: 14 serial Phase 14D/14F/14F.2/14F.3 Chromium scenarios passed, including 3 new stability/demo/overlay scenarios
+- Phase 14F.3 production backend behavior changes: none; only the DEBUG-only seed command and tests changed
+- Phase 14F.3 API/model/migration changes: none
 - Backend runtime changes in Phase 14C: no
 - Migrations in Phase 14C: none
 - Backend runtime changes in Phase 14C.0: yes

@@ -39,6 +39,10 @@ The seeded Admin, Staff, and Doctor dashboards are non-empty and their related r
 
 ## Automated verification
 
+Phase 14F.3 makes the clinical demo state explicit: Doctor One has named Morning (08:00–12:00) and Evening (14:00–18:00) shifts Monday–Friday with weekends Off; Doctor Two and Staff One have different valid split-shift examples. Exactly one Doctor One visit is started through the normal service transition, while a separate Doctor Two appointment remains checked in and eligible for Start Visit. Eligible appointments fit active shifts; explicit leave/shift-impact records remain intentionally marked Needs Reschedule.
+
+The mock-AI record uses a distinct transparent 320×180 overlay over a same-size synthetic original and retains structured stored findings. These bytes remain non-clinical demo media; no inference is performed.
+
 Focused command coverage is in `tests/accounts/test_seed_demo_clinic_story_command.py`. It verifies first seed, idempotency, reset preservation, deterministic reference dates, account/profile creation, scheduling/reschedule relationships, visits, imaging/external states, billing reconciliation, audit sanitization, role dashboards, and demo media naming.
 
 The current Phase 14F.1 verification expands the same two focused seed tests with inactive/must-change profile linkage, clinic-local dates, multiple leave types, domain-derived reschedule provenance, returning-patient history, 320×180 media dimensions, financial reconciliation, and sanitized audit evidence. Current full-suite totals are recorded in `PROJECT_STATUS.md`.

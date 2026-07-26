@@ -223,6 +223,8 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 
 ## Intentionally Not Implemented Yet
 
+Phase 14F.3 closes content-sized status presentation, repeated-card row stability, a deterministic Doctor One active visit, and a same-canvas authenticated stored AI overlay. It adds no client inference, public media URL, API contract, model, migration, or production backend behavior. See `design_v3/PHASE_14F3_VISUAL_STABILITY_ACTIVE_VISIT_AI_OVERLAY_CLEANUP_RECORD.md`.
+
 - Real AI integration beyond the MVP `MOCK_ADAPTER`.
 - Email forgot-password. Gender, qualifications, license, profile photo, Staff biography, and activity notes remain intentionally unsupported professional fields.
 - Online payments, invoice itemization, tax, discount, and insurance workflows.

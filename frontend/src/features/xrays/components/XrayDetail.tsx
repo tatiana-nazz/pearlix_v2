@@ -9,7 +9,7 @@ import { useXrayAiResult } from "../hooks/useXrays";
 import { formatFileSize } from "../utils/xrayValidation";
 import { aiStatusLabel, xraySourceLabel, xrayText } from "../utils/xrayPresentation";
 import { AiResultPanel } from "./AiResultPanel";
-import { ProtectedXrayImage } from "./ProtectedXrayImage";
+import { ProtectedXrayViewer } from "./ProtectedXrayViewer";
 
 interface XrayDetailProps { role: UserRole; xray: XrayAttachment; }
 
@@ -17,7 +17,7 @@ export function XrayDetail({ role, xray }: XrayDetailProps) {
   const aiResult = useXrayAiResult(xray.id, xray.has_ai_result);
   return <div className="xray-detail-grid">
     <Card><header className="xray-detail-header"><div><p className="eyebrow">Saved X-ray</p><h3>{xrayText(xray.title || xray.original_file_name)}</h3><p>{xray.patient.full_name} · {xray.visit ? formatDateTime(xray.visit.started_at) : xraySourceLabel(xray.source)}</p></div><StatusPill status={xray.has_ai_result ? "AVAILABLE" : "NOT_RUN"} /></header>
-      <ProtectedXrayImage endpoint={xray.file_endpoint} label="Protected original image" alt="Protected dental X-ray for clinical review" />
+      <ProtectedXrayViewer originalEndpoint={xray.file_endpoint} overlayEndpoint={xray.ai_overlay_endpoint} overlayAvailable={Boolean(aiResult.data?.overlay_available)} originalLabel="Protected original image" originalAlt="Protected dental X-ray for clinical review" />
       <section aria-labelledby="xray-metadata-title"><h4 id="xray-metadata-title">Metadata</h4><dl className="detail-grid xray-metadata-grid">
         <div><dt>Patient</dt><dd><Link to={`/${role.toLowerCase()}/patients/${xray.patient.id}`}>{xray.patient.full_name}</Link></dd></div>
         <div><dt>Related visit</dt><dd>{xray.visit ? formatDateTime(xray.visit.started_at) : "—"}</dd></div>
@@ -32,6 +32,6 @@ export function XrayDetail({ role, xray }: XrayDetailProps) {
         <div className="detail-wide"><dt>Description</dt><dd>{xrayText(xray.notes)}</dd></div>
       </dl></section>
     </Card>
-    <AiResultPanel result={aiResult.data} isLoading={aiResult.isLoading} error={aiResult.error} overlayEndpoint={xray.ai_overlay_endpoint} onRetry={() => void aiResult.refetch()} />
+    <AiResultPanel result={aiResult.data} isLoading={aiResult.isLoading} error={aiResult.error} onRetry={() => void aiResult.refetch()} />
   </div>;
 }

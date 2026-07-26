@@ -11,7 +11,6 @@ import { XrayUploadDialog } from "./XrayUploadDialog";
 
 const navigate = vi.fn();
 vi.mock("react-router-dom", async (importOriginal) => ({ ...(await importOriginal<typeof import("react-router-dom")>()), useNavigate: () => navigate }));
-vi.mock("./ProtectedXrayImage", () => ({ ProtectedXrayImage: ({ enabled = true }: { enabled?: boolean }) => enabled ? <span>Protected image</span> : null }));
 
 const xray = {
   id: 4,
@@ -64,14 +63,11 @@ describe("X-ray workspace", () => {
     expect(onSubmit).toHaveBeenCalledWith({ file, title: "", notes: "" });
   });
 
-  it("shows stored AI information without exposing a Run AI control and fetches an overlay only after its toggle", () => {
+  it("shows stored AI information without exposing a Run AI or separate overlay control", () => {
     const result = { id: 3, status: "COMPLETED", result_summary: "Stored result", overall_confidence: 0.8, overall_confidence_percent: 80, findings: [], overlay_available: true, model_version: "stored-v1", error_message: "", disclaimer: "Review independently.", disclaimer_ar: "", xray_attachment: null, external_xray_case: null, created_at: "2026-07-26T09:00:00Z", updated_at: "2026-07-26T09:30:00Z" } as AIResult;
-    render(<AiResultPanel result={result} isLoading={false} overlayEndpoint="/api/xrays/4/ai-overlay/" onRetry={vi.fn()} />);
+    render(<AiResultPanel result={result} isLoading={false} onRetry={vi.fn()} />);
     expect(screen.getByText("Stored result")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Run AI" })).not.toBeInTheDocument();
-    const overlay = screen.getByRole("button", { name: "Show overlay" });
-    expect(overlay).toHaveAttribute("aria-pressed", "false");
-    fireEvent.click(overlay);
-    expect(overlay).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: /overlay/i })).not.toBeInTheDocument();
   });
 });

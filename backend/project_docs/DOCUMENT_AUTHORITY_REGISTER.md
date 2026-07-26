@@ -21,6 +21,7 @@ Latest user-approved decisions > `CODEX_START_HERE.md` > `PROJECT_STATUS.md` > c
 | `frontend/design_v3/FULL_VISUAL_SOURCE_MIGRATION_RECORD.md` | IMPLEMENTATION_RECORD | Phase 14F implementation/acceptance | Delivered migration, route audit, token mapping, preservation, and browser evidence record. |
 | `frontend/design_v3/PHASE_14F1_UI_ACCEPTANCE_CORRECTION_RECORD.md` | IMPLEMENTATION_RECORD | Phase 14F.1 accepted correction | Supersedes conflicting Phase 14F presentation after direct user rejection; preserves runtime/RBAC boundaries. |
 | `frontend/design_v3/PHASE_14F2_INFORMATION_ARCHITECTURE_PERMISSION_RESPONSIVE_CLOSURE_RECORD.md` | IMPLEMENTATION_RECORD | Phase 14F.2 accepted closure | Current Team read-projection, navigation, schedule/leave, Billing, identity-directory, status, and responsive evidence. |
+| `frontend/design_v3/PHASE_14F3_VISUAL_STABILITY_ACTIVE_VISIT_AI_OVERLAY_CLEANUP_RECORD.md` | IMPLEMENTATION_RECORD | Phase 14F.3 accepted closure | Content-sized status, repeated-card, deterministic clinical demo, layered protected viewer, cleanup, and acceptance evidence. |
 | `backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md` | CURRENT_SUPPORTING | Integration changes | Contract evidence, not product authority. |
 | `backend/project_docs/BACKEND_PHASE_TRACKER.md` | CURRENT_SUPPORTING | Backend phase work | Phase evidence; defer status to `PROJECT_STATUS.md`. |
 | `backend/project_docs/PHASE_14R_BACKEND_REGRESSION_STABILIZATION.md` | IMPLEMENTATION_RECORD | Scheduling regression work | Historical implementation/QA evidence. |

@@ -48,4 +48,6 @@ The following reference implementation categories were not adopted:
 
 ## Change rule
 
+Phase 14F.3 clarifies that status elements are content-sized shared primitives, not generic table descendants. Equal repeated-card rows are owned by their parent grids without global fixed heights, and the mobile transformation returns cards to natural height. Protected original and stored overlay bytes share one authenticated viewer canvas; separate overlay figures and client-generated AI output are excluded.
+
 Later work may extend this visual system, but it must not reintroduce reference prototype behavior or fragment the semantic token layer. New values should enter through the Phase 14F tokens and shared primitives before route-local styling is considered.

@@ -45,6 +45,10 @@ Saved X-ray, attachment, viewer, stored-result, and external-X-ray surfaces reta
 
 ## Stability and design-change rules
 
+### Phase 14F.3 stability closure
+
+Status badges are one content-sized shared primitive: machine status selects semantic tone while an optional localized label supplies presentation. Repeated Dashboard KPI, Team, Billing summary, and Clinic Settings cards stretch only within their grid row and return to natural height on mobile. Protected original and stored overlay bytes render in one authenticated viewer canvas with a localized `aria-pressed` toggle; textual stored findings remain available and no client inference is authorized. See `design_v3/PHASE_14F3_VISUAL_STABILITY_ACTIVE_VISIT_AI_OVERLAY_CLEANUP_RECORD.md`.
+
 Troubleshooting fixes the affected behavior without restoring an older shell or unrelated design. A design change needs explicit scope, reconciliation with current contracts/tests/RBAC, and an implementation/acceptance record. The next planned current-UI refinement begins with action hierarchy or an explicitly approved Phase 14E scope.
 
 ## Rejected historical directions

@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { useAuthStore } from "../../../auth/authStore";
 import { Card } from "../../../components/Card";
 import { StatusPill } from "../../../components/StatusPill";
@@ -8,19 +6,16 @@ import type { AIResult } from "../../../types/ai";
 import { formatDateTime } from "../../../utils/dates";
 import { xrayCopy } from "../i18n";
 import { xrayText } from "../utils/xrayPresentation";
-import { ProtectedXrayImage } from "./ProtectedXrayImage";
 
 interface AiResultPanelProps {
   result?: AIResult;
   isLoading: boolean;
   error?: unknown;
-  overlayEndpoint: string;
   onRetry: () => void;
 }
 
-export function AiResultPanel({ result, isLoading, error, overlayEndpoint, onRetry }: AiResultPanelProps) {
+export function AiResultPanel({ result, isLoading, error, onRetry }: AiResultPanelProps) {
   const c = xrayCopy(useAuthStore((state) => state.user?.language_preference));
-  const [overlayVisible, setOverlayVisible] = useState(false);
   if (isLoading) return <StatePanel state="loading" title="Loading AI result…" />;
   if (error) return <StatePanel state="error" title="AI result unavailable" action={<Button variant="secondary" type="button" onClick={onRetry}>Retry</Button>} />;
   if (!result) return <Card><div className="xray-ai-empty"><h3>{c.aiResult}</h3><p>{c.noResult}</p><p>{c.unavailable}</p></div></Card>;
@@ -33,6 +28,5 @@ export function AiResultPanel({ result, isLoading, error, overlayEndpoint, onRet
     {result.findings.length ? <section className="xray-findings" aria-labelledby="xray-findings-title"><h4 id="xray-findings-title">{c.findings}</h4><ul className="summary-list-flat">{result.findings.map((finding, index) => <li className="summary-row" key={`${finding.fdi_tooth_id ?? "finding"}-${index}`}><div><strong>{xrayText(finding.disease_label)}</strong><span dir="ltr">{xrayText(finding.fdi_tooth_id)} · {finding.confidence_percent === undefined ? "—" : `${finding.confidence_percent}%`}</span></div></li>)}</ul></section> : null}
     <dl className="xray-ai-metadata"><div><dt>{c.model}</dt><dd dir="ltr">{xrayText(result.model_version)}</dd></div><div><dt>{c.uploaded}</dt><dd dir="ltr">{formatDateTime(result.created_at) || "—"}</dd></div><div><dt>{c.updated}</dt><dd dir="ltr">{formatDateTime(result.updated_at) || "—"}</dd></div></dl>
     <div className="ai-disclaimer" role="note"><p>{result.disclaimer || c.disclaimer}</p>{result.disclaimer_ar ? <p lang="ar" dir="rtl">{result.disclaimer_ar}</p> : null}</div>
-    {result.overlay_available ? <div className="xray-overlay-control"><Button variant="secondary" type="button" aria-pressed={overlayVisible} onClick={() => setOverlayVisible((visible) => !visible)}>{overlayVisible ? c.hideOverlay : c.showOverlay}</Button><ProtectedXrayImage enabled={overlayVisible} endpoint={overlayEndpoint} label="AI overlay" alt="Protected AI overlay aligned to this X-ray" /></div> : null}
   </Card>;
 }

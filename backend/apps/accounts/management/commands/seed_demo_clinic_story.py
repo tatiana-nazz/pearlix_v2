@@ -35,6 +35,7 @@ from apps.scheduling.models import Appointment, AvailabilityException, WorkingSh
 from apps.scheduling.serializers import AppointmentDetailSerializer
 from apps.scheduling.services import mark_overlapping_appointments_needs_reschedule, update_appointment, update_working_shift
 from apps.visits.models import Visit
+from apps.visits.services import start_visit_from_appointment
 from apps.xrays.models import ExternalXrayCase, XrayAttachment
 from apps.xrays.services import (
     attach_external_case_to_patient,
@@ -70,7 +71,42 @@ def _synthetic_dental_png(width=320, height=180):
     return b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", header) + _png_chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + _png_chunk(b"IEND", b"")
 
 
-PNG_BYTES = _synthetic_dental_png()
+def _synthetic_overlay_png(width=320, height=180):
+    """Return a transparent QA overlay with deterministic non-clinical markers."""
+    rows = []
+    regions = ((54, 42, 126, 112), (184, 58, 262, 138))
+    for y in range(height):
+        row = bytearray([0])
+        for x in range(width):
+            pixel = (0, 0, 0, 0)
+            for left, top, right, bottom in regions:
+                on_edge = (left <= x <= right and y in {top, top + 1, bottom - 1, bottom}) or (top <= y <= bottom and x in {left, left + 1, right - 1, right})
+                if on_edge:
+                    pixel = (255, 78, 92, 220)
+                elif left < x < right and top < y < bottom:
+                    pixel = (255, 78, 92, 24)
+            if (abs(x - 160) <= 2 or abs(y - 90) <= 2) and 145 <= x <= 175 and 75 <= y <= 105:
+                pixel = (36, 220, 230, 235)
+            row.extend(pixel)
+        rows.append(bytes(row))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", header) + _png_chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + _png_chunk(b"IEND", b"")
+
+
+XRAY_PNG_BYTES = _synthetic_dental_png()
+OVERLAY_PNG_BYTES = _synthetic_overlay_png()
+
+DOCTOR_SHIFT_SPECS = {
+    "doctor.one": ((range(5), "Morning", time(8), time(12)), (range(5), "Evening", time(14), time(18))),
+    "doctor.two": ((range(5), "Morning", time(9), time(13)), (range(5), "Evening", time(16), time(20))),
+    "doctor.three": ((range(1, 7), "Morning", time(8), time(15)),),
+    "doctor.four": ((range(2, 7), "Late", time(13), time(18)),),
+}
+
+STAFF_SHIFT_SPECS = {
+    "staff.one": ((range(5), "Morning", time(8), time(12)), (range(5), "Evening", time(13), time(17))),
+    "staff.two": ((range(6), "Day", time(8), time(16)),),
+}
 
 USER_SPECS = (
     ("admin", "Nour Haddad", User.Role.ADMIN, False),
@@ -220,20 +256,14 @@ class Command(BaseCommand):
         return patients
 
     def _create_schedules(self, accounts, reference_date):
-        for doctor_key in ("doctor.one", "doctor.two", "doctor.three", "doctor.four"):
-            doctor = accounts[doctor_key]
-            for weekday in range(7):
-                if doctor_key == "doctor.four":
-                    ranges = ((time(8), time(12)), (time(13), time(17)))
-                else:
-                    ranges = ((time(8), time(17)),)
-                for number, (start, end) in enumerate(ranges, start=1):
-                    WorkingShift.objects.create(employee=doctor, name=f"Demo {doctor_key} shift {number}", weekday=weekday, start_time=start, end_time=end, created_by=accounts["admin"], updated_by=accounts["admin"])
-        for staff_key in ("staff.one", "staff.two"):
-            for weekday in range(7):
-                ranges = ((time(8), time(12)), (time(13), time(16))) if staff_key == "staff.two" else ((time(8), time(16)),)
-                for number, (start, end) in enumerate(ranges, start=1):
-                    WorkingShift.objects.create(employee=accounts[staff_key], name=f"Demo staff shift {number}", weekday=weekday, start_time=start, end_time=end, created_by=accounts["admin"], updated_by=accounts["admin"])
+        for employee_key, specifications in {**DOCTOR_SHIFT_SPECS, **STAFF_SHIFT_SPECS}.items():
+            for weekdays, name, start, end in specifications:
+                for weekday in weekdays:
+                    WorkingShift.objects.create(
+                        employee=accounts[employee_key], name=name, weekday=weekday,
+                        start_time=start, end_time=end,
+                        created_by=accounts["admin"], updated_by=accounts["admin"],
+                    )
         AvailabilityException.objects.create(
             staff=accounts["staff.one"], start_datetime=self._dt(reference_date + timedelta(days=2), 12),
             end_datetime=self._dt(reference_date + timedelta(days=2), 16), type=AvailabilityException.Type.UNAVAILABLE,
@@ -258,24 +288,33 @@ class Command(BaseCommand):
     def _create_appointments_and_visits(self, accounts, patients, reference_date):
         staff, d1, d2, d3, d4 = accounts["staff.one"], accounts["doctor.one"], accounts["doctor.two"], accounts["doctor.three"], accounts["doctor.four"]
         today = reference_date
-        past = today - timedelta(days=7)
         future = today + timedelta(days=3)
+        previous_day = lambda weekday: today - timedelta(days=((today.weekday() - weekday) % 7 or 7))
         app = {}
-        app["today_confirmed"] = self._appointment(patient=patients[0], doctor=d1, start=self._dt(today, 10), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Today confirmed")
-        app["checked_in"] = self._appointment(patient=patients[1], doctor=d2, start=self._dt(today, 10), duration=45, status=Appointment.Status.CHECKED_IN, staff=staff, reason="Checked in")
-        active_app = self._appointment(patient=patients[2], doctor=d3, start=self._dt(today, 11), duration=30, status=Appointment.Status.ACTIVE, staff=staff, reason="Active visit")
-        active_visit = Visit.objects.create(appointment=active_app, patient=patients[2], doctor=d3, status=Visit.Status.ACTIVE, started_at=self._dt(today, 11, 5), symptoms="Synthetic active symptom", created_by=d3, updated_by=d3)
+        app["today_confirmed"] = self._appointment(patient=patients[0], doctor=d4, start=self._dt(today, 14), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Today confirmed")
+        app["checked_in"] = self._appointment(patient=patients[1], doctor=d2, start=self._dt(previous_day(4), 10), duration=45, status=Appointment.Status.CHECKED_IN, staff=staff, reason="Checked in and ready to start")
+        active_app = self._appointment(patient=patients[2], doctor=d1, start=self._dt(previous_day(4), 14), duration=30, status=Appointment.Status.CHECKED_IN, staff=staff, reason="Active clinical review")
+        active_visit = start_visit_from_appointment(appointment=active_app, user=d1)
+        active_visit.symptoms = "Synthetic sensitivity for active-visit QA."
+        active_visit.clinical_notes = "Editable synthetic note created by the deterministic demo story."
+        active_visit.save(update_fields=["symptoms", "clinical_notes", "updated_at"])
         completed = []
         for index in range(3, 14):
             doctor = (d1, d2, d4)[index % 3]
-            appointment = self._appointment(patient=patients[index], doctor=doctor, start=self._dt(past - timedelta(days=index % 3), 9 + (index % 5)), duration=(15, 30, 45, 60)[index % 4], status=Appointment.Status.COMPLETED, staff=staff, reason="Completed history")
+            if doctor == d1:
+                weekday, hour = index % 5, (9 if index % 2 else 14)
+            elif doctor == d2:
+                weekday, hour = index % 5, (10 if index % 2 else 16)
+            else:
+                weekday, hour = 2 + (index % 5), 14
+            appointment = self._appointment(patient=patients[index], doctor=doctor, start=self._dt(previous_day(weekday), hour), duration=(15, 30, 45, 60)[index % 4], status=Appointment.Status.COMPLETED, staff=staff, reason="Completed history")
             completed.append(self._completed_visit(appointment, doctor, staff, notes=index != 13))
             app[f"completed_{index}"] = appointment
-        returning_appointment = self._appointment(patient=patients[3], doctor=d1, start=self._dt(past - timedelta(days=25), 15), duration=30, status=Appointment.Status.COMPLETED, staff=staff, reason="Returning patient history")
+        returning_appointment = self._appointment(patient=patients[3], doctor=d1, start=self._dt(previous_day(4) - timedelta(days=28), 15), duration=30, status=Appointment.Status.COMPLETED, staff=staff, reason="Returning patient history")
         completed.append(self._completed_visit(returning_appointment, d1, staff))
         app["returning_history"] = returning_appointment
         app["cancelled"] = self._appointment(patient=patients[19], doctor=d1, start=self._dt(today + timedelta(days=5), 9), duration=30, status=Appointment.Status.CANCELLED, staff=staff, reason="Cancelled demo")
-        app["no_show"] = self._appointment(patient=patients[20], doctor=d2, start=self._dt(past, 15), duration=30, status=Appointment.Status.NO_SHOW, staff=staff, reason="No show demo")
+        app["no_show"] = self._appointment(patient=patients[20], doctor=d2, start=self._dt(previous_day(3), 16), duration=30, status=Appointment.Status.NO_SHOW, staff=staff, reason="No show demo")
         app["future"] = self._appointment(patient=patients[21], doctor=d4, start=self._dt(today + timedelta(days=6), 14), duration=60, status=Appointment.Status.UPCOMING, staff=staff, reason="Future split shift")
         app["future_second_doctor"] = self._appointment(patient=patients[22], doctor=d3, start=self._dt(today + timedelta(days=6), 14), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Parallel clinic capacity")
         leave_impacted = []
@@ -287,15 +326,15 @@ class Command(BaseCommand):
             app[f"leave_{index}"] = appointment
         rescheduled = marked[0]
         old_slot = {"doctor_id": rescheduled.doctor_id, "start_datetime": rescheduled.start_datetime.isoformat()}
-        appointment_serializer = AppointmentDetailSerializer(instance=rescheduled, data={"doctor_id": d2.id, "start_datetime": self._dt(future, 14), "duration_minutes": 30}, partial=True)
+        appointment_serializer = AppointmentDetailSerializer(instance=rescheduled, data={"doctor_id": d2.id, "start_datetime": self._dt(future, 16), "duration_minutes": 30}, partial=True)
         appointment_serializer.is_valid(raise_exception=True)
         app["rescheduled"] = update_appointment(appointment=rescheduled, serializer=appointment_serializer, user=staff)
         log_activity(actor=staff, action="appointment_rescheduled", entity_type="appointment", entity_id=rescheduled.id, metadata={"demo_story": DEMO_TAG, "old": old_slot, "new": {"doctor_id": d2.id, "start_datetime": app["rescheduled"].start_datetime.isoformat()}})
         second_leave = AvailabilityException.objects.create(doctor=d3, start_datetime=self._dt(today + timedelta(days=5), 13), end_datetime=self._dt(today + timedelta(days=5), 17), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo training leave", created_by=accounts["admin"], updated_by=accounts["admin"])
-        shift = WorkingShift.objects.filter(employee=d2, weekday=(today + timedelta(days=4)).weekday(), start_time=time(8)).first()
+        shift = WorkingShift.objects.filter(employee=d2, weekday=(today + timedelta(days=4)).weekday(), name="Morning").first()
         shift_change_day = today + timedelta(days=4)
-        shifted = self._appointment(patient=patients[10], doctor=d2, start=self._dt(shift_change_day, 16), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Shift change conflict workflow")
-        shift_serializer = type("ShiftUpdate", (), {"validated_data": {"end_time": time(15), "version": shift.version}})()
+        shifted = self._appointment(patient=patients[10], doctor=d2, start=self._dt(shift_change_day, 12, 30), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Shift change conflict workflow")
+        shift_serializer = type("ShiftUpdate", (), {"validated_data": {"end_time": time(12), "version": shift.version}})()
         shift, impacted_count = update_working_shift(instance=shift, serializer=shift_serializer, user=accounts["admin"], confirm_appointment_impact=True)
         if impacted_count != 1:
             raise CommandError("The deterministic shift-change story did not affect exactly one appointment.")
@@ -305,15 +344,15 @@ class Command(BaseCommand):
 
     def _upload(self, filename):
         from django.core.files.uploadedfile import SimpleUploadedFile
-        return SimpleUploadedFile(filename, PNG_BYTES, content_type="image/png")
+        return SimpleUploadedFile(filename, XRAY_PNG_BYTES, content_type="image/png")
 
     def _create_imaging_story(self, accounts, patients, story):
         d1, d2 = accounts["doctor.one"], accounts["doctor.two"]
         completed = story["completed_visits"]
         xray = create_xray_attachment(patient=patients[4], visit=completed[1], uploaded_by=completed[1].doctor, uploaded_file=self._upload("demo14a-original-ai.png"), stored_file_name="demo14a-original-ai.png", title="Synthetic demo X-ray with mock AI", notes="Non-clinical synthetic image.")
         result = run_ai_for_xray(xray_attachment=xray, user=completed[1].doctor)
-        result.overlay_file.save("demo14a-overlay.png", ContentFile(PNG_BYTES), save=False)
-        result.result_summary = "Mock/supportive only — not a diagnosis."
+        result.overlay_file.save("demo14a-overlay.png", ContentFile(OVERLAY_PNG_BYTES), save=False)
+        result.result_summary = "Mock/supportive only — synthetic markers, not a diagnosis."
         result.save()
         create_xray_attachment(patient=patients[5], visit=completed[2], uploaded_by=completed[2].doctor, uploaded_file=self._upload("demo14a-original-no-ai.png"), stored_file_name="demo14a-original-no-ai.png", title="Synthetic demo X-ray without AI", notes="Non-clinical synthetic image.")
         temporary = create_external_xray_case(uploaded_by=d1, uploaded_file=self._upload("demo14a-external-temporary.png"), stored_file_name="demo14a-external-temporary.png", title="Temporary synthetic external image", notes="Non-clinical synthetic image.")

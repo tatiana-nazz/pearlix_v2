@@ -36,7 +36,7 @@ export function OwnLeavePage() {
                 <strong>{formatDateRange(item.start_datetime, item.end_datetime)}</strong>
                 <span>{displayText(item.reason, "No reason recorded")}</span>
               </div>
-              <StatusPill status={item.is_cancelled ? "CANCELLED" : item.type} tone={item.is_cancelled ? "default" : "attention"} />
+              <StatusPill status={item.is_cancelled ? "CANCELLED" : item.type} />
             </li>
           ))}
         </ul>

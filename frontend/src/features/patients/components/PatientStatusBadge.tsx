@@ -6,5 +6,5 @@ interface PatientStatusBadgeProps {
 }
 
 export function PatientStatusBadge({ patient }: PatientStatusBadgeProps) {
-  return <StatusPill status={patient.is_archived ? "ARCHIVED" : "ACTIVE"} tone={patient.is_archived ? "attention" : "success"} />;
+  return <StatusPill status={patient.is_archived ? "ARCHIVED" : "ACTIVE"} />;
 }

@@ -30,7 +30,7 @@ export function AppointmentTable({ appointments, timezone, onDetails }: Appointm
               <tr key={appointment.id} className="v2-clickable-row" tabIndex={onDetails ? 0 : undefined} onClick={() => onDetails?.(appointment)} onKeyDown={(event) => { if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) { event.preventDefault(); onDetails?.(appointment); } }}>
                 <td>
                   <strong>{formatAppointmentDateTime(appointment.start_datetime, language, timezone)}</strong>
-                  <span>{appointment.duration_minutes} {c.minutes}</span>
+                  <span className="table-secondary-text">{appointment.duration_minutes} {c.minutes}</span>
                 </td>
                 <td>{appointment.patient.full_name}</td>
                 <td>{appointment.doctor.full_name}</td>

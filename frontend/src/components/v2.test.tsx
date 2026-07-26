@@ -19,6 +19,14 @@ describe("Phase 14C shared primitives", () => {
     expect(screen.getByLabelText("Status: FUTURE STATUS")).toBeInTheDocument();
   });
 
+  it("keeps machine status semantics when a localized label is supplied", () => {
+    render(<StatusBadge status="NEEDS_RESCHEDULE" label="بحاجة إلى إعادة جدولة" />);
+    const badge = screen.getByLabelText("Status: بحاجة إلى إعادة جدولة");
+    expect(badge).toHaveAttribute("data-status", "NEEDS_RESCHEDULE");
+    expect(badge).toHaveClass("v2-status", "warning");
+    expect(badge).toHaveTextContent("بحاجة إلى إعادة جدولة");
+  });
+
   it("supports tab selection and arrow-key navigation", () => {
     function Example() { const [selected, setSelected] = useState("one"); return <Tabs selected={selected} onSelect={setSelected} tabs={[{ id:"one", label:"One" }, { id:"two", label:"Two" }]} />; }
     render(<Example />);

@@ -10,6 +10,9 @@ async function login(page: Page, email: string) {
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/(admin|staff|doctor)\/dashboard$/);
+  const english = page.getByRole("button", { name: "EN", exact: true });
+  if (await english.getAttribute("aria-pressed") !== "true") await english.click();
+  if (await page.locator("html").getAttribute("data-theme") !== "light") await page.locator(".theme-toggle").click();
 }
 
 const noDocumentOverflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);

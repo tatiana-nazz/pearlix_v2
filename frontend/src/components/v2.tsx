@@ -61,7 +61,7 @@ export function PageHeaderV2({ title, description, action }: { title:string; des
 export function SectionHeading({ title, description }: { title:string; description?:string }) { return <div className="section-header"><h3>{title}</h3>{description ? <p>{description}</p> : null}</div>; }
 export function SurfaceCard({ children, major = false, className }: PropsWithChildren<{ major?:boolean; className?:string }>) { return <section className={["v2-card", major ? "major" : "", className].filter(Boolean).join(" ")}>{children}</section>; }
 export type KpiTone = "blue" | "violet" | "teal" | "green" | "amber" | "orange" | "rose";
-export function KpiCard({ icon, label, value, support, tone = "blue" }: { icon:ReactNode; label:string; value:string|number; support?:string; tone?:KpiTone }) { return <SurfaceCard className={`v2-kpi ${tone}`}><div className="kpi-icon">{icon}</div><p>{label}</p><strong>{value}</strong>{support ? <span>{support}</span> : null}</SurfaceCard>; }
+export function KpiCard({ icon, label, value, support, tone = "blue" }: { icon:ReactNode; label:string; value:string|number; support?:string; tone?:KpiTone }) { return <SurfaceCard className={`v2-kpi ${tone}`}><div className="kpi-icon">{icon}</div><p>{label}</p><strong>{value}</strong><span className="v2-kpi-support" aria-hidden={support ? undefined : "true"}>{support ?? ""}</span></SurfaceCard>; }
 
 const statusMeta: Record<string, { tone:string; icon:typeof Circle }> = {
   ACTIVE:{ tone:"success", icon:CheckCircle2 }, AVAILABLE:{ tone:"success", icon:CheckCircle2 }, COMPLETED:{ tone:"success", icon:CheckCircle2 }, PAID:{ tone:"success", icon:CheckCircle2 }, CONVERTED_TO_INVOICE:{ tone:"success", icon:CheckCircle2 },

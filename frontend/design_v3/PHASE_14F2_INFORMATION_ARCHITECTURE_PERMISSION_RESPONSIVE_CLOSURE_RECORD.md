@@ -23,3 +23,7 @@ This phase changes additive read projections and Team read permissions only. It 
 ## Evidence
 
 Automated and real-browser evidence is recorded in [`../QA_14F2_INFORMATION_ARCHITECTURE_PERMISSION_RESPONSIVE_CLOSURE.md`](../QA_14F2_INFORMATION_ARCHITECTURE_PERMISSION_RESPONSIVE_CLOSURE.md). Generated screenshots and traces remain outside Git and are not product authority.
+
+## Superseding stability note
+
+Phase 14F.3 preserves this information architecture and permission closure while superseding its remaining stretched status-badge, uneven repeated-card, inactive demo-visit, and separate X-ray overlay presentation defects.

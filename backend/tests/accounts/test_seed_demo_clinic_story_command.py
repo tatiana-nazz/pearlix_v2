@@ -6,7 +6,8 @@ import pytest
 from django.core.management import call_command
 from django.db.models import F
 from django.test import override_settings
-from rest_framework.test import APIRequestFactory, force_authenticate
+from django.utils import timezone
+from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
 
 from apps.accounts.models import StaffProfile, User
 from apps.ai_results.models import AIResult
@@ -68,7 +69,6 @@ def test_demo_story_relationships_dashboards_and_media_are_coherent(tmp_path):
         assert Appointment.objects.filter(status=Appointment.Status.NEEDS_RESCHEDULE, reschedule_source_working_shift__isnull=False).exists()
         assert AvailabilityException.objects.filter(doctor__isnull=False).count() >= 2
         assert AvailabilityException.objects.filter(staff__isnull=False, reason="Demo staff personal leave").exists()
-        assert WorkingShift.objects.filter(employee__email="doctor.four@pearlix-demo.local", start_time="08:00").exists()
         assert WorkingShift.objects.filter(employee__email="doctor.four@pearlix-demo.local", start_time="13:00").exists()
         assert Visit.objects.filter(status=Visit.Status.ACTIVE).count() == 1
         assert Visit.objects.filter(status=Visit.Status.COMPLETED, symptoms__gt="", diagnosis__gt="", treatment__gt="", clinical_notes__gt="", follow_up_notes__gt="").exists()
@@ -104,3 +104,90 @@ def test_demo_story_relationships_dashboards_and_media_are_coherent(tmp_path):
             assert struct.unpack(">II", image.read(24)[16:24]) == (320, 180)
         reschedule_logs = ActivityLog.objects.filter(action="appointment_rescheduled", metadata_json__demo_story="phase-14a-integrated-demo-story")
         assert any("old" in item.metadata_json and "new" in item.metadata_json for item in reschedule_logs)
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_demo_story_split_shifts_are_named_non_overlapping_and_match_eligible_appointments(tmp_path):
+    with override_settings(MEDIA_ROOT=tmp_path):
+        seed("--reset-demo", "--reference-date", "2026-07-26")
+        doctor_one = User.objects.get(email="doctor.one@pearlix-demo.local")
+        staff_one = User.objects.get(email="staff.one@pearlix-demo.local")
+        doctor_shifts = WorkingShift.objects.filter(employee=doctor_one).order_by("weekday", "start_time")
+        staff_shifts = WorkingShift.objects.filter(employee=staff_one).order_by("weekday", "start_time")
+        assert set(doctor_shifts.values_list("name", flat=True)) == {"Morning", "Evening"}
+        assert set(staff_shifts.values_list("name", flat=True)) == {"Morning", "Evening"}
+        assert set(doctor_shifts.values_list("weekday", flat=True)) == {0, 1, 2, 3, 4}
+        assert not doctor_shifts.filter(weekday__in=[5, 6]).exists()
+
+        for employee in User.objects.filter(email__endswith=f"@{DOMAIN}", working_shifts__isnull=False).distinct():
+            for weekday in range(7):
+                shifts = list(WorkingShift.objects.filter(employee=employee, weekday=weekday, is_active=True).order_by("start_time"))
+                assert all(left.end_time <= right.start_time for left, right in zip(shifts, shifts[1:]))
+
+        eligible = Appointment.objects.exclude(status=Appointment.Status.NEEDS_RESCHEDULE)
+        for appointment in eligible:
+            local_start = timezone.localtime(appointment.start_datetime).time()
+            local_end = timezone.localtime(appointment.end_datetime).time()
+            weekday = timezone.localtime(appointment.start_datetime).weekday()
+            assert WorkingShift.objects.filter(
+                employee=appointment.doctor,
+                weekday=weekday,
+                is_active=True,
+                start_time__lte=local_start,
+                end_time__gte=local_end,
+            ).exists(), appointment.id
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_demo_story_has_one_service_started_doctor_one_visit_and_an_independent_checked_in_appointment(tmp_path):
+    with override_settings(MEDIA_ROOT=tmp_path):
+        seed("--reset-demo", "--reference-date", "2026-07-26")
+        active = Visit.objects.get(status=Visit.Status.ACTIVE)
+        doctor_one = User.objects.get(email="doctor.one@pearlix-demo.local")
+        doctor_two = User.objects.get(email="doctor.two@pearlix-demo.local")
+        assert active.doctor == doctor_one
+        assert active.appointment.status == Appointment.Status.ACTIVE
+        assert active.patient_id == active.appointment.patient_id
+        assert active.completed_at is None
+        checked_in = Appointment.objects.get(status=Appointment.Status.CHECKED_IN)
+        assert checked_in.doctor == doctor_two
+        assert not Visit.objects.filter(appointment=checked_in).exists()
+
+        client = APIClient()
+        client.force_authenticate(doctor_one)
+        assert client.get("/api/visits/active/").status_code == 200
+        response = client.patch(
+            f"/api/visits/{active.id}/clinical-notes/",
+            {"clinical_notes": "Verified editable synthetic note."},
+            format="json",
+        )
+        assert response.status_code == 200
+        client.force_authenticate(doctor_two)
+        assert client.patch(f"/api/visits/{active.id}/clinical-notes/", {"clinical_notes": "forbidden"}, format="json").status_code == 404
+        for email in ("staff.one@pearlix-demo.local", "admin@pearlix-demo.local"):
+            client.force_authenticate(User.objects.get(email=email))
+            assert client.patch(f"/api/visits/{active.id}/clinical-notes/", {"clinical_notes": "forbidden"}, format="json").status_code == 403
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_demo_story_overlay_is_distinct_transparent_same_size_and_protected(tmp_path):
+    with override_settings(MEDIA_ROOT=tmp_path):
+        seed("--reset-demo", "--reference-date", "2026-07-26")
+        result = AIResult.objects.get(status=AIResult.Status.COMPLETED, overlay_file__icontains="demo14a-overlay")
+        with result.xray_attachment.original_file.open("rb") as original_file:
+            original = original_file.read()
+        with result.overlay_file.open("rb") as overlay_file:
+            overlay = overlay_file.read()
+        assert original != overlay
+        assert struct.unpack(">II", original[16:24]) == struct.unpack(">II", overlay[16:24]) == (320, 180)
+        assert overlay[25] == 6  # RGBA PNG, preserving transparent regions.
+
+        client = APIClient()
+        assert client.get(f"/api/xrays/{result.xray_attachment_id}/ai-overlay/").status_code == 401
+        client.force_authenticate(result.xray_attachment.uploaded_by)
+        response = client.get(f"/api/xrays/{result.xray_attachment_id}/ai-overlay/")
+        assert response.status_code == 200
+        assert response["Content-Type"] == "image/png"

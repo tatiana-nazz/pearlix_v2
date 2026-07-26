@@ -22,6 +22,10 @@ type XrayCopy = {
   hideOverlay: string;
   originalImage: string;
   protectedUnavailable: string;
+  loadingOriginal: string;
+  loadingOverlay: string;
+  overlayUnavailable: string;
+  retry: string;
   metadata: string;
   findings: string;
   confidence: string;
@@ -53,10 +57,14 @@ const en: XrayCopy = {
   noResult: "No stored AI result is available for this X-ray.",
   unavailable: "AI analysis is unavailable in this environment. Stored results, when present, remain available for review.",
   disclaimer: "AI-assisted information requires professional interpretation and is not a clinical diagnosis.",
-  showOverlay: "Show overlay",
-  hideOverlay: "Hide overlay",
+  showOverlay: "Show AI overlay",
+  hideOverlay: "Hide AI overlay",
   originalImage: "Protected original image",
   protectedUnavailable: "The protected image is unavailable. Check your access and try again.",
+  loadingOriginal: "Loading protected original image…",
+  loadingOverlay: "Loading AI overlay…",
+  overlayUnavailable: "The AI overlay is unavailable. The original image remains available.",
+  retry: "Retry",
   metadata: "Metadata",
   findings: "Findings",
   confidence: "Confidence",
@@ -88,10 +96,14 @@ const ar: XrayCopy = {
   noResult: "لا توجد نتيجة محفوظة للذكاء الاصطناعي لهذه الأشعة.",
   unavailable: "تحليل الذكاء الاصطناعي غير متاح في هذه البيئة. تبقى النتائج المحفوظة، إن وجدت، متاحة للمراجعة.",
   disclaimer: "تتطلب المعلومات المدعومة بالذكاء الاصطناعي تفسيراً مهنياً وليست تشخيصاً طبياً.",
-  showOverlay: "إظهار الطبقة",
-  hideOverlay: "إخفاء الطبقة",
+  showOverlay: "إظهار طبقة الذكاء الاصطناعي",
+  hideOverlay: "إخفاء طبقة الذكاء الاصطناعي",
   originalImage: "الصورة الأصلية المحمية",
   protectedUnavailable: "الصورة المحمية غير متاحة. تحقق من صلاحية الوصول وحاول مجدداً.",
+  loadingOriginal: "جارٍ تحميل الصورة الأصلية المحمية…",
+  loadingOverlay: "جارٍ تحميل طبقة الذكاء الاصطناعي…",
+  overlayUnavailable: "طبقة الذكاء الاصطناعي غير متاحة. ما زالت الصورة الأصلية متاحة.",
+  retry: "إعادة المحاولة",
   metadata: "البيانات الوصفية",
   findings: "النتائج",
   confidence: "مستوى الثقة",

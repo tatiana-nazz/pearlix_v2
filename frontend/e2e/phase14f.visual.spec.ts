@@ -7,7 +7,7 @@ const evidenceDir = process.env.PHASE14F_EVIDENCE_DIR;
 const accounts = {
   admin: "admin@pearlix-demo.local",
   staff: "staff.one@pearlix-demo.local",
-  doctor: "doctor.three@pearlix-demo.local",
+  doctor: "doctor.one@pearlix-demo.local",
 } as const;
 
 async function login(page: Page, email: string) {
@@ -17,6 +17,9 @@ async function login(page: Page, email: string) {
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/(admin|staff|doctor)\/dashboard$/);
+  const english = page.getByRole("button", { name: "EN", exact: true });
+  if (await english.getAttribute("aria-pressed") !== "true") await english.click();
+  if (await page.locator("html").getAttribute("data-theme") !== "light") await page.locator(".theme-toggle").click();
 }
 
 async function capture(page: Page, name: string) {
@@ -158,7 +161,7 @@ test("Real API appointment actions remain connected through corrected detail-fir
   await page.getByRole("option", { name: /Riad Hakim/ }).click();
   const appointmentDialog = page.locator(".v2-overlay").filter({ hasText: "New appointment" });
   await appointmentDialog.locator("select").selectOption({ label: "Dr. Yasmin Barakat" });
-  await appointmentDialog.locator('input[type="date"]').fill("2026-07-27");
+  await appointmentDialog.locator('input[type="date"]').fill("2026-08-01");
   await appointmentDialog.locator('input[type="time"]').fill("16:00");
   await appointmentDialog.locator("label").filter({ hasText: "Reason" }).locator("input").fill("E2E created appointment");
   await appointmentDialog.getByRole("button", { name: "Save appointment" }).click();
@@ -182,12 +185,12 @@ test("Real API appointment actions remain connected through corrected detail-fir
   await page.getByRole("button", { name: "Logout" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await login(page, "doctor.two@pearlix-demo.local");
-  await page.goto("/doctor/appointments/day");
+  await page.goto("/doctor/appointments/day?date=2026-07-24");
   await page.getByRole("row", { name: /Karim Azzam/ }).click();
   await page.getByRole("button", { name: "Start visit", exact: true }).click();
   await page.getByRole("button", { name: "Confirm", exact: true }).click();
   await expect(page).toHaveURL(/\/doctor\/visits\/active/);
-  await expect(page.getByRole("heading", { name: "Active visit", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Karim Azzam", exact: true }).first()).toBeVisible();
   expect(issues.consoleErrors).toEqual([]);
   expect(issues.failedRequests).toEqual([]);
   expect(issues.httpErrors).toEqual([]);
@@ -207,7 +210,7 @@ test("Doctor visual acceptance covers appointments, active visit, and protected 
   await expect(page).toHaveURL(/\/doctor\/appointments\/month/);
 
   await page.goto("/doctor/visits/active");
-  await expect(page.getByRole("heading", { name: "Active visit", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lina Mansour", exact: true }).first()).toBeVisible();
   await capture(page, "after-doctor-active-visit");
 
   await page.goto("/doctor/xrays");

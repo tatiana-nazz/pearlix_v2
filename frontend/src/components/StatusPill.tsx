@@ -1,10 +1,2 @@
-import { StatusBadge } from "./v2";
-
-interface StatusPillProps {
-  status: string;
-  tone?: "default" | "attention" | "success" | "danger";
-}
-
-export function StatusPill({ status }: StatusPillProps) {
-  return <StatusBadge status={status} />;
-}
+// Transitional import alias; StatusBadge is the sole status implementation.
+export { StatusBadge as StatusPill } from "./v2";
