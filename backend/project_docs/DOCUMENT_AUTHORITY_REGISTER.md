@@ -1,8 +1,8 @@
 # Document Authority Register
 
 **Authority marker:** `CURRENT_CANONICAL_AUTHORITY_REGISTER`
-**Last reconciled:** 2026-07-25
-**Owner / next responsibility:** Phase 14E documentation governance; every future feature owner updates only the rows affected by its approved work.
+**Last reconciled:** 2026-07-26
+**Owner / next responsibility:** Phase 14F visual-system governance; every future feature owner updates only the rows affected by approved work.
 
 Read [`../../CODEX_START_HERE.md`](../../CODEX_START_HERE.md) first. This register is the sole index of documents allowed to claim project-wide binding/current authority. Current Doctor authorization is all active/non-archived patients; it is not narrow object-level scoped-patient access.
 
@@ -17,6 +17,8 @@ Latest user-approved decisions > `CODEX_START_HERE.md` > `PROJECT_STATUS.md` > c
 | `backend/project_docs/PROJECT_STATUS.md` | CURRENT_CANONICAL | All tasks; mandatory | Current status/baseline; link to root entry required. |
 | `backend/project_docs/CURRENT_BACKEND_DECISIONS.md` | CURRENT_CANONICAL | Backend/role/patient work | Current backend and role summary; runtime/tests remain required. |
 | `frontend/CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md` | CURRENT_CANONICAL | Frontend/product/design work | Current reconciled UI/product rules. |
+| `frontend/design_v3/DESIGN_SOURCE_ADOPTION_CONTRACT.md` | CURRENT_SUPPORTING | Frontend visual work | Phase 14F visual authority boundary; explicitly excludes reference prototype behavior. |
+| `frontend/design_v3/FULL_VISUAL_SOURCE_MIGRATION_RECORD.md` | IMPLEMENTATION_RECORD | Phase 14F implementation/acceptance | Delivered migration, route audit, token mapping, preservation, and browser evidence record. |
 | `backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md` | CURRENT_SUPPORTING | Integration changes | Contract evidence, not product authority. |
 | `backend/project_docs/BACKEND_PHASE_TRACKER.md` | CURRENT_SUPPORTING | Backend phase work | Phase evidence; defer status to `PROJECT_STATUS.md`. |
 | `backend/project_docs/PHASE_14R_BACKEND_REGRESSION_STABILIZATION.md` | IMPLEMENTATION_RECORD | Scheduling regression work | Historical implementation/QA evidence. |

@@ -9,11 +9,19 @@ const navigation = readFileSync(resolve(root, "src/layouts/navigation.tsx"), "ut
 const utilities = readFileSync(resolve(root, "src/styles/v2/utilities.css"), "utf8");
 const viteConfig = readFileSync(resolve(root, "vite.config.ts"), "utf8");
 
-describe("Phase 14C token and icon source contract", () => {
-  it("defines required light/dark semantic tokens and 272/84/72 shell dimensions", () => {
+describe("Phase 14F visual source token and icon contract", () => {
+  it("defines the supplied light/dark semantic tokens and preserved 264/76/68 shell dimensions", () => {
     for (const token of ["canvas", "surface", "surface-subtle", "border", "text", "muted", "primary", "success", "warning", "danger", "info", "neutral"]) expect((colors.match(new RegExp(`--v2-${token}:`, "g")) ?? []).length).toBeGreaterThanOrEqual(2);
     expect(colors).toContain('[data-theme="dark"]');
-    expect(shell).toContain("--sidebar-size:272px"); expect(shell).toContain("--sidebar-size:84px"); expect(shell).toContain("min-height:72px"); expect(shell).toContain("overflow-x:clip");
+    expect(colors).toContain("--v2-canvas: #f6f8fc");
+    expect(colors).toContain("--v2-primary: #3f63f2");
+    expect(colors).toContain("--v2-primary-strong: #2f51d9");
+    expect(colors).toContain("--v2-gradient-primary: linear-gradient(135deg, #3f63f2 0%, #5baef7 100%)");
+    expect(colors).toContain("--v2-shadow-major: 0 12px 30px rgba(30, 41, 59, 0.06)");
+    expect(shell).toContain("--sidebar-size: 264px");
+    expect(shell).toContain("--sidebar-size: 76px");
+    expect(shell).toContain("min-height: 68px");
+    expect(shell).toContain("overflow-x: clip");
   });
   it("keeps Lucide React as the sole functional icon source in the navigation map", () => { expect(navigation).toContain('from "lucide-react"'); expect(navigation).not.toMatch(/react-icons|fontawesome|material-icons|emoji/i); });
   it("provides a reusable bidi-isolation utility for identifiers and mixed-script values", () => { expect(utilities).toContain(".bidi-ltr"); expect(utilities).toContain("unicode-bidi:isolate"); expect(utilities).toContain("direction:ltr"); });

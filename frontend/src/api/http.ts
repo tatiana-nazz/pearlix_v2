@@ -14,6 +14,10 @@ type TokenAccessors = {
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api";
 export const apiBaseUrl = rawBaseUrl.replace(/\/+$/, "");
 
+function normalizeBlobEndpoint(url: string) {
+  return apiBaseUrl.endsWith("/api") && url.startsWith("/api/") ? url.slice(4) : url;
+}
+
 let tokenAccessors: TokenAccessors | null = null;
 let refreshPromise: Promise<string> | null = null;
 
@@ -102,7 +106,7 @@ export const api = {
       headers: { "Content-Type": "multipart/form-data" },
     }),
   getBlob: (url: string) =>
-    request<Blob>("GET", url, {
+    request<Blob>("GET", normalizeBlobEndpoint(url), {
       responseType: "blob",
     }),
 };

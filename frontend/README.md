@@ -1,10 +1,8 @@
 # Pearlix Frontend
 
-Read [`../CODEX_START_HERE.md`](../CODEX_START_HERE.md) before frontend work. This README provides setup and supporting implementation context, not product/role authority. Current UI authority is [`CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md); current status is [`../backend/project_docs/PROJECT_STATUS.md`](../backend/project_docs/PROJECT_STATUS.md). The implementation continues from `e54a85842f1c683b27f12e0da93987ae128c861d`; `preview-pre-v2-ui` / `bdd5f6f` are rejected historical material. Team and Users & Access are separate, and active Doctors are authorized for all active/non-archived patients (workflow filters do not limit access). Documentation cleanup is not a runtime change; next UI work begins only with approved action hierarchy or Phase 14E scope.
+Read [`../CODEX_START_HERE.md`](../CODEX_START_HERE.md) before frontend work. This README provides setup and supporting implementation context, not product/role authority. Current UI authority is [`CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md); current status is [`../backend/project_docs/PROJECT_STATUS.md`](../backend/project_docs/PROJECT_STATUS.md). The reconciled v2 runtime lineage continues from `e54a858`; Phase 14F visually adopts the supplied reference pack on the current runtime application. Team and Users & Access remain separate, active Doctors retain all-active/non-archived patient access, and `preview-pre-v2-ui` / `bdd5f6f` remain rejected historical material.
 
-Read [`../CODEX_START_HERE.md`](../CODEX_START_HERE.md) before frontend work. This README provides setup and supporting implementation context, not product/role authority. Current UI authority is [`CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md); current status is [`../backend/project_docs/PROJECT_STATUS.md`](../backend/project_docs/PROJECT_STATUS.md). The implementation continues from `e54a85842f1c683b27f12e0da93987ae128c861d`; `preview-pre-v2-ui` / `bdd5f6f` are rejected historical material. Team and Users & Access are separate, and active Doctors are authorized for all active/non-archived patients (workflow filters do not limit access). Documentation cleanup is not a runtime change; next UI work begins only with approved action hierarchy or Phase 14E scope.
-
-Read [`../CODEX_START_HERE.md`](../CODEX_START_HERE.md) before frontend work. This README provides setup and supporting implementation context, not product/role authority. Current UI authority is [`CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md); current status is [`../backend/project_docs/PROJECT_STATUS.md`](../backend/project_docs/PROJECT_STATUS.md). The implementation continues from `e54a85842f1c683b27f12e0da93987ae128c861d`; `preview-pre-v2-ui` / `bdd5f6f` are rejected historical material. Team and Users & Access are separate, and active Doctors are authorized for all active/non-archived patients (workflow filters do not limit access). Documentation cleanup is not a runtime change; next UI work begins only with approved action hierarchy or Phase 14E scope.
+Phase 14F consolidates the reference-derived token system, shell, components, overlays, and route presentation across every current Admin, Staff, Doctor, authentication, and settings route without changing backend contracts or RBAC. See `design_v3/DESIGN_SOURCE_ADOPTION_CONTRACT.md`, `design_v3/FULL_VISUAL_SOURCE_MIGRATION_RECORD.md`, and `QA_14F_FULL_VISUAL_SOURCE_MIGRATION.md`.
 
 Phase 14D.4A closes the patient workspace contract: server-backed directory state, Staff-only General Information creation, read-first patient detail, explicit medical-history editing, versioned archive/reactivation, accessible URL-backed tabs, centralized English/Arabic copy, and behavioral coverage. Doctors have canonical access to every active/non-archived patient; Doctor helper filters narrow lists only. See `QA_14D4_PATIENT_WORKSPACE.md`, `design_v2/PHASE_14D4_PATIENT_WORKSPACE_IMPLEMENTATION_RECORD.md`, and `design_v2/PHASE_14D4A_PATIENT_CLOSURE_RECORD.md`.
 
@@ -91,10 +89,10 @@ npm run test:e2e
 
 ## Browser QA
 
-The integrated Phase 14D browser acceptance gate is closed. See `frontend/QA_14D_BROWSER_ACCEPTANCE.md` and `frontend/design_v2/PHASE_14D_BROWSER_ACCEPTANCE_RECORD.md`; earlier checklists remain historical verification references.
+The integrated Phase 14F browser acceptance gate is closed with Admin, Staff, Doctor, protected-media, responsive, RTL, dark-mode, console, and network coverage. See `QA_14F_FULL_VISUAL_SOURCE_MIGRATION.md` and `design_v3/FULL_VISUAL_SOURCE_MIGRATION_RECORD.md`. Phase 14D records remain historical verification references.
 Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, `frontend/QA_13H.md` for X-rays and AI, and `frontend/QA_13I.md` for billing handoffs, invoices, payments, and print-data QA.
 
-Phase 14E.4 aligns the existing X-ray/AI surfaces while preserving protected backend media access and current RBAC. See `design_v2/PHASE_14E4_XRAY_AI_WORKSPACE_IMPLEMENTATION_RECORD.md`. The synthetic protected-media endpoint is verified, but final visual original/overlay acceptance remains open until it is rerun in a browser that supports Blob object URLs; do not replace authenticated Blob access with public URLs.
+Phase 14E.4 aligns the existing X-ray/AI surfaces while preserving protected backend media access and current RBAC. Phase 14F closes the prior visual gap: authenticated original pixels and stored AI output render in Chromium through the private Blob client. See `design_v2/PHASE_14E4_XRAY_AI_WORKSPACE_IMPLEMENTATION_RECORD.md` and `design_v3/FULL_VISUAL_SOURCE_MIGRATION_RECORD.md`; do not replace authenticated Blob access with public URLs.
 
 ## Local QA Accounts
 
@@ -122,9 +120,9 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 - Dashboards render real backend data only; no permanent demo dashboard data is hardcoded.
 - Each response includes `clinic_date` and `clinic_timezone`; the dashboard heading formats the backend clinic date rather than a browser-local date.
 - The Admin dashboard is supervisory and read-only; Staff shortcuts stay operational; Doctor content stays own-scope and has no billing or appointment-creation action.
-- Loading, empty queue, retryable error, refresh, EN/AR status labels, RTL, light/dark tokens, and 1440–768 responsive layouts are implemented. Browser QA remains pending.
+- Loading, empty queue, retryable error, refresh, EN/AR status labels, RTL, light/dark tokens, and frozen responsive layouts are implemented and covered by the Phase 14F browser gate.
 - Patient workflows are implemented through Phase 13E.1; appointment/rescheduling through 13F; shift/availability through 13F.1; active visits through 13G; X-ray/AI through 13H; billing through 13I; Admin user management, clinic settings, and audit logs through 13J; and final regression/release-readiness polish through 13K. See `backend/project_docs/PROJECT_STATUS.md` for canonical current/next phase status.
-- Browser QA is still pending execution with the seeded local QA accounts to verify live role data, 401 refresh behavior, and backend 403 handling.
+- Seeded local browser QA covers current role surfaces; backend authorization tests remain authoritative for 401/403 enforcement.
 
 ## Patient Management
 
@@ -211,7 +209,7 @@ Phase 13G adds real visit and clinical note routes:
 - Phase 13J QA contract: `frontend/QA_13J.md`.
 - Phase 13K final QA/release-readiness contract: `frontend/QA_13K.md`.
 - Phase 14A added the deterministic development-only integrated demo data story.
-- Phase 14B froze the replacement UI/UX design; runtime visual redesign has not started.
+- Phase 14B froze the replacement direction; Phase 14F now delivers the reconciled runtime visual adoption.
 - Phase 14C.0 added Team APIs, transactional Doctor/Staff onboarding, linked-profile states, protected role transitions, reactivation, and frontend contract wrappers only; no runtime Team page was added.
 - Phase 14C added the v2 token layer, fixed/retractable role shell, centralized Lucide navigation, LIGHT/DARK/SYSTEM and EN/AR preference foundations, shared primitives, and 23 focused Phase 14C tests, for 75 total frontend tests. Shell/common copy is EN/AR; feature copy remains Phase 14D–14E work.
 
@@ -226,9 +224,9 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 ## Intentionally Not Implemented Yet
 
 - Real AI integration beyond the MVP `MOCK_ADAPTER`.
-- Email forgot-password and runtime Team/Users & Access redesign (the Phase 14C.0 professional-profile API is implemented; final screens are Phase 14D). Gender, qualifications, license, profile photo, Staff biography, and activity notes remain intentionally unsupported professional fields.
+- Email forgot-password. Gender, qualifications, license, profile photo, Staff biography, and activity notes remain intentionally unsupported professional fields.
 - Online payments, invoice itemization, tax, discount, and insurance workflows.
-- Browser QA execution for completed frontend phases remains pending.
+- No additional browser phase is implicitly authorized; new work requires approved scope.
 
 ## Project Status
 

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LogOut, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { LogOut, PanelLeftClose, PanelLeftOpen, Stethoscope, X } from "lucide-react";
 
 import type { UserRole } from "../types/auth";
 import { useAuthStore } from "../auth/authStore";
@@ -25,7 +25,7 @@ export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerC
   return (
     <aside className="app-sidebar">
       <div className="app-sidebar-brand">
-        <div className="app-sidebar-brand-mark">P</div>
+        <div className="app-sidebar-brand-mark"><Stethoscope size={21} strokeWidth={2} aria-hidden="true" /></div>
         <div className="app-sidebar-brand-copy">
           <strong>Pearlix</strong>
           <span>{workspaceLabel}</span>

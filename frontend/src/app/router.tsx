@@ -23,6 +23,7 @@ import { PatientsPage } from "../pages/patients/PatientsPage";
 import { StaffDashboardPage } from "../pages/staff/StaffDashboardPage";
 import { OwnSchedulePage } from "../pages/profile/OwnSchedulePage";
 import { OwnLeavePage } from "../pages/profile/OwnLeavePage";
+import { OwnProfilePage } from "../pages/profile/OwnProfilePage";
 import { DoctorActiveVisitPage } from "../pages/visits/DoctorActiveVisitPage";
 import { VisitDetailPage } from "../pages/visits/VisitDetailPage";
 import { ExternalXrayDetailPage, ExternalXrayListPage } from "../pages/xrays/ExternalXrayPages";
@@ -81,6 +82,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/admin/dashboard" replace /> },
               { path: "dashboard", element: <AdminDashboardPage /> },
+              { path: "profile", element: <OwnProfilePage /> },
               { path: "doctors", element: <ScheduleManagementPage /> },
               { path: "leave", element: <LeaveManagementPage /> },
               { path: "leave/:exceptionId", element: <LeaveManagementPage /> },
@@ -124,6 +126,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/staff/dashboard" replace /> },
               { path: "dashboard", element: <StaffDashboardPage /> },
+              { path: "profile", element: <OwnProfilePage /> },
               { path: "profile/schedule", element: <OwnSchedulePage /> },
               { path: "profile/leave", element: <OwnLeavePage /> },
               { path: "appointments", element: <Navigate to="/staff/appointments/day" replace /> },
@@ -158,6 +161,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/doctor/dashboard" replace /> },
               { path: "dashboard", element: <DoctorDashboardPage /> },
+              { path: "profile", element: <OwnProfilePage /> },
               { path: "profile/schedule", element: <OwnSchedulePage /> },
               { path: "profile/leave", element: <OwnLeavePage /> },
               { path: "appointments", element: <Navigate to="/doctor/appointments/day" replace /> },

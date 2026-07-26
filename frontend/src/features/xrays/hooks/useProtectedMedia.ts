@@ -9,8 +9,16 @@ interface ProtectedMediaState {
   error: unknown;
 }
 
-function blobUrl(blob: Blob): Promise<{ url: string; revoke: boolean }> {
-  if (typeof URL.createObjectURL === "function") return Promise.resolve({ url: URL.createObjectURL(blob), revoke: true });
+function blobUrl(value: Blob): Promise<{ url: string; revoke: boolean }> {
+  const blob = value instanceof Blob ? value : new Blob([value as unknown as BlobPart]);
+  if (typeof URL.createObjectURL === "function") {
+    try {
+      return Promise.resolve({ url: URL.createObjectURL(blob), revoke: true });
+    } catch {
+      // Embedded Chromium can return a cross-realm value for a blob response.
+      // FileReader is the standards-based, in-memory fallback.
+    }
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(reader.error ?? new Error("Unable to read protected media."));

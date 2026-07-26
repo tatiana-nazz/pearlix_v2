@@ -28,9 +28,9 @@ import { addDays, clinicToday, formatAppointmentDate, isValidDateInput } from ".
 import { buildAppointmentFilters } from "../../features/appointments/utils/appointmentFilters";
 import { getAppointmentPermissions } from "../../features/appointments/utils/appointmentPermissions";
 import { appointmentReschedulePath, appointmentViewPath } from "../../features/appointments/utils/appointmentPermissions";
-import { appointmentCopy } from "../../features/appointments/i18n";
+import { appointmentCopy, appointmentStatusLabel } from "../../features/appointments/i18n";
 import { useAuthStore } from "../../auth/authStore";
-import type { AppointmentListItem, AppointmentViewMode, CreateAppointmentPayload, UpdateAppointmentPayload } from "../../types/appointments";
+import type { AppointmentListItem, AppointmentStatus, AppointmentViewMode, CreateAppointmentPayload, UpdateAppointmentPayload } from "../../types/appointments";
 import type { UserRole } from "../../types/auth";
 
 interface AppointmentsPageProps {
@@ -139,13 +139,26 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   const clinicDate = appointments.data?.clinic_date ?? clinicToday(clinicTimezone);
   const currentMutationError = checkIn.error ?? cancel.error ?? noShow.error ?? startVisit.error;
   const isActionSubmitting = checkIn.isPending || cancel.isPending || noShow.isPending || startVisit.isPending;
+  const statusSummary = Object.entries(rows.reduce<Partial<Record<AppointmentStatus, number>>>((summary, appointment) => {
+    summary[appointment.status] = (summary[appointment.status] ?? 0) + 1;
+    return summary;
+  }, {}));
 
   return (
     <main className="appointments-v2" data-role={role}>
-      <header className="appointments-v2-header"><div><p>{formatAppointmentDate(date, language, clinicTimezone, view === "week" ? { month: "short", day: "numeric", year: "numeric" } : { dateStyle: "full" })}</p><h1>{view === "needs-reschedule" ? c.needsReschedule : c.title}</h1><span>{role === "STAFF" ? c.staffDescription : c.readDescription}</span></div><div className="appointments-v2-actions"><Button type="button" variant="secondary" onClick={() => setParam("date", addDays(date, -1))} aria-label={c.previous}>{language === "AR" ? "→" : "←"}</Button><Button type="button" variant="secondary" onClick={() => setParam("date", clinicDate)}>{c.today}</Button><Button type="button" variant="secondary" onClick={() => setParam("date", addDays(date, 1))} aria-label={c.next}>{language === "AR" ? "←" : "→"}</Button><Button type="button" variant="secondary" onClick={() => void appointments.refetch()}>{appointments.isFetching ? c.refreshing : c.refresh}</Button>{permissions.canCreate ? <Button type="button" onClick={() => setCreateOpen(true)}>{c.newAppointment}</Button> : null}</div></header>
+      <header className="appointments-v2-header"><div><h1>{view === "needs-reschedule" ? c.needsReschedule : c.title}</h1><span>{role === "STAFF" ? c.staffDescription : c.readDescription}</span></div><div className="appointments-v2-actions"><Button type="button" variant="secondary" onClick={() => void appointments.refetch()}>{appointments.isFetching ? c.refreshing : c.refresh}</Button>{permissions.canCreate ? <Button type="button" onClick={() => setCreateOpen(true)}>{c.newAppointment}</Button> : null}</div></header>
 
-      <SurfaceCard>
+      <SurfaceCard className="appointments-navigation-card">
+        <div className="appointments-date-navigation">
+          <Button type="button" variant="secondary" onClick={() => setParam("date", addDays(date, -1))} aria-label={c.previous}>{language === "AR" ? "→" : "←"}</Button>
+          <strong>{formatAppointmentDate(date, language, clinicTimezone, view === "week" ? { month: "short", day: "numeric", year: "numeric" } : { dateStyle: "full" })}</strong>
+          <Button type="button" variant="secondary" onClick={() => setParam("date", addDays(date, 1))} aria-label={c.next}>{language === "AR" ? "←" : "→"}</Button>
+          <Button type="button" variant="ghost" onClick={() => setParam("date", clinicDate)}>{c.today}</Button>
+        </div>
         <AppointmentViewTabs role={role} views={viewsForRole(role)} />
+      </SurfaceCard>
+
+      <SurfaceCard className="appointments-filter-card">
         <AppointmentFilters
           date={date}
           status={status}
@@ -159,7 +172,8 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
         {view === "list" ? <label className="appointments-v2-search">{c.search}<input value={search} onChange={(event) => setParam("search", event.target.value)} /></label> : null}
       </SurfaceCard>
 
-      <SurfaceCard>
+      <div className={view === "week" ? "appointments-content-grid" : "appointments-content-grid single"}>
+      <SurfaceCard className="appointments-schedule-card">
         {appointments.isLoading ? <LoadingState title={c.loading} /> : null}
         {appointments.isError ? (
           <ErrorState error={appointments.error} onRetry={() => void appointments.refetch()} title={c.unavailable} />
@@ -193,6 +207,20 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
           </>
         ) : null}
       </SurfaceCard>
+      {view === "week" && appointments.data ? (
+        <aside className="appointments-summary-rail" aria-label={c.weekSummary}>
+          <SurfaceCard>
+            <h2>{c.weekSummary}</h2>
+            <dl>
+              <div><dt>{c.total}</dt><dd>{rows.length}</dd></div>
+              {statusSummary.map(([summaryStatus, count]) => (
+                <div key={summaryStatus}><dt>{appointmentStatusLabel(language, summaryStatus as AppointmentStatus)}</dt><dd>{count}</dd></div>
+              ))}
+            </dl>
+          </SurfaceCard>
+        </aside>
+      ) : null}
+      </div>
 
       {isCreateOpen ? (
           <Modal open title={c.newAppointment} onClose={() => setCreateOpen(false)} wide>

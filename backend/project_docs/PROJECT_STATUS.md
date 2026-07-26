@@ -1,7 +1,7 @@
 # Project Status
 
 **Authority marker:** `CURRENT_CANONICAL_PROJECT_STATUS`
-Read [`../../CODEX_START_HERE.md`](../../CODEX_START_HERE.md) before using this tracker. Authority reconciliation is documentation governance only; it changes no runtime behavior. The current implementation continues from `e54a85842f1c683b27f12e0da93987ae128c861d`. The rejected pre-v2 preview (`preview-pre-v2-ui`, `bdd5f6f`) is not an implementation source. Team and Users & Access remain separate; active Doctors have all-active/non-archived patient access as summarized in `CURRENT_BACKEND_DECISIONS.md`. Next work is current-UI refinement beginning with approved action hierarchy or explicitly approved Phase 14E scope.
+Read [`../../CODEX_START_HERE.md`](../../CODEX_START_HERE.md) before using this tracker. Authority reconciliation is documentation governance only; it changes no runtime behavior. The reconciled v2 runtime lineage continues from `e54a858`; Phase 14F visually adopts the supplied reference pack on starting commit `78052117fb7014932ff407226923567b0d788b6d` while preserving current runtime authority. The rejected pre-v2 preview (`preview-pre-v2-ui`, `bdd5f6f`) is not an implementation source. Team and Users & Access remain separate; active Doctors have all-active/non-archived patient access as summarized in `CURRENT_BACKEND_DECISIONS.md`.
 
 This is the canonical current-phase tracker. Other project documents describe capabilities and defer current/next-phase status to this file.
 
@@ -11,12 +11,13 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current phase: 14E.4 X-ray, Attachment, Viewer, and AI-Result Workspace Design Alignment
+- Current phase: 14F Full Frontend Visual Source Adoption — delivered
 - Phase 13 series: complete
-- Next phase: Close the Phase 14E.4 protected-media visual browser acceptance in an object-URL-capable browser surface
-- Next step: do not change backend media security; rerun the documented browser evidence
+- Next phase: no phase is implicitly authorized; use a new approved scope
+- Next step: preserve the Phase 14F visual system and current runtime/RBAC contracts
 - Final backend full regression: 420 passed
-- Final frontend regression: 133 passed in 46 files
+- Final frontend regression: 136 passed in 47 files
+- Final browser regression: 7 passed in Chromium, including 4 Phase 14F visual acceptance tests
 - Backend runtime changes in Phase 14C: no
 - Migrations in Phase 14C: none
 - Backend runtime changes in Phase 14C.0: yes
@@ -34,7 +35,12 @@ Local login connectivity is now deterministic: the documented frontend uses `127
 - Frontend visible UI changes in Phase 14E.4: action-free X-ray/attachment collections, shared upload modal, protected viewer hierarchy, structured stored-result/overlay presentation, and external temporary-case detail alignment
 - Backend runtime changes in Phase 14E.4: none
 - Migrations in Phase 14E.4: none
-- Phase 14E.4 acceptance note: authenticated synthetic protected-media endpoint verified as `200 image/png`; in-app browser lacked Blob object-URL support, so final image/overlay visual acceptance remains open
+- Phase 14E.4 historical acceptance note: the original browser surface limitation is superseded by the closed Phase 14F protected-media Chromium acceptance
+- Frontend visible UI changes in Phase 14F: supplied reference tokens, shell, navigation, topbar, shared components, overlays, appointments, profiles, Team/Users & Access, dashboards, Active Visit, Billing, X-ray/AI, authentication, and settings adopted across every current route family
+- Phase 14F protected-media acceptance: authenticated original pixels rendered with non-zero natural width and stored AI result in Chromium; accidental duplicated `/api/api/...` media paths are normalized in the frontend Blob client without public media URLs
+- Backend runtime changes in Phase 14F: none
+- API changes in Phase 14F: none
+- Migrations in Phase 14F: none
 - Backend runtime changes in Phase 14E.2A: none
 - Migrations in Phase 14E.2A: none
 - Backend runtime changes in Phase 14E.2: none

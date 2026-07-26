@@ -120,73 +120,93 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
       <Link className="inline-back-link" to={patientListPath(role)}>
         {c.backToPatients}
       </Link>
-      <PatientProfileHeader
-        role={role}
-        patient={patient.data}
-        onEdit={() => openEdit("general")}
-        onArchive={() => {
-          archivePatient.reset();
-          setArchiveMode("archive");
-        }}
-        onUnarchive={() => {
-          unarchivePatient.reset();
-          setArchiveMode("unarchive");
-        }}
-      />
+      <div className="patient-detail-surface">
+        <aside className="patient-identity-rail" aria-label={patient.data.full_name}>
+          <span className="profile-initials" aria-hidden="true">
+            {patient.data.first_name.slice(0, 1).toUpperCase()}{patient.data.last_name.slice(0, 1).toUpperCase()}
+          </span>
+          <div>
+            <h2>{patient.data.full_name}</h2>
+            <p>{patient.data.gender === "Female" ? c.female : c.male} · {patient.data.age ? `${patient.data.age} ${c.yearsOld}` : c.ageNotRecorded}</p>
+          </div>
+          <dl className="identity-details">
+            <div><dt>{c.phone}</dt><dd dir="ltr">{patient.data.phone_number || c.notRecorded}</dd></div>
+            <div><dt>{c.email}</dt><dd dir="ltr">{patient.data.email || c.notRecorded}</dd></div>
+            <div><dt>{c.bloodGroup}</dt><dd>{patient.data.blood_group || c.notRecorded}</dd></div>
+            <div><dt>{c.emergencyContact}</dt><dd>{patient.data.emergency_contact || c.notRecorded}</dd></div>
+          </dl>
+        </aside>
 
-      {isEditing && permissions.canEdit ? (
-        <div className="dialog-backdrop" role="presentation">
-          <section className="dialog-panel wide" role="dialog" aria-modal="true" aria-labelledby="edit-patient-title">
-            <h3 id="edit-patient-title">{searchParams.get("edit") === "medical" ? c.medicalHistory : c.editPatient}</h3>
-            <PatientForm
-              mode="edit"
-              section={searchParams.get("edit") === "medical" ? "medical" : "general"}
-              role={role}
-              patient={patient.data}
-              submitLabel={c.saveChanges}
-              isSubmitting={updatePatient.isPending}
-              error={updatePatient.error}
-              onSubmit={handleUpdate}
-              onCancel={closeEdit}
-              onReloadLatest={() => void handleReloadLatestPatient()}
-              onContinueReviewing={() => updatePatient.reset()}
-            />
-          </section>
-        </div>
-      ) : null}
+        <section className="patient-detail-main">
+          <PatientProfileHeader
+            role={role}
+            patient={patient.data}
+            onEdit={() => openEdit("general")}
+            onArchive={() => {
+              archivePatient.reset();
+              setArchiveMode("archive");
+            }}
+            onUnarchive={() => {
+              unarchivePatient.reset();
+              setArchiveMode("unarchive");
+            }}
+          />
 
-      <PatientProfileTabs role={role} activeTab={visibleTab} onTabChange={setTab} />
+          {isEditing && permissions.canEdit ? (
+            <div className="dialog-backdrop" role="presentation">
+              <section className="dialog-panel wide" role="dialog" aria-modal="true" aria-labelledby="edit-patient-title">
+                <h3 id="edit-patient-title">{searchParams.get("edit") === "medical" ? c.medicalHistory : c.editPatient}</h3>
+                <PatientForm
+                  mode="edit"
+                  section={searchParams.get("edit") === "medical" ? "medical" : "general"}
+                  role={role}
+                  patient={patient.data}
+                  submitLabel={c.saveChanges}
+                  isSubmitting={updatePatient.isPending}
+                  error={updatePatient.error}
+                  onSubmit={handleUpdate}
+                  onCancel={closeEdit}
+                  onReloadLatest={() => void handleReloadLatestPatient()}
+                  onContinueReviewing={() => updatePatient.reset()}
+                />
+              </section>
+            </div>
+          ) : null}
 
-      <div id={`patient-profile-panel-${visibleTab}`} role="tabpanel" aria-labelledby={`patient-profile-tab-${visibleTab}`} tabIndex={0}>
-      {visibleTab === "overview" ? <PatientOverview patient={patient.data} /> : null}
-      {visibleTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} onEdit={() => openEdit("medical")} /> : null}
-      {visibleTab === "visits" ? (
-        <PatientVisitsSummary role={role} visits={visits.data} isLoading={visits.isLoading} error={visits.error} onRetry={() => void visits.refetch()} />
-      ) : null}
-      {visibleTab === "appointments" ? (
-        <PatientAppointmentsSummary
-          role={role}
-          appointments={appointments.data}
-          isLoading={appointments.isLoading}
-          error={appointments.error}
-          onRetry={() => void appointments.refetch()}
-        />
-      ) : null}
-      {visibleTab === "xrays" ? (
-        <PatientXraySummary
-          role={role}
-          patientId={patientId}
-          xrays={xrays.data}
-          aiResults={aiResults.data}
-          isLoading={xrays.isLoading || aiResults.isLoading}
-          error={xrays.error ?? aiResults.error}
-          onRetry={() => {
-            void xrays.refetch();
-            void aiResults.refetch();
-          }}
-        />
-      ) : null}
-      {visibleTab === "billing" ? <PatientBillingSummary role={role} patientId={patientId} /> : null}
+          <PatientProfileTabs role={role} activeTab={visibleTab} onTabChange={setTab} />
+
+          <div id={`patient-profile-panel-${visibleTab}`} role="tabpanel" aria-labelledby={`patient-profile-tab-${visibleTab}`} tabIndex={0}>
+            {visibleTab === "overview" ? <PatientOverview patient={patient.data} /> : null}
+            {visibleTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} onEdit={() => openEdit("medical")} /> : null}
+            {visibleTab === "visits" ? (
+              <PatientVisitsSummary role={role} visits={visits.data} isLoading={visits.isLoading} error={visits.error} onRetry={() => void visits.refetch()} />
+            ) : null}
+            {visibleTab === "appointments" ? (
+              <PatientAppointmentsSummary
+                role={role}
+                appointments={appointments.data}
+                isLoading={appointments.isLoading}
+                error={appointments.error}
+                onRetry={() => void appointments.refetch()}
+              />
+            ) : null}
+            {visibleTab === "xrays" ? (
+              <PatientXraySummary
+                role={role}
+                patientId={patientId}
+                xrays={xrays.data}
+                aiResults={aiResults.data}
+                isLoading={xrays.isLoading || aiResults.isLoading}
+                error={xrays.error ?? aiResults.error}
+                onRetry={() => {
+                  void xrays.refetch();
+                  void aiResults.refetch();
+                }}
+              />
+            ) : null}
+            {visibleTab === "billing" ? <PatientBillingSummary role={role} patientId={patientId} /> : null}
+          </div>
+        </section>
       </div>
 
       <ArchivePatientDialog

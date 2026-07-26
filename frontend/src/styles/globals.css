@@ -1358,3 +1358,534 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+.profile-page-v3 {
+  display: grid;
+  max-width: 1540px;
+  gap: 24px;
+  margin-inline: auto;
+}
+
+.profile-page-v3-header h1,
+.profile-page-v3-header p,
+.profile-page-v3-grid h2 {
+  margin: 0;
+}
+
+.profile-page-v3-header h1 {
+  color: var(--color-text);
+  font-size: 28px;
+  letter-spacing: -0.025em;
+}
+
+.profile-page-v3-header p {
+  margin-block-start: 4px;
+  color: var(--color-muted);
+}
+
+.profile-page-v3-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.95fr) minmax(360px, 1.1fr) minmax(300px, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.profile-page-v3-grid > .v2-card {
+  min-width: 0;
+  min-height: 420px;
+}
+
+.profile-information-card {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+}
+
+.profile-information-card .profile-initials {
+  margin-inline: auto;
+}
+
+.profile-schedule-card,
+.profile-leave-card {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.profile-shift-matrix {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.profile-shift-matrix > div {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--color-divider);
+  border-radius: 14px;
+  background: var(--color-surface-muted);
+  padding: 14px;
+}
+
+.profile-shift-matrix span {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.profile-leave-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-leave-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--color-divider);
+  border-radius: 14px;
+  background: var(--color-surface-muted);
+  padding: 14px;
+}
+
+.profile-leave-list li > div {
+  display: grid;
+  gap: 3px;
+}
+
+.profile-leave-list span {
+  color: var(--color-muted);
+}
+
+@media (max-width: 1279px) {
+  .profile-page-v3-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-information-card {
+    grid-row: span 2;
+  }
+}
+
+@media (max-width: 767px) {
+  .profile-page-v3-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-information-card {
+    grid-row: auto;
+  }
+
+  .profile-page-v3-grid > .v2-card {
+    min-height: auto;
+  }
+}
+
+/* Phase 14F reference adoption for retained feature contracts. */
+body {
+  overflow-x: hidden;
+  background: var(--gradient-page);
+  font-family: var(--font-sans);
+  line-height: 1.55;
+}
+
+.button {
+  min-height: 44px;
+  border-radius: 12px;
+  padding-inline: 18px;
+  font-weight: 800;
+}
+
+.button.primary {
+  border-color: transparent;
+  background: var(--gradient-primary);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(63, 99, 242, 0.18);
+}
+
+.button.primary:hover {
+  background: var(--gradient-primary);
+  box-shadow: 0 13px 26px rgba(63, 99, 242, 0.24);
+  transform: translateY(-1px);
+}
+
+.button.secondary {
+  border-color: var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.button.secondary:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.button.danger {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--color-danger) 11%, var(--color-surface));
+  color: var(--color-danger);
+}
+
+.card,
+.profile-header,
+.dialog-panel,
+.visit-workspace > .card,
+.shift-card {
+  border-color: var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.card {
+  padding: 24px;
+}
+
+.page-header h2,
+.profile-header h2 {
+  color: var(--color-text);
+  letter-spacing: -0.025em;
+}
+
+.page-header p,
+.section-header p,
+.profile-header p {
+  color: var(--color-muted);
+}
+
+.stat-card {
+  min-height: 140px;
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.stat-card::before {
+  display: block;
+  width: 44px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--gradient-primary);
+  content: "";
+}
+
+.status-pill {
+  min-height: 24px;
+  border: 0;
+  border-radius: 999px;
+  padding-inline: 10px;
+  background: var(--color-surface-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.status-pill.attention {
+  background: color-mix(in srgb, var(--color-warning) 16%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-warning) 65%, var(--color-text));
+}
+
+.status-pill.success {
+  background: color-mix(in srgb, var(--color-success) 13%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-success) 72%, var(--color-text));
+}
+
+.status-pill.danger {
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  color: var(--color-danger);
+}
+
+.patient-filters,
+.appointment-filters,
+.billing-filter-card {
+  border-color: var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.patient-filters input,
+.patient-filters select,
+.appointment-filters input,
+.appointment-filters select,
+.patient-form input,
+.patient-form select,
+.patient-form textarea,
+.appointment-form input,
+.appointment-form select,
+.appointment-form textarea,
+.dialog-field input,
+.dialog-field textarea,
+.dialog-panel select {
+  min-height: 44px;
+  border-color: var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-muted);
+}
+
+.patient-table th,
+.appointment-table th,
+.billing-table th,
+.xray-table th {
+  height: 48px;
+  background: transparent;
+  color: var(--color-muted);
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.patient-table th,
+.patient-table td,
+.appointment-table th,
+.appointment-table td,
+.billing-table th,
+.billing-table td,
+.xray-table th,
+.xray-table td {
+  border-bottom-color: var(--color-divider);
+  padding: 16px 12px;
+}
+
+.patient-table tbody tr:hover,
+.appointment-table tbody tr:hover,
+.billing-table .clickable-row:hover,
+.billing-table .clickable-row:focus-visible,
+.xray-table .clickable-row:hover,
+.xray-table .clickable-row:focus-visible {
+  background: var(--color-primary-soft);
+}
+
+.dialog-backdrop {
+  background: rgba(15, 23, 42, 0.52);
+}
+
+.dialog-panel {
+  border-radius: 24px;
+  box-shadow: var(--shadow-modal);
+}
+
+.profile-tabs {
+  gap: 8px;
+  border-bottom-color: var(--color-divider);
+}
+
+.profile-tabs button {
+  min-height: 48px;
+  padding-inline: 18px;
+  color: var(--color-muted);
+  font-weight: 800;
+}
+
+.profile-tabs button.active,
+.profile-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.detail-grid div {
+  border-color: var(--color-divider);
+  border-radius: 16px;
+  background: var(--color-surface-muted);
+  padding: 16px;
+}
+
+.detail-grid dt {
+  color: var(--color-text-muted);
+}
+
+.weekly-board {
+  gap: 14px;
+}
+
+.shift-card {
+  min-height: 150px;
+  align-content: start;
+  gap: 10px;
+  background: var(--color-surface-muted);
+  padding: 18px;
+}
+
+.schedule-list {
+  gap: 12px;
+}
+
+.schedule-list li {
+  min-height: 76px;
+  border-color: var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-card);
+}
+
+.auth-layout,
+.auth-page {
+  background: var(--gradient-page);
+}
+
+.auth-panel,
+.auth-card {
+  border-color: var(--color-border);
+  border-radius: 24px;
+  box-shadow: var(--shadow-modal);
+}
+
+.patient-page,
+.visit-page,
+.visit-workspace,
+.xray-page,
+.billing-page,
+.schedule-page,
+.admin-page {
+  max-width: 1540px;
+  margin-inline: auto;
+}
+
+.patient-page {
+  gap: 24px;
+}
+
+.profile-header {
+  padding: 24px 28px;
+}
+
+.patient-detail-surface,
+.team-detail-surface {
+  display: grid;
+  overflow: hidden;
+  grid-template-columns: 280px minmax(0, 1fr);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-modal);
+}
+
+.patient-identity-rail,
+.team-identity-rail {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  border-inline-end: 1px solid var(--color-divider);
+  background: linear-gradient(180deg, var(--color-surface-muted), var(--color-surface));
+  padding: 36px 24px;
+  text-align: center;
+}
+
+.profile-initials {
+  display: grid;
+  inline-size: 104px;
+  block-size: 104px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  color: #fff;
+  font-size: 32px;
+  font-weight: 800;
+  box-shadow: 0 16px 30px rgba(63, 99, 242, 0.2);
+}
+
+.patient-identity-rail h2,
+.team-identity-rail h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 23px;
+  line-height: 1.25;
+}
+
+.patient-identity-rail p,
+.team-identity-rail p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.identity-details {
+  display: grid;
+  width: 100%;
+  gap: 13px;
+  margin: 4px 0 0;
+  text-align: start;
+}
+
+.identity-details div {
+  display: grid;
+  gap: 3px;
+}
+
+.identity-details dt {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.identity-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.patient-detail-main,
+.team-detail-main {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 24px;
+  padding: 34px 38px;
+}
+
+.patient-detail-main .profile-header,
+.team-detail-main .page-header {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.patient-detail-main > [role="tabpanel"] {
+  min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  .patient-detail-surface,
+  .team-detail-surface {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-identity-rail,
+  .team-identity-rail {
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--color-divider);
+    padding: 28px 24px;
+  }
+
+  .identity-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .patient-detail-main,
+  .team-detail-main {
+    padding: 28px 24px;
+  }
+}
+
+@media (max-width: 767px) {
+  .identity-details {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-detail-main,
+  .team-detail-main {
+    padding: 22px 16px;
+  }
+
+  .profile-tabs button {
+    padding-inline: 13px;
+  }
+}
