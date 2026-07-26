@@ -438,21 +438,18 @@ p {
   padding-top: 0;
 }
 
-.summary-row > div,
-.active-visit-content > div {
+.summary-row > div {
   display: grid;
   min-width: 0;
   gap: var(--space-1);
 }
 
-.summary-row strong,
-.active-visit-content strong {
+.summary-row strong {
   overflow-wrap: anywhere;
   color: var(--color-text);
 }
 
-.summary-row span,
-.active-visit-content span {
+.summary-row span {
   overflow-wrap: anywhere;
   color: var(--color-muted);
   font-size: var(--font-size-sm);
@@ -505,17 +502,6 @@ p {
   padding: var(--space-4);
   background: #fbfdfe;
   color: var(--color-muted);
-}
-
-.active-visit-card {
-  border-color: rgba(26, 154, 154, 0.28);
-}
-
-.active-visit-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
 }
 
 .dashboard-note p {

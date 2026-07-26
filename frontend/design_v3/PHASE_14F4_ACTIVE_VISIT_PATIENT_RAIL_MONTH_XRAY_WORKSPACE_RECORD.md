@@ -27,4 +27,14 @@ Production backend behavior, API contracts, models, migrations, RBAC, visit owne
 
 The superseded simple `VisitXraySection` was removed. Month status mapping is centralized, X-ray copy is centralized, and the protected viewer remains the sole original/overlay canvas. No fake frontend result, confidence, finding, public media URL, new endpoint, or collection action was added.
 
+## Phase 14F.4B visual acceptance closure
+
+The 2026-07-27 closure aligned the existing Active Visit surface with the accepted visual reference without changing runtime behavior. The patient and visit summary is a flatter static context region with grouped clinical actions and the exact four icon-labelled tabs. The inline X-ray review keeps upload and selected-record context in the workspace header, places saved thumbnails above the structured AI result rail, and keeps the protected canvas larger than its aligned review rail. Viewer controls remain below the single protected canvas in the accepted zoom, reset, overlay, fit, and fullscreen order.
+
+At 1024×768 on Lina Mansour's full Overview panel, the Patient Profile identity rail moved from 145.6px to its expected 88px sticky top while the real document scrolled 600px and the main panel moved from 145.6px to -454.4px. Horizontal overflow remained 0px. At 1023px the rail returned to static stacked flow.
+
+The protected panoramic original and overlay both loaded at 320×180 natural pixels. At the measured 1440×900 review state, both occupied the same 692×389.25px rectangle at x=334.4px and y=-127.96px; x, y, width, and height deltas were all 0px. Both images shared the same `.protected-xray-canvas`, no separate overlay figure existed, and hiding the overlay left the original visible.
+
+Focused Phase 14F.4 browser acceptance passed 3/3 scenarios. The complete serial browser suite passed 17/17 after the pre-existing Phase 14F appointment-action test pinned `/staff/appointments/day?date=2026-07-26`; this removed dependence on the workstation date crossing midnight without changing application behavior.
+
 Acceptance evidence is recorded in [`../QA_14F4_ACTIVE_VISIT_PATIENT_RAIL_MONTH_XRAY_WORKSPACE.md`](../QA_14F4_ACTIVE_VISIT_PATIENT_RAIL_MONTH_XRAY_WORKSPACE.md).

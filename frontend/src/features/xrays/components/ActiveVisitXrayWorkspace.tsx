@@ -68,10 +68,12 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
 
   return <section className="active-xray-workspace" aria-labelledby="active-xray-title">
     <header className="active-xray-header">
-      <div><p className="eyebrow">{c.researchOnly}</p><h3 id="active-xray-title">{c.selectedXray}</h3><p>{selected ? xrayText(selected.title || selected.original_file_name) : c.noXrays}</p></div>
       <div className="active-xray-primary-actions">
-        {canRunAi ? <Button type="button" loading={runAi.isPending} aria-live="polite" onClick={() => runAi.mutate()}><Sparkles size={18} aria-hidden="true" />{runAi.isPending ? c.runningAi : c.runAi}</Button> : null}
-        {canUpload ? <Button variant="secondary" type="button" onClick={() => { upload.reset(); setUploadOpen(true); }}><Upload size={18} aria-hidden="true" />{c.uploadXray}</Button> : null}
+        {canUpload ? <Button type="button" onClick={() => { upload.reset(); setUploadOpen(true); }}><Upload size={18} aria-hidden="true" />{c.uploadXray}</Button> : null}
+      </div>
+      <div className="active-xray-selected-copy"><p className="eyebrow">{c.researchOnly}</p><h3 id="active-xray-title">{c.selectedXray}</h3><p>{selected ? xrayText(selected.title || selected.original_file_name) : c.noXrays}</p></div>
+      <div className="active-xray-primary-actions">
+        {canRunAi ? <Button variant="secondary" type="button" loading={runAi.isPending} aria-live="polite" onClick={() => runAi.mutate()}><Sparkles size={18} aria-hidden="true" />{runAi.isPending ? c.runningAi : c.runAi}</Button> : null}
       </div>
     </header>
 
@@ -80,15 +82,16 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
     {xrays.isError ? <ErrorState error={xrays.error} title={c.savedXrays} onRetry={() => void xrays.refetch()} /> : null}
     {xrays.data && !xrays.data.results.length ? <div className="active-xray-empty"><EmptyState title={c.noXrays} /></div> : null}
 
-    {xrays.data?.results.length ? <div className="active-xray-thumbnail-strip" aria-label={c.savedXrays}>{xrays.data.results.map((xray) => <XrayThumbnail key={xray.id} xray={xray} selected={xray.id === selectedXrayId} onSelect={() => setSelectedXrayId(xray.id)} />)}</div> : null}
-
     {selectedXrayId ? <div className="active-xray-review-grid">
       <div className="active-xray-canvas-panel">
         {selectedXray.isLoading && !selected ? <LoadingState title={c.selectedXray} /> : null}
         {selectedXray.isError ? <ErrorState error={selectedXray.error} title={c.selectedXray} onRetry={() => void selectedXray.refetch()} /> : null}
         {selected ? <ProtectedXrayViewer originalEndpoint={selected.file_endpoint} overlayEndpoint={selected.ai_overlay_endpoint} overlayAvailable={Boolean(aiResult.data?.overlay_available)} originalLabel={`${c.selectedXray}: ${xrayText(selected.title || selected.original_file_name)}`} originalAlt={`${xrayText(selected.title || selected.original_file_name)} — ${visit.patient.full_name}`} /> : null}
       </div>
-      <AiResultPanel result={aiResult.data} isLoading={Boolean(selected?.has_ai_result && aiResult.isLoading)} error={aiResult.error} onRetry={() => void aiResult.refetch()} />
+      <aside className="active-xray-review-side">
+        {xrays.data?.results.length ? <div className="active-xray-thumbnail-strip" aria-label={c.savedXrays}>{xrays.data.results.map((xray) => <XrayThumbnail key={xray.id} xray={xray} selected={xray.id === selectedXrayId} onSelect={() => setSelectedXrayId(xray.id)} />)}</div> : null}
+        <AiResultPanel result={aiResult.data} isLoading={Boolean(selected?.has_ai_result && aiResult.isLoading)} error={aiResult.error} onRetry={() => void aiResult.refetch()} />
+      </aside>
     </div> : null}
 
     {uploadOpen ? <XrayUploadDialog title={c.uploadXray} isSubmitting={upload.isPending} error={upload.error} onCancel={() => setUploadOpen(false)} onSubmit={finishUpload} /> : null}

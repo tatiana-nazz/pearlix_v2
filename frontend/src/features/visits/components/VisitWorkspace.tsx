@@ -1,4 +1,4 @@
-import { CalendarDays, Clock3, ExternalLink, Save, Stethoscope, UserRound } from "lucide-react";
+import { CalendarDays, ClipboardList, Clock3, ExternalLink, FileImage, ReceiptText, Save, Stethoscope, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -32,13 +32,15 @@ type WorkspaceTab = "notes" | "patient" | "attachments" | "billing";
 
 function VisitTabs({ selected, onSelect }: { selected: WorkspaceTab; onSelect: (tab: WorkspaceTab) => void }) {
   const c = visitCopy(useAuthStore((state) => state.user?.language_preference));
-  const tabs: Array<{ id: WorkspaceTab; label: string }> = [
-    { id: "notes", label: c.visitNotes },
-    { id: "patient", label: c.patientProfile },
-    { id: "attachments", label: c.attachments },
-    { id: "billing", label: c.billing },
+  const tabs: Array<{ id: WorkspaceTab; label: string; icon: typeof ClipboardList }> = [
+    { id: "notes", label: c.visitNotes, icon: ClipboardList },
+    { id: "patient", label: c.patientProfile, icon: UserRound },
+    { id: "attachments", label: c.attachments, icon: FileImage },
+    { id: "billing", label: c.billing, icon: ReceiptText },
   ];
-  return <div className="visit-workspace-tabs" role="tablist" aria-label={c.activeVisit}>{tabs.map((tab, index) => <button key={tab.id} id={`visit-tab-${tab.id}`} className={selected === tab.id ? "active" : undefined} type="button" role="tab" aria-selected={selected === tab.id} aria-controls={`visit-panel-${tab.id}`} tabIndex={selected === tab.id ? 0 : -1} onClick={() => onSelect(tab.id)} onKeyDown={(event) => {
+  return <div className="visit-workspace-tabs" role="tablist" aria-label={c.activeVisit}>{tabs.map((tab, index) => {
+    const Icon = tab.icon;
+    return <button key={tab.id} id={`visit-tab-${tab.id}`} className={selected === tab.id ? "active" : undefined} type="button" role="tab" aria-selected={selected === tab.id} aria-controls={`visit-panel-${tab.id}`} tabIndex={selected === tab.id ? 0 : -1} onClick={() => onSelect(tab.id)} onKeyDown={(event) => {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
     event.preventDefault();
     const rtl = getComputedStyle(event.currentTarget.parentElement ?? event.currentTarget).direction === "rtl";
@@ -48,7 +50,8 @@ function VisitTabs({ selected, onSelect }: { selected: WorkspaceTab; onSelect: (
     const tablist = event.currentTarget.parentElement;
     onSelect(tabs[next].id);
     window.requestAnimationFrame(() => tablist?.querySelectorAll<HTMLButtonElement>("[role='tab']")[next]?.focus());
-  }}>{tab.label}</button>)}</div>;
+  }}><Icon size={18} aria-hidden="true" /><span>{tab.label}</span></button>;
+  })}</div>;
 }
 
 function PatientAndVisitSummary({
@@ -81,21 +84,21 @@ function PatientAndVisitSummary({
       <span className="active-visit-avatar" aria-hidden="true">{initials}</span>
       <div><h2 id="active-visit-patient-name">{visit.patient.full_name}</h2><p>{visit.patient.age ? `${visit.patient.age} ${c.yearsOld}` : c.notRecorded} · {displayText(visit.patient.gender, c.notRecorded)}</p><p dir="ltr">{displayText(visit.patient.phone_number, c.notRecorded)}</p></div>
     </div>
-    <dl className="active-visit-summary-list">
+    <dl className="active-visit-summary-list active-visit-appointment-list">
       <div><dt><CalendarDays size={17} aria-hidden="true" />{c.appointment}</dt><dd className="active-visit-appointment" dir="ltr"><span>{formatDateRange(visit.appointment.start_datetime, visit.appointment.end_datetime) || c.notRecorded}</span><StatusPill status={visit.appointment.status} /></dd></div>
       <div><dt><Clock3 size={17} aria-hidden="true" />{c.visitStatus}</dt><dd><StatusPill status={visit.status} /></dd></div>
-      <div><dt><Stethoscope size={17} aria-hidden="true" />{c.doctor}</dt><dd>{displayText(visit.doctor.full_name, c.notRecorded)}</dd></div>
-      <div><dt><Clock3 size={17} aria-hidden="true" />{c.started}</dt><dd dir="ltr">{formatDateTime(visit.started_at) || c.notRecorded}</dd></div>
     </dl>
     <dl className="active-visit-summary-list active-visit-audit-list">
-      <div><dt>{c.reason}</dt><dd>{displayText(visit.appointment.reason, c.notRecorded)}</dd></div>
-      <div><dt>{c.created}</dt><dd dir="ltr">{formatDateTime(visit.created_at) || c.notRecorded}</dd></div>
-      <div><dt>{c.updated}</dt><dd dir="ltr">{formatDateTime(visit.updated_at) || c.notRecorded}</dd></div>
+      <div><dt><Clock3 size={17} aria-hidden="true" />{c.created}</dt><dd dir="ltr">{formatDateTime(visit.created_at) || c.notRecorded}</dd></div>
+      <div><dt><Clock3 size={17} aria-hidden="true" />{c.updated}</dt><dd dir="ltr">{formatDateTime(visit.updated_at) || c.notRecorded}</dd></div>
+      <div><dt><Stethoscope size={17} aria-hidden="true" />{c.doctor}</dt><dd>{displayText(visit.doctor.full_name, c.notRecorded)}</dd></div>
     </dl>
     <div className="active-visit-summary-actions">
       <Link className="button secondary" to={profilePath} onClick={guardProfile}><ExternalLink size={17} aria-hidden="true" />{c.openPatient}</Link>
-      {canSave ? <button className={`button ${isDirty ? "primary" : "secondary"}`} type="button" disabled={!isDirty || isSaving} aria-busy={isSaving || undefined} onClick={onSave}><Save size={17} aria-hidden="true" />{isSaving ? c.saving : c.saveNotes}</button> : null}
-      {canComplete ? <button className="button active-visit-complete" type="button" onClick={onComplete}>{c.completeVisit}</button> : null}
+      {canSave || canComplete ? <div className="active-visit-clinical-actions">
+        {canSave ? <button className={`button ${isDirty ? "primary" : "secondary"}`} type="button" disabled={!isDirty || isSaving} aria-busy={isSaving || undefined} onClick={onSave}><Save size={17} aria-hidden="true" />{isSaving ? c.saving : c.saveNotes}</button> : null}
+        {canComplete ? <button className="button active-visit-complete" type="button" onClick={onComplete}>{c.completeVisit}</button> : null}
+      </div> : null}
     </div>
   </section>;
 }

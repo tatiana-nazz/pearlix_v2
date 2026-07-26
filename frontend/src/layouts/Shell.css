@@ -420,7 +420,7 @@ body {
 
 .workspace-content {
   min-height: calc(100vh - 68px);
-  overflow: auto;
+  overflow: visible;
   padding: 28px 28px 40px;
 }
 

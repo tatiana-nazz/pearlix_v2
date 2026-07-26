@@ -130,17 +130,6 @@ export function ProtectedXrayViewer({
       aria-modal={enlargedFallback || undefined}
       aria-label={enlargedFallback ? originalLabel : undefined}
     >
-      <figcaption className="protected-xray-toolbar">
-        <span>{originalLabel}</span>
-        <div className="protected-xray-toolbar-actions">
-          {overlayAvailable && overlayEndpoint ? <Button variant="secondary" type="button" aria-pressed={overlayVisible} onClick={toggleOverlay}>{overlayVisible ? c.hideOverlay : c.showOverlay}</Button> : null}
-          <Button variant="secondary" type="button" onClick={() => setBoundedScale(scale + SCALE_STEP)} disabled={scale >= MAX_SCALE}><Plus size={17} aria-hidden="true" />{c.zoomIn}</Button>
-          <Button variant="secondary" type="button" onClick={() => setBoundedScale(scale - SCALE_STEP)} disabled={scale <= MIN_SCALE}><Minus size={17} aria-hidden="true" />{c.zoomOut}</Button>
-          <Button variant="secondary" type="button" onClick={() => { setScale(1); setOverlayVisible(false); }}><RotateCcw size={17} aria-hidden="true" />{c.reset}</Button>
-          <Button variant="secondary" type="button" onClick={() => setScale(1)}><Scan size={17} aria-hidden="true" />{c.fitToView}</Button>
-          <Button variant="secondary" type="button" aria-pressed={isEnlarged} onClick={() => void toggleFullscreen()}>{isEnlarged ? <Minimize2 size={17} aria-hidden="true" /> : <Maximize2 size={17} aria-hidden="true" />}{isEnlarged ? c.exitFullscreen : c.fullscreen}</Button>
-        </div>
-      </figcaption>
       <div className="protected-xray-canvas">
         <div className="protected-xray-media" data-scale={scale.toFixed(2)} style={{ transform: `scale(${scale})` }}>
           <img className="protected-xray-original" src={original.url} alt={originalAlt} />
@@ -148,7 +137,18 @@ export function ProtectedXrayViewer({
         </div>
         {overlayVisible && overlay.isLoading ? <span className="protected-xray-overlay-state" role="status">{c.loadingOverlay}</span> : null}
       </div>
-      <output className="protected-xray-scale" aria-live="polite">{Math.round(scale * 100)}%</output>
+      <figcaption className="protected-xray-toolbar">
+        <span className="protected-xray-label">{originalLabel}</span>
+        <div className="protected-xray-toolbar-actions">
+          <Button variant="secondary" type="button" onClick={() => setBoundedScale(scale + SCALE_STEP)} disabled={scale >= MAX_SCALE}><Plus size={17} aria-hidden="true" />{c.zoomIn}</Button>
+          <Button variant="secondary" type="button" onClick={() => setBoundedScale(scale - SCALE_STEP)} disabled={scale <= MIN_SCALE}><Minus size={17} aria-hidden="true" />{c.zoomOut}</Button>
+          <Button variant="secondary" type="button" onClick={() => { setScale(1); setOverlayVisible(false); }}><RotateCcw size={17} aria-hidden="true" />{c.reset}</Button>
+          {overlayAvailable && overlayEndpoint ? <Button variant="secondary" type="button" aria-pressed={overlayVisible} onClick={toggleOverlay}>{overlayVisible ? c.hideOverlay : c.showOverlay}</Button> : null}
+          <Button variant="secondary" type="button" onClick={() => setScale(1)}><Scan size={17} aria-hidden="true" />{c.fitToView}</Button>
+          <Button variant="secondary" type="button" aria-pressed={isEnlarged} onClick={() => void toggleFullscreen()}>{isEnlarged ? <Minimize2 size={17} aria-hidden="true" /> : <Maximize2 size={17} aria-hidden="true" />}{isEnlarged ? c.exitFullscreen : c.fullscreen}</Button>
+        </div>
+        <output className="protected-xray-scale" aria-live="polite">{Math.round(scale * 100)}%</output>
+      </figcaption>
       {overlayFailed ? <p className="protected-xray-overlay-error" role="alert">{c.overlayUnavailable}</p> : null}
     </figure>
   );

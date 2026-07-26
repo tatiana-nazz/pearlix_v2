@@ -177,7 +177,7 @@ test("Real API appointment actions remain connected through corrected detail-fir
   await expect(page).toHaveURL(/\/staff\/appointments\/needs-reschedule/);
   await expect(page.getByText("2 records", { exact: true })).toBeVisible();
 
-  await page.goto("/staff/appointments/day");
+  await page.goto("/staff/appointments/day?date=2026-07-26");
   await page.getByRole("row", { name: /Amina Khalil/ }).click();
   for (const action of ["Check in", "Mark no-show", "Cancel"]) await expect(page.getByRole("button", { name: action, exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Close", exact: true }).click();

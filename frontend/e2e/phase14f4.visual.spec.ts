@@ -49,21 +49,34 @@ async function expectNoDocumentOverflow(page: Page) {
 }
 
 async function verifyStaticPatientRail(page: Page, role: "admin" | "staff") {
+  await page.setViewportSize({ width: 1024, height: 768 });
   const patients = await authorizedJson<{ results: Array<{ id: number }> }>(page, "/patients/?search=Lina%20Mansour");
   const patientId = patients.results[0]?.id;
   if (!patientId) throw new Error("The deterministic active-visit patient is missing.");
   await page.goto(`/${role}/patients/${patientId}`);
   const rail = page.locator(".patient-identity-rail");
+  const main = page.locator(".patient-detail-main");
   await expect(rail).toBeVisible();
+  await expect(main).toBeVisible();
   expect(await rail.evaluate((element) => getComputedStyle(element).position)).toBe("sticky");
-  await page.getByRole("tab", { name: "Medical Summary" }).click();
-  await page.evaluate(() => window.scrollTo(0, 260));
-  const firstTop = await rail.evaluate((element) => Math.round(element.getBoundingClientRect().top));
+  expect(await page.locator(".workspace-content").evaluate((element) => getComputedStyle(element).overflow)).toBe("visible");
+  const initialGeometry = await page.evaluate(() => ({
+    railTop: Math.round(document.querySelector(".patient-identity-rail")!.getBoundingClientRect().top),
+    mainTop: Math.round(document.querySelector(".patient-detail-main")!.getBoundingClientRect().top),
+  }));
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  const secondTop = await rail.evaluate((element) => Math.round(element.getBoundingClientRect().top));
-  expect(Math.abs(firstTop - secondTop)).toBeLessThanOrEqual(1);
+  const finalGeometry = await page.evaluate(() => ({
+    railTop: Math.round(document.querySelector(".patient-identity-rail")!.getBoundingClientRect().top),
+    mainTop: Math.round(document.querySelector(".patient-detail-main")!.getBoundingClientRect().top),
+    scrollY: Math.round(window.scrollY),
+    stickyTop: Math.round(Number.parseFloat(getComputedStyle(document.querySelector(".patient-identity-rail")!).top)),
+  }));
+  expect(finalGeometry.scrollY).toBeGreaterThan(0);
+  expect(finalGeometry.mainTop).toBeLessThan(initialGeometry.mainTop);
+  expect(Math.abs(finalGeometry.railTop - finalGeometry.stickyTop)).toBeLessThanOrEqual(1);
+  expect(finalGeometry.railTop).toBeLessThan(initialGeometry.railTop);
   await expectNoDocumentOverflow(page);
-  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.setViewportSize({ width: 1023, height: 768 });
   expect(await rail.evaluate((element) => getComputedStyle(element).position)).toBe("static");
   await expectNoDocumentOverflow(page);
 }
@@ -124,6 +137,10 @@ test("Doctor completes the inline active-visit X-ray workflow at the frozen view
   await expect(page.getByRole("heading", { name: "Active visit", exact: true })).toBeVisible();
   await page.getByRole("link", { name: /Lina Mansour Open active visit/ }).click();
   await expect(page.getByRole("heading", { name: "Active Visit", exact: true })).toBeVisible();
+  const themeToggle = page.locator(".theme-toggle");
+  if ((await themeToggle.getAttribute("aria-label")) === "Theme: Light") await themeToggle.click();
+  expect(await page.locator(".active-visit-context-stack").evaluate((element) => getComputedStyle(element).position)).toBe("static");
+  expect(await page.locator(".active-visit-summary").evaluate((element) => getComputedStyle(element).boxShadow)).toBe("none");
   await expect(page.getByRole("tab")).toHaveText(["Visit Notes", "Patient Profile", "X-rays / Attachments", "Billing / Invoice Handoff"]);
 
   const notes = page.getByLabel("Clinical notes");
@@ -136,6 +153,19 @@ test("Doctor completes the inline active-visit X-ray workflow at the frozen view
 
   await page.getByRole("tab", { name: "X-rays / Attachments" }).click();
   await expect(page.getByRole("heading", { name: "Selected X-ray" })).toBeVisible();
+  await expect(page.locator(".active-xray-canvas-panel")).toBeVisible();
+  await expect(page.locator(".active-xray-review-side")).toBeVisible();
+  await expect(page.getByText("AI Result", { exact: true })).toBeVisible();
+  const protectedOriginal = page.locator(".protected-xray-original");
+  await expect(protectedOriginal).toBeVisible();
+  await expect.poll(() => protectedOriginal.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  const reviewGeometry = await page.evaluate(() => {
+    const canvas = document.querySelector(".active-xray-canvas-panel")!.getBoundingClientRect();
+    const side = document.querySelector(".active-xray-review-side")!.getBoundingClientRect();
+    return { canvasWidth: canvas.width, sideWidth: side.width, alignedTop: Math.abs(canvas.top - side.top) < 1 };
+  });
+  expect(reviewGeometry.canvasWidth).toBeGreaterThan(reviewGeometry.sideWidth);
+  expect(reviewGeometry.alignedTop).toBe(true);
   await page.getByRole("button", { name: "Active visit bitewing X-ray without AI" }).click();
   const runRequest = page.waitForResponse((response) => response.url().includes("/run-ai/") && response.request().method() === "POST");
   await page.getByRole("button", { name: "Run AI Analysis" }).click();
@@ -150,26 +180,39 @@ test("Doctor completes the inline active-visit X-ray workflow at the frozen view
   });
   await page.getByRole("button", { name: "Upload", exact: true }).click();
   await expect(page.getByText("phase14f4-disposable.png").first()).toBeVisible();
-  await expect(page.locator(".protected-xray-original")).toBeVisible();
+  await expect(protectedOriginal).toBeVisible();
 
   await page.getByRole("button", { name: "Active visit panoramic X-ray with mock AI" }).click();
   const viewer = page.locator(".protected-xray-viewer");
   await expect(viewer).toBeVisible();
+  await expect(protectedOriginal).toBeVisible();
+  await expect.poll(() => protectedOriginal.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   await expect(page.getByRole("button", { name: "Show AI Overlay" })).toBeVisible();
   await page.getByRole("button", { name: "Zoom In" }).click();
   await expect(page.locator(".protected-xray-media")).toHaveAttribute("data-scale", "1.25");
   await page.getByRole("button", { name: "Zoom Out" }).click();
   await expect(page.locator(".protected-xray-media")).toHaveAttribute("data-scale", "1.00");
   await page.getByRole("button", { name: "Show AI Overlay" }).click();
-  await expect(page.locator(".protected-xray-overlay")).toBeVisible();
-  const alignment = await page.evaluate(() => {
-    const original = document.querySelector(".protected-xray-original")!.getBoundingClientRect();
-    const overlay = document.querySelector(".protected-xray-overlay")!.getBoundingClientRect();
-    return [overlay.x - original.x, overlay.y - original.y, overlay.width - original.width, overlay.height - original.height];
+  const protectedOverlay = page.locator(".protected-xray-overlay");
+  await expect(protectedOverlay).toBeVisible();
+  await expect.poll(() => protectedOverlay.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  const overlayGeometry = await page.evaluate(() => {
+    const originalElement = document.querySelector(".protected-xray-original")!;
+    const overlayElement = document.querySelector(".protected-xray-overlay")!;
+    const original = originalElement.getBoundingClientRect();
+    const overlay = overlayElement.getBoundingClientRect();
+    return {
+      deltas: [overlay.x - original.x, overlay.y - original.y, overlay.width - original.width, overlay.height - original.height],
+      sameCanvas: originalElement.closest(".protected-xray-canvas") === overlayElement.closest(".protected-xray-canvas"),
+      separateOverlayFigures: document.querySelectorAll(".protected-xray-overlay-figure, .xray-overlay-figure, .overlay-figure").length,
+    };
   });
-  expect(alignment.every((delta) => Math.abs(delta) < 1)).toBe(true);
+  expect(overlayGeometry.deltas.every((delta) => Math.abs(delta) < 1)).toBe(true);
+  expect(overlayGeometry.sameCanvas).toBe(true);
+  expect(overlayGeometry.separateOverlayFigures).toBe(0);
   await page.getByRole("button", { name: "Hide AI Overlay" }).click();
   await expect(page.locator(".protected-xray-overlay")).toHaveCount(0);
+  await expect(protectedOriginal).toBeVisible();
   await page.getByRole("button", { name: "Fit to View" }).click();
   await page.getByRole("button", { name: "Reset" }).click();
   await page.getByRole("button", { name: "Fullscreen" }).click();
