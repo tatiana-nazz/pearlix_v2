@@ -15,12 +15,12 @@ export function AdminDashboard() {
   if (query.isError) return <DashboardError language={language} onRetry={() => void query.refetch()} />;
   if (!query.data) return <DashboardEmpty language={language} />;
   const data = query.data;
-  return <main className="dashboard-v2" data-role="ADMIN"><DashboardHeader language={language} clinicDate={data.clinic_date} clinicTimezone={data.clinic_timezone} title={c.adminTitle} description={c.adminDescription} refreshing={query.isFetching} onRefresh={() => void query.refetch()} />
+  return <main className="dashboard-v2" data-role="ADMIN"><DashboardHeader language={language} clinicDate={data.clinic_date} clinicTimezone={data.clinic_timezone} title={c.adminTitle} description={c.adminDescription} actions={<><Link className="v2-button" to="/admin/team/new">{c.addTeamMember}</Link><Link className="v2-button secondary" to="/admin/users/new">{c.createUser}</Link></>} />
     <DashboardMetrics>
-      <DashboardMetric icon={<UsersRound size={22} />} label={c.activePatients} value={data.total_active_patients} to="/admin/patients" />
-      <DashboardMetric icon={<CalendarDays size={22} />} label={c.appointments} value={data.today_appointments_count} to="/admin/appointments/day" />
-      <DashboardMetric icon={<CircleAlert size={22} />} label={c.needsReschedule} value={data.needs_reschedule_appointments_count} support={data.needs_reschedule_appointments_count ? c.attention : undefined} to="/admin/appointments/needs-reschedule" />
-      <DashboardMetric icon={<Activity size={22} />} label={c.activeVisits} value={data.active_visits_count} />
+      <DashboardMetric tone="violet" icon={<UsersRound size={22} />} label={c.activePatients} value={data.total_active_patients} to="/admin/patients" />
+      <DashboardMetric tone="blue" icon={<CalendarDays size={22} />} label={c.appointments} value={data.today_appointments_count} to="/admin/appointments/day" />
+      <DashboardMetric tone="orange" icon={<CircleAlert size={22} />} label={c.needsReschedule} value={data.needs_reschedule_appointments_count} support={data.needs_reschedule_appointments_count ? c.attention : undefined} to="/admin/appointments/needs-reschedule" />
+      <DashboardMetric tone="teal" icon={<Activity size={22} />} label={c.activeVisits} value={data.active_visits_count} />
     </DashboardMetrics>
     <div className="dashboard-v2-layout"><DashboardSection title={c.attention}><div className="dashboard-v2-attention">{data.needs_reschedule_appointments_count ? <Link to="/admin/appointments/needs-reschedule">{c.needsReschedule}: {data.needs_reschedule_appointments_count}</Link> : <p>{c.noAttention}</p>}{data.pending_billing_handoffs_count ? <Link to="/admin/billing/handoffs">{c.pendingHandoffs}: {data.pending_billing_handoffs_count}</Link> : null}</div></DashboardSection>
       <DashboardSection title={c.activity} action={<Link to="/admin/appointments/list">{c.viewAll}</Link>} className="dashboard-v2-primary"><DashboardList language={language} clinicTimezone={data.clinic_timezone} items={data.recent_appointments} empty={c.noActivity} role="ADMIN" showDoctor /></DashboardSection></div>

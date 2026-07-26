@@ -167,6 +167,7 @@ export const router = createBrowserRouter([
               { path: "appointments", element: <Navigate to="/doctor/appointments/day" replace /> },
               { path: "appointments/day", element: <AppointmentsPage role="DOCTOR" view="day" /> },
               { path: "appointments/week", element: <AppointmentsPage role="DOCTOR" view="week" /> },
+              { path: "appointments/month", element: <AppointmentsPage role="DOCTOR" view="month" /> },
               { path: "appointments/list", element: <AppointmentsPage role="DOCTOR" view="list" /> },
               { path: "appointments/needs-reschedule", element: <AppointmentsPage role="DOCTOR" view="needs-reschedule" /> },
               { path: "patients", element: <PatientsPage role="DOCTOR" /> },

@@ -73,6 +73,16 @@ test("Phase 14F shell and route surfaces use the supplied desktop visual system"
   await page.goto("/admin/users");
   await expect(page.getByRole("heading", { name: "Users & Access" })).toBeVisible();
   await capture(page, "after-admin-users-access");
+  await page.goto("/admin/clinic-settings");
+  for (const title of ["Clinic identity", "Scheduling defaults", "Locale and currency", "AI operations"]) await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save settings" })).toBeVisible();
+  await capture(page, "after-admin-clinic-settings");
+  await expect(page.getByRole("link", { name: "Profile", exact: true })).toHaveAttribute("href", "/admin/profile");
+  await page.goto("/admin/patients");
+  await page.getByLabel("Search", { exact: true }).fill("Amina Khalil");
+  await page.getByText("Amina Khalil", { exact: true }).click();
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Archive|Reactivate/ })).toHaveCount(0);
   expect(issues.consoleErrors).toEqual([]);
   expect(issues.failedRequests).toEqual([]);
   expect(issues.httpErrors).toEqual([]);
@@ -83,27 +93,102 @@ test("Staff visual acceptance covers appointments, profile, patient, and payment
   await page.setViewportSize({ width: 1440, height: 1000 });
   await login(page, accounts.staff);
   await expect(page).toHaveURL(/\/staff\/dashboard$/);
+  await expect(page.getByRole("button", { name: "Refresh" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "New appointment" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "New patient" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "My Profile" })).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "My Schedule" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "My Leave" })).toHaveCount(0);
   await capture(page, "after-staff-dashboard");
 
   await page.goto("/staff/appointments/week");
   await expect(page.getByRole("heading", { name: "Appointments", exact: true })).toBeVisible();
   await expect(page.getByText("Week summary")).toBeVisible();
+  for (const label of ["Day", "Week", "Month", "List", "Calendar", "Reschedule Queue"]) await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible();
   await capture(page, "after-staff-appointments-week");
+
+  await page.getByRole("link", { name: "Month", exact: true }).click();
+  await expect(page).toHaveURL(/\/staff\/appointments\/month/);
+  await capture(page, "after-staff-appointments-month");
+  await page.getByRole("link", { name: "Reschedule Queue", exact: true }).click();
+  await expect(page).toHaveURL(/\/staff\/appointments\/needs-reschedule/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/staff\/appointments\/month/);
+  await page.goForward();
+  await expect(page).toHaveURL(/\/staff\/appointments\/needs-reschedule/);
+  await expect(page.getByText("Demo approved leave").first()).toBeVisible();
+  await capture(page, "after-staff-reschedule-queue");
 
   await page.goto("/staff/profile");
   await expect(page.getByRole("heading", { name: "Profile", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Current workload", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Working hours / shifts", exact: true })).toBeVisible();
   await capture(page, "after-staff-profile");
 
-  await page.goto("/staff/patients/1032");
+  await page.goto("/staff/patients");
+  await page.getByLabel("Search", { exact: true }).fill("Dania Farhat");
+  await page.getByText("Dania Farhat", { exact: true }).click();
   await expect(page.locator(".profile-header").getByRole("heading", { name: "Dania Farhat", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Edit patient" })).toBeVisible();
+  await expect(page.getByLabel(/First name/)).toHaveValue("Dania");
+  await page.getByLabel("Phone", { exact: true }).fill("+963-93-1400023");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("+963-93-1400023", { exact: true }).first()).toBeVisible();
   await capture(page, "after-staff-patient-profile");
 
   await page.goto("/staff/billing/invoices");
-  await page.getByText("INV-20260726-000044", { exact: true }).click();
+  await page.getByText("Bassam Salloum", { exact: true }).click();
   await expect(page).toHaveURL(/\/staff\/billing\/invoices\/\d+$/);
   await expect(page.getByRole("button", { name: "Record payment" })).toBeVisible();
   await capture(page, "after-staff-invoice-payment");
+  expect(issues.consoleErrors).toEqual([]);
+  expect(issues.failedRequests).toEqual([]);
+  expect(issues.httpErrors).toEqual([]);
+});
+
+test("Real API appointment actions remain connected through corrected detail-first UI", async ({ page }) => {
+  test.setTimeout(60_000);
+  const issues = diagnostics(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await login(page, accounts.staff);
+
+  await page.goto("/staff/appointments/day");
+  await page.getByRole("button", { name: "New appointment", exact: true }).click();
+  await page.getByRole("combobox", { name: "Patient" }).fill("Riad Hakim");
+  await page.getByRole("option", { name: /Riad Hakim/ }).click();
+  const appointmentDialog = page.locator(".v2-overlay").filter({ hasText: "New appointment" });
+  await appointmentDialog.locator("select").selectOption({ label: "Dr. Yasmin Barakat" });
+  await appointmentDialog.locator('input[type="date"]').fill("2026-07-27");
+  await appointmentDialog.locator('input[type="time"]').fill("16:00");
+  await appointmentDialog.locator("label").filter({ hasText: "Reason" }).locator("input").fill("E2E created appointment");
+  await appointmentDialog.getByRole("button", { name: "Save appointment" }).click();
+  await expect(page.getByRole("dialog", { name: "New appointment" })).toHaveCount(0);
+  await page.goto("/staff/appointments/list?search=Riad");
+  await expect(page.getByText("E2E created appointment", { exact: true })).toBeVisible();
+
+  await page.goto("/staff/appointments/needs-reschedule");
+  await page.getByRole("row", { name: /Mira Sayegh Dr\. Samir Nasser/ }).click();
+  await page.getByRole("button", { name: "Reschedule", exact: true }).click();
+  await page.getByRole("button", { name: /8:30 AM - 9:00 AM 0\/3 booked/ }).click();
+  await page.getByRole("button", { name: "Save reschedule" }).click();
+  await expect(page).toHaveURL(/\/staff\/appointments\/needs-reschedule/);
+  await expect(page.getByText("2 records", { exact: true })).toBeVisible();
+
+  await page.goto("/staff/appointments/day");
+  await page.getByRole("row", { name: /Amina Khalil/ }).click();
+  for (const action of ["Check in", "Mark no-show", "Cancel"]) await expect(page.getByRole("button", { name: action, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("button", { name: "Logout" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await login(page, "doctor.two@pearlix-demo.local");
+  await page.goto("/doctor/appointments/day");
+  await page.getByRole("row", { name: /Karim Azzam/ }).click();
+  await page.getByRole("button", { name: "Start visit", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(page).toHaveURL(/\/doctor\/visits\/active/);
+  await expect(page.getByRole("heading", { name: "Active visit", exact: true })).toBeVisible();
   expect(issues.consoleErrors).toEqual([]);
   expect(issues.failedRequests).toEqual([]);
   expect(issues.httpErrors).toEqual([]);
@@ -119,6 +204,8 @@ test("Doctor visual acceptance covers appointments, active visit, and protected 
   await page.goto("/doctor/appointments/week");
   await expect(page.getByRole("heading", { name: "Appointments", exact: true })).toBeVisible();
   await capture(page, "after-doctor-appointments-week");
+  await page.getByRole("link", { name: "Month", exact: true }).click();
+  await expect(page).toHaveURL(/\/doctor\/appointments\/month/);
 
   await page.goto("/doctor/visits/active");
   await expect(page.getByRole("heading", { name: "Active visit", exact: true })).toBeVisible();

@@ -27,6 +27,7 @@ interface PatientFormProps {
   onCancel?: () => void;
   onReloadLatest?: () => void;
   onContinueReviewing?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 const bloodGroups = ["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
@@ -47,6 +48,7 @@ export function PatientForm({
   onCancel,
   onReloadLatest,
   onContinueReviewing,
+  onDirtyChange,
 }: PatientFormProps) {
   const language = useAuthStore((state) => state.user?.language_preference);
   const c = patientCopy(language);
@@ -63,6 +65,10 @@ export function PatientForm({
   useEffect(() => {
     if (error) setErrors(apiErrorToFormErrors(error));
   }, [error]);
+
+  useEffect(() => {
+    onDirtyChange?.(JSON.stringify(values) !== initialValues.current);
+  }, [onDirtyChange, values]);
 
   function updateField<K extends keyof PatientFormValues>(field: K, value: PatientFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));

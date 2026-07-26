@@ -1,16 +1,15 @@
-import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-import { Button, KpiCard, Skeleton, StatePanel, StatusBadge, SurfaceCard } from "../../components/v2";
+import { Button, KpiCard, Skeleton, StatePanel, StatusBadge, SurfaceCard, type KpiTone } from "../../components/v2";
 import type { DashboardAppointmentSummary } from "../../types/dashboard";
 import type { LanguagePreference } from "../../types/auth";
 import { dashboardTime } from "./format";
 import { dashboardCopy, dashboardStatus } from "./i18n";
 
-export function DashboardHeader({ language, clinicDate, clinicTimezone, title, description, refreshing, onRefresh }: { language: LanguagePreference; clinicDate: string; clinicTimezone: string; title: string; description: string; refreshing: boolean; onRefresh: () => void }) {
+export function DashboardHeader({ language, clinicDate, clinicTimezone, title, description, actions }: { language: LanguagePreference; clinicDate: string; clinicTimezone: string; title: string; description: string; actions?: ReactNode }) {
   const c = dashboardCopy(language);
-  return <header className="dashboard-v2-header"><div><p className="dashboard-v2-date">{c.today} · {new Intl.DateTimeFormat(language === "AR" ? "ar" : "en-US", { dateStyle: "full", timeZone: clinicTimezone }).format(new Date(`${clinicDate}T12:00:00Z`))}</p><h1>{title}</h1><p>{description}</p></div><Button type="button" variant="secondary" onClick={onRefresh} loading={refreshing}><RefreshCw size={18} aria-hidden="true" />{refreshing ? c.refreshing : c.refresh}</Button></header>;
+  return <header className="dashboard-v2-header"><div><p className="dashboard-v2-date">{c.today} · {new Intl.DateTimeFormat(language === "AR" ? "ar" : "en-US", { dateStyle: "full", timeZone: clinicTimezone }).format(new Date(`${clinicDate}T12:00:00Z`))}</p><h1>{title}</h1><p>{description}</p></div>{actions ? <div className="dashboard-v2-header-actions">{actions}</div> : null}</header>;
 }
 
 export function DashboardLoading({ language }: { language: LanguagePreference }) {
@@ -24,11 +23,10 @@ export function DashboardError({ language, onRetry }: { language: LanguagePrefer
 }
 
 export function DashboardEmpty({ language }: { language: LanguagePreference }) { return <StatePanel state="empty" title={dashboardCopy(language).noData} />; }
-
 export function DashboardMetrics({ children }: { children: ReactNode }) { return <div className="dashboard-v2-metrics">{children}</div>; }
 
-export function DashboardMetric({ icon, label, value, support, to }: { icon: ReactNode; label: string; value: number; support?: string; to?: string }) {
-  const content = <KpiCard icon={icon} label={label} value={value} support={support} />;
+export function DashboardMetric({ icon, label, value, support, to, tone }: { icon: ReactNode; label: string; value: number; support?: string; to?: string; tone?: KpiTone }) {
+  const content = <KpiCard icon={icon} label={label} value={value} support={support} tone={tone} />;
   return to ? <Link className="dashboard-v2-metric-link" aria-label={`${label}: ${value}`} to={to}>{content}</Link> : content;
 }
 

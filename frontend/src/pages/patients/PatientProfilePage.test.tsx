@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PatientDetail } from "../../types/patients";
 import { PatientProfilePage } from "./PatientProfilePage";
@@ -48,6 +48,38 @@ vi.mock("../../features/patients/hooks/usePatientMutations", () => ({
 }));
 
 describe("PatientProfilePage", () => {
+  beforeEach(() => mutation.mutateAsync.mockClear());
+  it("opens Staff Edit with loaded values and submits the current version", async () => {
+    mutation.mutateAsync.mockResolvedValue(patient);
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/staff/patients/12"]}>
+        <Routes><Route path="/staff/patients/:patientId" element={<PatientProfilePage role="STAFF" />} /></Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(await screen.findByRole("dialog", { name: "Edit patient" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/First name/)).toHaveValue("Ava");
+    fireEvent.change(screen.getByLabelText(/First name/), { target: { value: "Avery" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ first_name: "Avery", version: 4 })));
+  });
+
+  it("allows Doctor edit for permitted fields without archive controls", async () => {
+    mutation.mutateAsync.mockResolvedValue(patient);
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/doctor/patients/12"]}><Routes><Route path="/doctor/patients/:patientId" element={<PatientProfilePage role="DOCTOR" />} /></Routes></MemoryRouter>);
+    expect(screen.queryByRole("button", { name: /Archive|Reactivate/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(await screen.findByLabelText("Phone"), { target: { value: "555-0199" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ phone_number: "555-0199", version: 4 })));
+  });
+
+  it("keeps Admin patient detail read-only", () => {
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/admin/patients/12"]}><Routes><Route path="/admin/patients/:patientId" element={<PatientProfilePage role="ADMIN" />} /></Routes></MemoryRouter>);
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Archive|Reactivate/ })).not.toBeInTheDocument();
+  });
+
   it("safely falls back to the readable overview when a Doctor opens the inaccessible billing tab directly", () => {
     render(
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/doctor/patients/12?tab=billing"]}>

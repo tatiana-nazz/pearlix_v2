@@ -20,7 +20,11 @@ describe("Sidebar", () => {
 
     expect(navigationByRole.STAFF.some((item) => item.path.includes("external-xrays"))).toBe(false);
     expect(navigationByRole.DOCTOR.some((item) => item.path.includes("billing/invoices"))).toBe(false);
-    expect(navigationByRole.ADMIN.some((item) => item.path.includes("profile"))).toBe(false);
+    expect(navigationByRole.ADMIN.filter((item) => item.path.includes("profile"))).toHaveLength(1);
+    for (const role of ["STAFF", "DOCTOR"] as const) {
+      expect(navigationByRole[role].filter((item) => item.label === "My Profile")).toHaveLength(1);
+      expect(navigationByRole[role].some((item) => ["My Schedule", "My Leave", "Needs reschedule"].includes(item.label))).toBe(false);
+    }
   });
 
   it("renders accessible links for the current workspace", () => {

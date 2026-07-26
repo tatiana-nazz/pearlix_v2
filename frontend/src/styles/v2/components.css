@@ -184,16 +184,49 @@
   min-height: 140px;
 }
 .dashboard-v2-metrics .v2-card::before {
-  width: 44px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--v2-gradient-primary);
-  content: "";
+  content: none;
 }
 .dashboard-v2-metrics .v2-card strong {
   color: var(--v2-text);
   font-size: 2.1rem;
 }
+.dashboard-v2-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.dashboard-v2-metrics .v2-kpi {
+  --kpi-accent: var(--v2-primary);
+  --kpi-tint: var(--v2-primary-soft);
+  position: relative;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--kpi-accent) 24%, var(--v2-border));
+  background: linear-gradient(145deg, var(--kpi-tint), var(--v2-surface) 76%);
+}
+.dashboard-v2-metrics .v2-kpi::after {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 4px;
+  background: var(--kpi-accent);
+  content: "";
+}
+.dashboard-v2-metrics .v2-kpi .kpi-icon {
+  display: grid;
+  inline-size: 42px;
+  block-size: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--kpi-accent) 14%, var(--v2-surface));
+  color: var(--kpi-accent);
+}
+.dashboard-v2-metrics .v2-kpi.violet { --kpi-accent:#7c5ce7; --kpi-tint:color-mix(in srgb,#7c5ce7 10%,var(--v2-surface)); }
+.dashboard-v2-metrics .v2-kpi.teal { --kpi-accent:var(--v2-teal); --kpi-tint:color-mix(in srgb,var(--v2-teal) 10%,var(--v2-surface)); }
+.dashboard-v2-metrics .v2-kpi.green { --kpi-accent:var(--v2-success); --kpi-tint:color-mix(in srgb,var(--v2-success) 9%,var(--v2-surface)); }
+.dashboard-v2-metrics .v2-kpi.amber { --kpi-accent:#d99a12; --kpi-tint:color-mix(in srgb,var(--v2-warning) 12%,var(--v2-surface)); }
+.dashboard-v2-metrics .v2-kpi.orange { --kpi-accent:#f97316; --kpi-tint:color-mix(in srgb,#f97316 11%,var(--v2-surface)); }
+.dashboard-v2-metrics .v2-kpi.rose { --kpi-accent:var(--v2-danger); --kpi-tint:color-mix(in srgb,var(--v2-danger) 9%,var(--v2-surface)); }
 .dashboard-v2-focus,
 .dashboard-v2-actions a {
   border-radius: 12px;
@@ -388,4 +421,93 @@
     overflow-x: auto;
     flex-wrap: nowrap;
   }
+}
+
+/* Phase 14F.1 appointment hierarchy and compact toolbar correction. */
+.appointments-navigation-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px 20px;
+}
+.appointments-navigation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.appointment-workspace-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border: 1px solid var(--v2-border);
+  border-radius: 14px;
+  background: var(--v2-surface);
+  padding: 4px;
+}
+.appointment-workspace-tabs a {
+  min-height: 36px;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 15px;
+  color: var(--v2-muted);
+  font-weight: 700;
+  text-decoration: none;
+}
+.appointment-workspace-tabs a.active {
+  background: var(--v2-primary);
+  color: #fff;
+}
+.appointments-filter-card {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+  padding: 16px 20px;
+}
+.appointments-v2-search {
+  display: grid;
+  min-width: 0;
+  max-width: none;
+  gap: 5px;
+  margin: 0;
+  color: var(--v2-muted);
+  font-size: .8rem;
+  font-weight: 700;
+}
+.appointments-v2-search input {
+  width: 100%;
+  min-height: var(--v2-control);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-control);
+  background: var(--v2-surface-subtle);
+  color: var(--v2-text);
+  padding-inline: 12px;
+  font: inherit;
+}
+.appointments-filter-card .appointment-filters {
+  display: flex;
+  grid-template-columns: none;
+  align-items: end;
+  gap: 12px;
+}
+.appointments-filter-card .appointment-filters label { min-width: 180px; }
+.appointments-queue-intro { margin: 0; color: var(--v2-muted); }
+.appointment-month-weekday {
+  padding: 4px 8px;
+  color: var(--v2-muted);
+  font-size: .78rem;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+.appointments-schedule-card { padding: 20px; }
+
+@media (max-width:1023px) {
+  .appointments-navigation-row { align-items: stretch; flex-direction: column; }
+  .appointments-filter-card { grid-template-columns: 1fr; }
+}
+@media (max-width:767px) {
+  .appointment-workspace-tabs,
+  .appointments-filter-card .appointment-filters { overflow-x: auto; flex-wrap: nowrap; }
+  .appointments-filter-card .appointment-filters label { min-width: 180px; }
 }

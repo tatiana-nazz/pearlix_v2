@@ -46,6 +46,15 @@ export function addDays(value: string, days: number): string {
   return toDateInputValue(date);
 }
 
+export function addMonths(value: string, months: number): string {
+  const current = localDate(new Date(`${value}T00:00:00`));
+  const day = current.getDate();
+  const target = new Date(current.getFullYear(), current.getMonth() + months, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(day, lastDay));
+  return toDateInputValue(target);
+}
+
 export function getWeekRange(anchor: string) {
   const date = localDate(new Date(`${anchor}T00:00:00`));
   const day = date.getDay();

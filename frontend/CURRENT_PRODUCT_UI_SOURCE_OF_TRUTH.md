@@ -6,14 +6,14 @@
 
 ## Product direction
 
-Pearlix is a professional medical SaaS for dental-clinic operations. The reconciled v2 runtime lineage continues from `e54a858`; the accepted current direction is the delivered Phase 14F visual source adoption on top of those current role workspaces: calm reference-derived clinical visual language, responsive desktop/tablet/mobile transformations, English/Arabic with RTL, and light/dark support. Existing runtime behavior, API contracts, and RBAC remain protected.
+Pearlix is a professional medical SaaS for dental-clinic operations. The reconciled v2 runtime lineage continues from `e54a858`. Phase 14F was implemented but rejected in direct user acceptance; Phase 14F.1 is the accepted correction layer on top of its source adoption. The current direction is a calm reference-derived clinical visual language, corrected workspace hierarchy, responsive desktop/tablet/mobile transformations, English/Arabic with RTL, and light/dark support. Existing runtime behavior, API contracts, and RBAC remain protected.
 
 ## Current product rules
 
-- **Shell and navigation:** retain the Phase 14F reference-derived shell and semantic token system. Role navigation exposes delivered dashboards, appointments, patients, clinical/visit work, X-ray/AI, billing where authorized, Team, and Users & Access as supported by routes and role guards.
+- **Shell and navigation:** retain the Phase 14F.1 corrected reference-derived shell and semantic token system. Use the Pearlix brand SVG, simple arrow collapse, text-only `EN`/`AR`, no top-right account menu, and one sidebar profile destination. Staff/Doctor schedule and leave belong inside profile. The appointment reschedule queue is a Calendar sibling tab, not a sidebar item.
 - **Team and Users & Access:** Team is the professional profile, availability, shifts, leave, and workload workspace. Users & Access is account identity, login status, security, and role management. Do not merge them into an older "Doctors & Staff" surface.
 - **Patients:** retain the read-first patient workspace, role-aware tabs, versioned edits, dedicated archive actions, and Staff-only General Information creation. Active Doctors may access every active, non-archived patient and permitted clinical history; workflow filters are not authorization restrictions.
-- **Appointments and dashboards:** retain delivered role dashboards and appointment workspace contracts. Staff performs operational scheduling; Doctors work only their permitted own appointment/visit actions; Admin remains supervisory where the backend enforces it.
+- **Appointments and dashboards:** retain meaningful KPI colors and role-specific primary actions without a generic Refresh button. The appointment workspace has Calendar/Reschedule Queue siblings and Day/Week/Month/List calendar views for every permitted role. Staff performs operational scheduling; Doctors work only their permitted own appointment/visit actions; Admin remains supervisory where the backend enforces it.
 - **Billing, visits, and imaging:** Doctors have no global Billing or payment processing. They may perform only current own-visit handoff actions. Visits, X-ray/AI, protected media, and AI boundaries remain governed by current backend contracts and role tests.
 - **Accessibility and presentation:** preserve bilingual/RTL, responsive behavior, light/dark support, accessible controls, and backend-enforced RBAC.
 
@@ -23,7 +23,7 @@ The supplied reference pack is adopted as the current visual authority for color
 
 The current implementation uses the reference-derived 264px/76px sidebar, 68px topbar, Manrope-first typography, `#f6f8fc` canvas, `#3f63f2` primary, 12px controls, 20px cards, 24px dialogs, supplied gradients/shadows, and one consolidated semantic token layer. The frozen 1279px, 1023px, and 767px transformations remain current. See `design_v3/DESIGN_SOURCE_ADOPTION_CONTRACT.md` and `design_v3/FULL_VISUAL_SOURCE_MIGRATION_RECORD.md`.
 
-All current route families are visually migrated. Future work must extend this token/component system rather than restore pre-14F route styling or copy excluded prototype behavior.
+All current route families are visually migrated and the Phase 14F.1 acceptance corrections supersede conflicting Phase 14F presentation. Future work must extend this token/component system rather than restore pre-14F route styling or copy excluded prototype behavior. See `design_v3/PHASE_14F1_UI_ACCEPTANCE_CORRECTION_RECORD.md`.
 
 ## Action hierarchy: Phase 14E.1A collection-action closure
 
@@ -56,4 +56,4 @@ Troubleshooting fixes the affected behavior without restoring an older shell or 
 
 ## Unresolved future work
 
-Real AI and the post-MVP limits recorded in project status remain unresolved. Phase 14F responsive, dark, RTL, console/network, and protected-media visual acceptance is closed. No future item authorizes a runtime change without approved scope.
+Real AI and the post-MVP limits recorded in project status remain unresolved. Phase 14F.1 responsive, dark, RTL, console/network, protected-media, patient-edit, appointment-workspace, and settings acceptance is closed. No future item authorizes a runtime change without approved scope.

@@ -5,7 +5,7 @@
       <stop offset="1" stop-color="#5baef7"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="18" fill="url(#pearlix)"/>
-  <path d="M20 18v11a12 12 0 0 0 24 0V18M17 18h6m18 0h6M32 41v5a7 7 0 0 0 14 0v-2" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="46" cy="41" r="3" fill="#fff"/>
+  <rect width="64" height="64" rx="17" fill="url(#pearlix)"/>
+  <g fill="none" stroke="#fff" stroke-width="4.6" stroke-linecap="round"><path d="M16 13v13a16 16 0 0 0 32 0V13"/><path d="M12 13h9m22 0h9M32 42v4a10 10 0 0 0 20 0v-3"/><circle cx="52" cy="38" r="4"/></g>
+  <circle cx="15" cy="11" r="4" fill="#fff"/><circle cx="49" cy="11" r="4" fill="#fff"/>
 </svg>

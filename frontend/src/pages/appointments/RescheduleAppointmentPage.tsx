@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
@@ -10,6 +10,7 @@ import { useDoctors } from "../../features/appointments/hooks/useDoctors";
 import { appointmentViewPath } from "../../features/appointments/utils/appointmentPermissions";
 
 export function RescheduleAppointmentPage() {
+  const navigate = useNavigate();
   const appointmentId = Number(useParams().appointmentId);
   const appointment = useAppointment(appointmentId);
   const doctors = useDoctors();
@@ -38,6 +39,7 @@ export function RescheduleAppointmentPage() {
           error={updateAppointment.error}
           onSubmit={async (payload) => {
             await updateAppointment.mutateAsync(payload);
+            navigate(appointmentViewPath("STAFF", "needs-reschedule"));
           }}
         />
       ) : null}

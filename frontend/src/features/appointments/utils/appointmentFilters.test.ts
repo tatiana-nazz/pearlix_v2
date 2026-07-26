@@ -15,13 +15,11 @@ describe("buildAppointmentFilters", () => {
     });
   });
 
-  it("keeps only supported backend query params", () => {
+  it("keeps only supported backend query params and leaves List unbounded by day", () => {
     expect(buildAppointmentFilters({ role: "STAFF", view: "list", date: "2026-07-10", doctorId: 7, page: 2, status: "CHECKED_IN" })).toEqual({
       page: 2,
       doctor_id: 7,
       status: "CHECKED_IN",
-      start_from: "2026-07-10T00:00:00",
-      start_to: "2026-07-11T00:00:00",
     });
   });
 });

@@ -52,6 +52,11 @@ body {
   box-shadow: 0 10px 22px rgba(63, 99, 242, 0.2);
 }
 
+.app-sidebar-brand-mark svg {
+  inline-size: 25px;
+  block-size: 25px;
+}
+
 .app-sidebar-brand-copy {
   display: grid;
   flex: 1;
@@ -173,17 +178,31 @@ body {
 }
 
 .sidebar-toggle {
+  display: grid;
   flex: 0 0 auto;
+  inline-size: 28px;
+  block-size: 36px;
+  place-items: center;
   margin: 0;
+  margin-inline-end: -4px;
   border: 0;
+  border-radius: 0;
   background: transparent;
+  color: var(--v2-text-muted);
   box-shadow: none;
+  cursor: pointer;
+}
+
+.sidebar-toggle:hover,
+.sidebar-toggle:focus-visible {
+  background: transparent;
+  color: var(--v2-primary);
 }
 
 .app-shell[data-collapsed="true"] .sidebar-toggle {
   position: absolute;
-  inset-block-start: 70px;
-  inset-inline-start: 16px;
+  inset-block-start: 74px;
+  inset-inline-start: 24px;
 }
 
 .app-sidebar-footer {
@@ -253,7 +272,7 @@ body {
   gap: 16px;
   border-block-end: 1px solid var(--v2-divider);
   background: color-mix(in srgb, var(--v2-surface) 96%, transparent);
-  padding-inline: 40px;
+  padding-inline: 28px;
   backdrop-filter: blur(18px);
 }
 
@@ -398,7 +417,7 @@ body {
 .workspace-content {
   min-height: calc(100vh - 68px);
   overflow: auto;
-  padding: 34px 40px 48px;
+  padding: 28px 28px 40px;
 }
 
 .mobile-nav-trigger,
@@ -440,8 +459,8 @@ body {
 
   .app-shell .sidebar-toggle {
     position: absolute;
-    inset-block-start: 70px;
-    inset-inline-start: 16px;
+    inset-block-start: 74px;
+    inset-inline-start: 24px;
   }
 
   .app-shell .v2-nav-link::after {

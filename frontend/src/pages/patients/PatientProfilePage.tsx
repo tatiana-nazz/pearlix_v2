@@ -27,6 +27,7 @@ import { getPatientPermissions, patientListPath } from "../../features/patients/
 import type { PatientFormValues } from "../../features/patients/utils/patientFormMapping";
 import type { UserRole } from "../../types/auth";
 import { useAuthStore } from "../../auth/authStore";
+import { Modal } from "../../components/v2";
 
 interface PatientProfilePageProps {
   role: UserRole;
@@ -44,6 +45,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const [searchParams, setSearchParams] = useSearchParams();
   const patientId = Number(params.patientId);
   const [isEditing, setIsEditing] = useState(Boolean(searchParams.get("edit")));
+  const [editDirty, setEditDirty] = useState(false);
   const [archiveMode, setArchiveMode] = useState<"archive" | "unarchive" | null>(null);
   const activeTab = searchParams.get("tab") ? tabFromSearch(searchParams.get("tab")) : defaultTab;
   const patient = usePatient(patientId);
@@ -58,7 +60,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const aiResults = usePatientAiResults(patientId, tabQueriesEnabled && activeTab === "xrays");
 
   useEffect(() => {
-    setIsEditing(searchParams.get("edit") === "1");
+    const section = searchParams.get("edit");
+    setIsEditing(section === "1" || section === "general" || section === "medical");
   }, [searchParams]);
 
   const permissions = useMemo(() => getPatientPermissions(role, patient.data), [role, patient.data]);
@@ -80,12 +83,14 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   }
 
   function openEdit(section: "general" | "medical" = "general") {
+    setEditDirty(false);
     const next = new URLSearchParams(searchParams);
     next.set("edit", section);
     setSearchParams(next);
   }
 
   function closeEdit() {
+    setEditDirty(false);
     const next = new URLSearchParams(searchParams);
     next.delete("edit");
     setSearchParams(next);
@@ -152,10 +157,14 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
             }}
           />
 
-          {isEditing && permissions.canEdit ? (
-            <div className="dialog-backdrop" role="presentation">
-              <section className="dialog-panel wide" role="dialog" aria-modal="true" aria-labelledby="edit-patient-title">
-                <h3 id="edit-patient-title">{searchParams.get("edit") === "medical" ? c.medicalHistory : c.editPatient}</h3>
+          <Modal
+            open={isEditing && permissions.canEdit}
+            title={searchParams.get("edit") === "medical" ? c.medicalHistory : c.editPatient}
+            onClose={closeEdit}
+            pending={updatePatient.isPending}
+            dirty={editDirty}
+            wide
+          >
                 <PatientForm
                   mode="edit"
                   section={searchParams.get("edit") === "medical" ? "medical" : "general"}
@@ -168,10 +177,9 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
                   onCancel={closeEdit}
                   onReloadLatest={() => void handleReloadLatestPatient()}
                   onContinueReviewing={() => updatePatient.reset()}
+                  onDirtyChange={setEditDirty}
                 />
-              </section>
-            </div>
-          ) : null}
+          </Modal>
 
           <PatientProfileTabs role={role} activeTab={visibleTab} onTabChange={setTab} />
 

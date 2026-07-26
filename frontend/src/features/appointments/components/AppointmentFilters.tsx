@@ -6,12 +6,11 @@ import { appointmentCopy, appointmentStatusLabel } from "../i18n";
 export type AppointmentStatusFilter = AppointmentStatus | "ALL";
 
 interface AppointmentFiltersProps {
-  date: string;
   status: AppointmentStatusFilter;
   doctorId: string;
   doctors: DoctorListItem[];
   showDoctorFilter: boolean;
-  onDateChange: (value: string) => void;
+  showStatusFilter?: boolean;
   onStatusChange: (value: AppointmentStatusFilter) => void;
   onDoctorChange: (value: string) => void;
 }
@@ -28,12 +27,11 @@ const statusOptions: AppointmentStatusFilter[] = [
 ];
 
 export function AppointmentFilters({
-  date,
   status,
   doctorId,
   doctors,
   showDoctorFilter,
-  onDateChange,
+  showStatusFilter = true,
   onStatusChange,
   onDoctorChange,
 }: AppointmentFiltersProps) {
@@ -41,11 +39,7 @@ export function AppointmentFilters({
   const c = appointmentCopy(language);
   return (
     <section className="appointment-filters" aria-label="Appointment filters">
-      <label>
-        {c.date}
-        <input type="date" value={date} onChange={(event) => onDateChange(event.target.value)} />
-      </label>
-      <label>
+      {showStatusFilter ? <label>
         {c.status}
         <select value={status} onChange={(event) => onStatusChange(event.target.value as AppointmentStatusFilter)}>
           {statusOptions.map((option) => (
@@ -54,7 +48,7 @@ export function AppointmentFilters({
             </option>
           ))}
         </select>
-      </label>
+      </label> : null}
       {showDoctorFilter ? (
         <label>
           {c.doctor}

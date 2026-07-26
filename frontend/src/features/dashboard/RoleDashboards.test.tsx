@@ -28,6 +28,9 @@ describe("role dashboards", () => {
     expect(await screen.findByRole("heading", { name: "Clinic overview" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Active patients: 12/ })).toHaveAttribute("href", "/admin/patients");
     expect(screen.getByRole("link", { name: "Team" })).toHaveAttribute("href", "/admin/team");
+    expect(screen.getByRole("link", { name: "Add team member" })).toHaveAttribute("href", "/admin/team/new");
+    expect(screen.getByRole("link", { name: "Create user" })).toHaveAttribute("href", "/admin/users/new");
+    expect(document.querySelectorAll(".v2-kpi.blue, .v2-kpi.teal, .v2-kpi.orange, .v2-kpi.violet")).toHaveLength(4);
     expect(screen.queryByRole("link", { name: "New appointment" })).not.toBeInTheDocument();
   });
 
@@ -35,8 +38,8 @@ describe("role dashboards", () => {
     setUser("STAFF"); vi.spyOn(dashboardApi, "staff").mockResolvedValue(staffData);
     renderDashboard(<StaffDashboard />);
     expect(await screen.findByRole("heading", { name: "Front desk overview" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "New appointment" })).toHaveAttribute("href", "/staff/appointments/day");
-    expect(screen.getByRole("link", { name: "New patient" })).toHaveAttribute("href", "/staff/patients/new");
+    expect(screen.getAllByRole("link", { name: "New appointment" })[0]).toHaveAttribute("href", "/staff/appointments/day");
+    expect(screen.getAllByRole("link", { name: "New patient" })[0]).toHaveAttribute("href", "/staff/patients/new");
     expect(screen.queryByRole("link", { name: "Team" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open active visit" })).not.toBeInTheDocument();
   });
@@ -98,12 +101,10 @@ describe("role dashboards", () => {
     expect(screen.getByText("No appointments are waiting right now.")).toBeInTheDocument();
   });
 
-  it("keeps rendered content available while a manual refresh is in flight", async () => {
-    setUser("ADMIN"); const refresh = vi.spyOn(dashboardApi, "admin").mockResolvedValue(adminData);
+  it("does not expose a generic manual refresh action", async () => {
+    setUser("ADMIN"); vi.spyOn(dashboardApi, "admin").mockResolvedValue(adminData);
     renderDashboard(<AdminDashboard />);
     await screen.findByRole("heading", { name: "Clinic overview" });
-    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    expect(screen.getByRole("heading", { name: "Clinic overview" })).toBeInTheDocument();
-    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("button", { name: "Refresh" })).not.toBeInTheDocument();
   });
 });

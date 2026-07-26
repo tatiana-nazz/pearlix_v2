@@ -52,9 +52,11 @@ export function buildAppointmentFilters(options: FilterOptions): AppointmentList
     return filters;
   }
 
-  const bounds = dayBounds(options.date);
-  filters.start_from = bounds.start_from;
-  filters.start_to = bounds.start_to;
+  if (options.view !== "list") {
+    const bounds = dayBounds(options.date);
+    filters.start_from = bounds.start_from;
+    filters.start_to = bounds.start_to;
+  }
   return filters;
 }
 

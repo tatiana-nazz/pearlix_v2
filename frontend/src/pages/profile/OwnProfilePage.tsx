@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { scheduleApi } from "../../api/endpoints/schedule";
+import { dashboardApi } from "../../api/endpoints/dashboard";
 import { useAuthStore } from "../../auth/authStore";
 import { StatePanel, StatusBadge, SurfaceCard } from "../../components/v2";
 import { formatClock, formatDateRange, formatWeekday } from "../../utils/dates";
@@ -28,6 +29,11 @@ const copy = {
     unavailable: "Profile schedule information is unavailable",
     retry: "Retry",
     noReason: "No reason recorded",
+    currentWorkload: "Current workload",
+    todayAppointments: "Today's appointments",
+    checkedIn: "Checked in",
+    needsReschedule: "Needs reschedule",
+    loadingWorkload: "Loading current workload",
   },
   AR: {
     title: "الملف الشخصي",
@@ -50,6 +56,11 @@ const copy = {
     unavailable: "معلومات جدول الملف الشخصي غير متاحة",
     retry: "إعادة المحاولة",
     noReason: "لا يوجد سبب مسجل",
+    currentWorkload: "عبء العمل الحالي",
+    todayAppointments: "مواعيد اليوم",
+    checkedIn: "تم تسجيل الحضور",
+    needsReschedule: "تحتاج إلى إعادة جدولة",
+    loadingWorkload: "جارٍ تحميل عبء العمل الحالي",
   },
 } as const;
 
@@ -65,7 +76,19 @@ export function OwnProfilePage() {
   });
   const leave = useQuery({
     queryKey: ["my-availability-exceptions"],
-    queryFn: () => scheduleApi.availabilityExceptions({ page: 1 }),
+    queryFn: () => scheduleApi.availabilityExceptions({ page: 1, ...(user?.role === "STAFF" ? { staff_id: user.id } : { doctor_id: user?.id }) }),
+    enabled: hasProfessionalProfile,
+  });
+  const workload = useQuery({
+    queryKey: ["my-profile-workload", user?.role],
+    queryFn: async () => {
+      if (user?.role === "DOCTOR") {
+        const data = await dashboardApi.doctor();
+        return { today: data.today_own_appointments.length, checkedIn: data.own_checked_in_appointments.length, needsReschedule: data.own_needs_reschedule_appointments.length };
+      }
+      const data = await dashboardApi.staff();
+      return { today: data.upcoming_today_appointments.length + data.checked_in_appointments.length, checkedIn: data.checked_in_appointments.length, needsReschedule: data.needs_reschedule_appointments.length };
+    },
     enabled: hasProfessionalProfile,
   });
 
@@ -90,6 +113,15 @@ export function OwnProfilePage() {
             <div className="detail-wide"><dt>{c.password}</dt><dd>{user.must_change_password ? c.passwordChange : c.passwordCurrent}</dd></div>
           </dl>
         </SurfaceCard>
+
+        {hasProfessionalProfile ? (
+          <SurfaceCard className="profile-workload-card">
+            <h2>{c.currentWorkload}</h2>
+            {workload.isLoading ? <StatePanel state="loading" title={c.loadingWorkload} /> : null}
+            {workload.isError ? <StatePanel state="error" title={c.unavailable} action={<button className="v2-button secondary" type="button" onClick={() => void workload.refetch()}>{c.retry}</button>} /> : null}
+            {workload.data ? <dl className="profile-workload-metrics"><div><dt>{c.todayAppointments}</dt><dd>{workload.data.today}</dd></div><div><dt>{c.checkedIn}</dt><dd>{workload.data.checkedIn}</dd></div><div><dt>{c.needsReschedule}</dt><dd>{workload.data.needsReschedule}</dd></div></dl> : null}
+          </SurfaceCard>
+        ) : null}
 
         {hasProfessionalProfile ? (
           <SurfaceCard className="profile-schedule-card">

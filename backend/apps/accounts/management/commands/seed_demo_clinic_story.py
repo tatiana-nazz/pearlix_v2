@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
-from decimal import Decimal
 from pathlib import Path
+from zoneinfo import ZoneInfo
+import binascii
+import struct
+import zlib
 
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
-from django.core.management import call_command
 from django.db import transaction
 from django.utils import timezone
 
@@ -30,6 +32,8 @@ from apps.billing.services import (
 from apps.clinic.models import ClinicSettings
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
+from apps.scheduling.serializers import AppointmentDetailSerializer
+from apps.scheduling.services import mark_overlapping_appointments_needs_reschedule, update_appointment, update_working_shift
 from apps.visits.models import Visit
 from apps.xrays.models import ExternalXrayCase, XrayAttachment
 from apps.xrays.services import (
@@ -44,11 +48,29 @@ DEMO_TAG = "phase-14a-integrated-demo-story"
 EMAIL_DOMAIN = "pearlix-demo.local"
 PATIENT_ID_PREFIX = "DEMO14A-"
 DEFAULT_PASSWORD = "PearlixDemo123!"
-PNG_BYTES = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-    b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xcf\xc0"
-    b"\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb1\x00\x00\x00\x00IEND\xaeB`\x82"
-)
+def _png_chunk(kind, payload):
+    return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", binascii.crc32(kind + payload) & 0xFFFFFFFF)
+
+
+def _synthetic_dental_png(width=320, height=180):
+    """Return a visibly useful, deterministic grayscale PNG without external dependencies."""
+    rows = []
+    for y in range(height):
+        row = bytearray([0])
+        for x in range(width):
+            center = abs(x - width / 2) / (width / 2)
+            arch = abs(y - (70 + 38 * center))
+            tooth = 76 if arch < 22 and 22 < x < width - 22 else 0
+            roots = 36 if 92 < y < 160 and ((x // 24) % 2 == 0) else 0
+            grain = (x * 7 + y * 11) % 20
+            value = max(12, min(235, 26 + tooth + roots + grain))
+            row.extend((value, value, value, 255))
+        rows.append(bytes(row))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", header) + _png_chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + _png_chunk(b"IEND", b"")
+
+
+PNG_BYTES = _synthetic_dental_png()
 
 USER_SPECS = (
     ("admin", "Nour Haddad", User.Role.ADMIN, False),
@@ -60,6 +82,7 @@ USER_SPECS = (
     ("doctor.four", "Dr. Yasmin Barakat", User.Role.DOCTOR, False),
 )
 MUST_CHANGE_SPEC = ("doctor.mustchange", "Dr. Fadi Saad", User.Role.DOCTOR, True)
+INACTIVE_SPEC = ("staff.inactive", "Salma Khatib", User.Role.STAFF, False)
 DOCTOR_PROFILE_SPECS = {
     "doctor.one": ("Endodontics", "+963-11-410-1001", "Root-canal and restorative care."),
     "doctor.two": ("Orthodontics", "+963-11-410-1002", "Orthodontic planning and follow-up."),
@@ -70,6 +93,7 @@ DOCTOR_PROFILE_SPECS = {
 STAFF_PROFILE_SPECS = {
     "staff.one": ("Clinic Coordinator", "+963-11-420-1001"),
     "staff.two": ("Reception", "+963-11-420-1002"),
+    "staff.inactive": ("Former Receptionist", "+963-11-420-1003"),
 }
 
 PATIENT_NAMES = (
@@ -94,7 +118,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--password", default=DEFAULT_PASSWORD, help="Local demo password (default: PearlixDemo123!).")
         parser.add_argument("--reset-demo", action="store_true", help="Delete only records explicitly tagged as this demo story before seeding.")
-        parser.add_argument("--include-must-change-user", action="store_true", help="Include the optional Doctor account requiring a password change.")
+        parser.add_argument("--include-must-change-user", action="store_true", help="Compatibility flag; the QA password-change account is always included.")
         parser.add_argument("--reference-date", help="Deterministic local reference date in YYYY-MM-DD format.")
 
     def handle(self, *args, **options):
@@ -108,7 +132,7 @@ class Command(BaseCommand):
             return
 
         with transaction.atomic():
-            accounts = self._create_accounts(options["password"], options["include_must_change_user"])
+            accounts = self._create_accounts(options["password"])
             self._configure_clinic(accounts["admin"])
             patients = self._create_patients(accounts["staff.one"], reference_date)
             self._create_schedules(accounts, reference_date)
@@ -121,27 +145,28 @@ class Command(BaseCommand):
             f"Seeded {DEMO_TAG}: {len(patients)} patients, {Appointment.objects.filter(patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX).count()} appointments."
         ))
         self.stdout.write("QA accounts (local development only):")
-        for key in ("admin", "staff.one", "staff.two", "doctor.one", "doctor.two", "doctor.three", "doctor.four"):
+        for key in ("admin", "staff.one", "staff.two", "doctor.one", "doctor.two", "doctor.three", "doctor.four", "doctor.mustchange"):
             self.stdout.write(f"- {accounts[key].email} / {options['password']}")
-        if options["include_must_change_user"]:
-            self.stdout.write(f"- {accounts['doctor.mustchange'].email} / {options['password']} (must change password)")
+        self.stdout.write(f"  {accounts['doctor.mustchange'].email} requires a password change.")
+        self.stdout.write(f"- {accounts['staff.inactive'].email} (inactive; sign-in intentionally blocked)")
 
     def _reference_date(self, raw):
         if not raw:
-            return timezone.localdate()
+            clinic_tz = ZoneInfo(ClinicSettings.get_solo().timezone)
+            return timezone.localtime(timezone.now(), clinic_tz).date()
         try:
             return date.fromisoformat(raw)
         except ValueError as exc:
             raise CommandError("--reference-date must use YYYY-MM-DD.") from exc
 
-    def _create_accounts(self, password, include_must_change):
+    def _create_accounts(self, password):
         accounts = {}
-        specs = list(USER_SPECS) + ([MUST_CHANGE_SPEC] if include_must_change else [])
+        specs = list(USER_SPECS) + [MUST_CHANGE_SPEC, INACTIVE_SPEC]
         for slug, full_name, role, must_change in specs:
             email = f"{slug}@{EMAIL_DOMAIN}"
             user = User.objects.create_user(
                 email=email, password=password, full_name=full_name, role=role,
-                is_active=True, is_staff=role == User.Role.ADMIN, is_superuser=role == User.Role.ADMIN,
+                is_active=slug != "staff.inactive", is_staff=role == User.Role.ADMIN, is_superuser=role == User.Role.ADMIN,
                 must_change_password=must_change,
             )
             if role == User.Role.DOCTOR:
@@ -149,7 +174,7 @@ class Command(BaseCommand):
                 DoctorProfile.objects.create(user=user, specialty=specialty, phone=phone, bio=bio, is_active=True)
             elif role == User.Role.STAFF:
                 position, phone = STAFF_PROFILE_SPECS[slug]
-                StaffProfile.objects.create(user=user, position=position, phone=phone, is_active=True)
+                StaffProfile.objects.create(user=user, position=position, phone=phone, is_active=user.is_active)
             accounts[slug] = user
             log_activity(actor=user, action="demo_user_created", entity_type="user", entity_id=user.id, metadata={"demo_story": DEMO_TAG, "role": role})
         return accounts
@@ -158,6 +183,8 @@ class Command(BaseCommand):
         clinic = ClinicSettings.get_solo()
         clinic.clinic_name = "Pearlix Dental Clinic"
         clinic.address = "Damascus, Syria"
+        clinic.phone = "+963-11-400-2026"
+        clinic.email = "hello@pearlix-demo.local"
         clinic.timezone = "Asia/Damascus"
         clinic.default_language = ClinicSettings.Language.EN
         clinic.default_currency = ClinicSettings.Currency.SYP
@@ -204,7 +231,14 @@ class Command(BaseCommand):
                     WorkingShift.objects.create(employee=doctor, name=f"Demo {doctor_key} shift {number}", weekday=weekday, start_time=start, end_time=end, created_by=accounts["admin"], updated_by=accounts["admin"])
         for staff_key in ("staff.one", "staff.two"):
             for weekday in range(7):
-                WorkingShift.objects.create(employee=accounts[staff_key], name="Demo staff shift", weekday=weekday, start_time=time(8), end_time=time(16), created_by=accounts["admin"], updated_by=accounts["admin"])
+                ranges = ((time(8), time(12)), (time(13), time(16))) if staff_key == "staff.two" else ((time(8), time(16)),)
+                for number, (start, end) in enumerate(ranges, start=1):
+                    WorkingShift.objects.create(employee=accounts[staff_key], name=f"Demo staff shift {number}", weekday=weekday, start_time=start, end_time=end, created_by=accounts["admin"], updated_by=accounts["admin"])
+        AvailabilityException.objects.create(
+            staff=accounts["staff.one"], start_datetime=self._dt(reference_date + timedelta(days=2), 12),
+            end_datetime=self._dt(reference_date + timedelta(days=2), 16), type=AvailabilityException.Type.UNAVAILABLE,
+            reason="Demo staff personal leave", created_by=accounts["admin"], updated_by=accounts["admin"],
+        )
 
     def _dt(self, day, hour, minute=0):
         return timezone.make_aware(datetime.combine(day, time(hour, minute)), timezone.get_current_timezone())
@@ -237,29 +271,37 @@ class Command(BaseCommand):
             appointment = self._appointment(patient=patients[index], doctor=doctor, start=self._dt(past - timedelta(days=index % 3), 9 + (index % 5)), duration=(15, 30, 45, 60)[index % 4], status=Appointment.Status.COMPLETED, staff=staff, reason="Completed history")
             completed.append(self._completed_visit(appointment, doctor, staff, notes=index != 13))
             app[f"completed_{index}"] = appointment
+        returning_appointment = self._appointment(patient=patients[3], doctor=d1, start=self._dt(past - timedelta(days=25), 15), duration=30, status=Appointment.Status.COMPLETED, staff=staff, reason="Returning patient history")
+        completed.append(self._completed_visit(returning_appointment, d1, staff))
+        app["returning_history"] = returning_appointment
         app["cancelled"] = self._appointment(patient=patients[19], doctor=d1, start=self._dt(today + timedelta(days=5), 9), duration=30, status=Appointment.Status.CANCELLED, staff=staff, reason="Cancelled demo")
         app["no_show"] = self._appointment(patient=patients[20], doctor=d2, start=self._dt(past, 15), duration=30, status=Appointment.Status.NO_SHOW, staff=staff, reason="No show demo")
         app["future"] = self._appointment(patient=patients[21], doctor=d4, start=self._dt(today + timedelta(days=6), 14), duration=60, status=Appointment.Status.UPCOMING, staff=staff, reason="Future split shift")
-        app["rescheduled"] = self._appointment(patient=patients[22], doctor=d1, start=self._dt(today + timedelta(days=7), 9), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Already rescheduled")
+        app["future_second_doctor"] = self._appointment(patient=patients[22], doctor=d3, start=self._dt(today + timedelta(days=6), 14), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Parallel clinic capacity")
+        leave_impacted = []
+        for index, minute in ((8, 0), (9, 30), (10, 0)):
+            leave_impacted.append(self._appointment(patient=patients[index], doctor=d1, start=self._dt(future, 9, minute), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Leave conflict workflow"))
         leave = AvailabilityException.objects.create(doctor=d1, start_datetime=self._dt(future, 9), end_datetime=self._dt(future, 11), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo approved leave", created_by=accounts["admin"], updated_by=accounts["admin"])
-        for index, minute in ((8, 0), (9, 30)):
-            appointment = self._appointment(patient=patients[index], doctor=d1, start=self._dt(future, 9, minute), duration=30, status=Appointment.Status.NEEDS_RESCHEDULE, staff=staff, reason="Needs reschedule: leave")
-            appointment.reschedule_source_exception = leave
-            appointment.reschedule_previous_status = Appointment.Status.UPCOMING
-            appointment.save(update_fields=["reschedule_source_exception", "reschedule_previous_status", "updated_at"])
+        marked = mark_overlapping_appointments_needs_reschedule(availability_exception=leave, actor=accounts["admin"])
+        for index, appointment in enumerate(marked):
             app[f"leave_{index}"] = appointment
+        rescheduled = marked[0]
+        old_slot = {"doctor_id": rescheduled.doctor_id, "start_datetime": rescheduled.start_datetime.isoformat()}
+        appointment_serializer = AppointmentDetailSerializer(instance=rescheduled, data={"doctor_id": d2.id, "start_datetime": self._dt(future, 14), "duration_minutes": 30}, partial=True)
+        appointment_serializer.is_valid(raise_exception=True)
+        app["rescheduled"] = update_appointment(appointment=rescheduled, serializer=appointment_serializer, user=staff)
+        log_activity(actor=staff, action="appointment_rescheduled", entity_type="appointment", entity_id=rescheduled.id, metadata={"demo_story": DEMO_TAG, "old": old_slot, "new": {"doctor_id": d2.id, "start_datetime": app["rescheduled"].start_datetime.isoformat()}})
+        second_leave = AvailabilityException.objects.create(doctor=d3, start_datetime=self._dt(today + timedelta(days=5), 13), end_datetime=self._dt(today + timedelta(days=5), 17), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo training leave", created_by=accounts["admin"], updated_by=accounts["admin"])
         shift = WorkingShift.objects.filter(employee=d2, weekday=(today + timedelta(days=4)).weekday(), start_time=time(8)).first()
         shift_change_day = today + timedelta(days=4)
-        shifted = self._appointment(patient=patients[10], doctor=d2, start=self._dt(shift_change_day, 16), duration=30, status=Appointment.Status.NEEDS_RESCHEDULE, staff=staff, reason="Needs reschedule: shift change")
-        shifted.reschedule_source_working_shift = shift
-        shifted.reschedule_previous_status = Appointment.Status.UPCOMING
-        shifted.save(update_fields=["reschedule_source_working_shift", "reschedule_previous_status", "updated_at"])
-        shift.end_time = time(15)
-        shift.version += 1
-        shift.updated_by = accounts["admin"]
-        shift.save(update_fields=["end_time", "version", "updated_by", "updated_at"])
+        shifted = self._appointment(patient=patients[10], doctor=d2, start=self._dt(shift_change_day, 16), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Shift change conflict workflow")
+        shift_serializer = type("ShiftUpdate", (), {"validated_data": {"end_time": time(15), "version": shift.version}})()
+        shift, impacted_count = update_working_shift(instance=shift, serializer=shift_serializer, user=accounts["admin"], confirm_appointment_impact=True)
+        if impacted_count != 1:
+            raise CommandError("The deterministic shift-change story did not affect exactly one appointment.")
+        shifted.refresh_from_db()
         app["shift"] = shifted
-        return {"appointments": app, "active_visit": active_visit, "completed_visits": completed, "leave": leave, "shift": shift}
+        return {"appointments": app, "active_visit": active_visit, "completed_visits": completed, "leave": leave, "second_leave": second_leave, "shift": shift}
 
     def _upload(self, filename):
         from django.core.files.uploadedfile import SimpleUploadedFile

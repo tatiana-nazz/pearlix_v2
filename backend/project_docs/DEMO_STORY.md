@@ -6,10 +6,10 @@ The Phase 14A demo is a deterministic, development-only dataset for exercising e
 
 ```powershell
 cd backend
-python manage.py seed_demo_clinic_story --password "PearlixDemo123!" --reset-demo --include-must-change-user
+python manage.py seed_demo_clinic_story --password "<LOCAL_QA_PASSWORD>" --reset-demo --reference-date 2026-07-26
 ```
 
-`--password` accepts a local QA password and defaults to `PearlixDemo123!`. Do not commit or reuse it outside local development. The command refuses to run unless `DEBUG=true`. `--reference-date YYYY-MM-DD` makes the relative story dates deterministic for automated tests.
+`--password` accepts a local QA password and defaults to a development-only value. Do not commit or reuse it outside local development. The command refuses to run unless `DEBUG=true`. `--reference-date YYYY-MM-DD` makes the relative story dates deterministic; without it the command derives the date in the configured clinic timezone. `--include-must-change-user` remains accepted for compatibility, but the must-change QA account is now always included.
 
 Without `--reset-demo`, an existing Phase 14A story is left untouched. With it, only accounts whose email ends with `@pearlix-demo.local` are removed, together with patients whose identity begins `DEMO14A-`, their transitively owned workflow records, audit rows tagged by the `phase-14a-integrated-demo-story` marker, and `demo14a-` media. It never deletes unrelated users, patients, workflow records, audit rows, settings, or media.
 
@@ -20,15 +20,20 @@ Phase 14A demo accounts use `@pearlix-demo.local`. Older development QA accounts
 - `admin@pearlix-demo.local` — Admin
 - `staff.one@pearlix-demo.local`, `staff.two@pearlix-demo.local` — Staff
 - `doctor.one@pearlix-demo.local` through `doctor.four@pearlix-demo.local` — Doctors
-- `doctor.mustchange@pearlix-demo.local` — optional Doctor; must change password
+- `doctor.mustchange@pearlix-demo.local` — active Doctor; must change password
+- `staff.inactive@pearlix-demo.local` — inactive Staff account with a linked inactive professional profile; login is intentionally blocked
 
 All use the supplied password. The clinic is configured for Damascus, `Asia/Damascus`, English/Arabic, SYP/USD, 30-minute default appointments, capacity 3, and `MOCK_ADAPTER` AI.
 
-Phase 14C.0 gives the four Doctors distinct stored specialties, phones, and biographies, and the two Staff distinct positions and phones. Their login and professional statuses are independently represented through valid profile linkage.
+Phase 14C.0 gives the Doctors distinct stored specialties, phones, and biographies, and Staff distinct positions and phones. Their login and professional statuses are independently represented through valid profile linkage.
 
 ## Anchor story
 
-The 24 synthetic patients include today’s confirmed and checked-in appointments, one active visit, completed clinical history with all five note fields, saved X-rays with and without mock AI, temporary/attached/discarded external X-rays, leave- and shift-change reschedules, cancelled/no-show/future appointments, archived history, and pending/converted/dismissed handoffs with unpaid/partial/paid/cancelled invoices. Doctors have schedules; Doctor Four has daily split shifts.
+The 24 synthetic patients include today's confirmed and checked-in appointments, one active visit, completed clinical history with all five note fields, a returning patient with multiple visits, saved X-rays with and without mock AI, temporary/attached/discarded external X-rays, cancelled/no-show/future appointments, archived history, and pending/converted/dismissed handoffs with unpaid/partial/paid/cancelled invoices. Doctors have schedules, Doctor Four and Staff Two demonstrate split shifts, and Staff leave is visible in the consolidated profile.
+
+The reschedule story uses real domain transitions: three future appointments are created before Doctor leave, the leave service marks them, one is then rescheduled to a valid doctor/time and logged with old/new slots, and two remain in the queue. A later Doctor shift reduction marks one additional appointment through the confirmed shift-impact service. A second Doctor leave and parallel same-time appointments across different Doctors make Admin and Staff views meaningfully populated.
+
+Generated demo images are deterministic 320×180 synthetic grayscale illustrations rather than one-pixel placeholders. They are explicitly non-clinical and remain unsuitable for diagnosis.
 
 The seeded Admin, Staff, and Doctor dashboards are non-empty and their related route screens are populated. Browser QA is still pending; use `frontend/QA_14A.md` for the live checklist.
 
@@ -36,6 +41,6 @@ The seeded Admin, Staff, and Doctor dashboards are non-empty and their related r
 
 Focused command coverage is in `tests/accounts/test_seed_demo_clinic_story_command.py`. It verifies first seed, idempotency, reset preservation, deterministic reference dates, account/profile creation, scheduling/reschedule relationships, visits, imaging/external states, billing reconciliation, audit sanitization, role dashboards, and demo media naming.
 
-Phase 14A verification recorded 2 focused seed tests and 407 backend tests passing. Frontend source and packages are unchanged, so frontend tests/build were not rerun. Browser QA remains pending.
+The current Phase 14F.1 verification expands the same two focused seed tests with inactive/must-change profile linkage, clinic-local dates, multiple leave types, domain-derived reschedule provenance, returning-patient history, 320×180 media dimensions, financial reconciliation, and sanitized audit evidence. Current full-suite totals are recorded in `PROJECT_STATUS.md`.
 
 Phase 14C.0 subsequently updated the seeded Team linkage and recorded 40 focused Team/account-linkage tests, 414 full backend tests, and 52 frontend contract tests. It adds no runtime Team UI; Phase 14C is next and deployment remains paused.

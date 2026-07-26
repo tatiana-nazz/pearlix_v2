@@ -13,8 +13,10 @@ interface AppointmentMonthViewProps {
 
 export function AppointmentMonthView({ date, timezone, appointments, onDetails, onDaySelect }: AppointmentMonthViewProps) {
   const days = getMonthGrid(date);
+  const weekdayHeadings = days.slice(0, 7).map((day) => new Intl.DateTimeFormat(undefined, { weekday: "short", timeZone: timezone }).format(new Date(`${day}T12:00:00Z`)));
   return (
     <div className="appointment-month-grid">
+      {weekdayHeadings.map((weekday) => <div className="appointment-month-weekday" key={weekday}>{weekday}</div>)}
       {days.map((day) => {
         const dayAppointments = appointments.filter((appointment) => dateFromAppointment(appointment.start_datetime, timezone) === day);
         return (

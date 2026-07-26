@@ -104,7 +104,7 @@ export function PatientsPage({ role }: PatientsPageProps) {
         }
       />
 
-      <Card>
+      <Card className="compact-toolbar-card">
         <PatientFilters
           role={role}
           search={search}
