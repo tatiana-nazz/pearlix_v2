@@ -11,10 +11,10 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current phase: 14E.4 X-ray, Attachment, Viewer, and AI-Result Workspace Design Alignment
+- Current completed phase: 14E.4A Protected X-ray and Overlay Visual Browser Acceptance Closure
 - Phase 13 series: complete
-- Next phase: Close the Phase 14E.4 protected-media visual browser acceptance in an object-URL-capable browser surface
-- Next step: do not change backend media security; rerun the documented browser evidence
+- Next phase: Remaining explicitly approved workflow refinements
+- Next step: plan only the next explicitly approved Phase 14E scope
 - Final backend full regression: 420 passed
 - Final frontend regression: 133 passed in 46 files
 - Backend runtime changes in Phase 14C: no
@@ -34,7 +34,10 @@ Local login connectivity is now deterministic: the documented frontend uses `127
 - Frontend visible UI changes in Phase 14E.4: action-free X-ray/attachment collections, shared upload modal, protected viewer hierarchy, structured stored-result/overlay presentation, and external temporary-case detail alignment
 - Backend runtime changes in Phase 14E.4: none
 - Migrations in Phase 14E.4: none
-- Phase 14E.4 acceptance note: authenticated synthetic protected-media endpoint verified as `200 image/png`; in-app browser lacked Blob object-URL support, so final image/overlay visual acceptance remains open
+- Phase 14E.4 acceptance note: protected media and overlay visual acceptance closed by Phase 14E.4A
+- Phase 14E.4A: frontend API-base URL normalization corrects `/api/api/...` protected-media requests; Chromium verified authenticated original and overlay rendering, dimensions, toggle, revocation, and truthful failure state
+- Backend runtime changes in Phase 14E.4A: none
+- Migrations in Phase 14E.4A: none
 - Backend runtime changes in Phase 14E.2A: none
 - Migrations in Phase 14E.2A: none
 - Backend runtime changes in Phase 14E.2: none

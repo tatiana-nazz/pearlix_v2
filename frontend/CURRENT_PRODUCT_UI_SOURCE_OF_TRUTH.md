@@ -33,7 +33,7 @@ Billing handoffs and invoices retain their separate current routes while using b
 
 ## X-ray and AI workspace: Phase 14E.4
 
-Saved X-ray, attachment, viewer, stored-result, and external-X-ray surfaces retain authenticated backend media access, current role contracts, and the collection-action closure. Collections open the whole record and carry no row actions. Viewer detail separates protected image, metadata, stored AI-assisted information, optional backend overlay, and authorized external temporary-case actions. No image editing, fake inference, client result generation, public media URL, or expanded role permission is authorized. The existing responsive shell and transformations remain frozen. See `design_v2/PHASE_14E4_XRAY_AI_WORKSPACE_IMPLEMENTATION_RECORD.md` for implementation evidence and its remaining object-URL-capable browser acceptance limitation.
+Saved X-ray, attachment, viewer, stored-result, and external-X-ray surfaces retain authenticated backend media access, current role contracts, and the collection-action closure. Collections open the whole record and carry no row actions. Viewer detail separates protected image, metadata, stored AI-assisted information, optional backend overlay, and authorized external temporary-case actions. No image editing, fake inference, client result generation, public media URL, or expanded role permission is authorized. The existing responsive shell and transformations remain frozen. Phase 14E.4A closes Chromium protected original/overlay visual acceptance without changing those boundaries; see `design_v2/PHASE_14E4A_PROTECTED_MEDIA_VISUAL_ACCEPTANCE_CLOSURE_RECORD.md`.
 
 ## Stability and design-change rules
 

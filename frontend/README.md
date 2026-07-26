@@ -94,7 +94,7 @@ npm run test:e2e
 The integrated Phase 14D browser acceptance gate is closed. See `frontend/QA_14D_BROWSER_ACCEPTANCE.md` and `frontend/design_v2/PHASE_14D_BROWSER_ACCEPTANCE_RECORD.md`; earlier checklists remain historical verification references.
 Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, `frontend/QA_13H.md` for X-rays and AI, and `frontend/QA_13I.md` for billing handoffs, invoices, payments, and print-data QA.
 
-Phase 14E.4 aligns the existing X-ray/AI surfaces while preserving protected backend media access and current RBAC. See `design_v2/PHASE_14E4_XRAY_AI_WORKSPACE_IMPLEMENTATION_RECORD.md`. The synthetic protected-media endpoint is verified, but final visual original/overlay acceptance remains open until it is rerun in a browser that supports Blob object URLs; do not replace authenticated Blob access with public URLs.
+Phase 14E.4 aligns the existing X-ray/AI surfaces while preserving protected backend media access and current RBAC. Phase 14E.4A closes Chromium visual acceptance for protected originals and overlays after correcting frontend API-base endpoint resolution; it does not change authenticated Blob access or permit public URLs. See `design_v2/PHASE_14E4A_PROTECTED_MEDIA_VISUAL_ACCEPTANCE_CLOSURE_RECORD.md`.
 
 ## Local QA Accounts
 

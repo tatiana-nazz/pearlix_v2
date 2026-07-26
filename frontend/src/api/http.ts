@@ -17,6 +17,10 @@ export const apiBaseUrl = rawBaseUrl.replace(/\/+$/, "");
 let tokenAccessors: TokenAccessors | null = null;
 let refreshPromise: Promise<string> | null = null;
 
+function endpointUrl(url: string): string {
+  return url.startsWith("/api/") ? url.slice(4) : url;
+}
+
 const client: AxiosInstance = axios.create({
   baseURL: apiBaseUrl,
   headers: {
@@ -65,7 +69,7 @@ async function refreshAccessToken(): Promise<string> {
 
 async function request<T>(method: Method, url: string, config: AxiosRequestConfig = {}): Promise<T> {
   try {
-    const response = await client.request<T>({ ...config, method, url });
+    const response = await client.request<T>({ ...config, method, url: endpointUrl(url) });
     return response.data;
   } catch (error) {
     const apiError = toApiClientError(error);
@@ -75,7 +79,7 @@ async function request<T>(method: Method, url: string, config: AxiosRequestConfi
       try {
         await refreshAccessToken();
         const retryHeaders = { ...(config.headers ?? {}), "X-Retry-After-Refresh": "true" };
-        const response = await client.request<T>({ ...config, method, url, headers: retryHeaders });
+        const response = await client.request<T>({ ...config, method, url: endpointUrl(url), headers: retryHeaders });
         return response.data;
       } catch (refreshError) {
         throw toApiClientError(refreshError);
