@@ -105,9 +105,10 @@ async function expectPatientRailPinned(page: Page, profilePath: string) {
   await expectNoDocumentOverflow(page);
 }
 
-async function expectXrayAndAiFit(page: Page) {
+async function expectXrayAndAiFit(page: Page, viewport: { width: number; height: number }) {
   const mainRow = page.locator(".active-xray-main-row");
   const viewer = page.locator(".active-xray-canvas-panel");
+  const protectedViewer = viewer.locator(".protected-xray-viewer");
   const aiPanel = page.locator(".active-xray-ai-result");
   await expect(viewer.locator(".protected-xray-original")).toBeVisible();
   await expect(page.getByRole("switch", { name: /AI Overlay/ })).toBeVisible();
@@ -128,23 +129,53 @@ async function expectXrayAndAiFit(page: Page) {
     const ai = rect(".active-xray-ai-result");
     const historyRect = rect(".active-xray-history-panel");
     const detailsRect = rect(".active-xray-analysis-details");
+    const aiCard = document.querySelector<HTMLElement>(".active-xray-ai-result > .card")!;
+    const aiCardStyle = getComputedStyle(aiCard);
+    const findingsRect = rect(".xray-findings");
     return {
       sideBySide: viewerRect.right <= ai.left + 1 && Math.abs(viewerRect.top - ai.top) <= 1,
+      stacked: viewerRect.bottom <= ai.top + 1 && Math.abs(viewerRect.left - ai.left) <= 1,
       viewerDominates: viewerRect.width / ai.width,
-      rowVisible: row.top >= -1 && row.bottom <= innerHeight + 1,
-      viewerVisible: viewerRect.top >= -1 && viewerRect.bottom <= innerHeight + 1,
-      aiVisible: ai.top >= -1 && ai.bottom <= innerHeight + 1,
+      rowHeight: row.height,
+      viewerHeight: viewerRect.height,
+      aiHasNoInternalScroll: !["auto", "scroll"].includes(aiCardStyle.overflowX) && !["auto", "scroll"].includes(aiCardStyle.overflowY) && aiCard.scrollWidth <= aiCard.clientWidth + 1 && aiCard.scrollHeight <= aiCard.clientHeight + 1,
+      findingsVisible: findingsRect.bottom <= aiCard.getBoundingClientRect().bottom + 1,
       historyAfterRow: historyRect.top >= row.bottom - 1,
       detailsAfterHistory: detailsRect.top >= historyRect.bottom - 1,
     };
   });
-  expect(geometry.sideBySide).toBe(true);
-  expect(geometry.viewerDominates).toBeGreaterThanOrEqual(2.2);
-  expect(geometry.rowVisible).toBe(true);
-  expect(geometry.viewerVisible).toBe(true);
-  expect(geometry.aiVisible).toBe(true);
+  if (viewport.width > 1024) {
+    expect(geometry.sideBySide).toBe(true);
+    expect(geometry.viewerDominates).toBeGreaterThanOrEqual(2.2);
+    expect(geometry.rowHeight).toBeGreaterThanOrEqual(viewport.height * .57);
+  } else {
+    expect(geometry.stacked).toBe(true);
+    expect(geometry.viewerHeight).toBeGreaterThanOrEqual(430);
+  }
+  expect(geometry.aiHasNoInternalScroll).toBe(true);
+  expect(geometry.findingsVisible).toBe(true);
   expect(geometry.historyAfterRow).toBe(true);
   expect(geometry.detailsAfterHistory).toBe(true);
+
+  await viewer.getByRole("button", { name: "Fullscreen" }).click();
+  const fullscreenControl = viewer.locator(".protected-xray-fullscreen-overlay-control");
+  const fullscreenSwitch = fullscreenControl.getByRole("switch", { name: "AI Overlay: Off" });
+  await expect(fullscreenSwitch).toBeVisible();
+  await fullscreenSwitch.click();
+  await expect(fullscreenControl.getByRole("switch", { name: "AI Overlay: On" })).toBeVisible();
+  await expect(viewer.locator(".protected-xray-original")).toBeVisible();
+  await expect(viewer.locator(".protected-xray-overlay")).toBeVisible();
+  expect(await protectedViewer.evaluate((element) => element.matches(":fullscreen") || element.classList.contains("is-enlarged"))).toBe(true);
+  const layerGeometry = await viewer.locator(".protected-xray-original, .protected-xray-overlay").evaluateAll((images) => images.map((image) => {
+    const bounds = image.getBoundingClientRect();
+    return { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height };
+  }));
+  expect(layerGeometry).toHaveLength(2);
+  expect(layerGeometry[1]).toEqual(layerGeometry[0]);
+  await viewer.getByRole("button", { name: "Exit Fullscreen" }).click();
+  await expect(page.getByRole("switch", { name: "AI Overlay: On" })).toBeVisible();
+  await page.getByRole("switch", { name: "AI Overlay: On" }).click();
+  await expect(viewer.locator(".protected-xray-overlay")).toHaveCount(0);
   await expect(mainRow).toBeVisible();
   await expect(history).toBeVisible();
   await expectNoDocumentOverflow(page);
@@ -177,7 +208,7 @@ test("Doctor completes one atomic visit-and-billing workflow and Staff receives 
     await expectActionBarInFlow(page, ".visit-tab-panel");
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole("tab", { name: "X-rays & AI" }).click();
-    await expectXrayAndAiFit(page);
+    await expectXrayAndAiFit(page, viewport);
     await expectActionBarInFlow(page, ".visit-tab-panel");
     await page.getByRole("tab", { name: "Billing" }).click();
     await expect(page.getByText("Billing details will be sent to Staff when the visit is completed.")).toBeVisible();

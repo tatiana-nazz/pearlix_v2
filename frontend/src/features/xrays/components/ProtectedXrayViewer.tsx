@@ -43,6 +43,7 @@ export function ProtectedXrayViewer({
   const overlayVisible = controlledOverlayVisible ?? internalOverlayVisible;
   const overlay = useProtectedMedia(overlayAvailable && overlayVisible ? overlayEndpoint : null);
   const isEnlarged = fullscreenActive || enlargedFallback;
+  const canToggleOverlay = overlayAvailable && Boolean(overlayEndpoint);
 
   useEffect(() => {
     setInternalOverlayVisible(false);
@@ -145,6 +146,14 @@ export function ProtectedXrayViewer({
       aria-modal={enlargedFallback || undefined}
       aria-label={enlargedFallback ? originalLabel : undefined}
     >
+      {isEnlarged ? <div className="protected-xray-fullscreen-overlay-control">
+        <button className="active-xray-overlay-switch" type="button" role="switch" aria-checked={overlayVisible} aria-label={`${c.aiOverlay}: ${overlayVisible ? c.overlayOn : c.overlayOff}`} disabled={!canToggleOverlay} title={!canToggleOverlay ? c.noOverlayAvailable : undefined} onClick={toggleOverlay}>
+          <span className="active-xray-overlay-label">{c.aiOverlay}</span>
+          <span className="active-xray-overlay-value">{overlayVisible ? c.overlayOn : c.overlayOff}</span>
+          <span className="active-xray-overlay-track" aria-hidden="true"><span /></span>
+        </button>
+        {!canToggleOverlay ? <span className="protected-xray-fullscreen-overlay-unavailable">{c.noOverlayAvailable}</span> : null}
+      </div> : null}
       <div className="protected-xray-canvas">
         <div className="protected-xray-media" data-scale={scale.toFixed(2)} style={{ transform: `scale(${scale})` }}>
           <img className="protected-xray-original" src={original.url} alt={originalAlt} />
@@ -158,7 +167,7 @@ export function ProtectedXrayViewer({
           <Button variant="secondary" type="button" onClick={() => setBoundedScale(scale + SCALE_STEP)} disabled={scale >= MAX_SCALE}><Plus size={17} aria-hidden="true" />{c.zoomIn}</Button>
           <Button variant="secondary" type="button" onClick={() => setBoundedScale(scale - SCALE_STEP)} disabled={scale <= MIN_SCALE}><Minus size={17} aria-hidden="true" />{c.zoomOut}</Button>
           <Button variant="secondary" type="button" onClick={() => { setScale(1); turnOverlayOff(); }}><RotateCcw size={17} aria-hidden="true" />{c.reset}</Button>
-          {showOverlayControl && overlayAvailable && overlayEndpoint ? <Button variant="secondary" type="button" aria-pressed={overlayVisible} onClick={toggleOverlay}>{overlayVisible ? c.hideOverlay : c.showOverlay}</Button> : null}
+          {showOverlayControl && canToggleOverlay ? <Button variant="secondary" type="button" aria-pressed={overlayVisible} onClick={toggleOverlay}>{overlayVisible ? c.hideOverlay : c.showOverlay}</Button> : null}
           <Button variant="secondary" type="button" onClick={() => setScale(1)}><Scan size={17} aria-hidden="true" />{c.fitToView}</Button>
           <Button variant="secondary" type="button" aria-pressed={isEnlarged} onClick={() => void toggleFullscreen()}>{isEnlarged ? <Minimize2 size={17} aria-hidden="true" /> : <Maximize2 size={17} aria-hidden="true" />}{isEnlarged ? c.exitFullscreen : c.fullscreen}</Button>
         </div>

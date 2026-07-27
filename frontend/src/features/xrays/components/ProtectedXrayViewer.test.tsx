@@ -74,4 +74,29 @@ describe("ProtectedXrayViewer", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Protected original image" })).not.toBeInTheDocument();
   });
+
+  it("keeps an overlay switch usable without exiting the enlarged viewer", () => {
+    const { container } = render(<ProtectedXrayViewer originalEndpoint="/original/" overlayEndpoint="/overlay/" overlayAvailable originalLabel="Protected original image" originalAlt="Dental X-ray" showOverlayControl={false} />);
+    expect(screen.queryByRole("switch", { name: "AI Overlay: Off" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Fullscreen" }));
+    const dialog = screen.getByRole("dialog", { name: "Protected original image" });
+    const fullscreenSwitch = screen.getByRole("switch", { name: "AI Overlay: Off" });
+    expect(fullscreenSwitch).toBeVisible();
+    expect(fullscreenSwitch).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(fullscreenSwitch);
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "AI Overlay: On" })).toHaveAttribute("aria-checked", "true");
+    expect(container.querySelector(".protected-xray-original")).toBeInTheDocument();
+    expect(container.querySelector(".protected-xray-overlay")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("switch", { name: "AI Overlay: On" }));
+    expect(dialog).toBeInTheDocument();
+    expect(container.querySelector(".protected-xray-overlay")).not.toBeInTheDocument();
+  });
+
+  it("shows a disabled fullscreen switch and explanation when no overlay exists", () => {
+    render(<ProtectedXrayViewer originalEndpoint="/original/" originalLabel="Protected original image" originalAlt="Dental X-ray" showOverlayControl={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Fullscreen" }));
+    expect(screen.getByRole("switch", { name: "AI Overlay: Off" })).toBeDisabled();
+    expect(screen.getByText("No AI overlay is available for this X-ray.")).toBeVisible();
+  });
 });
