@@ -554,8 +554,10 @@
 
 /* Phase 14F.4B stationary desktop patient rail. */
 .patient-detail-surface { align-items: start; overflow: visible; }
-.patient-identity-rail { position: sticky; inset-block-start: 88px; align-self: start; max-block-size: calc(100dvh - 108px); overflow-y: auto; border-start-start-radius: 24px; border-end-start-radius: 24px; scrollbar-width: thin; }
-.patient-detail-main { overflow: visible; }
+.patient-identity-rail { position: sticky; z-index: 2; inset-block-start: 88px; align-self: start; max-block-size: calc(100dvh - 108px); overflow-y: auto; gap: 14px; padding: 24px 20px; border-start-start-radius: 24px; border-end-start-radius: 24px; background: var(--v2-surface); scrollbar-width: thin; }
+.patient-identity-rail .profile-initials { inline-size: 84px; block-size: 84px; font-size: 27px; }
+.patient-identity-rail .identity-details { gap: 10px; }
+.patient-detail-main { position: relative; z-index: 1; overflow: visible; }
 @media (max-width:1023.98px) {
   .patient-detail-surface { align-items: stretch; overflow: hidden; }
   .patient-identity-rail { position: static; inset-block-start: auto; max-block-size: none; overflow: visible; border-radius: 24px 24px 0 0; }
@@ -563,19 +565,23 @@
 }
 
 /* Phase 14F.4 Active Visit specification: header, full-width context, tabs, work, actions. */
-.visit-workspace { --active-visit-action-height: 72px; --active-visit-action-gap: 18px; gap: var(--active-visit-action-gap); }
+.active-visit-page,.active-visit-page .visit-workspace { width: 100%; max-width: none; min-width: 0; margin-inline: 0; }
+.active-visit-page > *,.visit-workspace > * { min-width: 0; }
+.active-visit-page { gap: 14px; }
+.active-visit-page > .page-header { margin-block-end: 0; }
+.visit-workspace { --active-visit-action-height: 72px; --active-visit-action-gap: 12px; gap: var(--active-visit-action-gap); }
 .active-visit-page-actions,.active-visit-page-status { display: flex; align-items: center; gap: 10px; }
 .active-visit-page-status { flex-wrap: wrap; color: var(--v2-text); font-weight: 750; }
 .active-visit-page-status small { color: var(--v2-muted); font-weight: 650; }
-.active-visit-context-stack { position: static; display: grid; min-width: 0; gap: 14px; }
+.active-visit-context-stack { position: static; display: grid; min-width: 0; gap: 10px; }
 .active-visit-summary { display: grid; grid-template-columns: minmax(220px,.9fr) minmax(220px,.82fr) minmax(285px,1.18fr); align-items: stretch; overflow: hidden; border: 1px solid var(--v2-border); border-radius: 18px; background: var(--v2-surface); box-shadow: var(--v2-shadow-soft); }
-.active-visit-summary-section { min-width: 0; padding: 20px; }
+.active-visit-summary-section { min-width: 0; padding: 14px; }
 .active-visit-summary-section + .active-visit-summary-section { border-inline-start: 1px solid var(--v2-divider); }
 .active-visit-summary-kicker { display: flex; align-items: center; gap: 7px; margin: 0 0 12px; color: var(--v2-muted); font-size: 11px; font-weight: 850; letter-spacing: .055em; text-transform: uppercase; }
 .active-visit-identity { display: flex; align-items: center; gap: 16px; color: inherit; text-align: start; text-decoration: none; transition: background-color 140ms ease,box-shadow 140ms ease; }
 .active-visit-identity:hover { background: var(--v2-primary-soft); }
 .active-visit-identity:focus-visible { z-index: 1; outline: 3px solid color-mix(in srgb,var(--v2-primary) 42%,transparent); outline-offset: -3px; }
-.active-visit-avatar { display: grid; flex: 0 0 auto; inline-size: 72px; block-size: 72px; place-items: center; border: 1px solid color-mix(in srgb,var(--v2-primary) 22%,var(--v2-border)); border-radius: 18px; background: var(--v2-primary-soft); color: var(--v2-primary-strong); font-size: 23px; font-weight: 850; }
+.active-visit-avatar { display: grid; flex: 0 0 auto; inline-size: 56px; block-size: 56px; place-items: center; border: 1px solid color-mix(in srgb,var(--v2-primary) 22%,var(--v2-border)); border-radius: 14px; background: var(--v2-primary-soft); color: var(--v2-primary-strong); font-size: 19px; font-weight: 850; }
 .active-visit-identity h2 { margin: 0; color: var(--v2-text); font-size: 21px; line-height: 1.2; }
 .active-visit-identity p:not(.active-visit-summary-kicker) { margin: 7px 0 0; color: var(--v2-muted); font-size: 13px; font-weight: 650; }
 .active-visit-summary-list { display: grid; align-content: start; gap: 10px; margin: 0; }
@@ -602,8 +608,8 @@
 .clinical-notes-form textarea { min-block-size: 154px; padding: 14px; background: var(--v2-surface); line-height: 1.55; }
 .clinical-note-general textarea { min-block-size: 164px; }
 .clinical-notes-form .form-error { grid-column: 1 / -1; }
-.visit-tab-panel { padding-block-end: calc(var(--active-visit-action-height) + var(--active-visit-action-gap)); }
-.active-visit-action-bar { position: sticky; z-index: 4; inset-block-end: 12px; display: flex; min-block-size: var(--active-visit-action-height); align-items: center; justify-content: space-between; gap: 18px; margin-block-start: calc(-1 * (var(--active-visit-action-height) + var(--active-visit-action-gap))); border: 1px solid var(--v2-border); border-radius: 16px; padding: 14px 16px; background: color-mix(in srgb,var(--v2-surface) 94%,transparent); box-shadow: var(--v2-shadow-major); backdrop-filter: blur(12px); }
+.visit-tab-panel { min-width: 0; padding-block-end: 0; }
+.active-visit-action-bar { position: static; display: flex; min-block-size: var(--active-visit-action-height); align-items: center; justify-content: space-between; gap: 18px; margin-block-start: 0; border: 1px solid var(--v2-border); border-radius: 16px; padding: 14px 16px; background: var(--v2-surface); box-shadow: var(--v2-shadow-soft); }
 .active-visit-save-state { display: flex; align-items: center; gap: 9px; margin: 0; color: var(--v2-muted); font-size: 13px; font-weight: 750; }
 .active-visit-save-state > span { inline-size: 8px; block-size: 8px; border-radius: 999px; background: var(--v2-success); }
 .active-visit-save-state.is-dirty { color: color-mix(in srgb,var(--v2-warning) 72%,var(--v2-text)); }
@@ -614,17 +620,9 @@
 .active-visit-complete { border-color: var(--v2-primary); background: var(--v2-primary); color: #fff; }
 .active-visit-complete:hover { background: var(--v2-primary-strong); }
 @media (max-width:1279px) {
-  .active-visit-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .active-visit-summary-section { border-inline-start: 0!important; }
-  .active-visit-summary-section:nth-child(even) { border-inline-start: 1px solid var(--v2-divider)!important; }
-  .active-visit-summary-section:nth-child(n+3) { border-block-start: 1px solid var(--v2-divider); }
-  .active-visit-summary-section:nth-child(3) { grid-column: 1 / -1; }
+  .active-visit-summary { grid-template-columns: minmax(0,.9fr) minmax(0,.82fr) minmax(0,1.18fr); }
   .clinical-notes-form { grid-template-areas: "subjective" "objective" "assessment" "plan" "general"; grid-template-columns: 1fr; }
   .clinical-note-helper { min-block-size: 0; }
-}
-@media (max-width:767px) {
-  .visit-tab-panel { padding-block-end: 0; }
-  .active-visit-action-bar { position: static; inset-block-end: auto; margin-block-start: 0; }
 }
 @media (max-width:767px) {
   .active-visit-page-actions,.active-visit-action-bar { align-items: stretch; flex-direction: column; }
@@ -665,7 +663,7 @@
 }
 
 /* Phase 14F.4 inline protected X-ray review workspace. */
-.active-xray-workspace { display: grid; min-width: 0; gap: 16px; overflow: hidden; border: 1px solid #26394f; border-radius: 16px; padding: 20px; background: linear-gradient(145deg,#0b1623,#121f31); color: #edf5ff; box-shadow: 0 20px 44px rgba(4,12,22,.2); }
+.active-xray-workspace { display: grid; min-width: 0; gap: 12px; overflow: hidden; border: 1px solid #26394f; border-radius: 16px; padding: 14px; background: linear-gradient(145deg,#0b1623,#121f31); color: #edf5ff; box-shadow: 0 20px 44px rgba(4,12,22,.2); }
 .active-xray-header { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 18px; }
 .active-xray-header h3,.active-xray-header p { margin: 0; }
 .active-xray-header h3 { display: inline; margin-inline-end: 8px; color: #fff; font-size: 14px; }
@@ -703,46 +701,51 @@
 .active-xray-thumbnail small { color: #9fb1c6; font-size: 11px; }
 .active-xray-ai-status { color: #7fd9e8; font-size: 10px; font-weight: 800; }
 .active-xray-review-stack { display: grid; min-width: 0; gap: 16px; }
-.active-xray-main-row { display: grid; min-width: 0; grid-template-columns: minmax(0,2.35fr) minmax(270px,1fr); align-items: stretch; gap: 16px; }
-.active-xray-main-row > * { min-width: 0; }
-.active-xray-ai-result { display: grid; min-width: 0; align-content: start; }
-.active-xray-canvas-panel { min-width: 0; overflow: hidden; border: 1px solid #2b4057; border-radius: 12px; background: #09131f; }
-.active-xray-canvas-panel .protected-xray-viewer { display: grid; height: 100%; margin: 0; padding: 12px; color: #edf5ff; }
+.active-xray-main-row { display: grid; min-width: 0; min-height: 0; block-size: clamp(190px,calc(100dvh - 530px),370px); grid-template-columns: minmax(0,2.65fr) minmax(250px,1fr); align-items: stretch; gap: 16px; }
+.active-xray-main-row > * { min-width: 0; min-height: 0; }
+.active-xray-ai-result { display: grid; min-width: 0; min-height: 0; align-content: stretch; overflow: hidden; }
+.active-xray-canvas-panel { min-width: 0; min-height: 0; overflow: hidden; border: 1px solid #2b4057; border-radius: 12px; background: #09131f; }
+.active-xray-canvas-panel .protected-xray-viewer { display: grid; height: 100%; min-height: 0; grid-template-rows: minmax(0,1fr) auto auto; margin: 0; padding: 10px; color: #edf5ff; }
 .protected-xray-toolbar { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px 12px; padding-block-start: 10px; }
 .protected-xray-label { display: none; }
 .protected-xray-toolbar-actions { display: flex; min-width: 0; flex-wrap: wrap; gap: 7px; }
 .protected-xray-toolbar-actions .v2-button { min-block-size: 36px; border-color: #3d5670; background: #14283d; color: #edf5ff; padding-inline: 10px; font-size: 12px; }
-.protected-xray-canvas { display: grid; min-block-size: 480px; place-items: center; overflow: hidden; padding: 8px; background: #030a12; }
+.protected-xray-canvas { display: grid; min-block-size: 0; block-size: 100%; place-items: center; overflow: hidden; padding: 8px; background: #030a12; }
 .protected-xray-media { display: grid; inline-size: 100%; place-items: center; transform-origin: center center; transition: transform 160ms ease; }
-.protected-xray-media img { grid-area: 1 / 1; display: block; inline-size: 100%; block-size: auto; max-inline-size: 100%; max-block-size: 590px; border-radius: 8px; object-fit: contain; }
+.protected-xray-media img { grid-area: 1 / 1; display: block; inline-size: 100%; block-size: 100%; max-inline-size: 100%; max-block-size: 100%; border-radius: 8px; object-fit: contain; }
 .protected-xray-overlay { pointer-events: none; }
 .protected-xray-scale { grid-column: 2; grid-row: 1; justify-self: end; color: #9fb1c6; font-size: 11px; }
 .protected-xray-viewer.is-enlarged,.protected-xray-viewer:fullscreen { position: fixed; z-index: 80; inset: 14px; display: grid; overflow: auto; border: 1px solid #3d5670; border-radius: 18px; padding: 18px; background: #07111d; box-shadow: 0 30px 80px rgba(0,0,0,.55); }
 .protected-xray-viewer.is-enlarged .protected-xray-canvas,.protected-xray-viewer:fullscreen .protected-xray-canvas { min-block-size: calc(100vh - 170px); }
-.active-xray-ai-result > .card { min-width: 0; border-color: #2b4057; border-radius: 12px; background: #102035; color: #edf5ff; box-shadow: none; }
-.active-xray-ai-panel { display: grid; min-width: 0; align-content: start; gap: 14px; }
+.active-xray-ai-result > .card { min-width: 0; min-height: 0; height: 100%; overflow: auto; border-color: #2b4057; border-radius: 12px; padding: 16px; background: #102035; color: #edf5ff; box-shadow: none; }
+.active-xray-ai-panel { display: grid; min-width: 0; min-height: 0; align-content: start; gap: 10px; }
 .active-xray-ai-panel h3,.active-xray-ai-panel h4,.active-xray-ai-panel dd { color: #f4f8ff; }
 .active-xray-ai-panel .section-header h3,.active-xray-ai-panel.xray-ai-empty h3 { display: flex; align-items: center; gap: 8px; }
 .active-xray-ai-panel .section-header p,.active-xray-ai-panel p,.active-xray-ai-panel dt,.active-xray-ai-panel span { color: #b7c7d9; }
 .xray-ai-highlight { margin: 0; }
-.xray-ai-highlight div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-block: 1px solid #2b4057; padding-block: 12px; }
+.xray-ai-highlight div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-block: 1px solid #2b4057; padding-block: 8px; }
 .xray-ai-highlight dt { color: #b7c7d9; }
 .xray-ai-highlight dd { margin: 0; color: #42d7ee; font-size: 24px; font-weight: 850; }
 .xray-findings-scroll { max-width: 100%; overflow-x: auto; border: 1px solid #3d5670; border-radius: 10px; }
 .xray-findings table { inline-size: 100%; min-inline-size: 320px; border-collapse: collapse; }
-.xray-findings th,.xray-findings td { border-block-end: 1px solid #3d5670; padding: 10px; color: #edf5ff; text-align: start; }
+.xray-findings { margin-block: 4px; }
+.xray-findings h4 { margin-block-end: 6px; }
+.xray-findings th,.xray-findings td { border-block-end: 1px solid #3d5670; padding: 7px; color: #edf5ff; text-align: start; }
 .xray-findings th { color: #b7c7d9; font-size: 11px; }
-.active-xray-ai-panel .xray-ai-metadata { grid-template-columns: 1fr; margin: 0; }
-.active-xray-ai-panel .xray-ai-metadata div { border-color: #2b4057; background: #14283d; }
-.active-xray-ai-panel .ai-disclaimer { display: grid; gap: 5px; margin: 0; border-color: #42d7ee; background: #14283d; }
-.active-xray-ai-panel .ai-disclaimer strong { color: #edf5ff; }
-.active-xray-ai-panel .ai-disclaimer span { display: block; }
+.active-xray-analysis-details { display: grid; min-width: 0; gap: 12px; border: 1px solid #2b4057; border-radius: 12px; padding: 14px; background: #0d1b2b; }
+.active-xray-analysis-details h4 { margin: 0; color: #edf5ff; font-size: 14px; }
+.active-xray-analysis-details .xray-ai-metadata { grid-template-columns: repeat(4,minmax(0,1fr)); margin: 0; }
+.active-xray-analysis-details .xray-ai-metadata div { border-color: #2b4057; background: #14283d; }
+.active-xray-analysis-details .xray-ai-metadata dt { color: #9fb1c6; }
+.active-xray-analysis-details .xray-ai-metadata dd { color: #edf5ff; }
+.active-xray-analysis-details .ai-disclaimer { display: grid; gap: 5px; margin: 0; border-color: #42d7ee; background: #14283d; color: #b7c7d9; }
+.active-xray-analysis-details .ai-disclaimer strong { color: #edf5ff; }
+.active-xray-analysis-details .ai-disclaimer span { display: block; }
 @media (max-width:1279px) {
   .active-xray-history-panel { overflow: hidden; }
-  .active-xray-main-row { grid-template-columns: minmax(0,2.55fr) minmax(250px,1fr); }
-}
-@media (max-width:1023.98px) {
-  .active-xray-main-row { grid-template-columns: 1fr; }
+  .active-xray-header { gap: 12px; }
+  .active-xray-main-row { grid-template-columns: minmax(0,2.8fr) minmax(230px,1fr); gap: 12px; }
+  .active-xray-analysis-details .xray-ai-metadata { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:767px) {
   .active-xray-workspace { padding: 14px; }
@@ -751,7 +754,10 @@
   .active-xray-primary-actions .v2-button { flex: 1; }
   .active-xray-thumbnail { flex-basis: 220px; grid-template-columns: 68px minmax(110px,1fr); }
   .active-xray-thumbnail-image { inline-size: 68px; }
+  .active-xray-main-row { block-size: auto; grid-template-columns: 1fr; }
+  .active-xray-canvas-panel .protected-xray-viewer { min-block-size: 320px; }
   .protected-xray-canvas { min-block-size: 260px; }
+  .active-xray-analysis-details .xray-ai-metadata { grid-template-columns: 1fr; }
   .protected-xray-toolbar { grid-template-columns: minmax(0,1fr) auto; }
   .protected-xray-toolbar-actions { flex-wrap: nowrap; overflow-x: auto; padding-block-end: 4px; }
   .protected-xray-toolbar-actions .v2-button { flex: 0 0 auto; }

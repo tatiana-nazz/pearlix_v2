@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAuthStore } from "../../../auth/authStore";
@@ -69,9 +69,23 @@ describe("ActiveVisitXrayWorkspace", () => {
   });
 
   it("prioritizes the overlay-capable X-ray and keeps the top-level switch visible across selections", async () => {
-    render(<ActiveVisitXrayWorkspace role="DOCTOR" visit={visit} />);
+    const { container } = render(<ActiveVisitXrayWorkspace role="DOCTOR" visit={visit} />);
     expect(await screen.findByTestId("protected-viewer")).toHaveAttribute("data-endpoint", "/api/xrays/2/file/");
     expect(screen.getByText("Stored research result")).toBeInTheDocument();
+    const mainRow = container.querySelector<HTMLElement>(".active-xray-main-row")!;
+    const aiPanel = container.querySelector<HTMLElement>(".active-xray-ai-result")!;
+    const history = container.querySelector<HTMLElement>(".active-xray-history-panel")!;
+    const details = container.querySelector<HTMLElement>(".active-xray-analysis-details")!;
+    expect(within(aiPanel).getByText("AI Result")).toBeInTheDocument();
+    expect(within(aiPanel).getByText("75%")).toBeInTheDocument();
+    expect(within(aiPanel).getByText("Stored research result")).toBeInTheDocument();
+    expect(within(aiPanel).queryByText("Model Version")).not.toBeInTheDocument();
+    expect(within(aiPanel).queryByText("Research-only AI analysis")).not.toBeInTheDocument();
+    expect(within(details).getByText("AI Analysis Details")).toBeInTheDocument();
+    expect(within(details).getByText("Model Version")).toBeInTheDocument();
+    expect(within(details).getByText("Research-only AI analysis")).toBeInTheDocument();
+    expect(mainRow.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(history.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const overlay = screen.getByRole("switch", { name: "AI Overlay: Off" });
     expect(overlay).toBeEnabled();
     expect(overlay).toHaveAttribute("aria-checked", "false");

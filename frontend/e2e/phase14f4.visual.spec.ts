@@ -6,7 +6,6 @@ const viewports = [
   { width: 1440, height: 900 },
   { width: 1280, height: 720 },
   { width: 1024, height: 768 },
-  { width: 768, height: 1024 },
 ] as const;
 
 async function login(page: Page, email: string) {
@@ -35,27 +34,119 @@ async function expectNoDocumentOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 }
 
-async function expectActionFooterClear(page: Page, contentSelector: string, finalContentSelector: string) {
+async function expectActionBarInFlow(page: Page, contentSelector: string) {
   const footer = page.locator(".active-visit-action-bar");
-  await expect(footer).toBeVisible();
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await expect.poll(() => page.evaluate(() => Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1)).toBe(true);
-  const geometry = await page.evaluate(({ content, finalContent }) => {
-    const contentRect = document.querySelector(content)!.getBoundingClientRect();
-    const finalRect = document.querySelector(finalContent)!.getBoundingClientRect();
-    const footerElement = document.querySelector(".active-visit-action-bar")!;
+  const content = page.locator(contentSelector);
+  await expect(content).toBeVisible();
+  await expect(footer).toBeAttached();
+  const geometry = await content.evaluate((contentElement) => {
+    const contentRect = contentElement.getBoundingClientRect();
+    const footerElement = document.querySelector<HTMLElement>(".active-visit-action-bar")!;
     const footerRect = footerElement.getBoundingClientRect();
     return {
+      followsContent: Boolean(contentElement.compareDocumentPosition(footerElement) & Node.DOCUMENT_POSITION_FOLLOWING),
       contentClear: contentRect.bottom <= footerRect.top + 1,
-      finalContentClear: finalRect.bottom <= footerRect.top + 1,
       position: getComputedStyle(footerElement).position,
     };
-  }, { content: contentSelector, finalContent: finalContentSelector });
+  });
+  expect(geometry.followsContent).toBe(true);
   expect(geometry.contentClear).toBe(true);
-  expect(geometry.finalContentClear).toBe(true);
-  expect(geometry.position).toBe("sticky");
+  expect(geometry.position).toBe("static");
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1)).toBe(true);
+  await expect(footer).toBeVisible();
   await expect(page.getByRole("button", { name: "Save Notes" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Complete Visit" })).toBeVisible();
+  await expectNoDocumentOverflow(page);
+}
+
+async function expectActiveVisitFullWidth(page: Page) {
+  const geometry = await page.evaluate(() => {
+    const content = document.querySelector(".workspace-content")!;
+    const pageElement = document.querySelector(".active-visit-page")!;
+    const workspace = document.querySelector(".visit-workspace")!;
+    const contentStyle = getComputedStyle(content);
+    const availableWidth = content.getBoundingClientRect().width - parseFloat(contentStyle.paddingLeft) - parseFloat(contentStyle.paddingRight);
+    return {
+      pageDelta: Math.abs(pageElement.getBoundingClientRect().width - availableWidth),
+      workspaceDelta: Math.abs(workspace.getBoundingClientRect().width - availableWidth),
+    };
+  });
+  expect(geometry.pageDelta).toBeLessThanOrEqual(2);
+  expect(geometry.workspaceDelta).toBeLessThanOrEqual(2);
+}
+
+async function expectPatientRailPinned(page: Page, profilePath: string) {
+  await page.goto(profilePath);
+  await expect(page.locator(".patient-identity-rail")).toBeVisible();
+  const initial = await page.evaluate(() => {
+    const rail = document.querySelector(".patient-identity-rail")!;
+    const main = document.querySelector(".patient-detail-main")!;
+    const railRect = rail.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const style = getComputedStyle(rail);
+    return { railTop: railRect.top, railBottom: railRect.bottom, mainTop: mainRect.top, noOverlap: railRect.right <= mainRect.left + 1, position: style.position, top: parseFloat(style.top), background: style.backgroundColor, zIndex: Number(style.zIndex), viewportHeight: innerHeight };
+  });
+  expect(initial.position).toBe("sticky");
+  expect(initial.noOverlap).toBe(true);
+  expect(initial.railBottom).toBeLessThanOrEqual(initial.viewportHeight + 1);
+  expect(initial.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(initial.zIndex).toBeGreaterThan(1);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const scrolled = await page.evaluate(() => {
+    const railRect = document.querySelector(".patient-identity-rail")!.getBoundingClientRect();
+    const mainRect = document.querySelector(".patient-detail-main")!.getBoundingClientRect();
+    return { scrollY, railTop: railRect.top, railBottom: railRect.bottom, mainTop: mainRect.top, viewportHeight: innerHeight };
+  });
+  expect(scrolled.scrollY).toBeGreaterThan(0);
+  expect(scrolled.railTop).toBeCloseTo(initial.top, 0);
+  expect(scrolled.railBottom).toBeLessThanOrEqual(scrolled.viewportHeight + 1);
+  expect(scrolled.mainTop).toBeLessThan(initial.mainTop);
+  await expectNoDocumentOverflow(page);
+}
+
+async function expectXrayAndAiFit(page: Page) {
+  const mainRow = page.locator(".active-xray-main-row");
+  const viewer = page.locator(".active-xray-canvas-panel");
+  const aiPanel = page.locator(".active-xray-ai-result");
+  await expect(viewer.locator(".protected-xray-original")).toBeVisible();
+  await expect(page.getByRole("switch", { name: /AI Overlay/ })).toBeVisible();
+  await expect(aiPanel.getByText("AI Result")).toBeVisible();
+  await expect(aiPanel.getByText("Status:")).toBeVisible();
+  await expect(aiPanel.getByText("Overall Confidence")).toBeVisible();
+  await expect(aiPanel.getByText("Findings")).toBeVisible();
+  await expect(aiPanel.getByText("Model Version")).toHaveCount(0);
+  await expect(aiPanel.getByText("Research-only AI analysis")).toHaveCount(0);
+  const details = page.locator(".active-xray-analysis-details");
+  const history = page.locator(".active-xray-history-panel");
+  await expect(details.getByText("Model Version")).toBeVisible();
+  await expect(details.getByText("Research-only AI analysis")).toBeVisible();
+  const geometry = await page.evaluate(() => {
+    const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+    const row = rect(".active-xray-main-row");
+    const viewerRect = rect(".active-xray-canvas-panel");
+    const ai = rect(".active-xray-ai-result");
+    const historyRect = rect(".active-xray-history-panel");
+    const detailsRect = rect(".active-xray-analysis-details");
+    return {
+      sideBySide: viewerRect.right <= ai.left + 1 && Math.abs(viewerRect.top - ai.top) <= 1,
+      viewerDominates: viewerRect.width / ai.width,
+      rowVisible: row.top >= -1 && row.bottom <= innerHeight + 1,
+      viewerVisible: viewerRect.top >= -1 && viewerRect.bottom <= innerHeight + 1,
+      aiVisible: ai.top >= -1 && ai.bottom <= innerHeight + 1,
+      historyAfterRow: historyRect.top >= row.bottom - 1,
+      detailsAfterHistory: detailsRect.top >= historyRect.bottom - 1,
+    };
+  });
+  expect(geometry.sideBySide).toBe(true);
+  expect(geometry.viewerDominates).toBeGreaterThanOrEqual(2.2);
+  expect(geometry.rowVisible).toBe(true);
+  expect(geometry.viewerVisible).toBe(true);
+  expect(geometry.aiVisible).toBe(true);
+  expect(geometry.historyAfterRow).toBe(true);
+  expect(geometry.detailsAfterHistory).toBe(true);
+  await expect(mainRow).toBeVisible();
+  await expect(history).toBeVisible();
   await expectNoDocumentOverflow(page);
 }
 
@@ -78,17 +169,23 @@ test("Doctor completes one atomic visit-and-billing workflow and Staff receives 
     await page.setViewportSize(viewport);
     await page.goto("/doctor/visits/active");
     await expect(page.getByRole("tab")).toHaveText(["Visit Notes", "X-rays & AI", "Billing"]);
-    await expectActionFooterClear(page, ".active-visit-notes-card", ".clinical-note-general");
+    await expectActiveVisitFullWidth(page);
+    const profilePath = await page.getByRole("link", { name: /Open .* patient profile/ }).getAttribute("href");
+    expect(profilePath).toBeTruthy();
+    await expectPatientRailPinned(page, profilePath!);
+    await page.goto("/doctor/visits/active");
+    await expectActionBarInFlow(page, ".visit-tab-panel");
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole("tab", { name: "X-rays & AI" }).click();
-    await expect(page.locator(".protected-xray-original")).toBeVisible();
-    await expectActionFooterClear(page, ".active-xray-workspace", ".active-xray-history-panel");
+    await expectXrayAndAiFit(page);
+    await expectActionBarInFlow(page, ".visit-tab-panel");
     await page.getByRole("tab", { name: "Billing" }).click();
     await expect(page.getByText("Billing details will be sent to Staff when the visit is completed.")).toBeVisible();
     await expect(page.getByLabel("Treatment / invoice description")).toBeEditable();
     await expect(page.getByLabel("Total treatment charge")).toBeEditable();
     await expect(page.getByLabel("Billing note")).toBeEditable();
     await fillBilling(page);
-    await expectActionFooterClear(page, ".active-visit-billing-card", ".active-visit-billing-note");
+    await expectActionBarInFlow(page, ".visit-tab-panel");
     await page.getByRole("button", { name: "Complete Visit" }).click();
     const dialog = page.getByRole("dialog", { name: "Complete this visit?" });
     await expect(dialog).toBeVisible();

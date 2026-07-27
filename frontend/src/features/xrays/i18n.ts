@@ -15,6 +15,7 @@ type XrayCopy = {
   upload: string;
   uploading: string;
   aiResult: string;
+  aiAnalysisDetails: string;
   noResult: string;
   unavailable: string;
   disclaimer: string;
@@ -83,6 +84,7 @@ const en: XrayCopy = {
   upload: "Upload",
   uploading: "Uploading…",
   aiResult: "AI Result",
+  aiAnalysisDetails: "AI Analysis Details",
   noResult: "No stored AI result is available for this X-ray.",
   unavailable: "AI analysis is unavailable in this environment. Stored results, when present, remain available for review.",
   disclaimer: "AI-assisted information requires professional interpretation and is not a clinical diagnosis.",
@@ -151,6 +153,7 @@ const ar: XrayCopy = {
   upload: "رفع",
   uploading: "جارٍ الرفع…",
   aiResult: "نتيجة الذكاء الاصطناعي",
+  aiAnalysisDetails: "تفاصيل تحليل الذكاء الاصطناعي",
   noResult: "لا توجد نتيجة محفوظة للذكاء الاصطناعي لهذه الأشعة.",
   unavailable: "تحليل الذكاء الاصطناعي غير متاح في هذه البيئة. تبقى النتائج المحفوظة، إن وجدت، متاحة للمراجعة.",
   disclaimer: "تتطلب المعلومات المدعومة بالذكاء الاصطناعي تفسيراً مهنياً وليست تشخيصاً طبياً.",

@@ -59,13 +59,19 @@ describe("VisitWorkspace", () => {
     mutationState.complete.mockResolvedValue({ visit: { ...visit, status: "COMPLETED", completed_at: "2026-07-26T10:00:00Z" }, billing_handoff: { id: 5, status: "PENDING", suggested_amount: "250.00", currency: "SYP" } });
   });
 
-  it("uses one accessible three-tab workspace and keeps the sticky action contract", () => {
+  it("uses one accessible three-tab workspace with the action bar after the active panel", () => {
     const { container } = renderWorkspace();
     expect(screen.getByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Visit Notes", "X-rays & AI", "Billing"]);
-    expect(container.querySelector(".active-visit-action-bar")).toBeInTheDocument();
+    const notesPanel = container.querySelector(".visit-tab-panel");
+    const actionBar = container.querySelector(".active-visit-action-bar");
+    expect(notesPanel).toBeInTheDocument();
+    expect(actionBar).toBeInTheDocument();
+    expect(notesPanel!.compareDocumentPosition(actionBar!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "X-rays & AI" }));
-    expect(container.querySelector(".active-visit-action-bar")).toBeInTheDocument();
+    const xrayPanel = container.querySelector(".visit-tab-panel");
+    expect(xrayPanel).toBeInTheDocument();
+    expect(xrayPanel!.compareDocumentPosition(actionBar!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("keeps note and billing drafts across tabs and includes both in unsaved state", () => {

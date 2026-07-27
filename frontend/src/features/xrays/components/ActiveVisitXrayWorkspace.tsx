@@ -16,7 +16,7 @@ import { useRunSavedXrayAi, useVisitXrayUpload, useXray, useXrayAiResult, useXra
 import { xrayCopy } from "../i18n";
 import { canRunSavedXrayAi, canUploadVisitXray } from "../utils/xrayPermissions";
 import { xrayText } from "../utils/xrayPresentation";
-import { AiResultPanel } from "./AiResultPanel";
+import { AiAnalysisDetails, AiResultPanel } from "./AiResultPanel";
 import { ProtectedXrayViewer } from "./ProtectedXrayViewer";
 import { XrayUploadDialog } from "./XrayUploadDialog";
 
@@ -113,6 +113,7 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
         <div className="active-xray-list-heading"><h4>{c.savedXrays}</h4><span>{xrays.data?.results.length ?? 0}</span></div>
         {xrays.data?.results.length ? <div className="active-xray-thumbnail-strip" aria-label={c.savedXrays}>{xrays.data.results.map((xray) => <XrayThumbnail key={xray.id} xray={xray} selected={xray.id === selectedXrayId} onSelect={() => setSelectedXrayId(xray.id)} />)}</div> : null}
       </section>
+      <AiAnalysisDetails result={aiResult.data} />
     </div> : null}
 
     {uploadOpen ? <XrayUploadDialog title={c.uploadXray} isSubmitting={upload.isPending} error={upload.error} onCancel={() => setUploadOpen(false)} onSubmit={finishUpload} /> : null}
