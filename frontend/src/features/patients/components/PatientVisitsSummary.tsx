@@ -18,16 +18,18 @@ interface PatientVisitsSummaryProps {
   isLoading: boolean;
   error: unknown;
   onRetry: () => void;
+  title?: string;
+  description?: string;
 }
 
-export function PatientVisitsSummary({ role, visits, isLoading, error, onRetry }: PatientVisitsSummaryProps) {
+export function PatientVisitsSummary({ role, visits, isLoading, error, onRetry, title = "Visits", description = "Clinical history for this patient. Access is read-only unless you are the doctor who owns the visit." }: PatientVisitsSummaryProps) {
   if (isLoading) return <LoadingState title="Loading visits..." />;
   if (error) return <ErrorState error={error} onRetry={onRetry} title="Unable to load visits" />;
   const rows = visits?.results ?? [];
 
   return (
     <Card>
-      <SectionHeader title="Visits" description="Clinical history for this patient. Access is read-only unless you are the doctor who owns the visit." />
+      <SectionHeader title={title} description={description} />
       {rows.length ? (
         <ul className="summary-list-flat">
           {rows.map((visit) => (

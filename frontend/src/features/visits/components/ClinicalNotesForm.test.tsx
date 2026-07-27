@@ -13,16 +13,20 @@ const values = {
 };
 
 describe("ClinicalNotesForm", () => {
-  it("edits only supported clinical note fields and submits save", async () => {
+  it("maps the five supported backend fields to the specified clinical sections", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    const onSave = vi.fn();
-    render(<ClinicalNotesForm values={values} onChange={onChange} onSave={onSave} />);
+    render(<ClinicalNotesForm values={values} onChange={onChange} />);
 
-    await user.type(screen.getByLabelText("Diagnosis"), "Caries");
-    await user.click(screen.getByRole("button", { name: "Save Notes" }));
+    expect(screen.getByLabelText("Subjective Notes")).toHaveValue("Pain");
+    expect(screen.getByLabelText("Objective Notes")).toBeInTheDocument();
+    expect(screen.getByLabelText("Assessment")).toBeInTheDocument();
+    expect(screen.getByLabelText("Plan")).toBeInTheDocument();
+    expect(screen.getByLabelText("General Notes")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save Notes" })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Assessment"), "Caries");
 
     expect(onChange).toHaveBeenCalledWith("diagnosis", "C");
-    expect(onSave).toHaveBeenCalledOnce();
   });
 });

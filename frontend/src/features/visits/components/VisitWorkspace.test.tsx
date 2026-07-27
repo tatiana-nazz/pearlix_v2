@@ -8,7 +8,9 @@ import type { VisitDetail } from "../../../types/visits";
 import { VisitWorkspace } from "./VisitWorkspace";
 
 vi.mock("../../patients/hooks/usePatient", () => ({
-  usePatient: () => ({ isLoading: false, isError: false, data: { phone_number: "555-0100", blood_group: "O+", insurance_info: "Clinic plan", medical_conditions_history: "Penicillin allergy" } }),
+  usePatient: () => ({ isLoading: false, isError: false, error: null, refetch: vi.fn(), data: { id: 44, first_name: "Ada", last_name: "Lovelace", full_name: "Ada Lovelace", gender: "Female", date_of_birth: "1985-01-01", age: 41, phone_number: "555-0100", email: "ada@example.test", national_id_or_passport: null, blood_group: "O+", is_archived: false, version: 1, created_at: "2026-01-01", updated_at: "2026-01-01", address: "Analytical Engine Lane", emergency_contact: "Charles Babbage", medical_conditions_history: "Penicillin allergy", insurance_info: "Clinic plan", general_notes: "", created_by: null, updated_by: null } }),
+  usePatientVisits: () => ({ isLoading: false, error: null, refetch: vi.fn(), data: { count: 0, next: null, previous: null, results: [] } }),
+  usePatientAppointments: () => ({ isLoading: false, error: null, refetch: vi.fn(), data: { count: 0, next: null, previous: null, results: [] } }),
 }));
 vi.mock("../../xrays/components/ActiveVisitXrayWorkspace", () => ({ ActiveVisitXrayWorkspace: () => <p>Attachment panel</p> }));
 vi.mock("../../billing/components/VisitBillingSection", () => ({ VisitBillingSection: () => <p>Billing panel</p> }));
@@ -38,7 +40,7 @@ describe("VisitWorkspace", () => {
     expect(screen.getByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
     expect(screen.queryByText("Visit #91")).not.toBeInTheDocument();
     expect(screen.getAllByRole("tab")).toHaveLength(4);
-    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Visit Notes", "Patient Profile", "X-rays / Attachments", "Billing / Invoice Handoff"]);
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Visit Notes", "Patient Profile", "X-rays & AI", "Billing"]);
     expect(screen.getByRole("tab", { name: "Visit Notes" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Doctor One")).toBeInTheDocument();
   });
@@ -48,8 +50,8 @@ describe("VisitWorkspace", () => {
     const notes = screen.getByRole("tab", { name: "Visit Notes" });
     fireEvent.keyDown(notes, { key: "ArrowRight" });
     expect(screen.getByRole("tab", { name: "Patient Profile" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByText("Penicillin allergy")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Open full patient profile" })).toHaveLength(2);
+    expect(screen.getAllByText("Penicillin allergy")).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Open Full Patient Profile" })).toHaveLength(2);
     expect(screen.queryByText(/archive|reactivate/i)).not.toBeInTheDocument();
   });
 
@@ -66,15 +68,15 @@ describe("VisitWorkspace", () => {
     setUser("DOCTOR", "AR");
     renderWorkspace();
     expect(screen.getByRole("tab", { name: "ملاحظات الزيارة" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "حفظ الملاحظات" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "حفظ الملاحظات" })).toHaveLength(1);
   });
 
   it("keeps unsaved clinical notes and the static summary while switching tabs", () => {
     renderWorkspace();
-    fireEvent.change(screen.getByLabelText("Clinical notes"), { target: { value: "Unsaved tab-safe note" } });
+    fireEvent.change(screen.getByLabelText("Objective Notes"), { target: { value: "Unsaved tab-safe note" } });
     fireEvent.click(screen.getByRole("tab", { name: "Patient Profile" }));
     expect(screen.getByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Visit Notes" }));
-    expect(screen.getByLabelText("Clinical notes")).toHaveValue("Unsaved tab-safe note");
+    expect(screen.getByLabelText("Objective Notes")).toHaveValue("Unsaved tab-safe note");
   });
 });

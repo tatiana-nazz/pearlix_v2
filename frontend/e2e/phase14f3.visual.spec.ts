@@ -81,7 +81,7 @@ test("Doctor One exposes the split schedule, editable active visit, and one laye
 
   await page.goto("/doctor/visits/active");
   await expect(page.getByRole("heading", { name: "Lina Mansour", exact: true }).first()).toBeVisible();
-  await expect(page.getByLabel("Clinical notes")).toBeEditable();
+  await expect(page.getByLabel("Objective Notes")).toBeEditable();
   await expect(page.getByRole("button", { name: "Save Notes" }).last()).toBeVisible();
 
   await page.goto("/doctor/xrays");

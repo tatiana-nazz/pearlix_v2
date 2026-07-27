@@ -5,32 +5,31 @@ import { visitCopy } from "../i18n";
 interface ClinicalNotesFormProps {
   values: ClinicalNotesValues;
   disabled?: boolean;
-  isDirty?: boolean;
   isSaving?: boolean;
   error?: unknown;
   onChange: (field: keyof ClinicalNotesValues, value: string) => void;
-  onSave: () => void;
 }
 
-export function ClinicalNotesForm({ values, disabled, isDirty = true, isSaving, error, onChange, onSave }: ClinicalNotesFormProps) {
+export function ClinicalNotesForm({ values, disabled, isSaving, error, onChange }: ClinicalNotesFormProps) {
   const c = visitCopy(useAuthStore((state) => state.user?.language_preference));
-  const fields: Array<{ key: keyof ClinicalNotesValues; label: string; rows: number }> = [
-    { key: "symptoms", label: c.symptoms, rows: 3 }, { key: "diagnosis", label: c.diagnosis, rows: 3 }, { key: "treatment", label: c.treatment, rows: 3 }, { key: "clinical_notes", label: c.clinicalNotesField, rows: 6 }, { key: "follow_up_notes", label: c.followUp, rows: 3 },
+  const fields: Array<{ key: keyof ClinicalNotesValues; label: string; helper: string; area: string }> = [
+    { key: "symptoms", label: c.subjectiveNotes, helper: c.subjectiveHelper, area: "subjective" },
+    { key: "clinical_notes", label: c.objectiveNotes, helper: c.objectiveHelper, area: "objective" },
+    { key: "diagnosis", label: c.assessment, helper: c.assessmentHelper, area: "assessment" },
+    { key: "treatment", label: c.plan, helper: c.planHelper, area: "plan" },
+    { key: "follow_up_notes", label: c.generalNotes, helper: c.generalNotesHelper, area: "general" },
   ];
   return (
-    <form
-      className="clinical-notes-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSave();
-      }}
-    >
+    <form className="clinical-notes-form" onSubmit={(event) => event.preventDefault()}>
       {fields.map((field) => (
-        <label key={field.key}>
-          {field.label}
+        <label className={`clinical-note-field clinical-note-${field.area}`} key={field.key}>
+          <span className="clinical-note-label">{field.label}</span>
+          <span className="clinical-note-helper" id={`clinical-note-${field.key}-helper`}>{field.helper}</span>
           <textarea
             name={field.key}
-            rows={field.rows}
+            aria-label={field.label}
+            aria-describedby={`clinical-note-${field.key}-helper`}
+            rows={6}
             value={values[field.key]}
             disabled={disabled || isSaving}
             onChange={(event) => onChange(field.key, event.target.value)}
@@ -38,11 +37,6 @@ export function ClinicalNotesForm({ values, disabled, isDirty = true, isSaving, 
         </label>
       ))}
       {error ? <p className="form-error" role="alert">{c.saveError}</p> : null}
-      <div className="form-actions">
-        <button className={`button ${isDirty ? "primary" : "secondary"}`} type="submit" disabled={disabled || isSaving || !isDirty}>
-          {isSaving ? c.saving : c.saveNotes}
-        </button>
-      </div>
     </form>
   );
 }

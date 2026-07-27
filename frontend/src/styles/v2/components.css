@@ -561,50 +561,86 @@
   .patient-identity-rail { position: static; inset-block-start: auto; max-block-size: none; overflow: visible; border-radius: 24px 24px 0 0; }
 }
 
-/* Phase 14F.4B target-aligned Active Visit composition. */
-.visit-workspace { gap: 18px; }
-.active-visit-context-stack { position: static; display: grid; gap: 0; min-width: 0; }
-.active-visit-summary { display: grid; grid-template-columns: minmax(255px,1.08fr) minmax(220px,.8fr) minmax(255px,.98fr) minmax(260px,.9fr); min-block-size: 154px; align-items: stretch; gap: 0; overflow: hidden; border: 1px solid var(--v2-border); border-block-end: 0; border-radius: 16px 16px 0 0; background: var(--v2-surface); box-shadow: none; }
-.active-visit-summary > * { min-width: 0; padding: 18px 22px; }
-.active-visit-summary > * + * { border-inline-start: 1px solid var(--v2-divider); }
-.active-visit-identity { display: flex; align-items: center; gap: 18px; text-align: start; }
-.active-visit-avatar { display: grid; flex: 0 0 auto; inline-size: 84px; block-size: 104px; place-items: center; border: 1px solid color-mix(in srgb,var(--v2-primary) 18%,var(--v2-border)); border-radius: 12px; background: linear-gradient(155deg,var(--v2-primary-soft),color-mix(in srgb,var(--v2-primary) 22%,var(--v2-surface))); color: var(--v2-primary-strong); font-size: 25px; font-weight: 850; box-shadow: none; }
-.active-visit-identity h2 { margin: 0 0 12px; color: var(--v2-text); font-size: 21px; line-height: 1.2; }
-.active-visit-identity p { margin: 7px 0 0; color: var(--v2-muted); font-size: 13px; font-weight: 650; }
-.active-visit-summary-list { display: grid; align-content: center; gap: 13px; margin: 0; }
-.active-visit-summary-list div { display: grid; min-width: 0; grid-template-columns: minmax(92px,auto) minmax(0,1fr); align-items: center; gap: 8px 12px; }
-.active-visit-summary-list dt { display: flex; align-items: center; gap: 7px; color: var(--v2-muted); font-size: 12px; font-weight: 700; }
-.active-visit-summary-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--v2-text); font-size: 13px; font-weight: 750; }
-.active-visit-appointment-list div { grid-template-columns: 1fr; gap: 6px; }
-.active-visit-appointment { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
-.active-visit-audit-list dd { font-size: 12px; }
-.active-visit-summary-actions { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 14px; }
-.active-visit-summary-actions > .button { inline-size: auto; min-block-size: 40px; justify-content: center; white-space: nowrap; }
-.active-visit-clinical-actions { display: flex; inline-size: 100%; justify-content: flex-end; gap: 10px; }
-.active-visit-clinical-actions .button { flex: 1 1 0; min-block-size: 42px; justify-content: center; white-space: nowrap; }
+/* Phase 14F.4 Active Visit specification: header, full-width context, tabs, work, actions. */
+.visit-workspace { --active-visit-action-height: 72px; --active-visit-action-gap: 18px; gap: var(--active-visit-action-gap); }
+.active-visit-page-actions,.active-visit-page-status { display: flex; align-items: center; gap: 10px; }
+.active-visit-page-status { flex-wrap: wrap; color: var(--v2-text); font-weight: 750; }
+.active-visit-page-status small { color: var(--v2-muted); font-weight: 650; }
+.active-visit-context-stack { position: static; display: grid; min-width: 0; gap: 14px; }
+.active-visit-summary { display: grid; grid-template-columns: minmax(220px,.9fr) minmax(220px,.82fr) minmax(285px,1.18fr) minmax(240px,1fr); align-items: stretch; overflow: hidden; border: 1px solid var(--v2-border); border-radius: 18px; background: var(--v2-surface); box-shadow: var(--v2-shadow-soft); }
+.active-visit-summary-section { min-width: 0; padding: 20px; }
+.active-visit-summary-section + .active-visit-summary-section { border-inline-start: 1px solid var(--v2-divider); }
+.active-visit-summary-kicker { display: flex; align-items: center; gap: 7px; margin: 0 0 12px; color: var(--v2-muted); font-size: 11px; font-weight: 850; letter-spacing: .055em; text-transform: uppercase; }
+.active-visit-identity { display: flex; align-items: center; gap: 16px; text-align: start; }
+.active-visit-avatar { display: grid; flex: 0 0 auto; inline-size: 72px; block-size: 72px; place-items: center; border: 1px solid color-mix(in srgb,var(--v2-primary) 22%,var(--v2-border)); border-radius: 18px; background: var(--v2-primary-soft); color: var(--v2-primary-strong); font-size: 23px; font-weight: 850; }
+.active-visit-identity h2 { margin: 0; color: var(--v2-text); font-size: 21px; line-height: 1.2; }
+.active-visit-identity p:not(.active-visit-summary-kicker) { margin: 7px 0 0; color: var(--v2-muted); font-size: 13px; font-weight: 650; }
+.active-visit-summary-list { display: grid; align-content: start; gap: 10px; margin: 0; }
+.active-visit-summary-list div { display: grid; min-width: 0; grid-template-columns: minmax(90px,.72fr) minmax(0,1.28fr); align-items: start; gap: 6px 10px; }
+.active-visit-summary-list dt { display: flex; align-items: center; gap: 6px; color: var(--v2-muted); font-size: 11px; font-weight: 700; }
+.active-visit-summary-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--v2-text); font-size: 12px; font-weight: 720; }
+.active-visit-status-pair dd { display: flex; flex-wrap: wrap; gap: 6px; }
+.active-visit-medical-alert { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; background: var(--v2-surface-subtle); }
+.active-visit-medical-alert.has-alert { background: color-mix(in srgb,var(--v2-warning) 10%,var(--v2-surface)); }
+.active-visit-medical-alert.has-alert .active-visit-summary-kicker { color: color-mix(in srgb,var(--v2-warning) 72%,var(--v2-text)); }
+.active-visit-medical-alert p:not(.active-visit-summary-kicker) { margin: 0; color: var(--v2-text); font-size: 13px; line-height: 1.55; }
+.active-visit-medical-alert .button { align-self: flex-start; }
+.active-visit-context-stack .visit-workspace-tabs { margin: 0; overflow: hidden; border: 1px solid var(--v2-border); border-radius: 14px; background: var(--v2-surface); }
+.active-visit-context-stack .visit-workspace-tabs button { display: inline-flex; flex: 1 1 0; min-block-size: 52px; align-items: center; justify-content: center; gap: 9px; border: 0; border-inline-end: 1px solid var(--v2-divider); padding-inline: 16px; white-space: nowrap; }
+.active-visit-context-stack .visit-workspace-tabs button:last-child { border-inline-end: 0; }
+.active-visit-context-stack .visit-workspace-tabs button.active { background: var(--v2-primary); color: #fff; }
+.visit-tab-panel > .card { border-radius: 18px; padding: clamp(20px,3vw,30px); box-shadow: var(--v2-shadow-soft); }
+.visit-tab-panel .section-header h3 { display: flex; align-items: center; gap: 8px; }
+.active-visit-notes-card { display: grid; gap: 22px; }
+.clinical-notes-form { grid-template-areas: "subjective assessment" "objective plan" "general general"; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; gap: 20px; }
+.clinical-note-subjective { grid-area: subjective; }
+.clinical-note-objective { grid-area: objective; }
+.clinical-note-assessment { grid-area: assessment; }
+.clinical-note-plan { grid-area: plan; }
+.clinical-note-general { grid-area: general; }
+.clinical-note-field { align-content: start; }
+.clinical-note-label { color: var(--v2-text); font-size: 14px; font-weight: 800; }
+.clinical-note-helper { min-block-size: 34px; color: var(--v2-muted); font-size: 12px; font-weight: 500; line-height: 1.45; }
+.clinical-notes-form textarea { min-block-size: 154px; padding: 14px; background: var(--v2-surface); line-height: 1.55; }
+.clinical-note-general textarea { min-block-size: 164px; }
+.clinical-notes-form .form-error { grid-column: 1 / -1; }
+.visit-tab-panel { padding-block-end: calc(var(--active-visit-action-height) + var(--active-visit-action-gap)); }
+.active-visit-action-bar { position: sticky; z-index: 4; inset-block-end: 12px; display: flex; min-block-size: var(--active-visit-action-height); align-items: center; justify-content: space-between; gap: 18px; margin-block-start: calc(-1 * (var(--active-visit-action-height) + var(--active-visit-action-gap))); border: 1px solid var(--v2-border); border-radius: 16px; padding: 14px 16px; background: color-mix(in srgb,var(--v2-surface) 94%,transparent); box-shadow: var(--v2-shadow-major); backdrop-filter: blur(12px); }
+.active-visit-save-state { display: flex; align-items: center; gap: 9px; margin: 0; color: var(--v2-muted); font-size: 13px; font-weight: 750; }
+.active-visit-save-state > span { inline-size: 8px; block-size: 8px; border-radius: 999px; background: var(--v2-success); }
+.active-visit-save-state.is-dirty { color: color-mix(in srgb,var(--v2-warning) 72%,var(--v2-text)); }
+.active-visit-save-state.is-dirty > span { background: var(--v2-warning); }
+.active-visit-action-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.active-visit-action-buttons .button { min-inline-size: 136px; justify-content: center; }
 .active-visit-complete { border-color: var(--v2-primary); background: var(--v2-primary); color: #fff; }
 .active-visit-complete:hover { background: var(--v2-primary-strong); }
-.active-visit-context-stack .visit-workspace-tabs { margin: 0; overflow: visible; border: 1px solid var(--v2-border); border-radius: 0 0 12px 12px; background: var(--v2-surface); }
-.active-visit-context-stack .visit-workspace-tabs button { display: inline-flex; flex: 1 1 0; min-block-size: 54px; align-items: center; justify-content: center; gap: 9px; border-inline-end: 1px solid var(--v2-divider); padding-inline: 14px; white-space: nowrap; }
-.active-visit-context-stack .visit-workspace-tabs button:last-child { border-inline-end: 0; }
-.visit-tab-panel > .card { border-radius: 20px; padding: clamp(20px,3vw,32px); box-shadow: var(--v2-shadow-major); }
-.visit-tab-panel .section-header h3 { display: flex; align-items: center; gap: 8px; }
-.clinical-notes-form textarea { min-block-size: 100px; padding: 13px 14px; background: var(--v2-surface-subtle); }
-.clinical-notes-form label:nth-of-type(4) textarea { min-block-size: 190px; }
+.active-visit-patient-tab { display: grid; gap: 18px; }
+.active-visit-medical-history { border-color: color-mix(in srgb,var(--v2-warning) 34%,var(--v2-border)); background: color-mix(in srgb,var(--v2-warning) 8%,var(--v2-surface)); }
+.active-visit-medical-history p { margin: 0; line-height: 1.6; }
+.active-visit-patient-footer { display: flex; justify-content: flex-end; }
 @media (max-width:1279px) {
   .active-visit-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .active-visit-summary > * { border-inline-start: 0; }
-  .active-visit-summary > *:nth-child(even) { border-inline-start: 1px solid var(--v2-divider); }
-  .active-visit-summary > *:nth-child(n+3) { border-block-start: 1px solid var(--v2-divider); }
+  .active-visit-summary-section { border-inline-start: 0!important; }
+  .active-visit-summary-section:nth-child(even) { border-inline-start: 1px solid var(--v2-divider)!important; }
+  .active-visit-summary-section:nth-child(n+3) { border-block-start: 1px solid var(--v2-divider); }
+  .clinical-notes-form { grid-template-areas: "subjective" "objective" "assessment" "plan" "general"; grid-template-columns: 1fr; }
+  .clinical-note-helper { min-block-size: 0; }
+}
+@media (max-height:900px), (max-width:1279px) {
+  .visit-tab-panel { padding-block-end: 0; }
+  .active-visit-action-bar { position: static; inset-block-end: auto; margin-block-start: 0; }
 }
 @media (max-width:767px) {
+  .active-visit-page-actions,.active-visit-action-bar { align-items: stretch; flex-direction: column; }
+  .active-visit-page-status { justify-content: flex-start; }
   .active-visit-summary { grid-template-columns: 1fr; }
-  .active-visit-summary > * + *,.active-visit-summary > *:nth-child(even),.active-visit-summary > *:nth-child(n+3) { border-inline-start: 0; border-block-start: 1px solid var(--v2-divider); }
-  .active-visit-summary-actions { align-items: stretch; }
-  .active-visit-summary-actions > .button { inline-size: 100%; }
-  .active-visit-clinical-actions { flex-direction: column; }
+  .active-visit-summary-section + .active-visit-summary-section,.active-visit-summary-section:nth-child(even),.active-visit-summary-section:nth-child(n+3) { border-inline-start: 0!important; border-block-start: 1px solid var(--v2-divider); }
+  .active-visit-medical-alert .button,.active-visit-page-actions > .button { inline-size: 100%; justify-content: center; }
   .active-visit-context-stack .visit-workspace-tabs { overflow-x: auto; }
-  .active-visit-context-stack .visit-workspace-tabs button { flex: 0 0 auto; min-inline-size: 180px; }
+  .active-visit-context-stack .visit-workspace-tabs button { flex: 0 0 auto; min-inline-size: 150px; }
+  .active-visit-action-buttons { display: grid; grid-template-columns: 1fr; }
+  .active-visit-action-buttons .button { inline-size: 100%; }
+  .active-visit-patient-footer .button { inline-size: 100%; justify-content: center; }
 }
 
 /* Phase 14F.4 inline protected X-ray review workspace. */
@@ -619,17 +655,23 @@
 .active-xray-primary-actions .v2-button.secondary,.active-xray-empty .v2-button { border-color: #3d5670; background: #182b40; color: #edf5ff; }
 .active-xray-ai-error { margin: 0; border: 1px solid color-mix(in srgb,var(--v2-danger) 50%,#26394f); border-radius: 12px; padding: 10px 12px; background: color-mix(in srgb,var(--v2-danger) 12%,#142337); color: #ffdbe3; }
 .active-xray-empty { display: grid; justify-items: center; gap: 14px; border: 1px dashed #3d5670; border-radius: 16px; padding: 34px; }
-.active-xray-thumbnail-strip { display: flex; min-width: 0; gap: 9px; overflow-x: auto; padding-block-end: 4px; scrollbar-width: thin; }
-.active-xray-thumbnail { display: grid; grid-template-columns: 82px minmax(100px,1fr); flex: 0 0 100%; align-items: center; gap: 10px; min-width: 0; border: 1px solid #3d5670; border-radius: 10px; padding: 7px; background: #132337; color: #edf5ff; text-align: start; cursor: pointer; }
+.active-xray-list-panel { display: grid; min-width: 0; align-content: start; gap: 12px; overflow: hidden; border: 1px solid #2b4057; border-radius: 12px; padding: 12px; background: #0d1b2b; }
+.active-xray-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.active-xray-list-heading h4 { margin: 0; color: #edf5ff; font-size: 13px; }
+.active-xray-list-heading span { display: grid; min-inline-size: 24px; block-size: 24px; place-items: center; border-radius: 999px; background: #1c334b; color: #c9d8e8; font-size: 11px; font-weight: 800; }
+.active-xray-thumbnail-strip { display: grid; min-width: 0; max-block-size: 620px; gap: 9px; overflow-y: auto; padding-inline-end: 3px; scrollbar-width: thin; }
+.active-xray-thumbnail { display: grid; grid-template-columns: 82px minmax(100px,1fr); align-items: center; gap: 10px; min-width: 0; border: 1px solid #3d5670; border-radius: 10px; padding: 8px; background: #132337; color: #edf5ff; text-align: start; cursor: pointer; }
 .active-xray-thumbnail[aria-pressed="true"] { border-color: #42d7ee; box-shadow: inset 0 0 0 1px #42d7ee; }
 .active-xray-thumbnail:focus-visible { outline: 3px solid #7c9cff; outline-offset: 2px; }
 .active-xray-thumbnail-image { display: grid; inline-size: 84px; block-size: 54px; place-items: center; overflow: hidden; border-radius: 8px; background: #07111d; }
 .active-xray-thumbnail-image img { inline-size: 100%; block-size: 100%; object-fit: contain; }
-.active-xray-thumbnail > span:last-child { display: grid; min-width: 0; gap: 4px; }
+.active-xray-thumbnail > span:last-child { display: grid; min-width: 0; gap: 3px; }
 .active-xray-thumbnail strong,.active-xray-thumbnail small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .active-xray-thumbnail small { color: #9fb1c6; font-size: 11px; }
-.active-xray-review-grid { display: grid; grid-template-columns: minmax(0,1.8fr) minmax(310px,.72fr); gap: 18px; align-items: stretch; }
-.active-xray-review-side { display: grid; min-width: 0; align-content: start; gap: 14px; }
+.active-xray-ai-status { color: #7fd9e8; font-size: 10px; font-weight: 800; }
+.active-xray-review-grid { display: grid; grid-template-columns: minmax(230px,.42fr) minmax(0,1.58fr); gap: 16px; align-items: stretch; }
+.active-xray-review-main { display: grid; min-width: 0; grid-template-columns: minmax(0,1.55fr) minmax(285px,.7fr); gap: 16px; align-items: stretch; }
+.active-xray-ai-column { display: grid; min-width: 0; align-content: start; }
 .active-xray-canvas-panel { min-width: 0; overflow: hidden; border: 1px solid #2b4057; border-radius: 12px; background: #09131f; }
 .active-xray-canvas-panel .protected-xray-viewer { display: grid; height: 100%; margin: 0; padding: 12px; color: #edf5ff; }
 .protected-xray-toolbar { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px 12px; padding-block-start: 10px; }
@@ -643,7 +685,7 @@
 .protected-xray-scale { grid-column: 2; grid-row: 1; justify-self: end; color: #9fb1c6; font-size: 11px; }
 .protected-xray-viewer.is-enlarged,.protected-xray-viewer:fullscreen { position: fixed; z-index: 80; inset: 14px; display: grid; overflow: auto; border: 1px solid #3d5670; border-radius: 18px; padding: 18px; background: #07111d; box-shadow: 0 30px 80px rgba(0,0,0,.55); }
 .protected-xray-viewer.is-enlarged .protected-xray-canvas,.protected-xray-viewer:fullscreen .protected-xray-canvas { min-block-size: calc(100vh - 170px); }
-.active-xray-review-side > .card { min-width: 0; border-color: #2b4057; border-radius: 12px; background: #102035; color: #edf5ff; box-shadow: none; }
+.active-xray-ai-column > .card { min-width: 0; border-color: #2b4057; border-radius: 12px; background: #102035; color: #edf5ff; box-shadow: none; }
 .active-xray-ai-panel { display: grid; min-width: 0; align-content: start; gap: 14px; }
 .active-xray-ai-panel h3,.active-xray-ai-panel h4,.active-xray-ai-panel dd { color: #f4f8ff; }
 .active-xray-ai-panel .section-header h3,.active-xray-ai-panel.xray-ai-empty h3 { display: flex; align-items: center; gap: 8px; }
@@ -663,7 +705,10 @@
 .active-xray-ai-panel .ai-disclaimer span { display: block; }
 @media (max-width:1279px) {
   .active-xray-review-grid { grid-template-columns: 1fr; }
+  .active-xray-list-panel { overflow: visible; }
+  .active-xray-thumbnail-strip { display: flex; max-block-size: none; overflow-x: auto; overflow-y: hidden; padding-block-end: 4px; }
   .active-xray-thumbnail { flex-basis: 270px; }
+  .active-xray-review-main { grid-template-columns: 1fr; }
 }
 @media (max-width:767px) {
   .active-xray-workspace { padding: 14px; }

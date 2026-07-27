@@ -18,16 +18,18 @@ interface PatientAppointmentsSummaryProps {
   isLoading: boolean;
   error: unknown;
   onRetry: () => void;
+  title?: string;
+  description?: string;
 }
 
-export function PatientAppointmentsSummary({ role, appointments, isLoading, error, onRetry }: PatientAppointmentsSummaryProps) {
+export function PatientAppointmentsSummary({ role, appointments, isLoading, error, onRetry, title = "Appointments", description = "Read-only patient appointment summary. Scheduling actions remain in Phase 13F." }: PatientAppointmentsSummaryProps) {
   if (isLoading) return <LoadingState title="Loading appointments..." />;
   if (error) return <ErrorState error={error} onRetry={onRetry} title="Unable to load appointments" />;
   const rows = appointments?.results ?? [];
 
   return (
     <Card>
-      <SectionHeader title="Appointments" description="Read-only patient appointment summary. Scheduling actions remain in Phase 13F." />
+      <SectionHeader title={title} description={description} />
       {rows.length ? (
         <ul className="summary-list-flat">
           {rows.map((appointment) => (

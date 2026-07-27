@@ -48,6 +48,30 @@ async function expectNoDocumentOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 }
 
+async function expectActionFooterClear(page: Page, contentSelector: string, finalContentSelector: string) {
+  const footer = page.locator(".active-visit-action-bar");
+  await expect(footer).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1)).toBe(true);
+  const geometry = await page.evaluate(({ content, finalContent }) => {
+    const contentRect = document.querySelector(content)!.getBoundingClientRect();
+    const finalRect = document.querySelector(finalContent)!.getBoundingClientRect();
+    const footerRect = document.querySelector(".active-visit-action-bar")!.getBoundingClientRect();
+    const footerPosition = getComputedStyle(document.querySelector(".active-visit-action-bar")!).position;
+    return {
+      contentClear: contentRect.bottom <= footerRect.top + 1,
+      finalContentClear: finalRect.bottom <= footerRect.top + 1,
+      footerTreatmentCorrect: window.innerHeight <= 900 || window.innerWidth <= 1279 ? footerPosition === "static" : footerPosition === "sticky",
+    };
+  }, { content: contentSelector, finalContent: finalContentSelector });
+  expect(geometry.contentClear).toBe(true);
+  expect(geometry.finalContentClear).toBe(true);
+  expect(geometry.footerTreatmentCorrect).toBe(true);
+  await expect(page.getByRole("button", { name: "Save Notes" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Complete Visit" })).toBeVisible();
+  await expectNoDocumentOverflow(page);
+}
+
 async function verifyStaticPatientRail(page: Page, role: "admin" | "staff") {
   await page.setViewportSize({ width: 1024, height: 768 });
   const patients = await authorizedJson<{ results: Array<{ id: number }> }>(page, "/patients/?search=Lina%20Mansour");
@@ -102,9 +126,9 @@ test("Staff sees semantic Month statuses, a static patient rail, and a read-only
   await page.setViewportSize({ width: 1440, height: 900 });
   const visitId = await activeVisitId(page);
   await page.goto(`/staff/visits/${visitId}`);
-  await expect(page.getByRole("tab")).toHaveText(["Visit Notes", "Patient Profile", "X-rays / Attachments", "Billing / Invoice Handoff"]);
-  await expect(page.getByLabel("Clinical notes")).toHaveCount(0);
-  await page.getByRole("tab", { name: "X-rays / Attachments" }).click();
+  await expect(page.getByRole("tab")).toHaveText(["Visit Notes", "Patient Profile", "X-rays & AI", "Billing"]);
+  await expect(page.getByLabel("Objective Notes")).toHaveCount(0);
+  await page.getByRole("tab", { name: "X-rays & AI" }).click();
   await expect(page.locator(".protected-xray-original")).toBeVisible();
   await expect(page.getByRole("button", { name: "Upload X-ray" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Run AI Analysis" })).toHaveCount(0);
@@ -121,8 +145,8 @@ test("Admin retains protected read-only inspection without upload or AI mutation
   await page.setViewportSize({ width: 1440, height: 900 });
   const visitId = await activeVisitId(page);
   await page.goto(`/admin/visits/${visitId}`);
-  await expect(page.getByLabel("Clinical notes")).toHaveCount(0);
-  await page.getByRole("tab", { name: "X-rays / Attachments" }).click();
+  await expect(page.getByLabel("Objective Notes")).toHaveCount(0);
+  await page.getByRole("tab", { name: "X-rays & AI" }).click();
   const original = page.locator(".protected-xray-original");
   await expect(original).toBeVisible();
   expect(await original.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
@@ -141,31 +165,60 @@ test("Doctor completes the inline active-visit X-ray workflow at the frozen view
   if ((await themeToggle.getAttribute("aria-label")) === "Theme: Light") await themeToggle.click();
   expect(await page.locator(".active-visit-context-stack").evaluate((element) => getComputedStyle(element).position)).toBe("static");
   expect(await page.locator(".active-visit-summary").evaluate((element) => getComputedStyle(element).boxShadow)).toBe("none");
-  await expect(page.getByRole("tab")).toHaveText(["Visit Notes", "Patient Profile", "X-rays / Attachments", "Billing / Invoice Handoff"]);
+  await expect(page.getByRole("tab")).toHaveText(["Visit Notes", "Patient Profile", "X-rays & AI", "Billing"]);
+  await expect(page.locator(".active-visit-summary")).toBeVisible();
+  await expect(page.locator(".active-visit-summary .active-visit-action-buttons")).toHaveCount(0);
+  const notesLayout = await page.evaluate(() => {
+    const summary = document.querySelector(".active-visit-summary")!.getBoundingClientRect();
+    const workspace = document.querySelector(".visit-workspace")!.getBoundingClientRect();
+    const subjective = document.querySelector(".clinical-note-subjective")!.getBoundingClientRect();
+    const assessment = document.querySelector(".clinical-note-assessment")!.getBoundingClientRect();
+    const general = document.querySelector(".clinical-note-general")!.getBoundingClientRect();
+    const actionBar = document.querySelector(".active-visit-action-bar")!;
+    const panel = document.querySelector(".visit-tab-panel")!;
+    return {
+      summaryWidthDelta: Math.abs(summary.width - workspace.width),
+      twoColumns: assessment.left > subjective.left && Math.abs(assessment.top - subjective.top) < 2,
+      generalSpansColumns: general.width > subjective.width * 1.8,
+      actionsAfterContent: Boolean(panel.compareDocumentPosition(actionBar) & Node.DOCUMENT_POSITION_FOLLOWING),
+    };
+  });
+  expect(notesLayout.summaryWidthDelta).toBeLessThan(2);
+  expect(notesLayout.twoColumns).toBe(true);
+  expect(notesLayout.generalSpansColumns).toBe(true);
+  expect(notesLayout.actionsAfterContent).toBe(true);
 
-  const notes = page.getByLabel("Clinical notes");
+  const notes = page.getByLabel("Objective Notes");
   const priorNotes = await notes.inputValue();
   await notes.fill(`${priorNotes} Browser acceptance.`);
-  await page.getByRole("button", { name: "Save Notes" }).last().click();
-  await expect(page.getByText("Notes saved.")).toBeVisible();
+  await page.getByRole("button", { name: "Save Notes" }).click();
+  await expect(page.getByText("Saved just now")).toBeVisible();
   await page.getByRole("tab", { name: "Patient Profile" }).click();
   await expect(page.getByRole("heading", { name: "Patient Profile" })).toBeVisible();
 
-  await page.getByRole("tab", { name: "X-rays / Attachments" }).click();
+  await page.getByRole("tab", { name: "X-rays & AI" }).click();
   await expect(page.getByRole("heading", { name: "Selected X-ray" })).toBeVisible();
   await expect(page.locator(".active-xray-canvas-panel")).toBeVisible();
-  await expect(page.locator(".active-xray-review-side")).toBeVisible();
-  await expect(page.getByText("AI Result", { exact: true })).toBeVisible();
+  await expect(page.locator(".active-xray-list-panel")).toBeVisible();
+  await expect(page.locator(".active-xray-review-main")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "AI Result", exact: true })).toBeVisible();
   const protectedOriginal = page.locator(".protected-xray-original");
   await expect(protectedOriginal).toBeVisible();
   await expect.poll(() => protectedOriginal.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   const reviewGeometry = await page.evaluate(() => {
     const canvas = document.querySelector(".active-xray-canvas-panel")!.getBoundingClientRect();
-    const side = document.querySelector(".active-xray-review-side")!.getBoundingClientRect();
-    return { canvasWidth: canvas.width, sideWidth: side.width, alignedTop: Math.abs(canvas.top - side.top) < 1 };
+    const list = document.querySelector(".active-xray-list-panel")!.getBoundingClientRect();
+    const main = document.querySelector(".active-xray-review-main")!.getBoundingClientRect();
+    const ai = document.querySelector(".active-xray-ai-column")!.getBoundingClientRect();
+    return {
+      listIsLeft: list.right <= main.left + 2,
+      alignedTop: Math.abs(list.top - main.top) < 1,
+      canvasWiderThanAi: canvas.width > ai.width,
+    };
   });
-  expect(reviewGeometry.canvasWidth).toBeGreaterThan(reviewGeometry.sideWidth);
+  expect(reviewGeometry.listIsLeft).toBe(true);
   expect(reviewGeometry.alignedTop).toBe(true);
+  expect(reviewGeometry.canvasWiderThanAi).toBe(true);
   await page.getByRole("button", { name: "Active visit bitewing X-ray without AI" }).click();
   const runRequest = page.waitForResponse((response) => response.url().includes("/run-ai/") && response.request().method() === "POST");
   await page.getByRole("button", { name: "Run AI Analysis" }).click();
@@ -219,7 +272,7 @@ test("Doctor completes the inline active-visit X-ray workflow at the frozen view
   await expect(page.getByRole("button", { name: "Exit Fullscreen" })).toBeVisible();
   await page.getByRole("button", { name: "Exit Fullscreen" }).click();
 
-  await page.getByRole("tab", { name: "Billing / Invoice Handoff" }).click();
+  await page.getByRole("tab", { name: "Billing" }).click();
   await expect(page.getByText(/Billing handoff/i).first()).toBeVisible();
   await expect(page.getByRole("button", { name: /payment/i })).toHaveCount(0);
 
@@ -229,8 +282,9 @@ test("Doctor completes the inline active-visit X-ray workflow at the frozen view
     await expect(page.locator(".appointment-month-item").first()).toBeVisible();
     await expectNoDocumentOverflow(page);
     await page.goto("/doctor/visits/active");
-    await page.getByRole("tab", { name: "X-rays / Attachments" }).click();
+    await expectActionFooterClear(page, ".active-visit-notes-card", ".clinical-note-general");
+    await page.getByRole("tab", { name: "X-rays & AI" }).click();
     await expect(viewer).toBeVisible();
-    await expectNoDocumentOverflow(page);
+    await expectActionFooterClear(page, ".active-xray-workspace", ".active-xray-ai-column");
   }
 });
