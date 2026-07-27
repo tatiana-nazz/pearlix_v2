@@ -41,11 +41,12 @@ vi.mock("../hooks/useXrays", () => ({
   useXrays: () => ({ data: { count: 2, results: [baseXray, storedXray], next: null, previous: null }, isLoading: false, isError: false, refetch: vi.fn() }),
   useXray: (id: number) => ({ data: [baseXray, storedXray, uploadedXray].find((xray) => xray.id === id), isLoading: false, isError: false, refetch: vi.fn() }),
   useXrayAiResult: (id: number, enabled: boolean) => ({ data: id === 2 && enabled ? result : undefined, isLoading: false, error: null, refetch: vi.fn() }),
+  useXrayAiResults: (ids: number[]) => ids.map((id) => ({ data: id === 2 ? result : undefined, isLoading: false, error: null })),
   useRunSavedXrayAi: () => ({ mutate: hookState.run, reset: hookState.runReset, isPending: false, error: null }),
   useVisitXrayUpload: () => ({ mutateAsync: hookState.upload, reset: hookState.uploadReset, isPending: false, error: null }),
 }));
 vi.mock("../hooks/useProtectedMedia", () => ({ useProtectedMedia: (endpoint?: string | null) => ({ url: endpoint ? `blob:${endpoint}` : null, isLoading: false, error: null, retry: vi.fn() }) }));
-vi.mock("./ProtectedXrayViewer", () => ({ ProtectedXrayViewer: ({ originalEndpoint, originalLabel }: { originalEndpoint: string; originalLabel: string }) => <div data-testid="protected-viewer" data-endpoint={originalEndpoint}>{originalLabel}</div> }));
+vi.mock("./ProtectedXrayViewer", () => ({ ProtectedXrayViewer: ({ originalEndpoint, originalLabel, overlayVisible }: { originalEndpoint: string; originalLabel: string; overlayVisible?: boolean }) => <div data-testid="protected-viewer" data-endpoint={originalEndpoint} data-overlay={String(Boolean(overlayVisible))}>{originalLabel}</div> }));
 
 const visit = {
   id: 91,
@@ -67,17 +68,26 @@ describe("ActiveVisitXrayWorkspace", () => {
     setUser("DOCTOR");
   });
 
-  it("selects the first saved X-ray, changes selection, and stays inline", async () => {
+  it("prioritizes the overlay-capable X-ray and keeps the top-level switch visible across selections", async () => {
     render(<ActiveVisitXrayWorkspace role="DOCTOR" visit={visit} />);
-    expect(await screen.findByTestId("protected-viewer")).toHaveAttribute("data-endpoint", "/api/xrays/1/file/");
-    fireEvent.click(screen.getByRole("button", { name: "Panoramic with AI" }));
-    expect(screen.getByTestId("protected-viewer")).toHaveAttribute("data-endpoint", "/api/xrays/2/file/");
+    expect(await screen.findByTestId("protected-viewer")).toHaveAttribute("data-endpoint", "/api/xrays/2/file/");
     expect(screen.getByText("Stored research result")).toBeInTheDocument();
+    const overlay = screen.getByRole("switch", { name: "AI Overlay: Off" });
+    expect(overlay).toBeEnabled();
+    expect(overlay).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(overlay);
+    expect(screen.getByRole("switch", { name: "AI Overlay: On" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("protected-viewer")).toHaveAttribute("data-overlay", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Bitewing without AI" }));
+    expect(screen.getByTestId("protected-viewer")).toHaveAttribute("data-endpoint", "/api/xrays/1/file/");
+    expect(screen.getByRole("switch", { name: "AI Overlay: Off" })).toBeDisabled();
+    expect(screen.getByTestId("protected-viewer")).toHaveAttribute("data-overlay", "false");
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("exposes the existing AI mutation only to Doctor for a result-free saved X-ray", async () => {
     render(<ActiveVisitXrayWorkspace role="DOCTOR" visit={visit} />);
+    fireEvent.click(screen.getByRole("button", { name: "Bitewing without AI" }));
     const run = await screen.findByRole("button", { name: "Run AI Analysis" });
     fireEvent.click(run);
     expect(hookState.run).toHaveBeenCalledTimes(1);

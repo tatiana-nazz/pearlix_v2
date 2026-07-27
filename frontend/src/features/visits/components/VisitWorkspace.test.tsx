@@ -39,20 +39,22 @@ describe("VisitWorkspace", () => {
     renderWorkspace();
     expect(screen.getByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
     expect(screen.queryByText("Visit #91")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(4);
-    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Visit Notes", "Patient Profile", "X-rays & AI", "Billing"]);
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Visit Notes", "X-rays & AI", "Billing"]);
     expect(screen.getByRole("tab", { name: "Visit Notes" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Doctor One")).toBeInTheDocument();
   });
 
-  it("keeps the patient context read-first and opens it with keyboard tabs", () => {
+  it("opens the authorized patient profile from the keyboard-accessible identity", () => {
     renderWorkspace();
+    const profile = screen.getByRole("link", { name: "Open Ada Lovelace patient profile" });
+    expect(profile).toHaveAttribute("href", "/doctor/patients/44");
+    expect(screen.queryByText("Medical Conditions History")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open Full Patient Profile" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Patient Profile" })).not.toBeInTheDocument();
     const notes = screen.getByRole("tab", { name: "Visit Notes" });
     fireEvent.keyDown(notes, { key: "ArrowRight" });
-    expect(screen.getByRole("tab", { name: "Patient Profile" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getAllByText("Penicillin allergy")).toHaveLength(2);
-    expect(screen.getAllByRole("link", { name: "Open Full Patient Profile" })).toHaveLength(2);
-    expect(screen.queryByText(/archive|reactivate/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "X-rays & AI" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("protects clinical editing and completion for a non-owning Staff user", () => {
@@ -74,7 +76,7 @@ describe("VisitWorkspace", () => {
   it("keeps unsaved clinical notes and the static summary while switching tabs", () => {
     renderWorkspace();
     fireEvent.change(screen.getByLabelText("Objective Notes"), { target: { value: "Unsaved tab-safe note" } });
-    fireEvent.click(screen.getByRole("tab", { name: "Patient Profile" }));
+    fireEvent.click(screen.getByRole("tab", { name: "X-rays & AI" }));
     expect(screen.getByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Visit Notes" }));
     expect(screen.getByLabelText("Objective Notes")).toHaveValue("Unsaved tab-safe note");

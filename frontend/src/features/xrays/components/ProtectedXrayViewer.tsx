@@ -12,6 +12,9 @@ interface ProtectedXrayViewerProps {
   overlayAvailable?: boolean;
   originalAlt: string;
   originalLabel: string;
+  overlayVisible?: boolean;
+  onOverlayVisibilityChange?: (visible: boolean) => void;
+  showOverlayControl?: boolean;
 }
 
 const MIN_SCALE = 0.5;
@@ -24,31 +27,37 @@ export function ProtectedXrayViewer({
   overlayAvailable = false,
   originalAlt,
   originalLabel,
+  overlayVisible: controlledOverlayVisible,
+  onOverlayVisibilityChange,
+  showOverlayControl = true,
 }: ProtectedXrayViewerProps) {
   const c = xrayCopy(useAuthStore((state) => state.user?.language_preference));
   const viewerRef = useRef<HTMLElement>(null);
   const fullscreenTriggerRef = useRef<HTMLElement | null>(null);
-  const [overlayVisible, setOverlayVisible] = useState(false);
+  const [internalOverlayVisible, setInternalOverlayVisible] = useState(false);
   const [overlayFailed, setOverlayFailed] = useState(false);
   const [scale, setScale] = useState(1);
   const [fullscreenActive, setFullscreenActive] = useState(false);
   const [enlargedFallback, setEnlargedFallback] = useState(false);
   const original = useProtectedMedia(originalEndpoint);
+  const overlayVisible = controlledOverlayVisible ?? internalOverlayVisible;
   const overlay = useProtectedMedia(overlayAvailable && overlayVisible ? overlayEndpoint : null);
   const isEnlarged = fullscreenActive || enlargedFallback;
 
   useEffect(() => {
-    setOverlayVisible(false);
+    setInternalOverlayVisible(false);
+    onOverlayVisibilityChange?.(false);
     setOverlayFailed(false);
     setScale(1);
-  }, [originalEndpoint, overlayEndpoint, overlayAvailable]);
+  }, [originalEndpoint, overlayEndpoint, overlayAvailable, onOverlayVisibilityChange]);
 
   useEffect(() => {
     if (overlayVisible && overlay.error) {
-      setOverlayVisible(false);
+      setInternalOverlayVisible(false);
+      onOverlayVisibilityChange?.(false);
       setOverlayFailed(true);
     }
-  }, [overlay.error, overlayVisible]);
+  }, [onOverlayVisibilityChange, overlay.error, overlayVisible]);
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -97,7 +106,13 @@ export function ProtectedXrayViewer({
   const setBoundedScale = (next: number) => setScale(Math.min(MAX_SCALE, Math.max(MIN_SCALE, next)));
   const toggleOverlay = () => {
     setOverlayFailed(false);
-    setOverlayVisible((visible) => !visible);
+    const next = !overlayVisible;
+    setInternalOverlayVisible(next);
+    onOverlayVisibilityChange?.(next);
+  };
+  const turnOverlayOff = () => {
+    setInternalOverlayVisible(false);
+    onOverlayVisibilityChange?.(false);
   };
 
   async function toggleFullscreen() {
@@ -142,8 +157,8 @@ export function ProtectedXrayViewer({
         <div className="protected-xray-toolbar-actions">
           <Button variant="secondary" type="button" onClick={() => setBoundedScale(scale + SCALE_STEP)} disabled={scale >= MAX_SCALE}><Plus size={17} aria-hidden="true" />{c.zoomIn}</Button>
           <Button variant="secondary" type="button" onClick={() => setBoundedScale(scale - SCALE_STEP)} disabled={scale <= MIN_SCALE}><Minus size={17} aria-hidden="true" />{c.zoomOut}</Button>
-          <Button variant="secondary" type="button" onClick={() => { setScale(1); setOverlayVisible(false); }}><RotateCcw size={17} aria-hidden="true" />{c.reset}</Button>
-          {overlayAvailable && overlayEndpoint ? <Button variant="secondary" type="button" aria-pressed={overlayVisible} onClick={toggleOverlay}>{overlayVisible ? c.hideOverlay : c.showOverlay}</Button> : null}
+          <Button variant="secondary" type="button" onClick={() => { setScale(1); turnOverlayOff(); }}><RotateCcw size={17} aria-hidden="true" />{c.reset}</Button>
+          {showOverlayControl && overlayAvailable && overlayEndpoint ? <Button variant="secondary" type="button" aria-pressed={overlayVisible} onClick={toggleOverlay}>{overlayVisible ? c.hideOverlay : c.showOverlay}</Button> : null}
           <Button variant="secondary" type="button" onClick={() => setScale(1)}><Scan size={17} aria-hidden="true" />{c.fitToView}</Button>
           <Button variant="secondary" type="button" aria-pressed={isEnlarged} onClick={() => void toggleFullscreen()}>{isEnlarged ? <Minimize2 size={17} aria-hidden="true" /> : <Maximize2 size={17} aria-hidden="true" />}{isEnlarged ? c.exitFullscreen : c.fullscreen}</Button>
         </div>

@@ -62,6 +62,10 @@ type XrayCopy = {
   finding: string;
   created: string;
   uploadFailed: string;
+  aiOverlay: string;
+  overlayOn: string;
+  overlayOff: string;
+  noOverlayAvailable: string;
 };
 
 const en: XrayCopy = {
@@ -126,6 +130,10 @@ const en: XrayCopy = {
   finding: "Finding",
   created: "Created",
   uploadFailed: "Unable to upload X-ray",
+  aiOverlay: "AI Overlay",
+  overlayOn: "On",
+  overlayOff: "Off",
+  noOverlayAvailable: "No AI overlay is available for this X-ray.",
 };
 
 const ar: XrayCopy = {
@@ -190,6 +198,10 @@ const ar: XrayCopy = {
   finding: "النتيجة",
   created: "تاريخ الإنشاء",
   uploadFailed: "تعذر رفع الأشعة",
+  aiOverlay: "طبقة الذكاء الاصطناعي",
+  overlayOn: "تشغيل",
+  overlayOff: "إيقاف",
+  noOverlayAvailable: "لا تتوفر طبقة ذكاء اصطناعي لهذه الأشعة.",
 };
 
 export function xrayCopy(language?: LanguagePreference | null): XrayCopy {
