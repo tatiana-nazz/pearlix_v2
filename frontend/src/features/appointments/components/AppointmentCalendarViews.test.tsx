@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppointmentListItem } from "../../../types/appointments";
 import { AppointmentMonthView } from "./AppointmentMonthView";
 import { AppointmentWeekView } from "./AppointmentWeekView";
+import { appointmentStatusClass, appointmentStatusTone } from "../utils/appointmentStatusPresentation";
 
 const appointment: AppointmentListItem = {
   id: 1,
@@ -52,7 +53,7 @@ describe("appointment calendar views", () => {
 
   it("uses shared semantic tones and status-inclusive accessible labels for every Month status", async () => {
     const statuses = ["UPCOMING", "CHECKED_IN", "ACTIVE", "COMPLETED", "NEEDS_RESCHEDULE", "CANCELLED", "NO_SHOW"] as const;
-    const expectedTone = ["status-info", "status-teal", "status-ai", "status-success", "status-warning", "status-danger", "status-danger"];
+    const expectedTone = ["status-info", "status-teal", "status-success", "status-success", "status-warning", "status-danger", "status-danger"];
     const appointments = statuses.map((status, index) => ({
       ...appointment,
       id: index + 10,
@@ -73,5 +74,35 @@ describe("appointment calendar views", () => {
     expect(within(container).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
     await userEvent.click(container.querySelector<HTMLButtonElement>('[data-status="UPCOMING"]')!);
     expect(onDetails).toHaveBeenCalledWith(expect.objectContaining({ status: "UPCOMING" }));
+  });
+
+  it("maps statuses deterministically and gives equal statuses equal Week card styling", () => {
+    expect(appointmentStatusTone("UPCOMING")).toBe("info");
+    expect(appointmentStatusTone("CHECKED_IN")).toBe("teal");
+    expect(appointmentStatusTone("ACTIVE")).toBe("success");
+    expect(appointmentStatusTone("COMPLETED")).toBe("success");
+    expect(appointmentStatusTone("NEEDS_RESCHEDULE")).toBe("warning");
+    expect(appointmentStatusTone("CANCELLED")).toBe("danger");
+    expect(appointmentStatusTone("NO_SHOW")).toBe("danger");
+    expect(appointmentStatusClass("appointment-calendar-item", "NEEDS_RESCHEDULE")).toBe("appointment-calendar-item appointment-status-surface status-warning");
+
+    const sameDay = "2026-07-13T08:00:00Z";
+    const rows = [
+      { ...appointment, id: 31, status: "NEEDS_RESCHEDULE", start_datetime: sameDay, doctor: { ...appointment.doctor, id: 81, full_name: "Dr First" } },
+      { ...appointment, id: 32, status: "CANCELLED", start_datetime: "2026-07-13T09:00:00Z", patient: { ...appointment.patient, full_name: "Cancelled Patient" } },
+      { ...appointment, id: 33, status: "NEEDS_RESCHEDULE", start_datetime: "2026-07-13T10:00:00Z", patient: { ...appointment.patient, full_name: "Second Warning" }, doctor: { ...appointment.doctor, id: 82, full_name: "Dr Second" } },
+    ] as AppointmentListItem[];
+    const { container, rerender } = render(<AppointmentWeekView role="STAFF" date="2026-07-13" timezone="UTC" appointments={rows} onDetails={vi.fn()} onDaySelect={vi.fn()} />);
+    const warnings = Array.from(container.querySelectorAll<HTMLElement>('.appointment-calendar-item[data-status="NEEDS_RESCHEDULE"]'));
+    const cancelled = container.querySelector<HTMLElement>('.appointment-calendar-item[data-status="CANCELLED"]');
+    expect(warnings).toHaveLength(2);
+    expect(warnings[0].className).toBe(warnings[1].className);
+    expect(warnings[0]).toHaveClass("status-warning");
+    expect(cancelled).toHaveClass("status-danger");
+    expect(within(warnings[0]).getByText("Needs reschedule")).toBeInTheDocument();
+    expect(within(cancelled!).getByText("Cancelled")).toBeInTheDocument();
+
+    rerender(<AppointmentWeekView role="STAFF" date="2026-07-13" timezone="UTC" appointments={[...rows].reverse()} onDetails={vi.fn()} onDaySelect={vi.fn()} />);
+    expect(Array.from(container.querySelectorAll<HTMLElement>('.appointment-calendar-item[data-status="NEEDS_RESCHEDULE"]')).every((item) => item.classList.contains("status-warning"))).toBe(true);
   });
 });

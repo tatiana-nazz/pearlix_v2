@@ -1,11 +1,11 @@
 import type { AppointmentStatus } from "../../../types/appointments";
 
-export type AppointmentStatusTone = "info" | "teal" | "ai" | "success" | "warning" | "danger";
+export type AppointmentStatusTone = "info" | "teal" | "success" | "warning" | "danger";
 
 const tones: Record<AppointmentStatus, AppointmentStatusTone> = {
   UPCOMING: "info",
   CHECKED_IN: "teal",
-  ACTIVE: "ai",
+  ACTIVE: "success",
   COMPLETED: "success",
   NEEDS_RESCHEDULE: "warning",
   CANCELLED: "danger",
@@ -16,6 +16,10 @@ export function appointmentStatusTone(status: AppointmentStatus): AppointmentSta
   return tones[status];
 }
 
+export function appointmentStatusClass(baseClass: string, status: AppointmentStatus): string {
+  return `${baseClass} appointment-status-surface status-${appointmentStatusTone(status)}`;
+}
+
 export function appointmentMonthStatusClass(status: AppointmentStatus): string {
-  return `appointment-month-item status-${appointmentStatusTone(status)}`;
+  return appointmentStatusClass("appointment-month-item", status);
 }

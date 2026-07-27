@@ -3,6 +3,7 @@ import type { UserRole } from "../../../types/auth";
 import { formatDate, formatTime } from "../../../utils/dates";
 import { addDays, getWeekRange } from "../utils/appointmentDates";
 import { dateFromAppointment } from "../utils/appointmentFilters";
+import { appointmentStatusClass } from "../utils/appointmentStatusPresentation";
 import { AppointmentStatusBadge } from "./AppointmentStatusBadge";
 
 interface AppointmentWeekViewProps {
@@ -23,7 +24,7 @@ export function AppointmentWeekView({ date, timezone, appointments, onDetails, o
         <section key={day} className="appointment-calendar-column">
           <h3><button type="button" onClick={() => onDaySelect(day)} aria-label={`Open day ${formatDate(`${day}T00:00:00`)}`}>{formatDate(`${day}T00:00:00`)}</button></h3>
           {appointments.filter((appointment) => dateFromAppointment(appointment.start_datetime, timezone) === day).map((appointment) => (
-            <button key={appointment.id} type="button" className="appointment-calendar-item" onClick={() => onDetails(appointment)}>
+            <button key={appointment.id} type="button" className={appointmentStatusClass("appointment-calendar-item", appointment.status)} data-status={appointment.status} onClick={() => onDetails(appointment)}>
               <strong>{formatTime(appointment.start_datetime)}</strong>
               <span>{appointment.patient.full_name}</span>
               <AppointmentStatusBadge status={appointment.status} />

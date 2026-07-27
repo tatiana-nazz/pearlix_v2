@@ -274,11 +274,14 @@
   color: #fff;
 }
 .appointment-week-grid {
-  grid-template-columns: repeat(7, minmax(108px, 1fr));
+  min-width: 0;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
+  overflow-x: hidden;
 }
 .appointment-calendar-column,
 .appointment-month-cell {
+  min-width: 0;
   min-height: 180px;
   border-color: var(--v2-border);
   border-radius: 18px;
@@ -290,29 +293,32 @@
   border-block-end: 1px solid var(--v2-divider);
 }
 .appointment-calendar-item {
+  --appointment-status: var(--v2-info);
+  box-sizing: border-box;
   position: relative;
+  min-width: 0;
   overflow: hidden;
-  border: 0;
-  border-inline-start: 4px solid var(--v2-primary);
+  border: 1px solid color-mix(in srgb, var(--appointment-status) 48%, var(--v2-border));
+  border-inline-start: 4px solid var(--appointment-status);
   border-radius: 14px;
-  background: var(--v2-primary-soft);
+  background: color-mix(in srgb, var(--appointment-status) 11%, var(--v2-surface));
   padding: 8px;
 }
 .appointment-calendar-item strong,
-.appointment-calendar-item > span {
+.appointment-calendar-item > span:not(.v2-status) {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.appointment-calendar-item:nth-of-type(3n + 2) {
-  border-inline-start-color: var(--v2-teal);
-  background: color-mix(in srgb, var(--v2-teal) 10%, var(--v2-surface));
+.appointment-calendar-item .v2-status {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
-.appointment-calendar-item:nth-of-type(3n) {
-  border-inline-start-color: var(--v2-warning);
-  background: color-mix(in srgb, var(--v2-warning) 12%, var(--v2-surface));
-}
-.appointment-calendar-item:hover {
+.appointment-calendar-item:hover,
+.appointment-calendar-item:focus-visible {
+  border-color: var(--appointment-status);
   box-shadow: 0 10px 20px rgba(30, 41, 59, 0.08);
   transform: translateY(-1px);
 }
@@ -376,12 +382,15 @@
   margin: 0;
 }
 .appointments-summary-rail dl div {
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 .appointments-summary-rail dt {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--v2-muted);
 }
 .appointments-summary-rail dd {
@@ -394,6 +403,18 @@
   font-weight: 800;
   text-align: center;
 }
+.appointment-status-surface { --appointment-status: var(--v2-info); }
+.appointment-status-surface.status-info { --appointment-status: var(--v2-info); }
+.appointment-status-surface.status-teal { --appointment-status: var(--v2-teal); }
+.appointment-status-surface.status-success { --appointment-status: var(--v2-success); }
+.appointment-status-surface.status-warning { --appointment-status: var(--v2-warning); }
+.appointment-status-surface.status-danger { --appointment-status: var(--v2-danger); }
+.appointment-status-badge.v2-status { border-color: currentColor; background: color-mix(in srgb, var(--appointment-status) 13%, var(--v2-surface)); color: var(--appointment-status); }
+.appointment-table tbody tr.appointment-status-surface { background: color-mix(in srgb, var(--appointment-status) 7%, var(--v2-surface)); }
+.appointment-table tbody tr.appointment-status-surface > td:first-child { border-inline-start: 4px solid var(--appointment-status); }
+.appointment-table tbody tr.appointment-status-surface:hover,.appointment-table tbody tr.appointment-status-surface:focus-visible { background: color-mix(in srgb, var(--appointment-status) 13%, var(--v2-surface)); outline-color: var(--appointment-status); }
+.appointment-status-summary { border-inline-start: 3px solid var(--appointment-status); border-radius: 8px; padding: 5px 7px; background: color-mix(in srgb, var(--appointment-status) 8%, var(--v2-surface)); }
+.appointments-summary-rail .appointment-status-summary dd { background: color-mix(in srgb, var(--appointment-status) 15%, var(--v2-surface)); color: var(--appointment-status); }
 @media (max-width:1279px) {
   .appointments-content-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -539,14 +560,8 @@
 .appointment-month-cell.selected-day { outline: 3px solid color-mix(in srgb, var(--v2-primary) 18%, transparent); }
 .appointment-month-cell h3 .appointment-month-date { display: inline-grid; inline-size: 30px; block-size: 30px; place-items: center; border: 0; border-radius: 999px; padding: 0; background: transparent; color: var(--v2-text); font: inherit; font-weight: 800; }
 .appointment-month-cell.today h3 .appointment-month-date { background: var(--v2-primary); color: #fff; }
-.appointment-month-item { --month-status: var(--v2-info); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 7px; inline-size: 100%; min-inline-size: 0; min-block-size: 52px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--month-status) 48%, var(--v2-border)); border-inline-start: 4px solid var(--month-status); border-radius: 10px; padding: 6px 7px; background: color-mix(in srgb, var(--month-status) 11%, var(--v2-surface)); color: var(--month-status); text-align: start; cursor: pointer; }
-.appointment-month-item:hover,.appointment-month-item:focus-visible { border-color: var(--month-status); background: color-mix(in srgb, var(--month-status) 17%, var(--v2-surface)); outline: 2px solid color-mix(in srgb, var(--month-status) 30%, transparent); outline-offset: 1px; }
-.appointment-month-item.status-info { --month-status: var(--v2-info); }
-.appointment-month-item.status-teal { --month-status: var(--v2-teal); }
-.appointment-month-item.status-ai { --month-status: var(--v2-ai); }
-.appointment-month-item.status-success { --month-status: var(--v2-success); }
-.appointment-month-item.status-warning { --month-status: var(--v2-warning); }
-.appointment-month-item.status-danger { --month-status: var(--v2-danger); }
+.appointment-month-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 7px; inline-size: 100%; min-inline-size: 0; min-block-size: 52px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--appointment-status) 48%, var(--v2-border)); border-inline-start: 4px solid var(--appointment-status); border-radius: 10px; padding: 6px 7px; background: color-mix(in srgb, var(--appointment-status) 11%, var(--v2-surface)); color: var(--appointment-status); text-align: start; cursor: pointer; }
+.appointment-month-item:hover,.appointment-month-item:focus-visible { border-color: var(--appointment-status); background: color-mix(in srgb, var(--appointment-status) 17%, var(--v2-surface)); outline: 2px solid color-mix(in srgb, var(--appointment-status) 30%, transparent); outline-offset: 1px; }
 .appointment-month-time { font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .appointment-month-patient { min-width: 0; overflow: hidden; color: var(--v2-text); font-size: 12px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
 .appointment-month-status { grid-column: 1 / -1; overflow: hidden; font-size: 10px; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }

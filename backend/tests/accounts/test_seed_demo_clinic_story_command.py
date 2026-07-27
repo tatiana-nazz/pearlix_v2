@@ -149,13 +149,17 @@ def test_demo_story_split_shifts_are_named_non_overlapping_and_match_eligible_ap
 def test_demo_story_has_one_service_started_doctor_one_visit_and_an_independent_checked_in_appointment(tmp_path):
     with override_settings(MEDIA_ROOT=tmp_path):
         seed("--reset-demo", "--reference-date", "2026-07-26")
-        active = Visit.objects.get(status=Visit.Status.ACTIVE)
         doctor_one = User.objects.get(email="doctor.one@pearlix-demo.local")
         doctor_two = User.objects.get(email="doctor.two@pearlix-demo.local")
+        assert doctor_one.full_name == "Dr. Samir Nasser"
+        assert Visit.objects.filter(doctor=doctor_one, status=Visit.Status.ACTIVE).count() == 1
+        active = Visit.objects.get(doctor=doctor_one, status=Visit.Status.ACTIVE)
         assert active.doctor == doctor_one
         assert active.appointment.status == Appointment.Status.ACTIVE
+        assert active.patient.full_name == "Lina Mansour"
         assert active.patient_id == active.appointment.patient_id
         assert active.completed_at is None
+        assert not BillingHandoff.objects.filter(visit=active).exists()
         checked_in = Appointment.objects.get(status=Appointment.Status.CHECKED_IN)
         assert checked_in.doctor == doctor_two
         assert not Visit.objects.filter(appointment=checked_in).exists()

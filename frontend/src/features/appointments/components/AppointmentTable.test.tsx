@@ -54,12 +54,16 @@ describe("AppointmentTable", () => {
       { ...base, id: 2, patient: { ...base.patient, first_name: "Nora", full_name: "Nora Patient" }, status: "NEEDS_RESCHEDULE" },
     ] as AppointmentListItem[];
 
-    render(
+    const { container } = render(
       <AppointmentTable appointments={rows} />,
     );
 
     expect(screen.getByText("Maya Patient")).toBeInTheDocument();
     expect(screen.getByText("Nora Patient")).toBeInTheDocument();
+    const warningRows = container.querySelectorAll('tr[data-status="NEEDS_RESCHEDULE"]');
+    expect(warningRows).toHaveLength(2);
+    expect(Array.from(warningRows).every((row) => row.classList.contains("status-warning"))).toBe(true);
+    expect(screen.getAllByText("Needs reschedule")).toHaveLength(2);
   });
 
   it.each(["ADMIN", "DOCTOR"] as const)("keeps %s collection rows action-free", () => {
