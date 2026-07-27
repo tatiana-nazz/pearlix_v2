@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.accounts.serializers import UserSummarySerializer
+from apps.billing.models import BillingHandoff
 from apps.patients.serializers import PatientListSerializer
 from apps.visits.models import Visit
 
@@ -53,3 +54,26 @@ class ClinicalNotesUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Visit
         fields = ("symptoms", "diagnosis", "treatment", "clinical_notes", "follow_up_notes")
+
+
+class VisitCompletionBillingSerializer(serializers.Serializer):
+    description = serializers.CharField(max_length=2000, trim_whitespace=True)
+    suggested_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    currency = serializers.ChoiceField(choices=BillingHandoff.Currency.choices)
+    note = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_description(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("This field is required.")
+        return value.strip()
+
+    def validate_suggested_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be positive.")
+        return value
+
+
+class VisitCompletionSerializer(serializers.Serializer):
+    version = serializers.DateTimeField()
+    notes = ClinicalNotesUpdateSerializer()
+    billing_handoff = VisitCompletionBillingSerializer()

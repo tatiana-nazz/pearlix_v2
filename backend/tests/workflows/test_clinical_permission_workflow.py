@@ -60,9 +60,27 @@ def test_wf_004_clinical_permission_workflow(admin_client, staff_client, doctor_
     assert doctor_notes_response.status_code == 200
     assert doctor_notes_response.data["symptoms"] == "Pain"
 
-    complete_response = doctor_client.post(f"/api/visits/{visit_id}/complete/")
+    complete_response = doctor_client.post(
+        f"/api/visits/{visit_id}/complete/",
+        {
+            "version": doctor_notes_response.data["updated_at"],
+            "notes": {
+                "symptoms": "Pain",
+                "diagnosis": "Suspected caries",
+                "treatment": "Clinical exam",
+                "follow_up_notes": "Follow up",
+            },
+            "billing_handoff": {
+                "description": "Clinical exam",
+                "suggested_amount": "1.00",
+                "currency": "SYP",
+                "note": "Clinical workflow handoff",
+            },
+        },
+        format="json",
+    )
     assert complete_response.status_code == 200
-    assert complete_response.data["status"] == Visit.Status.COMPLETED
+    assert complete_response.data["visit"]["status"] == Visit.Status.COMPLETED
 
     completed_notes_response = doctor_client.patch(
         f"/api/visits/{visit_id}/clinical-notes/",

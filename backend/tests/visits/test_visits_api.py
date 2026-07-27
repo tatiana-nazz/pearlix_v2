@@ -3,6 +3,8 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
+from apps.billing.models import BillingHandoff
+from apps.billing.services import BillingRuleError
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
@@ -35,6 +37,27 @@ def _visit_for(visit_factory, appointment_factory, doctor, status=Visit.Status.A
         **appointment_kwargs,
     )
     return visit_factory(appointment=appointment, status=status, **overrides)
+
+
+def _completion_payload(visit, **billing_overrides):
+    billing = {
+        "description": "Restorative dental treatment",
+        "suggested_amount": "250.00",
+        "currency": "SYP",
+        "note": "Collect payment at reception after treatment.",
+    }
+    billing.update(billing_overrides)
+    return {
+        "version": visit.updated_at.isoformat(),
+        "notes": {
+            "symptoms": "Sensitivity",
+            "diagnosis": "Caries",
+            "treatment": "Composite restoration",
+            "clinical_notes": "Completed with billing handoff.",
+            "follow_up_notes": "Review in six months.",
+        },
+        "billing_handoff": billing,
+    }
 
 
 @pytest.mark.django_db
@@ -315,7 +338,7 @@ def test_admin_and_staff_cannot_use_active_visit_endpoint(request, client_fixtur
 def test_doctor_can_complete_own_active_visit(doctor_client, doctor_user, appointment_factory, visit_factory):
     visit = _visit_for(visit_factory, appointment_factory, doctor_user)
 
-    response = doctor_client.post(f"/api/visits/{visit.id}/complete/")
+    response = doctor_client.post(f"/api/visits/{visit.id}/complete/", _completion_payload(visit), format="json")
 
     assert response.status_code == 200
     visit.refresh_from_db()
@@ -325,6 +348,95 @@ def test_doctor_can_complete_own_active_visit(doctor_client, doctor_user, appoin
     assert visit.updated_by == doctor_user
     assert visit.appointment.status == Appointment.Status.COMPLETED
     assert visit.appointment.updated_by == doctor_user
+    handoff = BillingHandoff.objects.get(visit=visit)
+    assert response.data["visit"]["id"] == visit.id
+    assert response.data["billing_handoff"]["id"] == handoff.id
+    assert handoff.patient_id == visit.patient_id
+    assert handoff.doctor_id == doctor_user.id
+    assert handoff.description == "Restorative dental treatment"
+    assert str(handoff.suggested_amount) == "250.00"
+    assert handoff.currency == "SYP"
+    assert handoff.note == "Collect payment at reception after treatment."
+    assert visit.clinical_notes == "Completed with billing handoff."
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "billing_overrides",
+    [
+        {"description": ""},
+        {"suggested_amount": "0"},
+        {"currency": "EUR"},
+    ],
+)
+def test_complete_visit_rejects_invalid_billing_without_state_change(doctor_client, doctor_user, appointment_factory, visit_factory, billing_overrides):
+    visit = _visit_for(visit_factory, appointment_factory, doctor_user, clinical_notes="Original")
+
+    response = doctor_client.post(f"/api/visits/{visit.id}/complete/", _completion_payload(visit, **billing_overrides), format="json")
+
+    assert response.status_code == 400
+    visit.refresh_from_db()
+    visit.appointment.refresh_from_db()
+    assert visit.status == Visit.Status.ACTIVE
+    assert visit.appointment.status == Appointment.Status.ACTIVE
+    assert visit.clinical_notes == "Original"
+    assert not BillingHandoff.objects.filter(visit=visit).exists()
+
+
+@pytest.mark.django_db
+def test_complete_visit_rolls_back_when_handoff_creation_fails(monkeypatch, doctor_client, doctor_user, appointment_factory, visit_factory):
+    visit = _visit_for(visit_factory, appointment_factory, doctor_user, clinical_notes="Original")
+
+    def fail_handoff(**_kwargs):
+        raise BillingRuleError("VALIDATION_ERROR", "Some fields are invalid.", {"note": ["Rejected."]})
+
+    monkeypatch.setattr("apps.billing.services.create_billing_handoff", fail_handoff)
+    response = doctor_client.post(f"/api/visits/{visit.id}/complete/", _completion_payload(visit), format="json")
+
+    assert response.status_code == 400
+    visit.refresh_from_db()
+    visit.appointment.refresh_from_db()
+    assert visit.status == Visit.Status.ACTIVE
+    assert visit.appointment.status == Appointment.Status.ACTIVE
+    assert visit.clinical_notes == "Original"
+    assert not BillingHandoff.objects.filter(visit=visit).exists()
+
+
+@pytest.mark.django_db
+def test_complete_visit_conflict_and_existing_handoff_preserve_active_visit(doctor_client, doctor_user, appointment_factory, visit_factory):
+    conflict_visit = _visit_for(visit_factory, appointment_factory, doctor_user)
+    conflict_payload = _completion_payload(conflict_visit)
+    conflict_payload["version"] = "2020-01-01T00:00:00Z"
+    conflict_response = doctor_client.post(f"/api/visits/{conflict_visit.id}/complete/", conflict_payload, format="json")
+    assert conflict_response.status_code == 409
+    assert conflict_response.data["code"] == "VERSION_CONFLICT"
+    conflict_visit.refresh_from_db()
+    assert conflict_visit.status == Visit.Status.ACTIVE
+
+    conflict_visit.status = Visit.Status.COMPLETED
+    conflict_visit.completed_at = timezone.now()
+    conflict_visit.save(update_fields=["status", "completed_at", "updated_at"])
+    second_visit = _visit_for(visit_factory, appointment_factory, doctor_user, start_datetime="2026-07-20T12:00:00+03:00", end_datetime="2026-07-20T12:30:00+03:00")
+    BillingHandoff.objects.create(patient=second_visit.patient, visit=second_visit, doctor=doctor_user, description="Existing", suggested_amount="10.00", currency="SYP", status=BillingHandoff.Status.PENDING)
+    existing_response = doctor_client.post(f"/api/visits/{second_visit.id}/complete/", _completion_payload(second_visit), format="json")
+    assert existing_response.status_code == 409
+    assert existing_response.data["code"] == "BILLING_HANDOFF_EXISTS"
+    second_visit.refresh_from_db()
+    assert second_visit.status == Visit.Status.ACTIVE
+    assert BillingHandoff.objects.filter(visit=second_visit).count() == 1
+
+
+@pytest.mark.django_db
+def test_repeated_complete_request_cannot_create_duplicate_handoff(doctor_client, doctor_user, appointment_factory, visit_factory):
+    visit = _visit_for(visit_factory, appointment_factory, doctor_user)
+    payload = _completion_payload(visit)
+
+    first = doctor_client.post(f"/api/visits/{visit.id}/complete/", payload, format="json")
+    second = doctor_client.post(f"/api/visits/{visit.id}/complete/", payload, format="json")
+
+    assert first.status_code == 200
+    assert second.status_code == 409
+    assert BillingHandoff.objects.filter(visit=visit).count() == 1
 
 
 @pytest.mark.django_db
@@ -391,7 +503,7 @@ def test_connected_doctor_cannot_complete_or_edit_another_doctors_visit(
 def test_doctor_cannot_complete_already_completed_visit(doctor_client, doctor_user, appointment_factory, visit_factory):
     visit = _visit_for(visit_factory, appointment_factory, doctor_user, status=Visit.Status.COMPLETED)
 
-    response = doctor_client.post(f"/api/visits/{visit.id}/complete/")
+    response = doctor_client.post(f"/api/visits/{visit.id}/complete/", _completion_payload(visit), format="json")
 
     assert response.status_code == 409
     assert response.data["code"] == "INVALID_STATUS_TRANSITION"

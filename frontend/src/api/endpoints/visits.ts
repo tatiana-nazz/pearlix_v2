@@ -8,7 +8,11 @@ export const visitsApi = {
   list: (query?: QueryParams) => api.get<Page<VisitDetail>>("/visits/", query),
   active: () => api.get<VisitDetail>("/visits/active/"),
   detail: (id: number) => api.get<VisitDetail>(`/visits/${id}/`),
-  complete: (id: number) => api.post<VisitDetail>(`/visits/${id}/complete/`),
+  complete: (id: number, payload: {
+    version: string;
+    notes: ClinicalNotesPayload;
+    billing_handoff: { description: string; suggested_amount: string; currency: "SYP" | "USD"; note: string };
+  }) => api.post<{ visit: VisitDetail; billing_handoff: BillingHandoff & { description: string } }, typeof payload>(`/visits/${id}/complete/`, payload),
   updateClinicalNotes: (id: number, payload: ClinicalNotesPayload) =>
     api.patch<VisitDetail, ClinicalNotesPayload>(`/visits/${id}/clinical-notes/`, payload),
   uploadXray: (id: number, formData: FormData) => api.postFormData<XrayAttachment>(`/visits/${id}/xrays/`, formData),

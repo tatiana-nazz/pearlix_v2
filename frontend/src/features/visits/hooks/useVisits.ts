@@ -8,9 +8,9 @@ export function visitKey(visitId: number) {
   return ["visit", visitId] as const;
 }
 
-function invalidateVisitContext(queryClient: ReturnType<typeof useQueryClient>, visit: VisitDetail) {
+function invalidateVisitContext(queryClient: ReturnType<typeof useQueryClient>, visit: VisitDetail, refetchActive = true) {
   queryClient.setQueryData(visitKey(visit.id), visit);
-  void queryClient.invalidateQueries({ queryKey: ["active-visit"] });
+  void queryClient.invalidateQueries({ queryKey: ["active-visit"], refetchType: refetchActive ? "active" : "none" });
   void queryClient.invalidateQueries({ queryKey: ["appointments"] });
   void queryClient.invalidateQueries({ queryKey: ["patient", visit.patient.id, "visits"] });
   void queryClient.invalidateQueries({ queryKey: ["dashboard", "doctor"] });
@@ -49,7 +49,11 @@ export function useUpdateClinicalNotes(visitId: number) {
 export function useCompleteVisit(visitId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => visitsApi.complete(visitId),
-    onSuccess: (visit) => invalidateVisitContext(queryClient, visit),
+    mutationFn: (payload: Parameters<typeof visitsApi.complete>[1]) => visitsApi.complete(visitId, payload),
+    onSuccess: (result) => {
+      invalidateVisitContext(queryClient, result.visit, false);
+      void queryClient.invalidateQueries({ queryKey: ["billing-handoffs"] });
+      void queryClient.invalidateQueries({ queryKey: ["patient", result.visit.patient.id, "billing"] });
+    },
   });
 }

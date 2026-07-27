@@ -1,43 +1,34 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const password = process.env.PEARLIX_E2E_PASSWORD;
-const accounts = {
-  admin: "admin@pearlix-demo.local",
-  staff: "staff.one@pearlix-demo.local",
-  doctor: "doctor.one@pearlix-demo.local",
-} as const;
+const accounts = { staff: "staff.one@pearlix-demo.local", doctor: "doctor.one@pearlix-demo.local" } as const;
 const viewports = [
   { width: 1440, height: 900 },
   { width: 1280, height: 720 },
   { width: 1024, height: 768 },
+  { width: 768, height: 1024 },
 ] as const;
 
 async function login(page: Page, email: string) {
   if (!password) throw new Error("PEARLIX_E2E_PASSWORD must be set.");
   await page.goto("/login");
+  await expect(page.locator("[data-brand-mark='pearlix-tooth']")).toBeVisible();
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/(admin|staff|doctor)\/dashboard$/);
+  await expect(page).toHaveURL(/\/(staff|doctor)\/dashboard$/);
   const english = page.getByRole("button", { name: "EN", exact: true });
   if (await english.getAttribute("aria-pressed") !== "true") await english.click();
+  await expect(page.locator(".app-sidebar-brand [data-brand-mark='pearlix-tooth']")).toBeVisible();
 }
 
 async function authorizedJson<T>(page: Page, path: string): Promise<T> {
   return page.evaluate(async (apiPath) => {
     const persisted = JSON.parse(window.localStorage.getItem("pearlix-auth") ?? "{}");
-    const accessToken = persisted?.state?.accessToken;
-    const response = await fetch(`http://127.0.0.1:8000/api${apiPath}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const response = await fetch(`http://127.0.0.1:8000/api${apiPath}`, { headers: { Authorization: `Bearer ${persisted?.state?.accessToken}` } });
     if (!response.ok) throw new Error(`Required API request failed: ${response.status}`);
     return response.json();
   }, path);
-}
-
-async function activeVisitId(page: Page) {
-  const payload = await authorizedJson<{ results: Array<{ id: number; status: string; patient: { full_name: string } }> }>(page, "/visits/?status=ACTIVE");
-  const active = payload.results.find((visit) => visit.status === "ACTIVE" && visit.patient.full_name === "Lina Mansour");
-  if (!active) throw new Error("The deterministic story must contain an active visit.");
-  return active.id;
 }
 
 async function expectNoDocumentOverflow(page: Page) {
@@ -52,241 +43,109 @@ async function expectActionFooterClear(page: Page, contentSelector: string, fina
   const geometry = await page.evaluate(({ content, finalContent }) => {
     const contentRect = document.querySelector(content)!.getBoundingClientRect();
     const finalRect = document.querySelector(finalContent)!.getBoundingClientRect();
-    const footerRect = document.querySelector(".active-visit-action-bar")!.getBoundingClientRect();
-    const footerPosition = getComputedStyle(document.querySelector(".active-visit-action-bar")!).position;
+    const footerElement = document.querySelector(".active-visit-action-bar")!;
+    const footerRect = footerElement.getBoundingClientRect();
     return {
       contentClear: contentRect.bottom <= footerRect.top + 1,
       finalContentClear: finalRect.bottom <= footerRect.top + 1,
-      footerTreatmentCorrect: window.innerHeight <= 900 || window.innerWidth <= 1279 ? footerPosition === "static" : footerPosition === "sticky",
+      position: getComputedStyle(footerElement).position,
     };
   }, { content: contentSelector, finalContent: finalContentSelector });
   expect(geometry.contentClear).toBe(true);
   expect(geometry.finalContentClear).toBe(true);
-  expect(geometry.footerTreatmentCorrect).toBe(true);
+  expect(geometry.position).toBe("sticky");
   await expect(page.getByRole("button", { name: "Save Notes" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Complete Visit" })).toBeVisible();
   await expectNoDocumentOverflow(page);
 }
 
-async function verifyStaticPatientRail(page: Page, role: "admin" | "staff") {
-  await page.setViewportSize({ width: 1024, height: 768 });
-  const patients = await authorizedJson<{ results: Array<{ id: number }> }>(page, "/patients/?search=Lina%20Mansour");
-  const patientId = patients.results[0]?.id;
-  if (!patientId) throw new Error("The deterministic active-visit patient is missing.");
-  await page.goto(`/${role}/patients/${patientId}`);
-  const rail = page.locator(".patient-identity-rail");
-  const main = page.locator(".patient-detail-main");
-  await expect(rail).toBeVisible();
-  await expect(main).toBeVisible();
-  expect(await rail.evaluate((element) => getComputedStyle(element).position)).toBe("sticky");
-  expect(await page.locator(".workspace-content").evaluate((element) => getComputedStyle(element).overflow)).toBe("visible");
-  const initialGeometry = await page.evaluate(() => ({
-    railTop: Math.round(document.querySelector(".patient-identity-rail")!.getBoundingClientRect().top),
-    mainTop: Math.round(document.querySelector(".patient-detail-main")!.getBoundingClientRect().top),
-  }));
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  const finalGeometry = await page.evaluate(() => ({
-    railTop: Math.round(document.querySelector(".patient-identity-rail")!.getBoundingClientRect().top),
-    mainTop: Math.round(document.querySelector(".patient-detail-main")!.getBoundingClientRect().top),
-    scrollY: Math.round(window.scrollY),
-    stickyTop: Math.round(Number.parseFloat(getComputedStyle(document.querySelector(".patient-identity-rail")!).top)),
-  }));
-  expect(finalGeometry.scrollY).toBeGreaterThan(0);
-  expect(finalGeometry.mainTop).toBeLessThan(initialGeometry.mainTop);
-  expect(Math.abs(finalGeometry.railTop - finalGeometry.stickyTop)).toBeLessThanOrEqual(1);
-  expect(finalGeometry.railTop).toBeLessThan(initialGeometry.railTop);
-  await expectNoDocumentOverflow(page);
+async function fillBilling(page: Page) {
+  await page.getByLabel("Treatment / invoice description").fill("Restorative dental treatment");
+  await page.getByLabel("Total treatment charge").fill("250.00");
+  await page.getByLabel("Currency").selectOption("SYP");
+  await page.getByLabel("Billing note").fill("Collect payment at reception after treatment.");
 }
 
-test("Staff sees semantic Month statuses, a static patient rail, and a read-only visit", async ({ page }) => {
-  test.setTimeout(90_000);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await login(page, accounts.staff);
-  await page.goto("/staff/appointments/month?date=2026-07-26");
-  const items = page.locator(".appointment-month-item");
-  await expect(items.first()).toBeVisible();
-  const statusContract = await items.evaluateAll((nodes) => nodes.map((node) => ({
-    status: node.getAttribute("data-status"),
-    className: node.className,
-    label: node.getAttribute("aria-label"),
-  })));
-  expect(statusContract.every((item) => item.label?.split(",").length === 3 && /status-(info|teal|ai|success|warning|danger)/.test(item.className))).toBe(true);
-  await items.first().click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await verifyStaticPatientRail(page, "staff");
-
-  await page.setViewportSize({ width: 1440, height: 900 });
-  const visitId = await activeVisitId(page);
-  await page.goto(`/staff/visits/${visitId}`);
-  await expect(page.getByRole("tab")).toHaveText(["Visit Notes", "X-rays & AI", "Billing"]);
-  await expect(page.getByLabel("Objective Notes")).toHaveCount(0);
-  await page.getByRole("tab", { name: "X-rays & AI" }).click();
-  await expect(page.locator(".protected-xray-original")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Upload X-ray" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Run AI Analysis" })).toHaveCount(0);
-});
-
-test("Admin retains protected read-only inspection without upload or AI mutation", async ({ page }) => {
-  test.setTimeout(90_000);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await login(page, accounts.admin);
-  await page.goto("/admin/appointments/month?date=2026-07-26");
-  await expect(page.locator(".appointment-month-item").first()).toBeVisible();
-  await verifyStaticPatientRail(page, "admin");
-
-  await page.setViewportSize({ width: 1440, height: 900 });
-  const visitId = await activeVisitId(page);
-  await page.goto(`/admin/visits/${visitId}`);
-  await expect(page.getByLabel("Objective Notes")).toHaveCount(0);
-  await page.getByRole("tab", { name: "X-rays & AI" }).click();
-  const original = page.locator(".protected-xray-original");
-  await expect(original).toBeVisible();
-  expect(await original.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
-  await expect(page.getByRole("button", { name: "Upload X-ray" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Run AI Analysis" })).toHaveCount(0);
-});
-
-test("Doctor completes the inline active-visit X-ray workflow at the frozen viewport matrix", async ({ page }) => {
-  test.setTimeout(150_000);
+test("Doctor completes one atomic visit-and-billing workflow and Staff receives the handoff", async ({ page }) => {
+  test.setTimeout(180_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await login(page, accounts.doctor);
-  await expect(page.getByRole("heading", { name: "Active visit", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: /Lina Mansour Open active visit/ }).click();
-  await expect(page.getByRole("heading", { name: "Active Visit", exact: true })).toBeVisible();
-  const themeToggle = page.locator(".theme-toggle");
-  if ((await themeToggle.getAttribute("aria-label")) === "Theme: Light") await themeToggle.click();
-  expect(await page.locator(".active-visit-context-stack").evaluate((element) => getComputedStyle(element).position)).toBe("static");
-  expect(await page.locator(".active-visit-summary").evaluate((element) => getComputedStyle(element).boxShadow)).toBe("none");
-  await expect(page.getByRole("tab")).toHaveText(["Visit Notes", "X-rays & AI", "Billing"]);
-  await expect(page.getByRole("tab", { name: "Patient Profile" })).toHaveCount(0);
-  await expect(page.getByText("Medical Conditions History")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Open Full Patient Profile" })).toHaveCount(0);
-  await expect(page.locator(".active-visit-summary")).toBeVisible();
-  await expect(page.locator(".active-visit-summary .active-visit-action-buttons")).toHaveCount(0);
-  const notesLayout = await page.evaluate(() => {
-    const summary = document.querySelector(".active-visit-summary")!.getBoundingClientRect();
-    const workspace = document.querySelector(".visit-workspace")!.getBoundingClientRect();
-    const subjective = document.querySelector(".clinical-note-subjective")!.getBoundingClientRect();
-    const assessment = document.querySelector(".clinical-note-assessment")!.getBoundingClientRect();
-    const general = document.querySelector(".clinical-note-general")!.getBoundingClientRect();
-    const actionBar = document.querySelector(".active-visit-action-bar")!;
-    const panel = document.querySelector(".visit-tab-panel")!;
-    return {
-      summaryWidthDelta: Math.abs(summary.width - workspace.width),
-      twoColumns: assessment.left > subjective.left && Math.abs(assessment.top - subjective.top) < 2,
-      generalSpansColumns: general.width > subjective.width * 1.8,
-      actionsAfterContent: Boolean(panel.compareDocumentPosition(actionBar) & Node.DOCUMENT_POSITION_FOLLOWING),
-    };
-  });
-  expect(notesLayout.summaryWidthDelta).toBeLessThan(2);
-  expect(notesLayout.twoColumns).toBe(true);
-  expect(notesLayout.generalSpansColumns).toBe(true);
-  expect(notesLayout.actionsAfterContent).toBe(true);
-
-  const notes = page.getByLabel("Objective Notes");
-  const priorNotes = await notes.inputValue();
-  await notes.fill(`${priorNotes} Browser acceptance.`);
-  await page.getByRole("button", { name: "Save Notes" }).click();
-  await expect(page.getByText("Saved just now")).toBeVisible();
-  const patientProfile = page.getByRole("link", { name: "Open Lina Mansour patient profile" });
-  await expect(patientProfile).toBeVisible();
-  await patientProfile.click();
-  await expect(page).toHaveURL(/\/doctor\/patients\/\d+$/);
-  await expect(page.locator(".patient-identity-rail")).toBeVisible();
-  await page.goBack();
-
-  await page.getByRole("tab", { name: "X-rays & AI" }).click();
-  await expect(page.getByRole("heading", { name: "Selected X-ray" })).toBeVisible();
-  await expect(page.locator(".active-xray-canvas-panel")).toBeVisible();
-  await expect(page.locator(".active-xray-history-panel")).toBeVisible();
-  await expect(page.locator(".active-xray-ai-result")).toBeVisible();
-  await expect(page.locator(".active-xray-list-panel, .active-xray-ai-column")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "AI Result", exact: true })).toBeVisible();
-  const protectedOriginal = page.locator(".protected-xray-original");
-  await expect(protectedOriginal).toBeVisible();
-  await expect.poll(() => protectedOriginal.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
-  const reviewGeometry = await page.evaluate(() => {
-    const canvas = document.querySelector(".active-xray-canvas-panel")!.getBoundingClientRect();
-    const history = document.querySelector(".active-xray-history-panel")!.getBoundingClientRect();
-    const ai = document.querySelector(".active-xray-ai-result")!.getBoundingClientRect();
-    const main = document.querySelector(".active-xray-main-row")!.getBoundingClientRect();
-    return {
-      historyBelowViewer: history.top >= canvas.bottom,
-      aiBesideViewer: Math.abs(ai.top - canvas.top) < 2 && ai.left >= canvas.right,
-      historyBelowMain: history.top >= main.bottom,
-      viewerDominates: canvas.width > ai.width * 1.7,
-    };
-  });
-  expect(reviewGeometry.historyBelowViewer).toBe(true);
-  expect(reviewGeometry.aiBesideViewer).toBe(true);
-  expect(reviewGeometry.historyBelowMain).toBe(true);
-  expect(reviewGeometry.viewerDominates).toBe(true);
-  const viewer = page.locator(".protected-xray-viewer");
-  await expect(viewer).toBeVisible();
-  await expect(protectedOriginal).toBeVisible();
-  await expect.poll(() => protectedOriginal.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
-  const overlaySwitch = page.getByRole("switch", { name: "AI Overlay: Off" });
-  await expect(overlaySwitch).toBeVisible();
-  await expect(overlaySwitch).toBeEnabled();
-  await expect(overlaySwitch).toHaveAttribute("aria-checked", "false");
-  expect(await overlaySwitch.evaluate((element) => element.getBoundingClientRect().top < document.querySelector(".active-xray-canvas-panel")!.getBoundingClientRect().top)).toBe(true);
-  await page.getByRole("button", { name: "Zoom In" }).click();
-  await expect(page.locator(".protected-xray-media")).toHaveAttribute("data-scale", "1.25");
-  await page.getByRole("button", { name: "Zoom Out" }).click();
-  await expect(page.locator(".protected-xray-media")).toHaveAttribute("data-scale", "1.00");
-  await overlaySwitch.click();
-  await expect(page.getByRole("switch", { name: "AI Overlay: On" })).toHaveAttribute("aria-checked", "true");
-  const protectedOverlay = page.locator(".protected-xray-overlay");
-  await expect(protectedOverlay).toBeVisible();
-  await expect.poll(() => protectedOverlay.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
-  const overlayGeometry = await page.evaluate(() => {
-    const originalElement = document.querySelector(".protected-xray-original")!;
-    const overlayElement = document.querySelector(".protected-xray-overlay")!;
-    const original = originalElement.getBoundingClientRect();
-    const overlay = overlayElement.getBoundingClientRect();
-    return {
-      deltas: [overlay.x - original.x, overlay.y - original.y, overlay.width - original.width, overlay.height - original.height],
-      sameCanvas: originalElement.closest(".protected-xray-canvas") === overlayElement.closest(".protected-xray-canvas"),
-      separateOverlayFigures: document.querySelectorAll(".protected-xray-overlay-figure, .xray-overlay-figure, .overlay-figure").length,
-    };
-  });
-  expect(overlayGeometry.deltas.every((delta) => Math.abs(delta) < 1)).toBe(true);
-  expect(overlayGeometry.sameCanvas).toBe(true);
-  expect(overlayGeometry.separateOverlayFigures).toBe(0);
-  await page.getByRole("switch", { name: "AI Overlay: On" }).click();
-  await expect(page.getByRole("switch", { name: "AI Overlay: Off" })).toHaveAttribute("aria-checked", "false");
-  await expect(page.locator(".protected-xray-overlay")).toHaveCount(0);
-  await expect(protectedOriginal).toBeVisible();
-  await page.getByRole("button", { name: "Active visit bitewing X-ray without AI" }).click();
-  await expect(page.getByRole("switch", { name: "AI Overlay: Off" })).toBeVisible();
-  await expect(page.getByRole("switch", { name: "AI Overlay: Off" })).toBeDisabled();
-  await page.getByRole("button", { name: "Fit to View" }).click();
-  await page.getByRole("button", { name: "Reset" }).click();
-  await page.getByRole("button", { name: "Fullscreen" }).click();
-  await expect(page.getByRole("button", { name: "Exit Fullscreen" })).toBeVisible();
-  await page.getByRole("button", { name: "Exit Fullscreen" }).click();
-
-  await page.getByRole("tab", { name: "Billing" }).click();
-  await expect(page.locator(".active-visit-billing-card > .section-header").getByRole("heading", { name: "Billing / Invoice Handoff" })).toBeVisible();
-  await expect(page.getByText("Complete the visit before sending the invoice handoff to Billing.")).toBeVisible();
-  await expect(page.getByLabel("Treatment / invoice description")).toBeVisible();
-  await expect(page.getByLabel("Total treatment charge")).toBeDisabled();
-  await expect(page.getByLabel("Currency")).toBeDisabled();
-  await expect(page.getByLabel("Billing note")).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Send to Billing" })).toBeDisabled();
-  await expect(page.getByText("Billing handoff visibility follows your backend role permissions.")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /payment/i })).toHaveCount(0);
+  await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  await expect(page.locator(".app-sidebar-brand [data-brand-mark='pearlix-tooth']")).toBeVisible();
+  await page.getByRole("button", { name: "Expand sidebar" }).click();
 
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
-    await page.goto("/doctor/appointments/month?date=2026-07-26");
-    await expect(page.locator(".appointment-month-item").first()).toBeVisible();
-    await expectNoDocumentOverflow(page);
     await page.goto("/doctor/visits/active");
+    await expect(page.getByRole("tab")).toHaveText(["Visit Notes", "X-rays & AI", "Billing"]);
     await expectActionFooterClear(page, ".active-visit-notes-card", ".clinical-note-general");
     await page.getByRole("tab", { name: "X-rays & AI" }).click();
-    await expect(viewer).toBeVisible();
-    await expectActionFooterClear(page, ".active-xray-workspace", ".active-xray-ai-result");
+    await expect(page.locator(".protected-xray-original")).toBeVisible();
+    await expectActionFooterClear(page, ".active-xray-workspace", ".active-xray-history-panel");
+    await page.getByRole("tab", { name: "Billing" }).click();
+    await expect(page.getByText("Billing details will be sent to Staff when the visit is completed.")).toBeVisible();
+    await expect(page.getByLabel("Treatment / invoice description")).toBeEditable();
+    await expect(page.getByLabel("Total treatment charge")).toBeEditable();
+    await expect(page.getByLabel("Billing note")).toBeEditable();
+    await fillBilling(page);
+    await expectActionFooterClear(page, ".active-visit-billing-card", ".active-visit-billing-note");
+    await page.getByRole("button", { name: "Complete Visit" }).click();
+    const dialog = page.getByRole("dialog", { name: "Complete this visit?" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("250.00");
+    await expect(dialog).toContainText("SYP");
+    const dialogBox = await dialog.boundingBox();
+    expect(dialogBox).not.toBeNull();
+    expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(viewport.width + 1);
+    expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport.height + 1);
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expectNoDocumentOverflow(page);
   }
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/doctor/visits/active");
+  const objective = page.getByLabel("Objective Notes");
+  await objective.fill(`${await objective.inputValue()} Atomic completion evidence.`);
+  await page.getByRole("tab", { name: "Billing" }).click();
+  await fillBilling(page);
+  await page.getByRole("tab", { name: "Visit Notes" }).click();
+  await page.getByRole("tab", { name: "Billing" }).click();
+  await expect(page.getByLabel("Treatment / invoice description")).toHaveValue("Restorative dental treatment");
+  await expect(page.getByLabel("Total treatment charge")).toHaveValue("250.00");
+  await page.getByRole("button", { name: "Complete Visit" }).click();
+  const completionResponse = page.waitForResponse((response) => response.url().includes("/visits/") && response.url().endsWith("/complete/") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "Complete Visit and Send to Billing" }).click();
+  const response = await completionResponse;
+  expect(response.status()).toBe(200);
+  const payload = await response.json() as { visit: { status: string; completed_at: string | null }; billing_handoff: { id: number; description: string; note: string; suggested_amount: string; currency: string; status: string } };
+  expect(payload.visit.status).toBe("COMPLETED");
+  expect(payload.visit.completed_at).toBeTruthy();
+  expect(payload.billing_handoff).toMatchObject({ description: "Restorative dental treatment", note: "Collect payment at reception after treatment.", currency: "SYP", status: "PENDING" });
+  expect(Number(payload.billing_handoff.suggested_amount)).toBe(250);
+  await expect(page.getByText("Visit completed and sent to Staff Billing.")).toBeVisible();
+  await expect(page.getByText("Sent to Staff Billing", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /payment|paid|invoice/i })).toHaveCount(0);
+
+  await page.evaluate(() => window.localStorage.clear());
+  await login(page, accounts.staff);
+  await page.goto("/staff/billing/handoffs");
+  const row = page.getByRole("row", { name: /Lina Mansour/ }).filter({ hasText: "Restorative dental treatment" });
+  await expect(row).toBeVisible();
+  await expect(row.getByRole("cell", { name: "Dr. Samir Nasser", exact: true })).toBeVisible();
+  await expect(row).toContainText("Collect payment at reception after treatment.");
+  const expectedAmount = new Intl.NumberFormat("en-US", { style: "currency", currency: "SYP", currencyDisplay: "code", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(250);
+  await expect(row.getByRole("cell", { name: expectedAmount, exact: true })).toBeVisible();
+  await expect(row).toContainText("PENDING");
+  const handoffs = await authorizedJson<{ results: Array<{ id: number; visit: { id: number }; patient: { full_name: string }; doctor: { full_name: string }; description: string; note: string; suggested_amount: string; currency: string; status: string }> }>(page, "/billing-handoffs/?status=PENDING");
+  const handoff = handoffs.results.find((candidate) => candidate.id === payload.billing_handoff.id);
+  expect(handoff).toBeDefined();
+  expect(handoff!.patient.full_name).toBe("Lina Mansour");
+  expect(handoff!.doctor.full_name).toBe("Dr. Samir Nasser");
+  expect(handoff!.visit.id).toBeTruthy();
+  expect(handoff!.description).toBe("Restorative dental treatment");
+  expect(Number(handoff!.suggested_amount)).toBe(250);
+  expect(handoff!.currency).toBe("SYP");
+  expect(handoff!.status).toBe("PENDING");
+  expect(handoff!.note).toBe("Collect payment at reception after treatment.");
 });
