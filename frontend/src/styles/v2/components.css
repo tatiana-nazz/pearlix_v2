@@ -716,7 +716,7 @@
 .active-xray-thumbnail small { color: #9fb1c6; font-size: 11px; }
 .active-xray-ai-status { color: #7fd9e8; font-size: 10px; font-weight: 800; }
 .active-xray-review-stack { display: grid; min-width: 0; gap: 16px; }
-.active-xray-main-row { display: grid; min-width: 0; min-height: 0; block-size: clamp(190px,calc(100dvh - 530px),370px); grid-template-columns: minmax(0,2.65fr) minmax(250px,1fr); align-items: stretch; gap: 16px; }
+.active-xray-main-row { display: grid; min-width: 0; min-height: 0; block-size: clamp(320px,calc(100dvh - 410px),520px); grid-template-columns: minmax(0,2.65fr) minmax(250px,1fr); align-items: stretch; gap: 16px; }
 .active-xray-main-row > * { min-width: 0; min-height: 0; }
 .active-xray-ai-result { display: grid; min-width: 0; min-height: 0; align-content: stretch; overflow: hidden; }
 .active-xray-canvas-panel { min-width: 0; min-height: 0; overflow: hidden; border: 1px solid #2b4057; border-radius: 12px; background: #09131f; }
@@ -725,9 +725,9 @@
 .protected-xray-label { display: none; }
 .protected-xray-toolbar-actions { display: flex; min-width: 0; flex-wrap: wrap; gap: 7px; }
 .protected-xray-toolbar-actions .v2-button { min-block-size: 36px; border-color: #3d5670; background: #14283d; color: #edf5ff; padding-inline: 10px; font-size: 12px; }
-.protected-xray-canvas { display: grid; min-block-size: 0; block-size: 100%; place-items: center; overflow: hidden; padding: 8px; background: #030a12; }
-.protected-xray-media { display: grid; inline-size: 100%; place-items: center; transform-origin: center center; transition: transform 160ms ease; }
-.protected-xray-media img { grid-area: 1 / 1; display: block; inline-size: 100%; block-size: 100%; max-inline-size: 100%; max-block-size: 100%; border-radius: 8px; object-fit: contain; }
+.protected-xray-canvas { box-sizing: border-box; display: grid; min-block-size: 0; block-size: 100%; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); place-items: center; overflow: hidden; padding: 8px; background: #030a12; }
+.protected-xray-media { display: grid; inline-size: 100%; block-size: 100%; min-inline-size: 0; min-block-size: 0; place-items: center; overflow: hidden; transform-origin: center center; transition: transform 160ms ease; }
+.protected-xray-media img { grid-area: 1 / 1; display: block; inline-size: 100%; block-size: 100%; min-inline-size: 0; min-block-size: 0; max-inline-size: 100%; max-block-size: 100%; border-radius: 8px; object-fit: contain; }
 .protected-xray-overlay { pointer-events: none; }
 .protected-xray-scale { grid-column: 2; grid-row: 1; justify-self: end; color: #9fb1c6; font-size: 11px; }
 .protected-xray-viewer.is-enlarged,.protected-xray-viewer:fullscreen { position: fixed; z-index: 80; inset: 14px; display: grid; overflow: auto; border: 1px solid #3d5670; border-radius: 18px; padding: 18px; background: #07111d; box-shadow: 0 30px 80px rgba(0,0,0,.55); }
