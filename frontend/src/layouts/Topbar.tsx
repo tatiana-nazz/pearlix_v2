@@ -2,6 +2,7 @@ import { Languages, Menu, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useAuthStore } from "../auth/authStore";
+import { PearlixBrandMark } from "../components/PearlixBrandMark";
 import type { LanguagePreference, ThemePreference } from "../types/auth";
 import { roleT, t } from "./i18n";
 
@@ -22,6 +23,7 @@ export function Topbar({ onMenu }: { onMenu: (trigger: HTMLElement) => void }) {
     <header className="workspace-header">
       <div className="workspace-header-identity">
         <button className="v2-icon-button mobile-nav-trigger" type="button" aria-label={t(language, "menu")} data-tooltip={t(language, "menu")} onClick={(event) => onMenu(event.currentTarget)}><Menu size={20} /></button>
+        <span className="mobile-brand-mark" aria-hidden="true"><PearlixBrandMark /></span>
         <div className="current-user-identity">
           <strong className="bidi-isolate">{user?.full_name ?? "Pearlix"}</strong>
           <span>{roleT(language, role)}</span>

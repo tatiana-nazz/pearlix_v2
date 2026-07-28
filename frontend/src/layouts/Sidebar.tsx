@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, LogOut, UserRound, X } from "lucide-react";
 
 import type { UserRole } from "../types/auth";
 import { useAuthStore } from "../auth/authStore";
+import { PearlixBrandMark } from "../components/PearlixBrandMark";
 import { navigationByRole, type NavigationGroup } from "./navigation";
 import { roleT, t, workspaceT } from "./i18n";
 export { navigationByRole } from "./navigation";
@@ -24,7 +25,7 @@ export function Sidebar({ role, collapsed = false, drawerOpen = false, onDrawerC
   return (
     <aside className="app-sidebar">
       <div className="app-sidebar-brand">
-        <div className="app-sidebar-brand-mark">P</div>
+        <div className="app-sidebar-brand-mark"><PearlixBrandMark /></div>
         <div className="app-sidebar-brand-copy">
           <strong>Pearlix</strong>
           <span>{workspaceT(language, role)}</span>

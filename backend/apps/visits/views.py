@@ -8,7 +8,7 @@ from apps.common.errors import error_response
 from apps.patients.selectors import get_patients_for_user
 from apps.visits.models import Visit
 from apps.visits.permissions import VisitPermission
-from apps.visits.serializers import ClinicalNotesUpdateSerializer, VisitDetailSerializer, VisitListSerializer
+from apps.visits.serializers import ClinicalNotesUpdateSerializer, VisitCompletionSerializer, VisitDetailSerializer, VisitListSerializer
 from apps.visits.services import VisitRuleError, complete_visit, update_clinical_notes
 
 
@@ -75,8 +75,16 @@ class VisitViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
         visit = self.get_object()
+        serializer = VisitCompletionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         try:
-            visit = complete_visit(visit=visit, user=request.user)
+            visit, handoff = complete_visit(
+                visit=visit,
+                user=request.user,
+                expected_updated_at=serializer.validated_data["version"],
+                notes=serializer.validated_data["notes"],
+                billing_handoff=serializer.validated_data["billing_handoff"],
+            )
         except VisitRuleError as exc:
             return exc.to_response()
         log_activity(
@@ -86,7 +94,16 @@ class VisitViewSet(viewsets.ReadOnlyModelViewSet):
             entity_id=visit.id,
             metadata={"visit_id": visit.id, "appointment_id": visit.appointment_id, "patient_id": visit.patient_id, "doctor_id": visit.doctor_id},
         )
-        return Response(VisitDetailSerializer(visit).data)
+        log_activity(
+            request=request,
+            action="billing_handoff_created",
+            entity_type="billing_handoff",
+            entity_id=handoff.id,
+            metadata={"handoff_id": handoff.id, "visit_id": handoff.visit_id, "patient_id": handoff.patient_id},
+        )
+        from apps.billing.serializers import BillingHandoffSerializer
+
+        return Response({"visit": VisitDetailSerializer(visit).data, "billing_handoff": BillingHandoffSerializer(handoff).data})
 
     @action(detail=True, methods=["patch"], url_path="clinical-notes")
     def clinical_notes(self, request, pk=None):

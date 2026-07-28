@@ -249,6 +249,73 @@ const taskMMessages = {
   EN: { finalCharge: "Final charge", finalChargeGuidance: "This final charge creates the official invoice immediately.", billingNoteOptional: "Billing note (optional)", createInvoice: "Create invoice", finalChargeFailed: "Unable to create the invoice. Review the final charge and try again." },
   AR: { finalCharge: "المبلغ النهائي", finalChargeGuidance: "يؤدي إرسال المبلغ النهائي إلى إنشاء الفاتورة الرسمية فورًا.", billingNoteOptional: "ملاحظة فوترة (اختيارية)", createInvoice: "إنشاء الفاتورة", finalChargeFailed: "تعذر إنشاء الفاتورة. راجع المبلغ النهائي وحاول مرة أخرى." },
 } as const;
+
+const activeVisitIntegrationMessages = {
+  EN: {
+    visitNotes: "Visit Notes", contact: "Contact", appointmentContext: "Appointment & visit",
+    subjectiveNotes: "Subjective Notes", subjectiveHelper: "Symptoms, concerns, and information reported by the patient.",
+    objectiveNotes: "Objective Notes", objectiveHelper: "Observed findings and examination results.",
+    assessment: "Assessment", assessmentHelper: "Clinical assessment and working interpretation.",
+    plan: "Plan", planHelper: "Treatment plan, follow-up, or next actions.",
+    generalNotesHelper: "Additional visit notes not covered above.", notesUnsaved: "Unsaved changes",
+    notesSavedNow: "Saved just now", notesUpToDate: "All changes saved", conflictTitle: "This visit was updated elsewhere",
+    conflictDescription: "Refresh the visit to review the latest clinical notes before saving again.", refreshVisit: "Refresh visit",
+    openPatientProfile: "Open patient profile", inVisit: "In visit", backAppointments: "Back to appointments",
+    billingWorkspaceTitle: "Billing / Invoice Handoff", billingCompletionDescription: "Billing details will be sent to Staff when the visit is completed.", billingLoadError: "Unable to load billing details",
+    treatmentDescription: "Treatment / invoice description", treatmentDescriptionHelper: "Describe the treatment or service provided during this visit.",
+    totalTreatmentCharge: "Total treatment charge", selectCurrency: "Select currency", billingNote: "Billing note",
+    billingNoteHelper: "Optional internal note for Staff Billing.", billingDescriptionRequired: "Enter the treatment or invoice description.",
+    billingAmountRequired: "Enter the total treatment charge.", billingCurrencyRequired: "Select a supported currency.",
+    invalidTreatmentCharge: "Enter a valid positive treatment charge.", completeBillingFirst: "Complete the billing details before completing the visit.",
+    completeWithBillingTitle: "Complete this visit?", completeWithBillingBody: "The visit will be completed and one pending billing handoff will be sent to Staff.",
+    completeAndSend: "Complete Visit and Send to Billing", visitCompleted: "Visit completed",
+    visitBillingSuccess: "Visit completed and sent to Staff Billing.", sentToStaffBilling: "Sent to Staff Billing",
+    handoffStatus: "Handoff status", invoiceSummary: "Linked invoice", invoiceStatus: "Invoice status",
+    invoiceReference: "Invoice reference", balance: "Balance", selectedXray: "Selected X-ray",
+    noStoredAiResult: "No stored AI result is available for this X-ray.", researchOnly: "Research-only AI analysis",
+    aiAnalysisDetails: "AI Analysis Details", overallConfidence: "Overall confidence", modelVersion: "Model version",
+    overlayAvailability: "Overlay availability", overlayAvailable: "Available", overlayNotAvailable: "Unavailable",
+    zoomIn: "Zoom in", zoomOut: "Zoom out", resetViewer: "Reset", fitToView: "Fit to view",
+    fullscreen: "Fullscreen", exitFullscreen: "Exit fullscreen", loadingOriginal: "Loading protected original image…",
+    loadingOverlay: "Loading AI overlay…", overlayUnavailable: "The AI overlay is unavailable. The original image remains available.",
+    aiOverlayOn: "On", aiOverlayOff: "Off", noOverlayAvailable: "No AI overlay is available for this X-ray.",
+    runAiAnalysis: "Run AI Analysis", runningAiAnalysis: "Running AI Analysis…", aiRequestFailed: "Unable to run AI analysis.",
+    aiServiceUnavailable: "AI analysis is not configured. The saved X-ray remains available.",
+    loadingAiResult: "Loading AI result…", aiResultUnavailable: "AI result unavailable", findings: "Findings",
+  },
+  AR: {
+    visitNotes: "ملاحظات الزيارة", contact: "التواصل", appointmentContext: "الموعد والزيارة",
+    subjectiveNotes: "الملاحظات الذاتية", subjectiveHelper: "الأعراض والمخاوف والمعلومات التي ذكرها المريض.",
+    objectiveNotes: "الملاحظات الموضوعية", objectiveHelper: "النتائج المرصودة ونتائج الفحص.",
+    assessment: "التقييم", assessmentHelper: "التقييم السريري والتفسير الأولي.",
+    plan: "الخطة", planHelper: "خطة العلاج أو المتابعة أو الإجراءات التالية.",
+    generalNotesHelper: "ملاحظات إضافية لا تغطيها الأقسام أعلاه.", notesUnsaved: "تغييرات غير محفوظة",
+    notesSavedNow: "تم الحفظ الآن", notesUpToDate: "جميع التغييرات محفوظة", conflictTitle: "تم تحديث هذه الزيارة في مكان آخر",
+    conflictDescription: "حدّث الزيارة لمراجعة أحدث الملاحظات قبل الحفظ مرة أخرى.", refreshVisit: "تحديث الزيارة",
+    openPatientProfile: "فتح ملف المريض", inVisit: "قيد الزيارة", backAppointments: "العودة إلى المواعيد",
+    billingWorkspaceTitle: "تسليم الفوترة / الفاتورة", billingCompletionDescription: "سيتم إرسال تفاصيل الفوترة إلى الموظفين عند إكمال الزيارة.", billingLoadError: "تعذر تحميل تفاصيل الفوترة",
+    treatmentDescription: "وصف العلاج / الفاتورة", treatmentDescriptionHelper: "صِف العلاج أو الخدمة المقدمة خلال هذه الزيارة.",
+    totalTreatmentCharge: "إجمالي تكلفة العلاج", selectCurrency: "اختر العملة", billingNote: "ملاحظة الفوترة",
+    billingNoteHelper: "ملاحظة داخلية اختيارية لفريق الفوترة.", billingDescriptionRequired: "أدخل وصف العلاج أو الفاتورة.",
+    billingAmountRequired: "أدخل إجمالي تكلفة العلاج.", billingCurrencyRequired: "اختر عملة مدعومة.",
+    invalidTreatmentCharge: "أدخل تكلفة علاج موجبة وصحيحة.", completeBillingFirst: "أكمل تفاصيل الفوترة قبل إكمال الزيارة.",
+    completeWithBillingTitle: "هل تريد إكمال هذه الزيارة؟", completeWithBillingBody: "سيتم إكمال الزيارة وإرسال تسليم فوترة معلق واحد إلى الموظفين.",
+    completeAndSend: "إكمال الزيارة وإرسالها إلى الفوترة", visitCompleted: "اكتملت الزيارة",
+    visitBillingSuccess: "اكتملت الزيارة وأُرسلت إلى فوترة الموظفين.", sentToStaffBilling: "أُرسلت إلى فوترة الموظفين",
+    handoffStatus: "حالة التسليم", invoiceSummary: "الفاتورة المرتبطة", invoiceStatus: "حالة الفاتورة",
+    invoiceReference: "مرجع الفاتورة", balance: "الرصيد", selectedXray: "الأشعة المحددة",
+    noStoredAiResult: "لا توجد نتيجة محفوظة للذكاء الاصطناعي لهذه الأشعة.", researchOnly: "تحليل ذكاء اصطناعي للبحث فقط",
+    aiAnalysisDetails: "تفاصيل تحليل الذكاء الاصطناعي", overallConfidence: "الثقة الإجمالية", modelVersion: "إصدار النموذج",
+    overlayAvailability: "توفر الطبقة", overlayAvailable: "متاحة", overlayNotAvailable: "غير متاحة",
+    zoomIn: "تكبير", zoomOut: "تصغير", resetViewer: "إعادة ضبط", fitToView: "ملاءمة للعرض",
+    fullscreen: "ملء الشاشة", exitFullscreen: "إنهاء ملء الشاشة", loadingOriginal: "جارٍ تحميل الصورة الأصلية المحمية…",
+    loadingOverlay: "جارٍ تحميل طبقة الذكاء الاصطناعي…", overlayUnavailable: "طبقة الذكاء الاصطناعي غير متاحة. ما زالت الصورة الأصلية متاحة.",
+    aiOverlayOn: "تشغيل", aiOverlayOff: "إيقاف", noOverlayAvailable: "لا تتوفر طبقة ذكاء اصطناعي لهذه الأشعة.",
+    runAiAnalysis: "تشغيل تحليل الذكاء الاصطناعي", runningAiAnalysis: "جارٍ تشغيل تحليل الذكاء الاصطناعي…", aiRequestFailed: "تعذر تشغيل تحليل الذكاء الاصطناعي.",
+    aiServiceUnavailable: "تحليل الذكاء الاصطناعي غير مهيأ. تبقى الأشعة المحفوظة متاحة.",
+    loadingAiResult: "جارٍ تحميل نتيجة الذكاء الاصطناعي…", aiResultUnavailable: "نتيجة الذكاء الاصطناعي غير متاحة", findings: "النتائج",
+  },
+} as const;
 const taskKMessages = {
   EN: {
     calendar: "Calendar", billing: "Billing", appointmentWorkspaceTabs: "Appointment workspace tabs", myAppointmentQueue: "My Appointment Queue", queueUpcoming: "Upcoming", queueCheckedIn: "Checked In", queueActive: "Active", queueCompleted: "Completed", queueCancelledNoShow: "Cancelled / No-show", invoicesAndPayments: "Invoices & Payments", totalTeam: "Total Team", activeToday: "Active Today", teamOverview: "Overview", teamSchedule: "Schedule", teamLeave: "Leave", teamAccess: "Access",
@@ -313,7 +380,7 @@ function hasOwnKey<Value extends object>(value: Value, key: PropertyKey): key is
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN | keyof typeof appointmentDetailSummaryMessages.EN | keyof typeof taskKMessages.EN | keyof typeof taskMMessages.EN;
+export type FeatureMessageKey = keyof typeof featureMessages.EN | keyof typeof patientListMessages.EN | keyof typeof featureExtensions.EN | keyof typeof calendarMessages.EN | keyof typeof acceptanceMessages.EN | keyof typeof scheduleMessages.EN | keyof typeof visitMessages.EN | keyof typeof xrayMessages.EN | keyof typeof billingMessages.EN | keyof typeof billingAcceptanceMessages.EN | keyof typeof clinicAuditMessages.EN | keyof typeof clinicSettingsOptionMessages.EN | keyof typeof auditAcceptanceMessages.EN | keyof typeof profileMessages.EN | keyof typeof appointmentChoiceMessages.EN | keyof typeof teamDirectoryMessages.EN | keyof typeof professionalScheduleMessages.EN | keyof typeof leavePolishMessages.EN | keyof typeof appointmentDetailSummaryMessages.EN | keyof typeof taskKMessages.EN | keyof typeof taskMMessages.EN | keyof typeof activeVisitIntegrationMessages.EN;
 
 export function featureT(language: LanguagePreference, key: FeatureMessageKey): string {
   const featureDictionary = featureMessages[language];
@@ -368,6 +435,9 @@ export function featureT(language: LanguagePreference, key: FeatureMessageKey): 
 
   const taskMDictionary = taskMMessages[language];
   if (hasOwnKey(taskMDictionary, key)) return taskMDictionary[key];
+
+  const activeVisitIntegrationDictionary = activeVisitIntegrationMessages[language];
+  if (hasOwnKey(activeVisitIntegrationDictionary, key)) return activeVisitIntegrationDictionary[key];
 
   throw new Error(`Missing translation for key: ${key}`);
 }

@@ -45,6 +45,7 @@ class BillingHandoffSerializer(serializers.ModelSerializer):
             "patient",
             "visit",
             "doctor",
+            "description",
             "note",
             "suggested_amount",
             "currency",
@@ -60,6 +61,7 @@ class BillingHandoffSerializer(serializers.ModelSerializer):
 
 
 class BillingHandoffCreateSerializer(serializers.Serializer):
+    description = serializers.CharField(required=False, allow_blank=True)
     note = serializers.CharField(required=False, allow_blank=True)
     suggested_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     currency = serializers.ChoiceField(choices=BillingHandoff.Currency.choices, required=False, allow_null=True, allow_blank=True)

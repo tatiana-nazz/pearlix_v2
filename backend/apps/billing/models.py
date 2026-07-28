@@ -23,6 +23,7 @@ class BillingHandoff(TimeStampedModel):
     patient = models.ForeignKey("patients.Patient", on_delete=models.PROTECT, related_name="billing_handoffs")
     visit = models.ForeignKey("visits.Visit", on_delete=models.PROTECT, related_name="billing_handoffs")
     doctor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="billing_handoffs")
+    description = models.TextField(blank=True)
     note = models.TextField(blank=True)
     suggested_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=3, choices=Currency.choices, null=True, blank=True)

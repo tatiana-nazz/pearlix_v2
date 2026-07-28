@@ -39,10 +39,18 @@ def test_wf_008_billing_handoff_to_invoice_payment_workflow(admin_client, staff_
     start_response = doctor_client.post(f"/api/appointments/{appointment_id}/start-visit/")
     visit_id = start_response.data["id"]
     notes_response = doctor_client.patch(f"/api/visits/{visit_id}/clinical-notes/", {"treatment": "Exam"}, format="json")
-    complete_response = doctor_client.post(f"/api/visits/{visit_id}/complete/")
-    handoff_response = doctor_client.post(
-        f"/api/visits/{visit_id}/billing-handoff/",
-        {"note": "Invoice after exam", "suggested_amount": "75.00", "currency": "SYP"},
+    complete_response = doctor_client.post(
+        f"/api/visits/{visit_id}/complete/",
+        {
+            "version": notes_response.data["updated_at"],
+            "notes": {"treatment": "Exam"},
+            "billing_handoff": {
+                "description": "Exam",
+                "note": "Invoice after exam",
+                "suggested_amount": "75.00",
+                "currency": "SYP",
+            },
+        },
         format="json",
     )
 
@@ -51,11 +59,10 @@ def test_wf_008_billing_handoff_to_invoice_payment_workflow(admin_client, staff_
     assert start_response.status_code == 201
     assert notes_response.status_code == 200
     assert complete_response.status_code == 200
-    assert complete_response.data["status"] == Visit.Status.COMPLETED
-    assert handoff_response.status_code == 201
-    assert handoff_response.data["status"] == BillingHandoff.Status.PENDING
+    assert complete_response.data["visit"]["status"] == Visit.Status.COMPLETED
+    assert complete_response.data["billing_handoff"]["status"] == BillingHandoff.Status.PENDING
 
-    handoff_id = handoff_response.data["id"]
+    handoff_id = complete_response.data["billing_handoff"]["id"]
     invoice_response = staff_client.post(f"/api/billing-handoffs/{handoff_id}/convert-to-invoice/", {}, format="json")
     assert invoice_response.status_code == 201
     assert invoice_response.data["status"] == Invoice.Status.UNPAID

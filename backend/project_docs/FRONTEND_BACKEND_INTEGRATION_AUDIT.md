@@ -2,7 +2,7 @@
 
 ## Billing workflow decision (Phase 14F Task M)
 
-The Doctor enters the final charge after completing the Visit. `POST /api/visits/{visit_id}/create-invoice/` atomically creates the official Invoice immediately. Staff does not approve or convert the charge, and normal Staff/Admin Billing navigation is Invoices & Payments only. Staff records Payments and performs permitted audited corrections; Admin is read-only. The legacy handoff routes remain isolated for historical compatibility.
+The owning Doctor submits notes and billing-handoff details through one `POST /api/visits/{visit_id}/complete/` transaction. Success completes the Visit and Appointment and creates exactly one pending handoff; Staff converts it to an official Invoice and records Payments. Admin is read-only and the Doctor has no payment authority after completion. The direct-invoice endpoint remains available only for compatibility outside the Active Visit path.
 
 ## Completed Phase 14D automated acceptance
 
@@ -862,12 +862,12 @@ Availability and conflict handling:
 - Doctor starts own checked-in appointment with `POST /api/appointments/{id}/start-visit/`.
 - Doctor works from `/doctor/visits/active` using `GET /api/visits/active/`.
 - Doctor updates notes with `PATCH /api/visits/{id}/clinical-notes/`.
-- Doctor completes visit with `POST /api/visits/{id}/complete/`; appointment status becomes `COMPLETED`.
+- Doctor completes a visit with `POST /api/visits/{id}/complete/`, submitting `{ version, notes, billing_handoff: { description, suggested_amount, currency, note? } }`; the Visit and Appointment become `COMPLETED` and one pending handoff is returned.
 - Only the owning Doctor can edit a visit's clinical notes, complete it, upload visit X-rays, or create billing handoff.
 - Other-doctor notes should be displayed read-only in patient history.
 - Phase 13G routes: Doctor `/doctor/visits/active` and `/doctor/visits/:visitId`; Admin and Staff `/[role]/visits/:visitId` read-only.
-- When clinical notes are dirty, the frontend saves the accepted five-field payload before requesting completion; a completion failure retains successfully saved notes.
-- Phase 13I now lets the owning Doctor create a billing handoff from a completed visit and review own handoff status.
+- Completion sends the accepted five-field note payload and billing details once; it never performs a preliminary notes save. Any completion failure leaves notes, Visit, Appointment, and handoff unchanged.
+- The owning Doctor prepares the handoff in Active Visit; Staff alone converts the resulting pending handoff and records payment.
 
 ## J. X-ray and AI Integration Plan
 

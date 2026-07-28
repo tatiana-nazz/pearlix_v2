@@ -98,5 +98,7 @@
   --v2-ai: var(--color-active);
   --v2-focus: color-mix(in srgb, var(--color-input-focus) 28%, transparent);
   --v2-hover: var(--color-surface-hover);
+  --v2-divider: var(--color-border);
+  --v2-shadow-soft: var(--shadow-soft);
   --v2-shadow-major: var(--shadow-card);
 }

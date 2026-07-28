@@ -1,6 +1,5 @@
+import { useFeatureT, type FeatureMessageKey } from "../../../layouts/i18n";
 import type { ClinicalNotesValues } from "../utils/visitForm";
-import { Button } from "../../../components/v2";
-import { useFeatureT } from "../../../layouts/i18n";
 
 interface ClinicalNotesFormProps {
   values: ClinicalNotesValues;
@@ -8,33 +7,34 @@ interface ClinicalNotesFormProps {
   isSaving?: boolean;
   error?: unknown;
   onChange: (field: keyof ClinicalNotesValues, value: string) => void;
-  onSave: () => void;
 }
 
-export const clinicalNoteFields: Array<{ key: keyof ClinicalNotesValues; label: "symptoms" | "diagnosis" | "treatment" | "clinicalNotes" | "followUpNotes"; rows: number }> = [
-  { key: "symptoms", label: "symptoms", rows: 3 },
-  { key: "diagnosis", label: "diagnosis", rows: 3 },
-  { key: "treatment", label: "treatment", rows: 3 },
-  { key: "clinical_notes", label: "clinicalNotes", rows: 6 },
-  { key: "follow_up_notes", label: "followUpNotes", rows: 3 },
+export const clinicalNoteFields: Array<{
+  key: keyof ClinicalNotesValues;
+  label: FeatureMessageKey;
+  helper: FeatureMessageKey;
+  area: string;
+}> = [
+  { key: "symptoms", label: "subjectiveNotes", helper: "subjectiveHelper", area: "subjective" },
+  { key: "clinical_notes", label: "objectiveNotes", helper: "objectiveHelper", area: "objective" },
+  { key: "diagnosis", label: "assessment", helper: "assessmentHelper", area: "assessment" },
+  { key: "treatment", label: "plan", helper: "planHelper", area: "plan" },
+  { key: "follow_up_notes", label: "generalNotes", helper: "generalNotesHelper", area: "general" },
 ];
 
-export function ClinicalNotesForm({ values, disabled, isSaving, error, onChange, onSave }: ClinicalNotesFormProps) {
+export function ClinicalNotesForm({ values, disabled, isSaving, error, onChange }: ClinicalNotesFormProps) {
   const t = useFeatureT();
   return (
-    <form
-      className="clinical-notes-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSave();
-      }}
-    >
+    <form className="clinical-notes-form" onSubmit={(event) => event.preventDefault()}>
       {clinicalNoteFields.map((field) => (
-        <label key={field.key}>
-          {t(field.label)}
+        <label className={`clinical-note-field clinical-note-${field.area}`} key={field.key}>
+          <span className="clinical-note-label">{t(field.label)}</span>
+          <span className="clinical-note-helper" id={`clinical-note-${field.key}-helper`}>{t(field.helper)}</span>
           <textarea
             name={field.key}
-            rows={field.rows}
+            aria-label={t(field.label)}
+            aria-describedby={`clinical-note-${field.key}-helper`}
+            rows={6}
             value={values[field.key]}
             disabled={disabled || isSaving}
             onChange={(event) => onChange(field.key, event.target.value)}
@@ -42,9 +42,6 @@ export function ClinicalNotesForm({ values, disabled, isSaving, error, onChange,
         </label>
       ))}
       {error ? <p className="form-error" role="alert">{t("unableToSaveNotes")}</p> : null}
-      <div className="form-actions">
-        <Button type="submit" loading={isSaving} disabled={disabled}>{isSaving ? t("savingNotes") : t("saveNotes")}</Button>
-      </div>
     </form>
   );
 }

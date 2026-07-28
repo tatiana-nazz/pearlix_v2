@@ -63,7 +63,10 @@ def start_visit_from_appointment(*, appointment: Appointment, user):
         return visit
 
 
-def complete_visit(*, visit: Visit, user):
+def complete_visit(*, visit: Visit, user, expected_updated_at, notes: dict, billing_handoff: dict):
+    from apps.billing.models import BillingHandoff
+    from apps.billing.services import BillingRuleError, create_billing_handoff
+
     with transaction.atomic():
         visit = Visit.objects.select_for_update().select_related("appointment").get(pk=visit.pk)
         if visit.doctor_id != user.id:
@@ -74,6 +77,20 @@ def complete_visit(*, visit: Visit, user):
                 "Only active visits can be completed.",
                 status_code=status.HTTP_409_CONFLICT,
             )
+        if visit.updated_at != expected_updated_at:
+            raise VisitRuleError(
+                "VERSION_CONFLICT",
+                "This visit was updated elsewhere. Refresh before completing it.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        if BillingHandoff.objects.select_for_update().filter(visit=visit).exists():
+            raise VisitRuleError(
+                "BILLING_HANDOFF_EXISTS",
+                "A billing handoff already exists for this visit.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+
+        update_clinical_notes(visit=visit, data=notes, user=user)
 
         now = timezone.now()
         visit.status = Visit.Status.COMPLETED
@@ -85,7 +102,11 @@ def complete_visit(*, visit: Visit, user):
         appointment.status = Appointment.Status.COMPLETED
         appointment.updated_by = user
         appointment.save(update_fields=["status", "updated_by", "updated_at"])
-        return visit
+        try:
+            handoff = create_billing_handoff(visit=visit, user=user, data=billing_handoff)
+        except BillingRuleError as exc:
+            raise VisitRuleError(exc.code, exc.message, exc.details, exc.status_code) from exc
+        return visit, handoff
 
 
 def update_clinical_notes(*, visit: Visit, data: dict, user):

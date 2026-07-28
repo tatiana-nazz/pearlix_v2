@@ -5,6 +5,9 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
+import binascii
+import struct
+import zlib
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -46,11 +49,48 @@ DEMO_TAG = "phase-14a-integrated-demo-story"
 EMAIL_DOMAIN = "pearlix-demo.local"
 PATIENT_ID_PREFIX = "DEMO14A-"
 DEFAULT_PASSWORD = "PearlixDemo123!"
-PNG_BYTES = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-    b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xcf\xc0"
-    b"\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb1\x00\x00\x00\x00IEND\xaeB`\x82"
-)
+def _png_chunk(kind, payload):
+    return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", binascii.crc32(kind + payload) & 0xFFFFFFFF)
+
+
+def _synthetic_dental_png(width=320, height=180):
+    rows = []
+    for y in range(height):
+        row = bytearray([0])
+        for x in range(width):
+            center = abs(x - width / 2) / (width / 2)
+            arch = abs(y - (70 + 38 * center))
+            tooth = 76 if arch < 22 and 22 < x < width - 22 else 0
+            roots = 36 if 92 < y < 160 and ((x // 24) % 2 == 0) else 0
+            grain = (x * 7 + y * 11) % 20
+            value = max(12, min(235, 26 + tooth + roots + grain))
+            row.extend((value, value, value, 255))
+        rows.append(bytes(row))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", header) + _png_chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + _png_chunk(b"IEND", b"")
+
+
+def _synthetic_overlay_png(width=320, height=180):
+    rows = []
+    regions = ((54, 42, 126, 112), (184, 58, 262, 138))
+    for y in range(height):
+        row = bytearray([0])
+        for x in range(width):
+            pixel = (0, 0, 0, 0)
+            for left, top, right, bottom in regions:
+                on_edge = (left <= x <= right and y in {top, top + 1, bottom - 1, bottom}) or (top <= y <= bottom and x in {left, left + 1, right - 1, right})
+                if on_edge:
+                    pixel = (255, 78, 92, 220)
+                elif left < x < right and top < y < bottom:
+                    pixel = (255, 78, 92, 24)
+            row.extend(pixel)
+        rows.append(bytes(row))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", header) + _png_chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + _png_chunk(b"IEND", b"")
+
+
+PNG_BYTES = _synthetic_dental_png()
+OVERLAY_PNG_BYTES = _synthetic_overlay_png()
 
 USER_SPECS = (
     ("admin", "Nour Haddad", User.Role.ADMIN, False),
@@ -239,10 +279,10 @@ class Command(BaseCommand):
         past = today - timedelta(days=7)
         future = today + timedelta(days=3)
         app = {}
-        app["today_confirmed"] = self._appointment(patient=patients[0], doctor=d1, start=self._dt(today, 10), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Today confirmed")
+        app["today_confirmed"] = self._appointment(patient=patients[0], doctor=d3, start=self._dt(today, 10), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Today confirmed")
         app["checked_in"] = self._appointment(patient=patients[1], doctor=d2, start=self._dt(today, 10), duration=45, status=Appointment.Status.CHECKED_IN, staff=staff, reason="Checked in")
-        active_app = self._appointment(patient=patients[2], doctor=d3, start=self._dt(today, 11), duration=30, status=Appointment.Status.ACTIVE, staff=staff, reason="Active visit")
-        active_visit = Visit.objects.create(appointment=active_app, patient=patients[2], doctor=d3, status=Visit.Status.ACTIVE, started_at=self._dt(today, 11, 5), symptoms="Synthetic active symptom", created_by=d3, updated_by=d3)
+        active_app = self._appointment(patient=patients[2], doctor=d1, start=self._dt(today, 11), duration=30, status=Appointment.Status.ACTIVE, staff=staff, reason="Active visit")
+        active_visit = Visit.objects.create(appointment=active_app, patient=patients[2], doctor=d1, status=Visit.Status.ACTIVE, started_at=self._dt(today, 11, 5), symptoms="Synthetic active symptom", diagnosis="Synthetic active assessment", treatment="Synthetic active plan", clinical_notes="Synthetic active objective note", follow_up_notes="Synthetic active follow-up", created_by=d1, updated_by=d1)
         completed = []
         for index in range(3, 14):
             doctor = (d1, d2, d4)[index % 3]
@@ -283,13 +323,13 @@ class Command(BaseCommand):
 
     def _create_imaging_story(self, accounts, patients, story):
         d1, d2 = accounts["doctor.one"], accounts["doctor.two"]
-        completed = story["completed_visits"]
-        xray = create_xray_attachment(patient=patients[4], visit=completed[1], uploaded_by=completed[1].doctor, uploaded_file=self._upload("demo14a-original-ai.png"), stored_file_name="demo14a-original-ai.png", title="Synthetic demo X-ray with mock AI", notes="Non-clinical synthetic image.")
-        result = run_ai_for_xray(xray_attachment=xray, user=completed[1].doctor)
-        result.overlay_file.save("demo14a-overlay.png", ContentFile(PNG_BYTES), save=False)
+        active_visit = story["active_visit"]
+        xray = create_xray_attachment(patient=active_visit.patient, visit=active_visit, uploaded_by=d1, uploaded_file=self._upload("demo14a-active-original-ai.png"), stored_file_name="demo14a-active-original-ai.png", title="Active visit X-ray with mock AI", notes="Non-clinical synthetic image.")
+        result = run_ai_for_xray(xray_attachment=xray, user=d1)
+        result.overlay_file.save("demo14a-overlay.png", ContentFile(OVERLAY_PNG_BYTES), save=False)
         result.result_summary = "Mock/supportive only — not a diagnosis."
         result.save()
-        create_xray_attachment(patient=patients[5], visit=completed[2], uploaded_by=completed[2].doctor, uploaded_file=self._upload("demo14a-original-no-ai.png"), stored_file_name="demo14a-original-no-ai.png", title="Synthetic demo X-ray without AI", notes="Non-clinical synthetic image.")
+        create_xray_attachment(patient=active_visit.patient, visit=active_visit, uploaded_by=d1, uploaded_file=self._upload("demo14a-active-original-no-ai.png"), stored_file_name="demo14a-active-original-no-ai.png", title="Active visit X-ray eligible for mock AI", notes="Non-clinical synthetic image.")
         temporary = create_external_xray_case(uploaded_by=d1, uploaded_file=self._upload("demo14a-external-temporary.png"), stored_file_name="demo14a-external-temporary.png", title="Temporary synthetic external image", notes="Non-clinical synthetic image.")
         attached = create_external_xray_case(uploaded_by=d2, uploaded_file=self._upload("demo14a-external-attached.png"), stored_file_name="demo14a-external-attached.png", title="Attached synthetic external image", notes="Non-clinical synthetic image.")
         attach_external_case_to_patient(external_case=attached, patient=patients[7], visit=None, user=d2, title="Attached synthetic external image", notes="Synthetic demo attachment.")
@@ -384,6 +424,6 @@ class Command(BaseCommand):
             ("AVAILABLE_OVERRIDE", story["available_override"]),
         ):
             self.stdout.write(f"- {alias}={record.id}")
-        self.stdout.write(f"- DOCTOR_NO_ACTIVE_VISIT={accounts['doctor.one'].id}")
+        self.stdout.write(f"- DOCTOR_NO_ACTIVE_VISIT={accounts['doctor.three'].id}")
         self.stdout.write(f"- DOCTOR_STARTABLE_VISIT={accounts['doctor.two'].id}")
-        self.stdout.write(f"- DOCTOR_ACTIVE_VISIT={accounts['doctor.three'].id}")
+        self.stdout.write(f"- DOCTOR_ACTIVE_VISIT={accounts['doctor.one'].id}")

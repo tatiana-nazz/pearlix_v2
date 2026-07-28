@@ -70,6 +70,18 @@ def test_demo_story_relationships_dashboards_and_media_are_coherent(tmp_path):
         assert WorkingShift.objects.filter(employee__email="doctor.four@pearlix-demo.local", start_time="08:00").exists()
         assert WorkingShift.objects.filter(employee__email="doctor.four@pearlix-demo.local", start_time="13:00").exists()
         assert Visit.objects.filter(status=Visit.Status.ACTIVE).count() == 1
+        doctor_one = User.objects.get(email="doctor.one@pearlix-demo.local")
+        assert doctor_one.full_name == "Dr. Samir Nasser"
+        active_visit = Visit.objects.get(status=Visit.Status.ACTIVE)
+        assert active_visit.doctor == doctor_one
+        assert active_visit.patient.full_name == "Lina Mansour"
+        assert active_visit.appointment.status == Appointment.Status.ACTIVE
+        assert active_visit.clinical_notes
+        assert not BillingHandoff.objects.filter(visit=active_visit).exists()
+        active_xrays = XrayAttachment.objects.filter(visit=active_visit)
+        assert active_xrays.count() == 2
+        assert active_xrays.filter(ai_result__status=AIResult.Status.COMPLETED, ai_result__overlay_file__gt="").count() == 1
+        assert active_xrays.filter(ai_result__isnull=True).count() == 1
         assert Visit.objects.filter(status=Visit.Status.COMPLETED, symptoms__gt="", diagnosis__gt="", treatment__gt="", clinical_notes__gt="", follow_up_notes__gt="").exists()
         assert AIResult.objects.filter(status=AIResult.Status.COMPLETED, overlay_file__icontains="demo14a-overlay").exists()
         assert XrayAttachment.objects.filter(stored_file_name__startswith="demo14a-").count() >= 3

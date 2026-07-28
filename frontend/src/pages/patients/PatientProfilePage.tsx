@@ -140,6 +140,18 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
       <Link className="inline-back-link" to={patientListNavigation(role, `?${searchParams.toString()}`)}>
         {t("backToPatients")}
       </Link>
+      <div className="patient-detail-surface">
+        <aside className="patient-identity-rail" aria-label={patient.data.full_name}>
+          <span className="profile-initials" aria-hidden="true">{patient.data.first_name.slice(0, 1).toUpperCase()}{patient.data.last_name.slice(0, 1).toUpperCase()}</span>
+          <div><h2>{patient.data.full_name}</h2><p>{t(patient.data.gender === "Female" ? "female" : "male")} · {patient.data.age ? `${patient.data.age} ${t("yearsOld")}` : t("ageNotRecorded")}</p></div>
+          <dl className="identity-details">
+            <div><dt>{t("phone")}</dt><dd dir="ltr">{patient.data.phone_number || t("notRecorded")}</dd></div>
+            <div><dt>{t("email")}</dt><dd dir="ltr">{patient.data.email || t("notRecorded")}</dd></div>
+            <div><dt>{t("bloodGroup")}</dt><dd>{patient.data.blood_group || t("notRecorded")}</dd></div>
+            <div><dt>{t("emergencyContact")}</dt><dd>{patient.data.emergency_contact || t("notRecorded")}</dd></div>
+          </dl>
+        </aside>
+        <section className="patient-detail-main">
       <PatientProfileHeader
         role={role}
         patient={patient.data}
@@ -209,6 +221,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
           <EmptyState title={t("billingUnavailableDoctor")} />
         </Card>
       ) : null}
+        </section>
+      </div>
 
       <ConfirmDialog open={Boolean(archiveMode)} title={archiveMode === "archive" ? t("archivePatient") : t("unarchivePatient")} description={archiveMode === "archive" ? t("archivePatientHelp") : t("unarchivePatientPrompt")} onClose={() => setArchiveMode(null)} pending={isArchiveSubmitting}><button className={archiveMode === "archive" ? "v2-button danger" : "v2-button"} type="button" onClick={() => void handleArchiveChange()} disabled={isArchiveSubmitting}>{archiveMode === "archive" ? t("archivePatient") : t("unarchivePatient")}</button>{archiveError ? <ErrorState error={archiveError} title={t("unableArchive")} /> : null}</ConfirmDialog>
     </div>

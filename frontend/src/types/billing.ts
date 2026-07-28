@@ -39,6 +39,7 @@ export interface BillingHandoff extends Timestamped {
   patient: PatientList;
   visit: BillingVisitSummary;
   doctor: UserSummary;
+  description?: string;
   note: string;
   suggested_amount: string | null;
   currency: Currency | null;
@@ -50,6 +51,7 @@ export interface BillingHandoff extends Timestamped {
 }
 
 export interface BillingHandoffCreatePayload {
+  description?: string;
   note?: string;
   suggested_amount?: string | null;
   currency?: Currency | null;

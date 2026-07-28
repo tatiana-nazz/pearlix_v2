@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { patientsApi } from "../../../api/endpoints/patients";
 import { visitsApi } from "../../../api/endpoints/visits";
@@ -16,6 +16,10 @@ export function useXray(xrayId: number) {
 
 export function useXrayAiResult(xrayId: number, enabled: boolean) {
   return useQuery({ queryKey: ["xray-ai-result", xrayId], queryFn: () => xraysApi.aiResult(xrayId), enabled });
+}
+
+export function useXrayAiResults(xrayIds: number[]) {
+  return useQueries({ queries: xrayIds.map((xrayId) => ({ queryKey: ["xray-ai-result", xrayId], queryFn: () => xraysApi.aiResult(xrayId) })) });
 }
 
 function invalidateSavedXrayContext(queryClient: ReturnType<typeof useQueryClient>, patientId?: number, visitId?: number | null) {

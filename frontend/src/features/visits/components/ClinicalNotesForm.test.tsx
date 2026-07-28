@@ -5,35 +5,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "../../../auth/authStore";
 import { ClinicalNotesForm } from "./ClinicalNotesForm";
 
-const values = {
-  symptoms: "Pain",
-  diagnosis: "",
-  treatment: "",
-  clinical_notes: "",
-  follow_up_notes: "",
-};
+const values = { symptoms: "Pain", diagnosis: "", treatment: "", clinical_notes: "", follow_up_notes: "" };
 
 describe("ClinicalNotesForm", () => {
   afterEach(() => { useAuthStore.setState({ user: null }); });
 
-  it("maps all five supported fields and submits the save lifecycle", async () => {
+  it("maps the five supported SOAP-style fields while the action bar owns saving", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    const onSave = vi.fn();
-    render(<ClinicalNotesForm values={values} onChange={onChange} onSave={onSave} />);
-
-    await user.type(screen.getByLabelText("Diagnosis"), "Caries");
-    await user.click(screen.getByRole("button", { name: "Save notes" }));
-
+    render(<ClinicalNotesForm values={values} onChange={onChange} />);
+    await user.type(screen.getByLabelText("Assessment"), "Caries");
     expect(onChange).toHaveBeenCalledWith("diagnosis", "C");
-    expect(onSave).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "Save notes" })).not.toBeInTheDocument();
   });
 
-  it("uses Arabic field labels when the clinic is in RTL mode", () => {
+  it("uses Arabic field labels in RTL mode", () => {
     useAuthStore.setState({ user: { language_preference: "AR" } as never });
-    render(<ClinicalNotesForm values={values} onChange={vi.fn()} onSave={vi.fn()} />);
-
-    expect(screen.getByRole("textbox", { name: "الأعراض" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "حفظ الملاحظات" })).toBeInTheDocument();
+    render(<ClinicalNotesForm values={values} onChange={vi.fn()} />);
+    expect(screen.getByRole("textbox", { name: "التقييم" })).toBeInTheDocument();
   });
 });

@@ -39,7 +39,7 @@ describe("Doctor clinical-history production route", () => {
     expect(vi.mocked(patientHooks.usePatientAppointments)).toHaveBeenCalledWith(9, false);
     expect(vi.mocked(patientHooks.usePatientXrays)).toHaveBeenCalledWith(9, false);
     expect(vi.mocked(patientHooks.usePatientAiResults)).toHaveBeenCalledWith(9, false);
-    expect(screen.getByText("ليلى Haddad")).toHaveClass("bidi-isolate");
+    expect(screen.getAllByText("ليلى Haddad").some((element) => element.classList.contains("bidi-isolate"))).toBe(true);
   });
 
   it("shows loading, empty visits, retryable visit errors, and Arabic/RTL patient context", async () => {
@@ -51,7 +51,7 @@ describe("Doctor clinical-history production route", () => {
     renderRoute();
     expect(screen.getByText("No visits have been recorded for this patient.")).toBeInTheDocument();
     document.documentElement.lang = "ar"; document.documentElement.dir = "rtl";
-    expect(screen.getByText("ليلى Haddad")).toBeInTheDocument();
+    expect(screen.getAllByText("ليلى Haddad")).toHaveLength(2);
     expect(document.documentElement).toHaveAttribute("dir", "rtl");
     fireEvent.click(screen.getByRole("tab", { name: "Visits" }));
     await waitFor(() => expect(vi.mocked(patientHooks.usePatientVisits)).toHaveBeenCalled());

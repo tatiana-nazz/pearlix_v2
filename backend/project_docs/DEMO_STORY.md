@@ -28,7 +28,7 @@ Phase 14C.0 gives the four Doctors distinct stored specialties, phones, and biog
 
 ## Anchor story
 
-The 24 synthetic patients include today’s confirmed and checked-in appointments, one active visit, completed clinical history with all five note fields, saved X-rays with and without mock AI, temporary/attached/discarded external X-rays, leave- and shift-change reschedules, cancelled/no-show/future appointments, archived history, and pending/converted/dismissed handoffs with unpaid/partial/paid/cancelled invoices. Doctors have schedules; Doctor Four has daily split shifts.
+The 24 synthetic patients include today’s confirmed and checked-in appointments and exactly one active Visit: `doctor.one@pearlix-demo.local` treating Lina, with all five note fields populated, exactly two saved X-rays (one completed mock-AI result with protected overlay and one eligible X-ray without a result), and no billing handoff yet. The wider story also includes completed clinical history, temporary/attached/discarded external X-rays, leave- and shift-change reschedules, cancelled/no-show/future appointments, archived history, and pending/converted/dismissed handoffs with unpaid/partial/paid/cancelled invoices. Doctors have schedules; Doctor Four has daily split shifts.
 
 The seeded Admin, Staff, and Doctor dashboards are non-empty and their related route screens are populated. Browser QA is still pending; use `frontend/QA_14A.md` for the live checklist.
 

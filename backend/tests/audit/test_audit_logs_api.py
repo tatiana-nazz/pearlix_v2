@@ -167,20 +167,30 @@ def test_important_actions_create_safe_audit_logs(
     staff_client.post(f"/api/appointments/{clinical_appointment.data['id']}/check-in/")
     start_visit = doctor_client.post(f"/api/appointments/{clinical_appointment.data['id']}/start-visit/")
     visit_id = start_visit.data["id"]
-    doctor_client.patch(
+    notes_response = doctor_client.patch(
         f"/api/visits/{visit_id}/clinical-notes/",
         {"diagnosis": "Sensitive diagnosis body", "clinical_notes": "Sensitive clinical body"},
         format="json",
     )
     xray_upload = doctor_client.post(f"/api/visits/{visit_id}/xrays/", {"file": upload_file("patient-name.png")}, format="multipart")
     doctor_client.post(f"/api/xrays/{xray_upload.data['id']}/run-ai/")
-    doctor_client.post(f"/api/visits/{visit_id}/complete/")
-    handoff = doctor_client.post(
-        f"/api/visits/{visit_id}/billing-handoff/",
-        {"suggested_amount": "90.00", "currency": "SYP"},
+    completion = doctor_client.post(
+        f"/api/visits/{visit_id}/complete/",
+        {
+            "version": notes_response.data["updated_at"],
+            "notes": {"diagnosis": "Sensitive diagnosis body", "clinical_notes": "Sensitive clinical body"},
+            "billing_handoff": {
+                "description": "Synthetic audited treatment",
+                "suggested_amount": "90.00",
+                "currency": "SYP",
+                "note": "",
+            },
+        },
         format="json",
     )
-    invoice = staff_client.post(f"/api/billing-handoffs/{handoff.data['id']}/convert-to-invoice/", {}, format="json")
+    invoice = staff_client.post(
+        f"/api/billing-handoffs/{completion.data['billing_handoff']['id']}/convert-to-invoice/", {}, format="json"
+    )
     staff_client.post(f"/api/invoices/{invoice.data['id']}/payments/", {"amount": "90.00", "currency": "SYP"}, format="json")
 
     patient = Patient.objects.get(id=patient_id)

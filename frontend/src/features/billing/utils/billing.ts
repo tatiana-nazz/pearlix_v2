@@ -1,5 +1,6 @@
 import type { BillingHandoff, Invoice } from "../../../types/billing";
 import type { UserRole } from "../../../types/auth";
+import { formatDateTime } from "../../../utils/dates";
 
 export function formatMoney(amount: string, currency: string): string {
   const numeric = Number(amount);
@@ -15,3 +16,11 @@ export function canManageHandoff(role: UserRole, handoff: BillingHandoff): boole
 }
 
 export function isPositiveMoney(value: string): boolean { return /^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0; }
+
+export function displayBillingText(value: string | null | undefined): string {
+  return value?.trim() || "—";
+}
+
+export function displayBillingDateTime(value: string | null | undefined): string {
+  return value ? formatDateTime(value) : "—";
+}

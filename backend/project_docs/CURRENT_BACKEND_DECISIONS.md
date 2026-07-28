@@ -2,7 +2,7 @@
 
 ## Billing workflow (Phase 14F Task M)
 
-The Doctor enters the final charge after completing the Visit. The system atomically creates the official Invoice immediately. Staff does not approve or convert the charge; Staff records Payments and performs only permitted audited Invoice corrections. Admin is read-only. `BillingHandoff` remains only as an internal and historical compatibility record; new Doctor final-charge submissions create it directly in `CONVERTED_TO_INVOICE` state and never create a pending handoff.
+The owning Doctor completes an active Visit with one atomic request containing clinical notes and billing-handoff details. The backend validates ownership, the submitted Visit timestamp, required description, positive amount, supported currency, and duplicate handoffs; it then completes the Visit and Appointment and creates exactly one `PENDING` `BillingHandoff` in the same transaction. Staff converts the handoff to the official Invoice and records Payments. Admin is read-only and Doctors have no post-completion payment authority. The direct-invoice endpoint remains a compatibility API, not the Active Visit path.
 
 Project: Dental Clinic Management System Website
 Backend: Django + Django REST Framework + PostgreSQL
@@ -57,8 +57,8 @@ This document summarizes the current accepted backend decisions for human develo
 - Doctor cannot start or complete another Doctor's appointment/visit.
 - Doctor cannot archive or unarchive patients.
 - Doctor cannot access invoices, payments, or global billing.
-- Doctor can create billing handoff for their own completed visit with suggested amount, currency, and note.
-- Staff handles invoice creation and payment recording from the handoff.
+- Doctor completion creates one billing handoff for their own active visit with required description and amount, supported currency, and optional note.
+- Staff handles invoice creation and payment recording from the pending handoff.
 - Staff can archive/unarchive patients.
 - Admin remains read-only for patient records.
 - Doctor default patient list shows active/non-archived patients.

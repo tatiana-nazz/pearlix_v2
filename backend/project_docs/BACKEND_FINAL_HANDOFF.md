@@ -2,7 +2,7 @@
 
 Project: Dental Clinic Management System Website
 
-Current phase/status: Phase 14C.0 Team Profile API and Account Linkage Foundation complete; deployment remains paused
+Current phase/status: Active Visit selective integration complete on the current `main` architecture; deployment remains paused
 
 Backend stack: Django, Django REST Framework, PostgreSQL
 
@@ -25,7 +25,7 @@ Run backend commands from `backend` with the virtualenv active.
 
 - Admin: account management, password resets, clinic settings update, working hours and availability exception management, read-only operational records.
 - Staff: patient creation/update/archive, appointment scheduling and rescheduling, invoice correction where audited rules permit, and payment operations.
-- Doctor: clinic-wide active patient profile/history access, own appointment/visit workflow, own clinical notes, X-ray upload/AI run, and final-charge invoice creation for own completed visits.
+- Doctor: clinic-wide active patient profile/history access, own appointment/visit workflow, own clinical notes, X-ray upload/AI run, and an atomic visit-completion handoff to Staff Billing.
 
 ## Capabilities
 
@@ -36,7 +36,7 @@ Run backend commands from `backend` with the virtualenv active.
 - Visits and clinical records: Doctors start/complete own visits and edit own clinical notes; completed own notes remain editable where supported by the current service. The Phase 13G frontend provides Doctor active/detail routes and Admin/Staff read-only visit detail routes without changing backend behavior.
 - X-rays and AI: Phase 13H integrates authenticated Blob requests with temporary object URLs, saved X-ray list/detail/upload, returned result disclaimers and overlays, and Admin/Doctor external workspace routes. Staff has no external-workspace access; only an owning Doctor may attach a temporary external case to a patient. The MVP remains `MOCK_ADAPTER` only; disabled real-service modes return `AI_SERVICE_NOT_CONFIGURED`. Browser QA remains pending.
 - Clinic settings: Admin sees and updates full settings; Staff/Doctor see safe settings only.
-- Billing: The Doctor enters the final charge after completing the Visit and the system atomically creates the official Invoice immediately. Staff does not approve or convert the charge; Staff records Payments and performs only permitted audited Invoice corrections. Admin is read-only. Doctors can view only their Visit's safe Invoice summary. `BillingHandoff` remains for internal and historical compatibility, and new Doctor submissions never create a pending handoff.
+- Billing: The owning Doctor completes an active Visit with one request containing the five clinical-note fields, required treatment/invoice description, positive suggested amount, supported currency, and optional billing note. The transaction completes the Visit and Appointment and creates exactly one `PENDING` `BillingHandoff`; any validation, ownership, optimistic-lock, duplicate, or service failure rolls the whole transaction back. Staff converts the handoff to an official Invoice and records Payments; Admin is read-only and the Doctor has no post-completion payment authority. Legacy direct-invoice endpoints remain compatibility APIs, not the Active Visit workflow.
 - Audit: key account, patient, scheduling, visit, X-ray, AI, billing, payment, clinic settings, and dashboard-adjacent actions are logged with sensitive metadata stripped.
 
 ## Security Decisions
@@ -132,14 +132,14 @@ Latest full backend regression:
 
 ```text
 python -m pytest -q
-414 passed
+429 passed
 ```
 
 Phase 14C.0 focused Team/account-linkage tests: 40 passed during development. The complete suite passed after stabilization. Phase 14A focused seed tests remain covered by the full suite.
 
 Frontend Phase 14C.0 contract verification: 52 passed; typecheck and production build passed. No runtime Team/Users UI exists yet.
 
-`accounts.0005_doctorprofile_version_staffprofile_version_and_more` is the only Phase 14C.0 migration. Browser QA remains pending; deployment remains paused.
+The Active Visit integration adds `billing.0003_billinghandoff_description`; migration drift reports no changes. Deployment remains paused.
 
 Historical Phase 13K verification (superseded): 405 backend tests and 51 frontend tests passed.
 

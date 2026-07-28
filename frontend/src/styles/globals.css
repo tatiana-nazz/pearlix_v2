@@ -56,6 +56,7 @@ textarea {
   color: white;
   font-weight: 800;
 }
+.brand-mark svg { width:28px; height:28px; }
 
 .eyebrow {
   margin: 0 0 var(--space-2);
@@ -1070,8 +1071,8 @@ p {
 .appointment-record { --record-bg: var(--v2-surface-raised, var(--color-surface)); --record-border: var(--color-border); --record-text: var(--color-text); background: var(--record-bg) !important; border-color: var(--record-border) !important; color: var(--record-text) !important; }
 .appointment-record strong, .appointment-record bdi, .appointment-record span, .appointment-record small { color: inherit; }
 .appointment-record--upcoming { --record-bg: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-primary) 48%, var(--color-border)); }
-.appointment-record--checked-in { --record-bg: color-mix(in srgb, var(--color-success) 11%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-success) 48%, var(--color-border)); }
-.appointment-record--active { --record-bg: color-mix(in srgb, #5b5ce2 12%, var(--color-surface)); --record-border: color-mix(in srgb, #5b5ce2 50%, var(--color-border)); }
+.appointment-record--checked-in { --record-bg: color-mix(in srgb, var(--color-secondary) 11%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-secondary) 52%, var(--color-border)); }
+.appointment-record--active { --record-bg: color-mix(in srgb, var(--color-success) 13%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-success) 56%, var(--color-border)); }
 .appointment-record--completed { --record-bg: color-mix(in srgb, var(--color-success) 8%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-success) 40%, var(--color-border)); }
 .appointment-record--needs-reschedule { --record-bg: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-warning) 54%, var(--color-border)); }
 .appointment-record--cancelled, .appointment-record--no-show { --record-bg: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-danger) 48%, var(--color-border)); }
