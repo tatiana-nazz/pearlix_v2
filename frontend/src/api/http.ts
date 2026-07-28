@@ -14,6 +14,25 @@ type TokenAccessors = {
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api";
 export const apiBaseUrl = rawBaseUrl.replace(/\/+$/, "");
 
+/**
+ * Backend serializers expose protected-media routes as API-rooted paths
+ * (for example, `/api/xrays/42/file/`). Axios already has that API root in
+ * its base URL, so normalize only that matching prefix before requesting it.
+ */
+export function normalizeApiEndpoint(url: string, baseUrl = apiBaseUrl): string {
+  if (!url.startsWith("/")) return url;
+
+  let basePath: string;
+  try {
+    basePath = new URL(baseUrl).pathname.replace(/\/+$/, "");
+  } catch {
+    return url;
+  }
+
+  if (!basePath || basePath === "/" || !url.startsWith(`${basePath}/`)) return url;
+  return url.slice(basePath.length) || "/";
+}
+
 let tokenAccessors: TokenAccessors | null = null;
 let refreshPromise: Promise<string> | null = null;
 
@@ -64,8 +83,9 @@ async function refreshAccessToken(): Promise<string> {
 }
 
 async function request<T>(method: Method, url: string, config: AxiosRequestConfig = {}): Promise<T> {
+  const endpoint = normalizeApiEndpoint(url);
   try {
-    const response = await client.request<T>({ ...config, method, url });
+    const response = await client.request<T>({ ...config, method, url: endpoint });
     return response.data;
   } catch (error) {
     const apiError = toApiClientError(error);
@@ -75,7 +95,7 @@ async function request<T>(method: Method, url: string, config: AxiosRequestConfi
       try {
         await refreshAccessToken();
         const retryHeaders = { ...(config.headers ?? {}), "X-Retry-After-Refresh": "true" };
-        const response = await client.request<T>({ ...config, method, url, headers: retryHeaders });
+        const response = await client.request<T>({ ...config, method, url: endpoint, headers: retryHeaders });
         return response.data;
       } catch (refreshError) {
         throw toApiClientError(refreshError);

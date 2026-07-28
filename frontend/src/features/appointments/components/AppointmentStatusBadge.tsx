@@ -1,6 +1,6 @@
-import { StatusPill } from "../../../components/StatusPill";
+import { StatusBadge } from "../../../components/v2";
 import type { AppointmentStatus } from "../../../types/appointments";
 
 export function AppointmentStatusBadge({ status }: { status: AppointmentStatus }) {
-  return <StatusPill status={status} />;
+  return <StatusBadge status={status} />;
 }

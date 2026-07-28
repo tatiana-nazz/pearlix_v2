@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { Card } from "../../components/Card";
+import { ConfirmDialog, InOverlayAlertDialog, Modal, StatePanel } from "../../components/v2";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
-import { ArchivePatientDialog } from "../../features/patients/components/ArchivePatientDialog";
 import { PatientAppointmentsSummary } from "../../features/patients/components/PatientAppointmentsSummary";
 import { PatientBillingSummary } from "../../features/patients/components/PatientBillingSummary";
 import { PatientForm, updatePayloadFromForm } from "../../features/patients/components/PatientForm";
@@ -15,6 +15,7 @@ import { PatientProfileHeader } from "../../features/patients/components/Patient
 import { PatientProfileTab, PatientProfileTabs } from "../../features/patients/components/PatientProfileTabs";
 import { PatientVisitsSummary } from "../../features/patients/components/PatientVisitsSummary";
 import { PatientXraySummary } from "../../features/patients/components/PatientXraySummary";
+import { useFeatureT } from "../../layouts/i18n";
 import {
   usePatient,
   usePatientAiResults,
@@ -23,7 +24,8 @@ import {
   usePatientXrays,
 } from "../../features/patients/hooks/usePatient";
 import { useArchivePatient, useUnarchivePatient, useUpdatePatient } from "../../features/patients/hooks/usePatientMutations";
-import { getPatientPermissions, patientListPath } from "../../features/patients/utils/patientPermissions";
+import { getPatientPermissions } from "../../features/patients/utils/patientPermissions";
+import { patientListNavigation } from "../../features/patients/utils/patientListNavigation";
 import type { PatientFormValues } from "../../features/patients/utils/patientFormMapping";
 import type { UserRole } from "../../types/auth";
 
@@ -44,6 +46,11 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const patientId = Number(params.patientId);
   const [isEditing, setIsEditing] = useState(searchParams.get("edit") === "1");
   const [archiveMode, setArchiveMode] = useState<"archive" | "unarchive" | null>(null);
+  const [editDirty, setEditDirty] = useState(false);
+  const [reloadConfirm, setReloadConfirm] = useState(false);
+  const [reloadError, setReloadError] = useState<unknown>(null);
+  const reloadLatestTrigger = useRef<HTMLButtonElement>(null);
+  const t = useFeatureT();
   const activeTab = searchParams.get("tab") ? tabFromSearch(searchParams.get("tab")) : defaultTab;
   const patient = usePatient(patientId);
   const updatePatient = useUpdatePatient(patientId);
@@ -62,12 +69,12 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const permissions = useMemo(() => getPatientPermissions(role, patient.data), [role, patient.data]);
 
   if (!Number.isFinite(patientId)) {
-    return <EmptyState title="Patient was not found." />;
+    return <EmptyState title={t("patientNotFound")} />;
   }
 
-  if (patient.isLoading) return <LoadingState title="Loading patient profile..." />;
-  if (patient.isError) return <ErrorState error={patient.error} onRetry={() => void patient.refetch()} title="Unable to load patient profile" />;
-  if (!patient.data) return <EmptyState title="Patient was not found or is unavailable to this role." />;
+  if (patient.isLoading) return <LoadingState title={t("loadingPatientProfile")} />;
+  if (patient.isError) return <ErrorState error={patient.error} onRetry={() => void patient.refetch()} title={t("unableLoadPatientProfile")} />;
+  if (!patient.data) return <EmptyState title={t("patientUnavailable")} />;
 
   function setTab(tab: PatientProfileTab) {
     const next = new URLSearchParams(searchParams);
@@ -77,12 +84,14 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   }
 
   function openEdit() {
+    setEditDirty(false);
     const next = new URLSearchParams(searchParams);
     next.set("edit", "1");
     setSearchParams(next);
   }
 
   function closeEdit() {
+    setEditDirty(false);
     const next = new URLSearchParams(searchParams);
     next.delete("edit");
     setSearchParams(next);
@@ -90,8 +99,12 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
 
   async function handleUpdate(values: PatientFormValues) {
     if (!patient.data) return;
-    await updatePatient.mutateAsync(updatePayloadFromForm(values, patient.data.version));
-    closeEdit();
+    try {
+      await updatePatient.mutateAsync(updatePayloadFromForm(values, patient.data.version));
+    } catch {
+      return false;
+    }
+    setEditDirty(false); closeEdit();
   }
 
   async function handleArchiveChange() {
@@ -102,11 +115,21 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
     setArchiveMode(null);
   }
 
+  function closeReloadConfirm() {
+    setReloadConfirm(false);
+    window.setTimeout(() => reloadLatestTrigger.current?.focus(), 0);
+  }
+
   async function handleReloadLatestPatient() {
-    if (window.confirm("Reload the latest patient record and discard unsaved edits?")) {
-      await patient.refetch();
-      updatePatient.reset();
+    setReloadError(null);
+    const result = await patient.refetch();
+    if (result.error) {
+      setReloadError(result.error);
+      return;
     }
+    updatePatient.reset();
+    setEditDirty(false);
+    closeReloadConfirm();
   }
 
   const archiveError = archiveMode === "archive" ? archivePatient.error : unarchivePatient.error;
@@ -114,8 +137,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
 
   return (
     <div className="patient-page">
-      <Link className="inline-back-link" to={patientListPath(role)}>
-        Back to patients
+      <Link className="inline-back-link" to={patientListNavigation(role, `?${searchParams.toString()}`)}>
+        {t("backToPatients")}
       </Link>
       <PatientProfileHeader
         role={role}
@@ -131,25 +154,24 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
         }}
       />
 
-      {isEditing && permissions.canEdit ? (
-        <div className="dialog-backdrop" role="presentation">
-          <section className="dialog-panel wide" role="dialog" aria-modal="true" aria-labelledby="edit-patient-title">
-            <h3 id="edit-patient-title">Edit Patient</h3>
+      <Modal open={isEditing && permissions.canEdit} title={t("editPatient")} onClose={closeEdit} pending={updatePatient.isPending} dirty={editDirty} wide>
+        {permissions.canEdit ? (
             <PatientForm
               mode="edit"
               role={role}
               patient={patient.data}
-              submitLabel="Save changes"
+              submitLabel={t("saveChanges")}
               isSubmitting={updatePatient.isPending}
               error={updatePatient.error}
               onSubmit={handleUpdate}
-              onCancel={closeEdit}
-              onReloadLatest={() => void handleReloadLatestPatient()}
+              onDirtyChange={setEditDirty}
+              onReloadLatest={() => { setReloadError(null); setReloadConfirm(true); }}
+              reloadLatestRef={reloadLatestTrigger}
               onContinueReviewing={() => updatePatient.reset()}
             />
-          </section>
-        </div>
-      ) : null}
+        ) : null}
+        <InOverlayAlertDialog open={reloadConfirm} title={t("reloadPatientPrompt")} onClose={closeReloadConfirm}><button className="v2-button secondary" type="button" onClick={closeReloadConfirm}>{t("continueReviewing")}</button><button className="v2-button danger" type="button" onClick={() => void handleReloadLatestPatient()}>{t("reloadLatest")}</button>{reloadError ? <StatePanel state="error" title={t("requestFailed")} description={reloadError instanceof Error ? reloadError.message : undefined} /> : null}</InOverlayAlertDialog>
+      </Modal>
 
       <PatientProfileTabs role={role} activeTab={activeTab === "billing" && !permissions.canViewBillingTab ? "overview" : activeTab} onTabChange={setTab} />
 
@@ -184,18 +206,11 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
       {activeTab === "billing" && permissions.canViewBillingTab ? <PatientBillingSummary role={role} patientId={patientId} /> : null}
       {activeTab === "billing" && !permissions.canViewBillingTab ? (
         <Card>
-          <EmptyState title="Billing and invoices are not available in the Doctor workspace." />
+          <EmptyState title={t("billingUnavailableDoctor")} />
         </Card>
       ) : null}
 
-      <ArchivePatientDialog
-        patient={archiveMode ? patient.data : null}
-        mode={archiveMode ?? "archive"}
-        isSubmitting={isArchiveSubmitting}
-        error={archiveError}
-        onCancel={() => setArchiveMode(null)}
-        onConfirm={() => void handleArchiveChange()}
-      />
+      <ConfirmDialog open={Boolean(archiveMode)} title={archiveMode === "archive" ? t("archivePatient") : t("unarchivePatient")} description={archiveMode === "archive" ? t("archivePatientHelp") : t("unarchivePatientPrompt")} onClose={() => setArchiveMode(null)} pending={isArchiveSubmitting}><button className={archiveMode === "archive" ? "v2-button danger" : "v2-button"} type="button" onClick={() => void handleArchiveChange()} disabled={isArchiveSubmitting}>{archiveMode === "archive" ? t("archivePatient") : t("unarchivePatient")}</button>{archiveError ? <ErrorState error={archiveError} title={t("unableArchive")} /> : null}</ConfirmDialog>
     </div>
   );
 }

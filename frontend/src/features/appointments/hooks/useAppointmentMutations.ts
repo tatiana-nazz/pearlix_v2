@@ -13,6 +13,7 @@ import { appointmentKey } from "./useAppointments";
 
 function invalidateAppointments(queryClient: ReturnType<typeof useQueryClient>, appointmentId?: number) {
   void queryClient.invalidateQueries({ queryKey: ["appointments"] });
+  void queryClient.invalidateQueries({ queryKey: ["appointment-calendar-range"] });
   void queryClient.invalidateQueries({ queryKey: ["appointment-availability"] });
   if (appointmentId) void queryClient.invalidateQueries({ queryKey: appointmentKey(appointmentId) });
 }
@@ -61,6 +62,13 @@ export function useStartAppointmentVisit() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (appointmentId: number) => startAppointmentVisit(appointmentId),
-    onSuccess: () => invalidateAppointments(queryClient),
+    onSuccess: (visit) => {
+      invalidateAppointments(queryClient, visit.appointment.id);
+      void queryClient.invalidateQueries({ queryKey: ["active-visit"] });
+      void queryClient.invalidateQueries({ queryKey: ["visit", visit.id] });
+      void queryClient.invalidateQueries({ queryKey: ["patient", visit.patient.id, "visits"] });
+      void queryClient.invalidateQueries({ queryKey: ["patient", visit.patient.id] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard", "doctor"] });
+    },
   });
 }

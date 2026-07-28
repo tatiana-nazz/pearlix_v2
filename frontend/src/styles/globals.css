@@ -4,7 +4,7 @@
 
 body {
   margin: 0;
-  min-width: 768px;
+  min-width: 320px;
   min-height: 100vh;
   background: var(--color-bg);
   color: var(--color-text);
@@ -337,6 +337,27 @@ p {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-4);
+  align-items: stretch;
+}
+
+.dashboard-grid > *,
+.dashboard-columns > *,
+.queue-grid > * {
+  min-width: 0;
+}
+
+.dashboard-columns,
+.queue-grid {
+  align-items: stretch;
+}
+
+.dashboard-columns > .v2-card,
+.queue-grid > .v2-card {
+  height: 100%;
+}
+
+.staff-dashboard .dashboard-kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .stat-card {
@@ -433,10 +454,11 @@ p {
 }
 
 .summary-row > div,
+.summary-row > span:not(.v2-status),
 .active-visit-content > div {
   display: grid;
   min-width: 0;
-  gap: var(--space-1);
+  gap: var(--v2-space-2);
 }
 
 .summary-row strong,
@@ -449,7 +471,8 @@ p {
 .active-visit-content span {
   overflow-wrap: anywhere;
   color: var(--color-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--v2-font-size-body);
+  line-height: 1.45;
 }
 
 .summary-row.compact {
@@ -564,6 +587,12 @@ p {
 
 .xray-page { display: grid; gap: var(--space-6); }
 .billing-page, .print-invoice { display: grid; gap: var(--space-6); }
+.billing-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--space-4); align-items: end; }
+.a4-invoice { width: min(210mm, 100%); min-height: 297mm; margin: 0 auto; padding: 18mm; background: var(--surface, #fff); color: var(--text, #172033); display: grid; gap: 16px; }
+.a4-invoice header { border-bottom: 2px solid currentColor; padding-bottom: 12px; }
+.a4-invoice h1, .a4-invoice h2, .a4-invoice h3, .a4-invoice p { margin: 0 0 8px; }
+.a4-invoice dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media print { body * { visibility: hidden; } .print-invoice, .print-invoice * { visibility: visible; } .print-invoice { position: absolute; inset: 0; display: block; } .print-control { display: none !important; } .a4-invoice { width: 210mm; min-height: 297mm; margin: 0; box-shadow: none; } }
 .billing-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); align-items: start; }
 .billing-table { width: 100%; min-width: 780px; border-collapse: collapse; }
 .billing-table th, .billing-table td { border-bottom: 1px solid var(--color-border); padding: var(--space-3); text-align: left; }
@@ -664,9 +693,19 @@ p {
 
 .patient-filters {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px);
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px) auto;
   gap: var(--space-4);
   align-items: end;
+}
+.visit-context { display:flex; flex-wrap:wrap; gap:var(--space-5); margin:0; }.visit-context div { display:grid; gap:var(--space-1); }.visit-context dt { color:var(--color-muted); font-size:var(--font-size-sm); }.visit-context dd { margin:0; }
+.app-sidebar-footer { display:grid; gap:var(--space-2); }.sidebar-profile-entry .nav-label { display:grid; gap:2px; min-inline-size:0; }.sidebar-profile-entry small { color:inherit; font-weight:600; opacity:.75; }
+
+.patient-search-field {
+  min-inline-size: 0;
+}
+
+.patient-clear-filters {
+  white-space: nowrap;
 }
 
 .patient-filters label,
@@ -679,6 +718,12 @@ p {
   color: var(--color-text);
   font-weight: 650;
 }
+
+.appointment-calendar-toolbar { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; justify-content: space-between; }
+.appointment-period-controls { display: flex; flex: 1 1 360px; align-items: center; justify-content: center; gap: var(--space-2); min-inline-size: 0; }
+.appointment-period-label { min-inline-size: min(22rem, 100%); text-align: center; }
+.calendar-nav { padding-inline: var(--space-3); }
+[dir="rtl"] .calendar-nav-prev span, [dir="rtl"] .calendar-nav-next span { display: inline-block; transform: scaleX(-1); }
 
 .appointment-tabs {
   display: flex;
@@ -711,8 +756,19 @@ p {
 }
 
 .table-scroll {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
   overflow-x: auto;
 }
+
+.appointment-calendar-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(15rem, 19rem); gap: var(--space-6); align-items: start; }
+.appointment-calendar-summary { display: grid; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--v2-surface, var(--color-surface)); }
+.appointment-calendar-summary h2 { margin: 0; font-size: var(--font-size-lg); }
+.appointment-calendar-summary dl { display: grid; gap: var(--space-2); margin: 0; }
+.appointment-calendar-summary dl div { display: flex; justify-content: space-between; gap: var(--space-4); padding-block: var(--space-2); border-bottom: 1px solid var(--color-border); }
+.appointment-calendar-summary dt { color: var(--color-muted); }.appointment-calendar-summary dd { margin: 0; color: var(--color-text); font-weight: 750; }
+.appointment-summary-status.needs_reschedule dd { color: var(--color-warning); }.appointment-summary-status.cancelled dd,.appointment-summary-status.no_show dd { color: var(--color-danger); }.appointment-summary-status.checked_in dd,.appointment-summary-status.active dd,.appointment-summary-status.completed dd { color: var(--color-success); }
 
 .patient-table,
 .appointment-table {
@@ -727,7 +783,7 @@ p {
 .appointment-table td {
   border-bottom: 1px solid var(--color-border);
   padding: var(--space-3);
-  text-align: left;
+  text-align: start;
   vertical-align: middle;
 }
 
@@ -744,7 +800,53 @@ p {
 
 .patient-table tbody tr:hover,
 .appointment-table tbody tr:hover {
-  background: #fbfdfe;
+  background: var(--v2-surface-raised, var(--color-surface));
+}
+
+.patient-table tbody tr:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.patient-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-inline-size: 220px;
+}
+
+.patient-identity > span:last-child,
+.patient-contact {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.patient-identity strong,
+.patient-contact bdi {
+  overflow-wrap: anywhere;
+}
+
+.patient-identity small,
+.patient-contact bdi + bdi {
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.patient-initials {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: 999px;
+  background: var(--color-primary-soft, var(--v2-surface-subtle));
+  color: var(--color-primary-strong);
+  font-weight: 750;
+}
+
+.patient-archived {
+  color: var(--color-warning, var(--color-muted));
 }
 
 .appointment-table td span {
@@ -759,6 +861,25 @@ p {
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
+}
+
+.modal-action-area {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.patient-table .row-actions {
+  inline-size: max-content;
+}
+
+.patient-table .compact-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .pagination-bar {
@@ -813,6 +934,26 @@ p {
 .schedule-list li div, .shift-card { display: grid; gap: var(--space-1); }
 .schedule-list span { color: var(--color-muted); font-size: var(--font-size-sm); }
 .schedule-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0; }
+.leave-list-header { display:flex; justify-content:space-between; align-items:center; gap:var(--space-3); margin-block-end:var(--space-4); }
+.leave-list-header h3 { margin:0; }
+.leave-filter-grid { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:var(--space-3); align-items:end; margin-block-end:var(--space-5); }
+.leave-filter-grid .v2-field,.leave-employee-picker { min-inline-size:0; }
+.leave-badges { display:flex; flex-wrap:wrap; gap:var(--space-1); align-items:center; }
+.leave-reason-cell { max-inline-size:28ch; overflow-wrap:anywhere; }
+.leave-own-list li { align-items:flex-start; }
+.patient-quick-find { position:relative; z-index:2; }
+.patient-quick-find-header { display:flex; align-items:start; justify-content:space-between; gap:var(--space-4); margin-block-end:var(--space-3); }
+.patient-quick-find-header .section-header { min-inline-size:0; }
+.patient-quick-find-header select { min-block-size:var(--v2-control); border:1px solid var(--v2-border); border-radius:var(--v2-radius-control); background:var(--v2-surface); color:var(--v2-text); padding-inline:10px; font:inherit; }
+.patient-quick-find-control { position:relative; display:flex; align-items:center; gap:var(--space-2); min-block-size:var(--v2-control); border:1px solid var(--v2-border); border-radius:var(--v2-radius-control); background:var(--v2-surface); padding-inline:var(--space-3); }
+.patient-quick-find-control:focus-within { outline:3px solid var(--v2-focus); outline-offset:2px; }
+.patient-quick-find-control input { min-inline-size:0; flex:1; border:0; outline:0; background:transparent; color:var(--v2-text); font:inherit; }
+.patient-quick-find-results { position:absolute; z-index:5; inset-inline:0; inset-block-start:calc(100% + var(--space-2)); display:grid; gap:var(--space-1); max-block-size:440px; overflow:auto; border:1px solid var(--v2-border); border-radius:var(--v2-radius-card); background:var(--v2-surface); box-shadow:var(--shadow-soft); padding:var(--space-2); }
+.patient-quick-find-results > p { margin:var(--space-3); color:var(--v2-muted); }
+.patient-quick-find-result { display:grid; grid-template-columns:auto minmax(0, 1fr) auto; gap:var(--space-3); align-items:center; border-radius:var(--v2-radius-small); color:inherit; padding:var(--space-3); text-decoration:none; }
+.patient-quick-find-result:hover,.patient-quick-find-result:focus-visible { background:var(--v2-surface-hover); outline:3px solid var(--v2-focus); outline-offset:1px; }
+.patient-quick-find-result > span:nth-child(2) { display:grid; gap:2px; min-inline-size:0; }.patient-quick-find-result small { overflow:hidden; color:var(--v2-muted); text-overflow:ellipsis; white-space:nowrap; }
+.patient-quick-find-avatar { display:grid; place-items:center; inline-size:36px; block-size:36px; border-radius:50%; background:var(--color-info-bg); color:var(--v2-info); font-size:var(--font-size-sm); font-weight:800; }
 .weekly-board { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); gap: var(--space-3); overflow-x: auto; }
 .shift-card { min-width: 150px; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
 @media (max-width: 1023px) { .schedule-grid { grid-template-columns: 1fr; } .compact-form { grid-template-columns: 1fr; } }
@@ -824,20 +965,50 @@ p {
 .patient-form-grid,
 .appointment-form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: var(--space-4);
 }
+
+.patient-form-grid > label { display:grid; grid-column:span 6; gap:var(--space-2); min-inline-size:0; color:var(--v2-text); font-size:var(--v2-font-size-label); font-weight:650; }
+.patient-form-section > label { display:grid; gap:var(--space-2); color:var(--v2-text); font-size:var(--v2-font-size-label); font-weight:650; }
+.v2-overlay:has(.patient-form) { max-height:calc(100vh - 40px); overflow:hidden; }
+.v2-overlay:has(.patient-form) .patient-form { min-block-size:0; overflow:auto; padding-inline-end:var(--space-2); }
+.v2-overlay:has(.patient-form) .v2-sticky-actions { margin-block-end:calc(var(--v2-space-6) * -1); }
+
+.appointment-field { min-inline-size: 0; }
+.appointment-field .v2-field, .appointment-field > label { display: grid; gap: var(--space-2); height: 100%; }
+.appointment-field .v2-field select, .appointment-field > label > input, .appointment-field > label > textarea { min-block-size: 46px; }
+.appointment-field.patient-field { grid-column: span 4; }
+.appointment-field.doctor-field { grid-column: span 3; }
+.appointment-field.date-field { grid-column: span 2; }
+.appointment-field.duration-field { grid-column: span 3; }
+.appointment-field.time-field { grid-column: span 5; }
+.appointment-field.reason-field { grid-column: span 7; }
+.appointment-field.notes-field { grid-column: 1 / -1; }
 
 .appointment-form {
   display: grid;
   gap: var(--space-5);
 }
 
+.appointment-calendar-scroll { inline-size: 100%; max-inline-size: 100%; overflow-x: auto; }
+.appointment-workspace-tabs { margin-block-end: var(--space-5); }
+.appointment-workspace-tabs a { min-block-size: 44px; border: 0; border-bottom: 3px solid transparent; color: var(--color-muted); display: inline-flex; align-items: center; padding-inline: var(--space-4); text-decoration: none; font-weight: 750; white-space: nowrap; }
+.appointment-workspace-tabs a.active, .appointment-workspace-tabs a:focus-visible { color: var(--color-primary-strong); border-bottom-color: var(--color-primary); outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.appointment-day-schedule { display: grid; gap: var(--space-3); max-inline-size: 960px; }
+.appointment-day-block { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) auto; align-items: start; gap: var(--space-4); inline-size: 100%; min-block-size: 88px; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; text-align: start; }
+.appointment-day-block time { color: var(--record-text); font-weight: 800; }
+.appointment-day-block > span { display: grid; gap: var(--space-1); min-inline-size: 0; }
+.appointment-day-block small { overflow-wrap: anywhere; }
+.doctor-appointment-queue { display:grid; gap:var(--space-4); }
+.doctor-queue-heading { display:flex; justify-content:space-between; gap:var(--space-4); align-items:start; }.doctor-queue-heading h2 { font-size:var(--font-size-xl); }.doctor-queue-heading p { margin:var(--space-1) 0 0; }
+.doctor-queue-status-picker { display:flex; gap:var(--space-2); }.doctor-queue-status-picker button { border:1px solid var(--color-border); border-radius:var(--radius-sm); background:var(--color-surface); color:var(--color-text); padding:var(--space-2) var(--space-3); cursor:pointer; }.doctor-queue-status-picker button.active { border-color:var(--color-primary); color:var(--color-primary-strong); }
+.doctor-queue-records { display:grid; gap:var(--space-3); }.doctor-queue-record { display:grid; grid-template-columns:6rem minmax(0,1fr) auto; align-items:center; gap:var(--space-3); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); color:var(--record-text, var(--color-text)); text-decoration:none; }.doctor-queue-record:hover,.doctor-queue-record:focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }.doctor-queue-record span { display:grid; gap:2px; min-inline-size:0; }.doctor-queue-record small { overflow-wrap:anywhere; }
 .appointment-week-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(180px, 1fr));
   gap: var(--space-3);
-  overflow-x: auto;
+  min-inline-size: 1260px;
 }
 
 .appointment-calendar-column {
@@ -848,8 +1019,16 @@ p {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: var(--space-3);
-  background: #fbfdfe;
+  background: var(--v2-surface-raised, var(--color-surface));
 }
+
+.appointment-calendar-column.selected, .appointment-month-cell.selected { border-color: var(--color-primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 22%, transparent); }
+.appointment-calendar-column.today .appointment-calendar-day-header, .appointment-month-cell.today h3 { color: var(--color-primary-strong); }
+.appointment-calendar-day-header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); width: 100%; border: 0; border-bottom: 1px solid var(--color-border); padding: 0 0 var(--space-3); background: transparent; color: var(--color-text); cursor: pointer; text-align: start; }
+.appointment-calendar-day-header span { color: var(--color-muted); font-size: var(--font-size-xs); font-weight: 700; text-transform: uppercase; }
+.appointment-calendar-day-header strong { font-size: var(--font-size-lg); }
+.appointment-calendar-day-header:focus-visible, .appointment-month-cell:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.appointment-calendar-empty { margin: 0; color: var(--color-muted); font-size: var(--font-size-sm); }
 
 .appointment-calendar-column h3,
 .appointment-month-cell h3 {
@@ -869,7 +1048,7 @@ p {
   color: var(--color-text);
   cursor: pointer;
   padding: var(--space-3);
-  text-align: left;
+  text-align: start;
 }
 
 .appointment-calendar-item:hover,
@@ -877,7 +1056,7 @@ p {
 .availability-grid button:hover,
 .availability-grid button.active {
   border-color: var(--color-primary);
-  background: #f3fbfd;
+  background: var(--v2-surface-raised, var(--color-surface));
 }
 
 .appointment-calendar-item span,
@@ -886,12 +1065,31 @@ p {
   font-size: var(--font-size-sm);
 }
 
+/* Shared whole-record appointment status contract.  --record-text remains a
+   normal high-contrast token; it is never the pale background/accent tone. */
+.appointment-record { --record-bg: var(--v2-surface-raised, var(--color-surface)); --record-border: var(--color-border); --record-text: var(--color-text); background: var(--record-bg) !important; border-color: var(--record-border) !important; color: var(--record-text) !important; }
+.appointment-record strong, .appointment-record bdi, .appointment-record span, .appointment-record small { color: inherit; }
+.appointment-record--upcoming { --record-bg: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-primary) 48%, var(--color-border)); }
+.appointment-record--checked-in { --record-bg: color-mix(in srgb, var(--color-success) 11%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-success) 48%, var(--color-border)); }
+.appointment-record--active { --record-bg: color-mix(in srgb, #5b5ce2 12%, var(--color-surface)); --record-border: color-mix(in srgb, #5b5ce2 50%, var(--color-border)); }
+.appointment-record--completed { --record-bg: color-mix(in srgb, var(--color-success) 8%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-success) 40%, var(--color-border)); }
+.appointment-record--needs-reschedule { --record-bg: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-warning) 54%, var(--color-border)); }
+.appointment-record--cancelled, .appointment-record--no-show { --record-bg: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface)); --record-border: color-mix(in srgb, var(--color-danger) 48%, var(--color-border)); }
+.appointment-record:hover, .appointment-record:focus-visible { box-shadow: inset 3px 0 0 var(--record-border); outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.appointment-calendar-item.appointment-record, .appointment-month-cell button.appointment-record { background: var(--record-bg) !important; border-inline-start: 4px solid var(--record-border); }
+.appointment-calendar-item.appointment-record span, .appointment-calendar-item.appointment-record small { color: var(--record-text); }
+
+.appointment-calendar-item small { color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .appointment-month-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(128px, 1fr));
   gap: var(--space-2);
-  overflow-x: auto;
+  min-inline-size: 896px;
 }
+
+.appointment-month-weekdays { display: contents; }
+.appointment-month-weekdays span { color: var(--color-muted); font-size: var(--font-size-xs); font-weight: 750; padding: var(--space-2); text-align: center; text-transform: uppercase; }
 
 .appointment-month-cell {
   display: grid;
@@ -904,8 +1102,11 @@ p {
   background: var(--color-surface);
 }
 
+.appointment-month-cell-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.appointment-month-cell-heading h3 { margin: 0; }.appointment-month-cell-heading > span { display: inline-grid; min-inline-size: 1.5rem; place-items: center; border-radius: 999px; background: var(--v2-surface-subtle); color: var(--color-muted); font-size: var(--font-size-xs); font-weight: 750; padding: 0.15rem; }
+
 .appointment-month-cell.muted {
-  background: #f7fafc;
+  background: var(--v2-surface-raised, var(--color-surface));
   color: var(--color-muted);
 }
 
@@ -1059,6 +1260,18 @@ p {
   margin: 0;
 }
 
+.detail-grid dt { font-size: var(--v2-font-size-label); line-height: 1.45; }
+.detail-grid dd { color: var(--v2-text); font-size: var(--v2-font-size-body); font-weight: 650; line-height: 1.55; }
+.invoice-details-overlay { display:grid; gap:var(--v2-space-5); }
+.invoice-details-status { display:flex; justify-content:flex-end; }
+.invoice-detail-section { display:grid; gap:var(--v2-space-3); border-block-start:1px solid var(--v2-border); padding-block-start:var(--v2-space-4); }
+.invoice-detail-section h3 { font-size:18px; }.invoice-detail-section p { margin:0; }
+.invoice-financial-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--v2-space-3); }
+.invoice-financial-summary > div { display:grid; gap:var(--v2-space-2); border:1px solid var(--v2-border); border-radius:var(--v2-radius-card); background:var(--v2-surface-subtle); padding:var(--v2-space-4); }
+.invoice-financial-summary span { color:var(--v2-muted); font-size:var(--v2-font-size-label); font-weight:700; }
+.invoice-financial-summary strong { color:var(--v2-text); font-size:24px; line-height:1.25; }
+.invoice-details-actions { position:sticky; inset-block-end:calc(var(--v2-space-6) * -1); display:flex; flex-wrap:wrap; justify-content:flex-end; gap:var(--v2-space-3); border-block-start:1px solid var(--v2-border); background:var(--v2-surface); padding:var(--v2-space-4) 0; }
+
 .medical-summary-grid {
   display: grid;
   gap: var(--space-4);
@@ -1100,9 +1313,6 @@ p {
     padding: var(--page-padding-lg);
   }
 
-  .dashboard-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 1279px) {
@@ -1116,6 +1326,10 @@ p {
   }
 
   .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .staff-dashboard .dashboard-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1197,12 +1411,27 @@ p {
   .patient-filters,
   .patient-form-grid,
   .appointment-filters,
-  .appointment-form-grid,
   .availability-grid,
   .reschedule-grid,
   .detail-grid {
     grid-template-columns: 1fr;
   }
+
+  .patient-form-grid > label { grid-column: auto; }
+
+  .appointment-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .appointment-field.patient-field,
+  .appointment-field.doctor-field,
+  .appointment-field.date-field,
+  .appointment-field.duration-field,
+  .appointment-field.time-field,
+  .appointment-field.reason-field,
+  .appointment-field.notes-field { grid-column: auto; }
+
+  .appointment-calendar-layout { grid-template-columns: 1fr; }
+  .leave-filter-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .appointment-period-controls { justify-content: flex-start; }
 
   .profile-actions,
   .form-actions,
@@ -1238,4 +1467,15 @@ p {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+
+  .appointment-form-grid { grid-template-columns: 1fr; }
+  .appointment-day-block { grid-template-columns: 1fr; gap: var(--space-2); }
+  .doctor-queue-record { grid-template-columns:1fr; gap:var(--space-2); }
+
+  .staff-dashboard .dashboard-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .leave-filter-grid { grid-template-columns:1fr; }
+  .invoice-financial-summary { grid-template-columns:1fr; }
+  .patient-quick-find-header { align-items:stretch; flex-direction:column; }
 }

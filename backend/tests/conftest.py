@@ -1,3 +1,5 @@
+from datetime import datetime, timezone as datetime_timezone
+
 import pytest
 from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -10,6 +12,13 @@ from apps.patients.models import Patient
 from apps.scheduling.models import Appointment, AvailabilityException, Weekday, WorkingShift
 from apps.visits.models import Visit
 from apps.xrays.models import ExternalXrayCase, XrayAttachment
+
+
+@pytest.fixture(autouse=True)
+def deterministic_clinic_clock(monkeypatch):
+    """Keep the fixed 2026 scheduling fixtures ahead of the application clock."""
+    reference = datetime(2026, 7, 19, 12, 0, 0, tzinfo=datetime_timezone.utc)
+    monkeypatch.setattr(timezone, "now", lambda: reference)
 
 
 @pytest.fixture

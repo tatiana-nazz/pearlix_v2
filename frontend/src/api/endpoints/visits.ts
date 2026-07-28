@@ -1,5 +1,5 @@
 import type { Page, QueryParams } from "../../types/api";
-import type { BillingHandoff, BillingHandoffCreatePayload } from "../../types/billing";
+import type { BillingHandoff, BillingHandoffCreatePayload, DoctorFinalChargePayload, Invoice, InvoiceSummary } from "../../types/billing";
 import type { ClinicalNotesPayload, VisitDetail } from "../../types/visits";
 import type { XrayAttachment } from "../../types/xrays";
 import { api } from "../http";
@@ -14,4 +14,7 @@ export const visitsApi = {
   uploadXray: (id: number, formData: FormData) => api.postFormData<XrayAttachment>(`/visits/${id}/xrays/`, formData),
   createBillingHandoff: (id: number, payload: BillingHandoffCreatePayload) =>
     api.post<BillingHandoff, BillingHandoffCreatePayload>(`/visits/${id}/billing-handoff/`, payload),
+  createInvoice: (id: number, payload: DoctorFinalChargePayload) =>
+    api.post<InvoiceSummary, DoctorFinalChargePayload>(`/visits/${id}/create-invoice/`, payload),
+  invoice: (id: number) => api.get<(InvoiceSummary & { notes: string; created_at: string }) | null>(`/visits/${id}/invoice/`),
 };

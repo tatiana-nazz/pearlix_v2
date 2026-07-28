@@ -1,33 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Card } from "../../components/Card";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
-import { ArchivePatientDialog } from "../../features/patients/components/ArchivePatientDialog";
+import { DataTableShell, StatePanel } from "../../components/v2";
 import { ArchiveFilter, DoctorWorkflowFilter, PatientFilters } from "../../features/patients/components/PatientFilters";
 import { PatientTable } from "../../features/patients/components/PatientTable";
-import { useArchivePatient, useUnarchivePatient } from "../../features/patients/hooks/usePatientMutations";
 import { usePatients } from "../../features/patients/hooks/usePatients";
 import { getPatientPermissions, newPatientPath } from "../../features/patients/utils/patientPermissions";
+import { useFeatureT } from "../../layouts/i18n";
 import type { UserRole } from "../../types/auth";
-import type { PatientListFilters, PatientListItem } from "../../types/patients";
+import type { PatientListFilters } from "../../types/patients";
 
-interface PatientsPageProps {
-  role: UserRole;
-}
+interface PatientsPageProps { role: UserRole; }
 
-function roleDescription(role: UserRole): string {
-  if (role === "STAFF") return "Create, update, archive, and restore patient records according to backend permissions.";
-  if (role === "DOCTOR") return "Clinic-wide active patient access with profile editing where backend rules allow.";
-  return "Read-only patient access for clinic supervision.";
-}
-
-function paramsToFilters(role: UserRole, searchParams: URLSearchParams, debouncedSearch: string): PatientListFilters {
+function paramsToFilters(role: UserRole, searchParams: URLSearchParams): PatientListFilters {
   const page = Number(searchParams.get("page") || "1");
   const filters: PatientListFilters = { page: Number.isFinite(page) && page > 0 ? page : 1 };
-  if (debouncedSearch) filters.search = debouncedSearch;
+  const search = searchParams.get("search")?.trim();
+  if (search) filters.search = search;
   if (role !== "DOCTOR") filters.is_archived = searchParams.get("archive") === "archived";
   if (role === "DOCTOR") {
     const scope = searchParams.get("scope");
@@ -39,144 +32,67 @@ function paramsToFilters(role: UserRole, searchParams: URLSearchParams, debounce
 }
 
 export function PatientsPage({ role }: PatientsPageProps) {
+  const t = useFeatureT();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [search, setSearch] = useState(searchParams.get("search") ?? "");
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
-  const [dialogPatient, setDialogPatient] = useState<PatientListItem | null>(null);
-  const [dialogMode, setDialogMode] = useState<"archive" | "unarchive">("archive");
+  const urlSearch = searchParams.get("search") ?? "";
+  const [search, setSearch] = useState(urlSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(urlSearch);
+  const pendingSearch = useRef(false);
   const permissions = getPatientPermissions(role);
 
   useEffect(() => {
+    if (!pendingSearch.current && (urlSearch !== search || urlSearch !== debouncedSearch)) {
+      pendingSearch.current = false;
+      setSearch(urlSearch);
+      setDebouncedSearch(urlSearch);
+    }
+  }, [debouncedSearch, search, urlSearch]);
+
+  useEffect(() => {
+    if (!pendingSearch.current) return;
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => window.clearTimeout(timeout);
   }, [search]);
 
   useEffect(() => {
-    const current = searchParams.get("search") ?? "";
-    if (debouncedSearch !== current) {
-      const next = new URLSearchParams(searchParams);
-      if (debouncedSearch) next.set("search", debouncedSearch);
-      else next.delete("search");
-      next.set("page", "1");
-      setSearchParams(next, { replace: true });
-    }
-  }, [debouncedSearch, searchParams, setSearchParams]);
+    if (!pendingSearch.current || debouncedSearch === urlSearch) return;
+    const next = new URLSearchParams(searchParams);
+    if (debouncedSearch) next.set("search", debouncedSearch);
+    else next.delete("search");
+    next.set("page", "1");
+    pendingSearch.current = false;
+    setSearchParams(next, { replace: true });
+  }, [debouncedSearch, searchParams, setSearchParams, urlSearch]);
 
   const archiveFilter = (searchParams.get("archive") === "archived" ? "archived" : "active") as ArchiveFilter;
   const doctorFilter = (searchParams.get("scope") ?? "all") as DoctorWorkflowFilter;
-  const filters = useMemo(() => paramsToFilters(role, searchParams, debouncedSearch), [role, searchParams, debouncedSearch]);
+  const filters = useMemo(() => paramsToFilters(role, searchParams), [role, searchParams]);
   const patients = usePatients(filters);
-  const archive = useArchivePatient();
-  const unarchive = useUnarchivePatient();
-
-  function setPage(page: number) {
-    const next = new URLSearchParams(searchParams);
-    next.set("page", String(page));
-    setSearchParams(next);
-  }
-
-  function setArchiveFilter(value: ArchiveFilter) {
-    const next = new URLSearchParams(searchParams);
-    next.set("archive", value);
-    next.set("page", "1");
-    setSearchParams(next);
-  }
-
-  function setDoctorFilter(value: DoctorWorkflowFilter) {
-    const next = new URLSearchParams(searchParams);
-    if (value === "all") next.delete("scope");
-    else next.set("scope", value);
-    next.set("page", "1");
-    setSearchParams(next);
-  }
-
-  function openArchiveDialog(patient: PatientListItem) {
-    setDialogPatient(patient);
-    setDialogMode("archive");
-    archive.reset();
-  }
-
-  function openUnarchiveDialog(patient: PatientListItem) {
-    setDialogPatient(patient);
-    setDialogMode("unarchive");
-    unarchive.reset();
-  }
-
-  async function confirmArchiveChange() {
-    if (!dialogPatient) return;
-    if (dialogMode === "archive") await archive.mutateAsync({ id: dialogPatient.id, version: dialogPatient.version });
-    else await unarchive.mutateAsync({ id: dialogPatient.id, version: dialogPatient.version });
-    setDialogPatient(null);
-  }
-
   const currentPage = filters.page ?? 1;
-  const isMutating = archive.isPending || unarchive.isPending;
-  const dialogError = dialogMode === "archive" ? archive.error : unarchive.error;
+  const hasActiveFilters = Boolean(urlSearch || (role !== "DOCTOR" && archiveFilter === "archived") || (role === "DOCTOR" && doctorFilter !== "all"));
+  const workspace = role === "STAFF" ? t("staffWorkspace") : role === "DOCTOR" ? t("doctorWorkspace") : t("adminWorkspace");
+  const description = role === "STAFF" ? t("patientWorkspaceStaff") : role === "DOCTOR" ? t("patientWorkspaceDoctor") : t("patientWorkspaceAdmin");
 
-  return (
-    <div className="patient-page">
-      <PageHeader
-        eyebrow={`${role.toLowerCase()} workspace`}
-        title="Patients"
-        description={roleDescription(role)}
-        actions={
-          permissions.canCreate ? (
-            <Link className="button primary" to={newPatientPath(role)}>
-              Add Patient
-            </Link>
-          ) : null
-        }
-      />
+  function updateParams(mutator: (next: URLSearchParams) => void) {
+    const next = new URLSearchParams(searchParams);
+    mutator(next);
+    setSearchParams(next);
+  }
 
-      <Card>
-        <PatientFilters
-          role={role}
-          search={search}
-          archiveFilter={archiveFilter}
-          doctorFilter={doctorFilter}
-          onSearchChange={setSearch}
-          onArchiveFilterChange={setArchiveFilter}
-          onDoctorFilterChange={setDoctorFilter}
-        />
-      </Card>
+  function setPage(page: number) { updateParams((next) => next.set("page", String(page))); }
+  function setArchiveFilter(value: ArchiveFilter) { updateParams((next) => { if (value === "archived") next.set("archive", value); else next.delete("archive"); next.set("page", "1"); }); }
+  function setDoctorFilter(value: DoctorWorkflowFilter) { updateParams((next) => { if (value === "all") next.delete("scope"); else next.set("scope", value); next.set("page", "1"); }); }
+  function clearFilters() { pendingSearch.current = false; setSearch(""); setDebouncedSearch(""); updateParams((next) => { next.delete("search"); next.delete("archive"); next.delete("scope"); next.set("page", "1"); }); }
 
-      <Card>
-        {patients.isLoading ? <LoadingState title="Loading patients..." /> : null}
-        {patients.isError ? <ErrorState error={patients.error} onRetry={() => void patients.refetch()} title="Unable to load patients" /> : null}
-        {patients.data ? (
-          <>
-            {patients.isFetching ? <p className="panel-note">Refreshing patient results...</p> : null}
-            <PatientTable
-              role={role}
-              patients={patients.data.results}
-              showArchivedStatus={role !== "DOCTOR"}
-              onArchive={openArchiveDialog}
-              onUnarchive={openUnarchiveDialog}
-            />
-            <div className="pagination-bar">
-              <span>{patients.data.count} records</span>
-              <div>
-                <button className="button secondary" type="button" disabled={!patients.data.previous || currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
-                  Previous
-                </button>
-                <span>Page {currentPage}</span>
-                <button className="button secondary" type="button" disabled={!patients.data.next} onClick={() => setPage(currentPage + 1)}>
-                  Next
-                </button>
-              </div>
-            </div>
-          </>
-        ) : null}
-      </Card>
-
-      <ArchivePatientDialog
-        patient={dialogPatient}
-        mode={dialogMode}
-        isSubmitting={isMutating}
-        error={dialogError}
-        onCancel={() => setDialogPatient(null)}
-        onConfirm={() => void confirmArchiveChange()}
-      />
-    </div>
-  );
+  return <div className="patient-page">
+    <PageHeader eyebrow={workspace} title={t("patients")} description={description} actions={permissions.canCreate ? <Link className="button primary" to={newPatientPath(role)}>{t("addPatient")}</Link> : null} />
+    <Card><PatientFilters role={role} search={search} archiveFilter={archiveFilter} doctorFilter={doctorFilter} hasActiveFilters={hasActiveFilters} onSearchChange={(value) => { pendingSearch.current = true; setSearch(value); }} onArchiveFilterChange={setArchiveFilter} onDoctorFilterChange={setDoctorFilter} onClear={clearFilters} /></Card>
+    {patients.isLoading && !patients.data ? <LoadingState title={t("loadingPatients")} /> : null}
+    {patients.isError && !patients.data ? <ErrorState error={patients.error} onRetry={() => void patients.refetch()} title={t("unableToLoadPatients")} /> : null}
+    {patients.data ? <DataTableShell title={t("allPatients")} count={patients.data.count} state={!patients.data.results.length ? <StatePanel state="empty" title={hasActiveFilters ? t("patientNoMatching") : t("patientNoRecords")} /> : undefined}>
+      {patients.data.results.length ? <PatientTable role={role} patients={patients.data.results} /> : null}
+    </DataTableShell> : null}
+    {patients.isFetching && patients.data ? <p className="panel-note" role="status">{t("refreshingPatients")}</p> : null}
+    {patients.data ? <div className="pagination-bar"><span className="bidi-isolate">{patients.data.count} {t("records")}</span><div><button className="button secondary" type="button" disabled={!patients.data.previous || currentPage <= 1} onClick={() => setPage(currentPage - 1)}>{t("previous")}</button><span className="bidi-isolate">{t("page")} {currentPage}</span><button className="button secondary" type="button" disabled={!patients.data.next} onClick={() => setPage(currentPage + 1)}>{t("next")}</button></div></div> : null}
+  </div>;
 }

@@ -297,7 +297,7 @@ def test_doctor_with_no_active_visit_receives_not_found(doctor_client):
     response = doctor_client.get("/api/visits/active/")
 
     assert response.status_code == 404
-    assert response.data["code"] == "NOT_FOUND"
+    assert response.data["code"] == "NO_ACTIVE_VISIT"
 
 
 @pytest.mark.django_db

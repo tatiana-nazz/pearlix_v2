@@ -11,6 +11,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
+from apps.accounts.professional_schedule import ProfessionalScheduleRuleError, active_shift_count, assert_professional_activation_allowed
 from apps.clinic.models import ClinicSettings
 from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
 from apps.visits.models import Visit
@@ -124,9 +125,9 @@ def create_team_member(*, account: dict, role: str, profile: dict) -> User:
         user.set_user_password(account["temporary_password"], must_change_password=True, mark_changed=False)
         user.save()
         if role == User.Role.DOCTOR:
-            DoctorProfile.objects.create(user=user, specialty=profile.get("specialty", ""), phone=profile.get("phone", ""), bio=profile.get("bio", ""), is_active=True)
+            DoctorProfile.objects.create(user=user, specialty=profile.get("specialty", ""), phone=profile.get("phone", ""), bio=profile.get("bio", ""), is_active=False)
         else:
-            StaffProfile.objects.create(user=user, position=profile.get("position", ""), phone=profile.get("phone", ""), is_active=True)
+            StaffProfile.objects.create(user=user, position=profile.get("position", ""), phone=profile.get("phone", ""), is_active=False)
         user = User.objects.select_for_update().select_related("doctor_profile", "staff_profile").get(pk=user.pk)
         assert_profile_integrity(user, require_profile=True)
         return user
@@ -157,6 +158,11 @@ def set_professional_status(*, user_id: int, is_active: bool, version: int) -> U
         profile = linked_profile(user)
         if version != profile.version:
             raise TeamRuleError("VERSION_CONFLICT", "The professional profile has changed.", {"current_version": profile.version}, 409)
+        if is_active:
+            try:
+                assert_professional_activation_allowed(user)
+            except ProfessionalScheduleRuleError as exc:
+                raise TeamRuleError(exc.code, exc.message, exc.details, exc.status_code) from exc
         profile.is_active = is_active
         profile.version += 1
         profile.save(update_fields=["is_active", "version", "updated_at"])
@@ -191,7 +197,8 @@ def transition_preview(*, user: User, target_role: str, actor: User) -> dict:
     token = None
     if allowed:
         token = signing.dumps({"user_id": user.id, "source_role": user.role, "target_role": target_role, "version": user.version, "profile_state": state}, salt=TRANSITION_SALT, compress=True)
-    return {"current_role": user.role, "target_role": target_role, "linked_profile_state": state, "operational_history": history, "required_target_profile": None if target_role == User.Role.ADMIN else ("doctor_profile" if target_role == User.Role.DOCTOR else "staff_profile"), "allowed": allowed, "blockers": blockers, "consequences": [consequence], "confirmation_token": token}
+    schedule_setup_required = target_role in {User.Role.DOCTOR, User.Role.STAFF} and active_shift_count(user) == 0
+    return {"current_role": user.role, "target_role": target_role, "linked_profile_state": state, "operational_history": history, "required_target_profile": None if target_role == User.Role.ADMIN else ("doctor_profile" if target_role == User.Role.DOCTOR else "staff_profile"), "schedule_setup_required": schedule_setup_required, "allowed": allowed, "blockers": blockers, "consequences": [consequence], "confirmation_token": token}
 
 
 def confirm_transition(*, user_id: int, actor: User, target_role: str, token: str, version: int, profile: dict) -> User:
@@ -222,20 +229,20 @@ def confirm_transition(*, user_id: int, actor: User, target_role: str, token: st
             if staff:
                 raise TeamRuleError("PROFILE_ALREADY_LINKED", "A Staff profile cannot be converted into a Doctor profile.", status_code=409)
             if doctor:
-                doctor.is_active = True
+                doctor.is_active = active_shift_count(user, lock=True) > 0
                 doctor.version += 1
                 doctor.save(update_fields=["is_active", "version", "updated_at"])
             else:
-                DoctorProfile.objects.create(user=user, specialty=profile.get("specialty", ""), phone=profile.get("phone", ""), bio=profile.get("bio", ""), is_active=True)
+                DoctorProfile.objects.create(user=user, specialty=profile.get("specialty", ""), phone=profile.get("phone", ""), bio=profile.get("bio", ""), is_active=active_shift_count(user, lock=True) > 0)
         elif target_role == User.Role.STAFF:
             if doctor:
                 raise TeamRuleError("PROFILE_ALREADY_LINKED", "A Doctor profile cannot be converted into a Staff profile.", status_code=409)
             if staff:
-                staff.is_active = True
+                staff.is_active = active_shift_count(user, lock=True) > 0
                 staff.version += 1
                 staff.save(update_fields=["is_active", "version", "updated_at"])
             else:
-                StaffProfile.objects.create(user=user, position=profile.get("position", ""), phone=profile.get("phone", ""), is_active=True)
+                StaffProfile.objects.create(user=user, position=profile.get("position", ""), phone=profile.get("phone", ""), is_active=active_shift_count(user, lock=True) > 0)
         else:
             if doctor:
                 doctor.is_active = False; doctor.version += 1; doctor.save(update_fields=["is_active", "version", "updated_at"])

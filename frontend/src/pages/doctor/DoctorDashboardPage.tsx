@@ -1,211 +1,42 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { CalendarDays, CheckCircle2, ClipboardCheck, Stethoscope } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 
+import { getAppointments } from "../../api/endpoints/appointments";
 import { getDoctorDashboard } from "../../api/endpoints/dashboard";
-import { Card } from "../../components/Card";
-import { EmptyState } from "../../components/EmptyState";
-import { ErrorState } from "../../components/ErrorState";
-import { LoadingState } from "../../components/LoadingState";
-import { PageHeader } from "../../components/PageHeader";
-import { SectionHeader } from "../../components/SectionHeader";
-import { StatCard } from "../../components/StatCard";
-import { StatusPill } from "../../components/StatusPill";
-import { SummaryList } from "../../components/SummaryList";
-import type {
-  DashboardAppointmentSummary,
-  DashboardAvailabilityExceptionSummary,
-  DashboardBillingHandoffSummary,
-  DashboardVisitSummary,
-  DashboardWorkingHourSummary,
-} from "../../types/dashboard";
-import { formatClock, formatDateRange, formatDateTime, formatWeekday } from "../../utils/dates";
-import { displayText, formatCount, formatCurrencyAmount } from "../../utils/formatters";
+import { KpiCard, PageHeaderV2, StatePanel, StatusBadge, SurfaceCard, Tabs } from "../../components/v2";
+import { appointmentRecordClass } from "../../features/appointments/utils/appointmentStatusAppearance";
+import { useFeatureT } from "../../layouts/i18n";
+import { formatTime } from "../../utils/dates";
+import { useClinicDashboardDate } from "../dashboard/DashboardV2";
+import type { AppointmentStatus } from "../../types/appointments";
 
-function appointmentRow(item: DashboardAppointmentSummary) {
-  return (
-    <li className="summary-row" key={item.id}>
-      <div>
-        <strong>{item.patient.full_name}</strong>
-        <span>{formatDateRange(item.start_datetime, item.end_datetime)}</span>
-        <span>{displayText(item.reason, "No reason recorded")}</span>
-      </div>
-      <StatusPill status={item.status} />
-    </li>
-  );
-}
+type QueueTab = "upcoming" | "checked-in" | "active" | "completed" | "cancelled";
+const queueTabs: QueueTab[] = ["upcoming", "checked-in", "active", "completed", "cancelled"];
+const queueStatus: Record<Exclude<QueueTab, "cancelled">, AppointmentStatus> = { upcoming: "UPCOMING", "checked-in": "CHECKED_IN", active: "ACTIVE", completed: "COMPLETED" };
 
-function visitRow(item: DashboardVisitSummary) {
-  return (
-    <li className="summary-row" key={item.id}>
-      <div>
-        <strong>{item.patient.full_name}</strong>
-        <span>Appointment #{item.appointment_id}</span>
-        <span>
-          Started {formatDateTime(item.started_at)}
-          {item.completed_at ? ` - Completed ${formatDateTime(item.completed_at)}` : ""}
-        </span>
-      </div>
-      <StatusPill status={item.status} />
-    </li>
-  );
-}
-
-function handoffRow(item: DashboardBillingHandoffSummary) {
-  return (
-    <li className="summary-row" key={item.id}>
-      <div>
-        <strong>{item.patient.full_name}</strong>
-        <span>Visit #{item.visit_id}</span>
-        <span>{formatCurrencyAmount(item.suggested_amount, item.currency)}</span>
-      </div>
-      <StatusPill status={item.status} />
-    </li>
-  );
-}
-
-function workingHourRow(item: DashboardWorkingHourSummary) {
-  return (
-    <li className="summary-row compact" key={item.id}>
-      <div>
-        <strong>{formatWeekday(item.weekday)}</strong>
-        <span>
-          {formatClock(item.start_time)} - {formatClock(item.end_time)}
-        </span>
-      </div>
-      <StatusPill status={item.is_active ? "ACTIVE" : "INACTIVE"} tone={item.is_active ? "success" : "default"} />
-    </li>
-  );
-}
-
-function availabilityRow(item: DashboardAvailabilityExceptionSummary) {
-  return (
-    <li className="summary-row compact" key={item.id}>
-      <div>
-        <strong>{formatDateRange(item.start_datetime, item.end_datetime)}</strong>
-        <span>{displayText(item.reason, "No reason recorded")}</span>
-      </div>
-      <StatusPill status={item.type} tone={item.is_cancelled ? "danger" : "attention"} />
-    </li>
-  );
+function DoctorQueue({ date }: { date: string }) {
+  const t = useFeatureT(); const [params, setParams] = useSearchParams(); const tab = queueTabs.includes(params.get("queue") as QueueTab) ? params.get("queue") as QueueTab : "upcoming"; const cancelledStatus = params.get("cancelled_status") === "NO_SHOW" ? "NO_SHOW" : "CANCELLED";
+  const status = tab === "cancelled" ? cancelledStatus : queueStatus[tab];
+  const query = useQuery({ queryKey: ["doctor-appointment-queue", tab, status, date], queryFn: () => getAppointments({ status, date, page: 1 }), enabled: Boolean(date) });
+  const setTab = (next: QueueTab) => { const search = new URLSearchParams(params); search.set("queue", next); search.delete("appointment"); setParams(search); };
+  const open = (id: number) => `/doctor/appointments/list?date=${encodeURIComponent(date)}&status=${status}&appointment=${id}`;
+  return <SurfaceCard major className="doctor-appointment-queue"><div className="doctor-queue-heading"><div><h2>{t("myAppointmentQueue")}</h2><p>{t("clinicLocalDate")}: <bdi>{date}</bdi></p></div></div><Tabs selected={tab} onSelect={(value) => setTab(value as QueueTab)} tabs={[{ id: "upcoming", label: t("queueUpcoming") }, { id: "checked-in", label: t("queueCheckedIn") }, { id: "active", label: t("queueActive") }, { id: "completed", label: t("queueCompleted") }, { id: "cancelled", label: t("queueCancelledNoShow") }]} />
+    {tab === "cancelled" ? <div className="doctor-queue-status-picker"><button type="button" className={cancelledStatus === "CANCELLED" ? "active" : ""} onClick={() => { const next = new URLSearchParams(params); next.set("cancelled_status", "CANCELLED"); setParams(next); }}>{t("cancelled")}</button><button type="button" className={cancelledStatus === "NO_SHOW" ? "active" : ""} onClick={() => { const next = new URLSearchParams(params); next.set("cancelled_status", "NO_SHOW"); setParams(next); }}>{t("noShow")}</button></div> : null}
+    {query.isLoading ? <StatePanel state="loading" title={t("loadingAppointments")} /> : query.isError ? <StatePanel state="error" title={t("unableToLoadAppointments")} action={<button className="v2-button secondary" onClick={() => void query.refetch()}>{t("retry")}</button>} /> : !query.data?.results.length ? <StatePanel state="empty" title={t("noAppointments")} /> : <div className="doctor-queue-records">{query.data.results.map((item) => <Link key={item.id} className={`doctor-queue-record ${appointmentRecordClass(item.status)}`} to={open(item.id)}><time className="bidi-isolate">{formatTime(item.start_datetime)}</time><span><strong className="bidi-isolate">{item.patient.full_name}</strong><small className="bidi-isolate">{item.reason || t("notRecorded")}{item.duration_minutes ? ` · ${item.duration_minutes} ${t("minutes")}` : ""}</small></span><StatusBadge status={item.status} /></Link>)}</div>}
+  </SurfaceCard>;
 }
 
 export function DoctorDashboardPage() {
-  const dashboard = useQuery({
-    queryKey: ["dashboard", "doctor"],
-    queryFn: getDoctorDashboard,
-  });
-
-  if (dashboard.isLoading) return <LoadingState title="Loading doctor dashboard..." />;
-  if (dashboard.isError) return <ErrorState error={dashboard.error} onRetry={() => void dashboard.refetch()} />;
-  if (!dashboard.data) return <EmptyState title="No doctor dashboard data was returned." />;
-
-  const data = dashboard.data;
-
-  return (
-    <div className="dashboard-page">
-      <PageHeader
-        eyebrow="Doctor dashboard"
-        title="Clinical workspace"
-        description="Own appointments, visits, schedule, and handoff visibility from the backend doctor dashboard endpoint."
-        actions={
-          <div className="page-header-actions"><Link className="button secondary" to="/doctor/visits/active">Active visit</Link><Link className="button secondary" to="/doctor/billing/handoffs">My handoffs</Link></div>
-        }
-      />
-
-      <Card className="active-visit-card">
-        <SectionHeader title="Active visit" description="Only the current doctor's active visit appears here." />
-        {data.own_active_visit ? (
-          <div className="active-visit-content">
-            <div>
-              <strong>{data.own_active_visit.patient.full_name}</strong>
-              <span>Appointment #{data.own_active_visit.appointment_id}</span>
-              <span>Started {formatDateTime(data.own_active_visit.started_at)}</span>
-            </div>
-            <StatusPill status={data.own_active_visit.status} tone="success" />
-          </div>
-        ) : (
-          <EmptyState title="No active visit was returned." />
-        )}
-      </Card>
-
-      <div className="dashboard-grid">
-        <StatCard label="Today's appointments" value={formatCount(data.today_own_appointments.length)} description="Assigned to you" />
-        <StatCard label="Checked in" value={formatCount(data.own_checked_in_appointments.length)} description="Ready to start" tone="success" />
-        <StatCard
-          label="Needs reschedule"
-          value={formatCount(data.own_needs_reschedule_appointments.length)}
-          description="Own affected appointments"
-          tone={data.own_needs_reschedule_appointments.length ? "attention" : "default"}
-        />
-        <StatCard
-          label="Completed today"
-          value={formatCount(data.own_completed_visits_today_count)}
-          description="Own completed visits"
-          tone="success"
-        />
-      </div>
-
-      <div className="dashboard-columns">
-        <Card>
-          <SummaryList
-            title="Today appointments"
-            items={data.today_own_appointments}
-            emptyMessage="No own appointments were returned for today."
-            renderItem={appointmentRow}
-          />
-        </Card>
-        <Card>
-          <SummaryList
-            title="Checked-in appointments"
-            items={data.own_checked_in_appointments}
-            emptyMessage="No own checked-in appointments were returned."
-            renderItem={appointmentRow}
-          />
-        </Card>
-        <Card>
-          <SummaryList
-            title="Needs reschedule"
-            items={data.own_needs_reschedule_appointments}
-            emptyMessage="No own appointments need rescheduling."
-            renderItem={appointmentRow}
-          />
-        </Card>
-        <Card>
-          <SummaryList
-            title="Recent visits"
-            items={data.own_recent_visits}
-            emptyMessage="No own recent visits were returned."
-            renderItem={visitRow}
-          />
-        </Card>
-        <Card>
-          <SummaryList
-            title="Pending billing handoffs"
-            description="Doctors can see own handoffs only."
-            items={data.own_pending_billing_handoffs}
-            emptyMessage="No own billing handoffs are waiting."
-            renderItem={handoffRow}
-          />
-        </Card>
-        <Card>
-          <SummaryList
-            title="Working schedule"
-            items={data.own_working_schedule}
-            emptyMessage="No working schedule was returned."
-            renderItem={workingHourRow}
-          />
-        </Card>
-      </div>
-
-      <Card>
-        <SummaryList
-          title="Availability and leave"
-          description="Own leave is read-only in this dashboard phase."
-          items={data.own_availability_exceptions}
-          emptyMessage="No own availability exceptions were returned."
-          renderItem={availabilityRow}
-        />
-      </Card>
-    </div>
-  );
+  const t = useFeatureT(); const dashboard = useQuery({ queryKey: ["dashboard", "doctor"], queryFn: getDoctorDashboard }); const clinic = useClinicDashboardDate();
+  if (dashboard.isLoading || clinic.isLoading) return <StatePanel state="loading" title={t("loadingDashboard")} />;
+  if (dashboard.isError || !dashboard.data || !clinic.date) return <StatePanel state="error" title={t("dashboardUnavailable")} action={<button className="v2-button secondary" onClick={() => { void dashboard.refetch(); }}>{t("retryDashboard")}</button>} />;
+  const data = dashboard.data; const date = clinic.date;
+  const cards = [
+    { label: t("todayAppointments"), value: data.today_own_appointments.length, to: `/doctor/dashboard?queue=upcoming`, icon: <CalendarDays />, tone: "info" as const },
+    { label: t("activeVisits"), value: data.own_active_visit ? 1 : 0, to: `/doctor/dashboard?queue=active`, icon: <Stethoscope />, tone: "info" as const },
+    { label: t("completedToday"), value: data.own_completed_visits_today_count, to: `/doctor/dashboard?queue=completed`, icon: <CheckCircle2 />, tone: "success" as const },
+    { label: t("checkedIn"), value: data.own_checked_in_appointments.length, to: `/doctor/dashboard?queue=checked-in`, icon: <ClipboardCheck />, tone: "success" as const },
+  ];
+  return <div className="dashboard-page doctor-dashboard"><PageHeaderV2 title={t("clinicalWorkspace")} description={`${t("clinicLocalDate")}: ${date}`} /><div className="dashboard-grid dashboard-kpi-grid">{cards.map((card) => <Link key={card.label} to={card.to} className="kpi-link"><KpiCard {...card} /></Link>)}</div><DoctorQueue date={date} /></div>;
 }

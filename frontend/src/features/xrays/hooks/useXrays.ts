@@ -21,6 +21,7 @@ export function useXrayAiResult(xrayId: number, enabled: boolean) {
 function invalidateSavedXrayContext(queryClient: ReturnType<typeof useQueryClient>, patientId?: number, visitId?: number | null) {
   void queryClient.invalidateQueries({ queryKey: ["xrays"] });
   if (patientId) {
+    void queryClient.invalidateQueries({ queryKey: ["patient", patientId] });
     void queryClient.invalidateQueries({ queryKey: ["patient", patientId, "xrays"] });
     void queryClient.invalidateQueries({ queryKey: ["patient", patientId, "ai-results"] });
   }
@@ -73,10 +74,11 @@ export function useExternalXrayMutations() {
   const invalidate = (caseId?: number) => {
     void queryClient.invalidateQueries({ queryKey: ["external-xrays"] });
     if (caseId) void queryClient.invalidateQueries({ queryKey: ["external-xray", caseId] });
+    void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   };
   return {
     upload: useMutation({ mutationFn: (payload: XrayUploadPayload) => xraysApi.createExternal(xrayUploadFormData(payload)), onSuccess: () => invalidate() }),
-    runAi: useMutation({ mutationFn: (caseId: number) => xraysApi.runExternalAi(caseId), onSuccess: (_, caseId) => { invalidate(caseId); void queryClient.invalidateQueries({ queryKey: ["external-xray-ai-result", caseId] }); } }),
+    runAi: useMutation({ mutationFn: (caseId: number) => xraysApi.runExternalAi(caseId), onSuccess: (result, caseId) => { queryClient.setQueryData(["external-xray-ai-result", caseId], result); invalidate(caseId); void queryClient.invalidateQueries({ queryKey: ["external-xray-ai-result", caseId] }); } }),
     discard: useMutation({ mutationFn: (caseId: number) => xraysApi.discardExternal(caseId), onSuccess: (_, caseId) => invalidate(caseId) }),
     attach: useMutation({
       mutationFn: ({ caseId, payload }: { caseId: number; payload: ExternalAttachPayload }) => xraysApi.attachExternalToPatient(caseId, payload),

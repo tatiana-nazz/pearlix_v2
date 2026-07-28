@@ -1,50 +1,65 @@
-"""Fail fast on Phase 14C closure documentation drift (standard library only)."""
+"""Validate Phase 14F current-head closure documentation and evidence."""
 from pathlib import Path
 import sys
 
+
 ROOT = Path(__file__).resolve().parents[1]
-FILES = {
-    "status": "backend/project_docs/PROJECT_STATUS.md", "audit": "backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md",
-    "readme": "frontend/README.md", "qa": "frontend/QA_14C.md", "record": "frontend/design_v2/PHASE_14C_IMPLEMENTATION_RECORD.md",
-    "mapping": "frontend/design_v2/RUNTIME_COMPONENT_MAPPING_V2.md", "matrix": "frontend/design_v2/DESIGN_ACCEPTANCE_MATRIX.md",
+STATUS_FILES = {
+    "status": "backend/project_docs/PROJECT_STATUS.md",
+    "readme": "frontend/README.md",
+    "audit": "frontend/design_v2/PHASE_14F_BROWSER_AUDIT.md",
+    "checklist": "frontend/design_v2/PHASE_14F_MANUAL_REVIEW_CHECKLIST.md",
+    "evidence": "frontend/design_v2/phase14f_evidence/current_head_acceptance/EVIDENCE_INDEX.md",
 }
-SCOPE = "phase 14d — priority workflows: dashboards, appointments, patients, team, and users & access"
+CURRENT_REQUIREMENTS = (
+    "phase 14f",
+    "complete",
+    "current_head_acceptance",
+)
+EVIDENCE_FILES = (
+    "staff-dashboard-1440x900-en-light.png",
+    "admin-team-setup-required-1024x900-en-dark.png",
+    "doctor-active-visit-empty-768x1024-ar-light-rtl.png",
+    "doctor-xray-ai-detail-768x1024-ar-light-rtl.png",
+)
+STALE_CURRENT_AUTHORITY = (
+    "phase 14f browser visual/uat acceptance is next",
+    "phase 14f complete — blocked",
+    "three high and two medium product defects",
+)
+
+
+def read(relative: str, errors: list[str]) -> str:
+    path = ROOT / relative
+    if not path.is_file():
+        errors.append(f"missing {relative}")
+        return ""
+    return path.read_text(encoding="utf-8")
+
 
 def main() -> int:
-    errors, text = [], {}
-    for key, relative in FILES.items():
-        path = ROOT / relative
-        if not path.is_file(): errors.append(f"missing {relative}")
-        else: text[key] = path.read_text(encoding="utf-8").lower()
-    checks = {
-        "status": ("current completed phase: 14c", SCOPE, "75 passed", "backend runtime changes in phase 14c: no", "migrations in phase 14c: none", "implement phases 14d–14f"),
-        "audit": ("completed phase 14c shell", SCOPE, "14c — shell", "no `/admin/team` runtime route"),
-        "readme": ("phase 14c added", "23 focused phase 14c tests", "75 total frontend tests", SCOPE, "design_v2/` is the authoritative"),
-        "qa": ("focused automated coverage", "23 passed", "75 passed", "collapse persistence", "browser qa is pending"),
-        "record": ("phase 14c is complete", "shared modal/drawer/confirmdialog foundation is complete", SCOPE, "browser qa remains pending"),
-        "mapping": ("shared v2 overlay foundation is complete", "appointmentconfirmdialog.tsx", "14d, remove"),
-        "matrix": ("phase 14c",),
-    }
-    for key, phrases in checks.items():
-        for phrase in phrases:
-            if phrase not in text.get(key, ""): errors.append(f"{key} missing {phrase!r}")
-    joined = "\n".join(text.values())
-    for stale in ("next is phase 14c", "phase 14c shell/token/shared-component work is next", "final team and users & access runtime ui (phase 14d)"):
-        if stale in joined: errors.append(f"stale current-phase wording: {stale!r}")
-    if "66 passed" in text.get("status", "") or "66 passed" in text.get("qa", ""): errors.append("frontend total remains the pre-final Phase 14C baseline")
-    if "14 focused foundation tests" in text.get("readme", ""):
-        errors.append("README still reports 14 focused Phase 14C tests")
-    if "23 focused phase 14c tests" not in text.get("readme", ""):
-        errors.append("README does not report 23 focused Phase 14C tests")
-    if "75 total frontend tests" not in text.get("readme", ""):
-        errors.append("README does not report 75 total frontend tests")
-    if "production contract through completed phase 14c.0" in text.get("audit", ""):
-        errors.append("integration audit final completion statement still stops at Phase 14C.0")
-    if "production contract through completed phase 14c." not in text.get("audit", ""):
-        errors.append("integration audit does not state current contract through completed Phase 14C")
-    if "browser qa: complete" in joined or "browser acceptance complete" in joined: errors.append("browser QA is falsely complete")
-    if errors:
-        print("Documentation consistency check failed:\n- " + "\n- ".join(errors)); return 1
-    print("Documentation consistency check passed."); return 0
+    errors: list[str] = []
+    sources = {name: read(relative, errors) for name, relative in STATUS_FILES.items()}
 
-if __name__ == "__main__": raise SystemExit(main())
+    for name, source in sources.items():
+        lowered = source.lower()
+        for requirement in CURRENT_REQUIREMENTS:
+            if requirement not in lowered:
+                errors.append(f"{name} missing current Phase 14F fact: {requirement!r}")
+        for stale in STALE_CURRENT_AUTHORITY:
+            if stale in lowered:
+                errors.append(f"{name} retains stale current authority: {stale!r}")
+
+    for filename in EVIDENCE_FILES:
+        if not (ROOT / "frontend/design_v2/phase14f_evidence/current_head_acceptance" / filename).is_file():
+            errors.append(f"missing current-head evidence screenshot: {filename}")
+
+    if errors:
+        print("Documentation consistency check failed:\n- " + "\n- ".join(errors))
+        return 1
+    print("Documentation consistency check passed for Phase 14F current-head closure.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

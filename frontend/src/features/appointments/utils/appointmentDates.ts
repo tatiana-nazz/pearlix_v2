@@ -23,6 +23,22 @@ export function addDays(value: string, days: number): string {
   return toDateInputValue(date);
 }
 
+export function addMonths(value: string, months: number): string {
+  const date = localDate(new Date(`${value}T00:00:00`));
+  date.setMonth(date.getMonth() + months);
+  return toDateInputValue(date);
+}
+
+export function calendarPeriodLabel(value: string, view: "day" | "week" | "month", locale?: string): string {
+  const date = new Date(`${value}T00:00:00`);
+  if (view === "day") return new Intl.DateTimeFormat(locale, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(date);
+  if (view === "month") return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date);
+  const range = getWeekRange(value);
+  const start = new Date(`${range.start}T00:00:00`);
+  const end = new Date(`${range.end}T00:00:00`);
+  return `${new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(start)} – ${new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(end)}`;
+}
+
 export function getWeekRange(anchor: string) {
   const date = localDate(new Date(`${anchor}T00:00:00`));
   const day = date.getDay();

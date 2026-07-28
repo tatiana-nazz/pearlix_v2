@@ -1,61 +1,60 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { scheduleApi } from "../../api/endpoints/schedule";
-import { usersApi } from "../../api/endpoints/users";
-import { Card } from "../../components/Card";
-import { EmptyState } from "../../components/EmptyState";
-import { ErrorState } from "../../components/ErrorState";
-import { LoadingState } from "../../components/LoadingState";
-import { PageHeader } from "../../components/PageHeader";
-import { StatusPill } from "../../components/StatusPill";
+import { teamApi } from "../../api/endpoints/team";
+import { Button, ClickableRow, Combobox, ConfirmDialog, DataTableShell, Field, FormSection, Modal, PageHeaderV2, Pagination, SelectField, StatePanel, SurfaceCard, useOverlayClose } from "../../components/v2";
+import { LeaveBadges } from "../../features/schedule/components/LeaveStatus";
+import { useFeatureT } from "../../layouts/i18n";
+import type { AvailabilityException, AvailabilityExceptionPayload, AvailabilityExceptionType } from "../../types/schedule";
+import type { TeamMemberSummary } from "../../types/team";
+import { getErrorMessage } from "../../utils/apiErrors";
 import { formatDateRange } from "../../utils/dates";
-import { displayText } from "../../utils/formatters";
+
+type LeaveDraft = { employeeId: string; start: string; end: string; type: AvailabilityExceptionType; reason: string };
+type Employee = Pick<TeamMemberSummary, "id" | "full_name" | "role">;
+const emptyLeave: LeaveDraft = { employeeId: "", start: "", end: "", type: "UNAVAILABLE", reason: "" };
+const toLocal = (value: string) => value.slice(0, 16);
+function roleLabel(role: "DOCTOR" | "STAFF", t: ReturnType<typeof useFeatureT>) { return role === "DOCTOR" ? t("doctor") : t("staff"); }
+function employeeFromLeave(leave?: AvailabilityException): Employee | undefined { const person = leave?.doctor ?? leave?.staff; return person && (person.role === "DOCTOR" || person.role === "STAFF") ? { id: person.id, full_name: person.full_name, role: person.role } : undefined; }
+
+function EmployeePicker({ value, selected, disabled, onChange, onEmployeeChange }: { value: string; selected?: Employee; disabled?: boolean; onChange: (value: string) => void; onEmployeeChange?: (employee: Employee | undefined) => void }) {
+  const t = useFeatureT(); const [input, setInput] = useState(""); const [query, setQuery] = useState("");
+  useEffect(() => { const timer = window.setTimeout(() => setQuery(input), 300); return () => window.clearTimeout(timer); }, [input]);
+  const directory = useQuery({ queryKey: ["leave-employee-options", query], queryFn: () => teamApi.list({ page: 1, q: query || undefined }), placeholderData: (previous) => previous });
+  const options = useMemo(() => { const mapped = (directory.data?.results ?? []).map((member) => ({ value: String(member.id), label: `${member.full_name} — ${roleLabel(member.role, t)}` })); return selected && !mapped.some((option) => option.value === String(selected.id)) ? [{ value: String(selected.id), label: `${selected.full_name} — ${roleLabel(selected.role, t)}` }, ...mapped] : mapped; }, [directory.data, selected, t]);
+  return <div className="leave-employee-picker"><Combobox label={t("employee")} value={value} onChange={(next) => { onChange(next); onEmployeeChange?.(directory.data?.results.find((member) => member.id === Number(next))); }} onQueryChange={setInput} options={options} placeholder={t("searchEmployees")} disabled={disabled} />{directory.isLoading ? <small>{t("employeeSearchLoading")}</small> : directory.isError ? <StatePanel state="error" title={t("employeeSearchUnavailable")} action={<Button compact variant="secondary" onClick={() => void directory.refetch()}>{t("retry")}</Button>} /> : !options.length && query ? <small>{t("noMatchingEmployees")}</small> : null}</div>;
+}
+
+function LeaveForm({ leave, onSave, onDirtyChange, onPendingChange }: { leave?: AvailabilityException; onSave: (payload: AvailabilityExceptionPayload) => Promise<unknown>; onDirtyChange: (dirty: boolean) => void; onPendingChange: (pending: boolean) => void }) {
+  const t = useFeatureT(); const close = useOverlayClose(); const preservedEmployee = employeeFromLeave(leave);
+  const initial: LeaveDraft = leave ? { employeeId: String(preservedEmployee?.id ?? ""), start: toLocal(leave.start_datetime), end: toLocal(leave.end_datetime), type: leave.type, reason: leave.reason } : emptyLeave;
+  const [draft, setDraft] = useState(initial); const [selected, setSelected] = useState<Employee | undefined>(preservedEmployee);
+  const mutation = useMutation({ mutationFn: () => onSave({ doctor_id: selected?.role === "DOCTOR" ? selected.id : null, staff_id: selected?.role === "STAFF" ? selected.id : null, start_datetime: new Date(draft.start).toISOString(), end_datetime: new Date(draft.end).toISOString(), type: draft.type, reason: draft.reason, ...(leave ? { version: leave.version } : {}) }) });
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initial); useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]); useEffect(() => onPendingChange(mutation.isPending), [mutation.isPending, onPendingChange]);
+  return <form onSubmit={(event) => { event.preventDefault(); mutation.mutate(); }}><FormSection title={t("leaveAvailability")}><EmployeePicker value={draft.employeeId} selected={selected} disabled={Boolean(leave)} onChange={(value) => { setDraft({ ...draft, employeeId: value }); setSelected(undefined); }} onEmployeeChange={setSelected} /><Field label={t("start")} required type="datetime-local" value={draft.start} onChange={(event) => setDraft({ ...draft, start: event.target.value })} /><Field label={t("end")} required type="datetime-local" value={draft.end} onChange={(event) => setDraft({ ...draft, end: event.target.value })} /><SelectField label={t("type")} value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value as AvailabilityExceptionType })}><option value="UNAVAILABLE">{t("unavailable")}</option><option value="AVAILABLE_OVERRIDE">{t("availableOverride")}</option></SelectField><Field label={t("reason")} value={draft.reason} onChange={(event) => setDraft({ ...draft, reason: event.target.value })} /></FormSection><p>{selected?.role === "DOCTOR" ? t("doctorImpact") : t("staffImpact")}</p>{mutation.error ? <StatePanel state="error" title={t("error")} description={getErrorMessage(mutation.error)} /> : null}<div className="v2-sticky-actions"><Button type="button" variant="secondary" onClick={close} disabled={mutation.isPending}>{t("cancel")}</Button><Button type="submit" loading={mutation.isPending} disabled={!selected}>{t("saveLeave")}</Button></div></form>;
+}
 
 export function LeaveManagementPage() {
-  const queryClient = useQueryClient();
-  const [employeeId, setEmployeeId] = useState<number | null>(null);
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
-  const [reason, setReason] = useState("");
-  const users = useQuery({ queryKey: ["schedule-employees"], queryFn: () => usersApi.list({ page: 1 }) });
-  const leave = useQuery({ queryKey: ["availability-exceptions", "admin"], queryFn: () => scheduleApi.availabilityExceptions({ page: 1 }) });
-  const employees = useMemo(() => (users.data?.results ?? []).filter((user) => user.role === "DOCTOR" || user.role === "STAFF"), [users.data]);
-  const selected = employees.find((user) => user.id === employeeId);
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ["availability-exceptions"] });
-  const create = useMutation({
-    mutationFn: () => scheduleApi.createAvailabilityException({
-      doctor_id: selected?.role === "DOCTOR" ? selected.id : null,
-      staff_id: selected?.role === "STAFF" ? selected.id : null,
-      start_datetime: new Date(start).toISOString(),
-      end_datetime: new Date(end).toISOString(),
-      type: "UNAVAILABLE",
-      reason,
-    }),
-    onSuccess: () => { setStart(""); setEnd(""); setReason(""); refresh(); },
-  });
-  const cancel = useMutation({ mutationFn: ({ id, version }: { id: number; version: number }) => scheduleApi.cancelAvailabilityException(id, version), onSuccess: refresh });
-  const editReason = async (id: number, version: number, currentReason: string) => {
-    const nextReason = window.prompt("Leave reason", currentReason);
-    if (nextReason !== null && nextReason !== currentReason) {
-      await scheduleApi.updateAvailabilityException(id, { reason: nextReason, version });
-      refresh();
-    }
-  };
-
-  return (
-    <div className="schedule-page">
-      <PageHeader eyebrow="Scheduling administration" title="Leave and availability" description="Leave is cancelled or voided, never deleted. Staff leave does not affect patient appointments." />
-      <Card>
-        <form className="compact-form" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-          <label>Employee<select required value={employeeId ?? ""} onChange={(event) => setEmployeeId(event.target.value ? Number(event.target.value) : null)}><option value="">Select Doctor or Staff</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name} ({employee.role})</option>)}</select></label>
-          <label>Start<input required type="datetime-local" value={start} onChange={(event) => setStart(event.target.value)} /></label>
-          <label>End<input required type="datetime-local" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
-          <label>Reason<input value={reason} onChange={(event) => setReason(event.target.value)} /></label>
-          <button className="button primary" disabled={create.isPending || !selected}>Create unavailable period</button>
-        </form>
-      </Card>
-      {leave.isLoading ? <LoadingState title="Loading leave records..." /> : leave.isError ? <ErrorState error={leave.error} onRetry={() => void leave.refetch()} /> : !leave.data?.results.length ? <EmptyState title="No leave or availability exceptions were returned." /> : <ul className="schedule-list">{leave.data.results.map((item) => <li key={item.id}><div><strong>{item.doctor?.full_name ?? item.staff?.full_name}</strong><span>{formatDateRange(item.start_datetime, item.end_datetime)}</span><span>{displayText(item.reason, "No reason recorded")}</span></div><div className="schedule-actions"><StatusPill status={item.is_cancelled ? "CANCELLED" : item.type} tone={item.is_cancelled ? "default" : "attention"} />{!item.is_cancelled && <button className="button ghost" onClick={() => void editReason(item.id, item.version, item.reason)}>Edit</button>}{!item.is_cancelled && <button className="button ghost" disabled={cancel.isPending} onClick={() => cancel.mutate({ id: item.id, version: item.version })}>Cancel leave</button>}</div></li>)}</ul>}
-    </div>
-  );
+  const t = useFeatureT(); const { exceptionId } = useParams(); const navigate = useNavigate(); const client = useQueryClient(); const [params, setParams] = useSearchParams(); const [form, setForm] = useState<AvailabilityException | "new" | null>(null); const [dirty, setDirty] = useState(false); const [pending, setPending] = useState(false); const [cancelTarget, setCancelTarget] = useState<AvailabilityException | null>(null);
+  const employeeId = params.get("employee") ?? ""; const type = params.get("type") ?? ""; const state = params.get("state") ?? ""; const startFrom = params.get("start_from") ?? ""; const endTo = params.get("end_to") ?? ""; const page = Math.max(1, Number(params.get("page") ?? "1"));
+  const employee = useQuery({ queryKey: ["leave-filter-employee", employeeId], queryFn: () => teamApi.detail(Number(employeeId)), enabled: Boolean(employeeId) });
+  const selectedEmployee = employee.data;
+  const query = { page, ...(selectedEmployee?.role === "DOCTOR" ? { doctor_id: employeeId } : selectedEmployee?.role === "STAFF" ? { staff_id: employeeId } : {}), ...(type ? { type } : {}), ...(state ? { is_cancelled: state } : {}), ...(startFrom ? { start_from: new Date(startFrom).toISOString() } : {}), ...(endTo ? { end_to: new Date(endTo).toISOString() } : {}) };
+  const leave = useQuery({ queryKey: ["availability-exceptions", "admin", query], queryFn: () => scheduleApi.availabilityExceptions(query), enabled: !employeeId || Boolean(selectedEmployee), placeholderData: (previous) => previous });
+  const detail = useQuery({ queryKey: ["availability-exception", exceptionId], queryFn: () => scheduleApi.availabilityException(Number(exceptionId)), enabled: Boolean(exceptionId) });
+  const set = (key: string, value: string) => { const next = new URLSearchParams(params); value ? next.set(key, value) : next.delete(key); if (key !== "page") next.set("page", "1"); setParams(next); };
+  const clear = () => setParams(new URLSearchParams());
+  const invalidate = () => { void client.invalidateQueries({ queryKey: ["availability-exceptions"] }); void client.invalidateQueries({ queryKey: ["availability-exception", exceptionId] }); void client.invalidateQueries({ queryKey: ["appointments"] }); void client.invalidateQueries({ queryKey: ["needs-reschedule"] }); };
+  const createOrUpdate = async (payload: AvailabilityExceptionPayload) => { if (form && form !== "new") { const { version: _version, ...update } = payload; await scheduleApi.updateAvailabilityException(form.id, { ...update, version: form.version }); } else await scheduleApi.createAvailabilityException(payload); invalidate(); setDirty(false); setPending(false); setForm(null); };
+  const cancel = useMutation({ mutationFn: (target: AvailabilityException) => scheduleApi.cancelAvailabilityException(target.id, target.version), onSuccess: () => { invalidate(); setCancelTarget(null); } }); const closeForm = () => { setDirty(false); setPending(false); setForm(null); };
+  const hasFilters = Boolean(employeeId || type || state || startFrom || endTo);
+  if (exceptionId) { if (detail.isLoading) return <StatePanel state="loading" title={t("loadingLeave")} />; if (detail.isError || !detail.data) return <StatePanel state="notFound" title={t("leaveNotFound")} description={detail.error ? getErrorMessage(detail.error) : undefined} action={<Link className="v2-button secondary" to={`/admin/leave${params.toString() ? `?${params}` : ""}`}>{t("backToLeave")}</Link>} />; const item = detail.data; const back = `/admin/leave${params.toString() ? `?${params}` : ""}`;
+    return <div className="admin-page"><Link className="inline-back-link" to={back}>{t("backToLeave")}</Link><PageHeaderV2 title={item.doctor?.full_name ?? item.staff?.full_name ?? t("employee")} description={item.doctor ? t("doctorImpact") : t("staffImpact")} action={!item.is_cancelled ? <><Button variant="secondary" onClick={() => setForm(item)}>{t("editLeave")}</Button><Button variant="danger" onClick={() => setCancelTarget(item)}>{t("cancelLeave")}</Button></> : undefined} /><SurfaceCard major><dl className="detail-grid"><div><dt>{t("role")}</dt><dd>{item.doctor ? t("doctor") : t("staff")}</dd></div><div><dt>{t("type")}</dt><dd><LeaveBadges item={item} /></dd></div><div><dt>{t("date")}</dt><dd><bdi>{formatDateRange(item.start_datetime, item.end_datetime)}</bdi></dd></div><div className="detail-wide"><dt>{t("reason")}</dt><dd className="bidi-isolate">{item.reason || t("noReason")}</dd></div></dl></SurfaceCard><LeaveOverlays form={form} onSave={createOrUpdate} dirty={dirty} pending={pending} onDirtyChange={setDirty} onPendingChange={setPending} onClose={closeForm} cancelTarget={cancelTarget} onCancelTarget={setCancelTarget} cancel={cancel} /></div>;
+  }
+  return <div className="admin-page"><PageHeaderV2 title={t("leaveAvailability")} description={t("leaveHelp")} action={<Button onClick={() => setForm("new")}><Plus size={18} />{t("createLeave")}</Button>} /><SurfaceCard major><div className="leave-list-header"><h3>{t("leaveRecords")} {leave.data ? <bdi>({leave.data.count})</bdi> : null}</h3>{hasFilters ? <Button compact variant="secondary" onClick={clear}>{t("clearFilters")}</Button> : null}</div><div className="leave-filter-grid"><EmployeePicker value={employeeId} selected={selectedEmployee} onChange={(value) => set("employee", value)} /><SelectField label={t("type")} value={type} onChange={(event) => set("type", event.target.value)}><option value="">{t("all")}</option><option value="UNAVAILABLE">{t("unavailable")}</option><option value="AVAILABLE_OVERRIDE">{t("availableOverride")}</option></SelectField><SelectField label={t("status")} value={state} onChange={(event) => set("state", event.target.value)}><option value="">{t("allLeaveStates")}</option><option value="false">{t("activeLeave")}</option><option value="true">{t("cancelled")}</option></SelectField><Field label={t("dateFrom")} type="datetime-local" value={startFrom} onChange={(event) => set("start_from", event.target.value)} /><Field label={t("dateTo")} type="datetime-local" value={endTo} onChange={(event) => set("end_to", event.target.value)} /></div>{leave.isLoading && !leave.data ? <StatePanel state="loading" title={t("loadingLeave")} /> : leave.isError && !leave.data ? <StatePanel state="error" title={t("leaveUnavailable")} description={getErrorMessage(leave.error)} action={<Button variant="secondary" onClick={() => void leave.refetch()}>{t("retry")}</Button>} /> : leave.data ? <DataTableShell title={t("leaveRecords")} count={leave.data.count} state={!leave.data.results.length ? <StatePanel state="empty" title={hasFilters ? t("noLeaveMatches") : t("noLeave")} /> : undefined}><table className="leave-record-table"><thead><tr><th>{t("employee")}</th><th>{t("role")}</th><th>{t("type")}</th><th>{t("date")}</th><th>{t("reason")}</th></tr></thead><tbody>{leave.data.results.map((item) => <ClickableRow key={item.id} ariaLabel={`${item.doctor?.full_name ?? item.staff?.full_name ?? t("employee")}: ${item.reason || t("noReason")}`} onOpen={() => navigate(`/admin/leave/${item.id}${params.toString() ? `?${params}` : ""}`)}><td><strong className="bidi-isolate">{item.doctor?.full_name ?? item.staff?.full_name}</strong></td><td>{item.doctor ? t("doctor") : t("staff")}</td><td><LeaveBadges item={item} /></td><td><bdi>{formatDateRange(item.start_datetime, item.end_datetime)}</bdi></td><td className="bidi-isolate leave-reason-cell">{item.reason || t("noReason")}</td></ClickableRow>)}</tbody></table></DataTableShell> : null}{leave.isFetching && leave.data ? <p role="status">{t("refreshingLeave")}</p> : null}</SurfaceCard>{leave.data ? <Pagination page={page} hasPrevious={Boolean(leave.data.previous)} hasNext={Boolean(leave.data.next)} onPrevious={() => set("page", String(page - 1))} onNext={() => set("page", String(page + 1))} /> : null}<LeaveOverlays form={form} onSave={createOrUpdate} dirty={dirty} pending={pending} onDirtyChange={setDirty} onPendingChange={setPending} onClose={closeForm} cancelTarget={cancelTarget} onCancelTarget={setCancelTarget} cancel={cancel} /></div>;
 }
+
+function LeaveOverlays({ form, onSave, dirty, pending, onDirtyChange, onPendingChange, onClose, cancelTarget, onCancelTarget, cancel }: { form: AvailabilityException | "new" | null; onSave: (payload: AvailabilityExceptionPayload) => Promise<unknown>; dirty: boolean; pending: boolean; onDirtyChange: (value: boolean) => void; onPendingChange: (value: boolean) => void; onClose: () => void; cancelTarget: AvailabilityException | null; onCancelTarget: (value: AvailabilityException | null) => void; cancel: ReturnType<typeof useMutation<unknown, unknown, AvailabilityException>> }) { const t = useFeatureT(); return <><Modal open={Boolean(form)} title={form === "new" ? t("createLeave") : t("editLeave")} onClose={onClose} dirty={dirty} pending={pending}><LeaveForm key={form === "new" ? "new" : form?.id} leave={form && form !== "new" ? form : undefined} onSave={onSave} onDirtyChange={onDirtyChange} onPendingChange={onPendingChange} /></Modal><ConfirmDialog open={Boolean(cancelTarget)} title={t("cancelLeave")} description={t("cancelLeaveImpact")} onClose={() => onCancelTarget(null)} pending={cancel.isPending}>{cancelTarget?.doctor ? <p>{t("doctorImpact")}</p> : <p>{t("staffImpact")}</p>}{cancel.error ? <StatePanel state="error" title={t("error")} description={getErrorMessage(cancel.error)} /> : null}<div className="v2-sticky-actions"><Button variant="secondary" onClick={() => onCancelTarget(null)}>{t("cancel")}</Button><Button variant="danger" loading={cancel.isPending} onClick={() => cancelTarget && cancel.mutate(cancelTarget)}>{t("cancelLeave")}</Button></div></ConfirmDialog></>; }

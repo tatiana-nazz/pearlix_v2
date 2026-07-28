@@ -2,6 +2,7 @@ import { ErrorState } from "../../../components/ErrorState";
 import { LoadingState } from "../../../components/LoadingState";
 import type { AppointmentAvailability, AvailabilitySlot } from "../../../types/appointments";
 import { formatTime } from "../../../utils/dates";
+import { useFeatureT } from "../../../layouts/i18n";
 
 interface AvailabilityPickerProps {
   availability?: AppointmentAvailability;
@@ -13,13 +14,14 @@ interface AvailabilityPickerProps {
 }
 
 export function AvailabilityPicker({ availability, isLoading, error, selectedStart, onSelect, onRetry }: AvailabilityPickerProps) {
-  if (isLoading) return <LoadingState title="Loading available appointment slots..." />;
-  if (error) return <ErrorState error={error} onRetry={onRetry} title="Unable to load availability" />;
-  if (!availability) return <p className="empty-state">Choose a doctor and date to see open slots.</p>;
-  if (!availability.available_slots.length) return <p className="empty-state">No available slots for this doctor and date.</p>;
+  const t = useFeatureT();
+  if (isLoading) return <LoadingState title={t("loadingAvailability")} />;
+  if (error) return <ErrorState error={error} onRetry={onRetry} title={t("unableToLoadAvailability")} />;
+  if (!availability) return <p className="empty-state">{t("chooseDoctorDate")}</p>;
+  if (!availability.available_slots.length) return <p className="empty-state">{t("noAvailableSlots")}</p>;
 
   return (
-    <div className="availability-grid" aria-label="Available appointment slots">
+    <div className="availability-grid" aria-label={t("availableTime")}>
       {availability.available_slots.map((slot) => (
         <button
           className={slot.start_datetime === selectedStart ? "active" : ""}
@@ -28,10 +30,10 @@ export function AvailabilityPicker({ availability, isLoading, error, selectedSta
           onClick={() => onSelect(slot)}
         >
           <strong>
-            {formatTime(slot.start_datetime)} - {formatTime(slot.end_datetime)}
+            <span className="bidi-isolate">{formatTime(slot.start_datetime)} - {formatTime(slot.end_datetime)}</span>
           </strong>
           <span>
-            {slot.current_count}/{slot.capacity} booked
+            <span className="bidi-isolate">{slot.current_count}/{slot.capacity} {t("booked")}</span>
           </span>
         </button>
       ))}

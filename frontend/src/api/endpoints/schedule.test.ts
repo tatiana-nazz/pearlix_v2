@@ -34,4 +34,10 @@ describe("scheduleApi", () => {
     expect(patch).toHaveBeenCalledWith("/working-shifts/4/", { name: "Evening", version: 2 });
     expect(patch.mock.calls[0][1]).not.toHaveProperty("status");
   });
+
+  it("loads a leave detail through the production retrieve endpoint", async () => {
+    const get = vi.spyOn(api, "get").mockResolvedValue({} as never);
+    await scheduleApi.availabilityException(14);
+    expect(get).toHaveBeenCalledWith("/availability-exceptions/14/");
+  });
 });

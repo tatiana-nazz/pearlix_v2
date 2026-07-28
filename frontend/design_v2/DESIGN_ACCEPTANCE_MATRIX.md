@@ -14,8 +14,8 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | SH-02 | shell collapsed, Staff seed | 84 px Lucide rail, tooltip/name, persisted state | 1024 dark/EN; no letter labels | 14C |
 | SH-03 | tablet drawer, Doctor seed | labelled focus-trapped drawer, closes after navigation | 768 light/AR; no page overflow | 14C |
 | SH-04 | header utilities | theme, EN/AR, profile/role menu update preferences | interaction test + both themes/languages | 14C |
-| DB-ADM | `/admin/dashboard`, Phase 14A data | five ordered KPIs, 4→8 previews and filtered links/read-only | 1440/1024/768 populated + empty/error | 14D |
-| DB-STF | `/staff/dashboard`, Phase 14A data | exact five KPI/queue order and two quick actions | 1440/1024/768, queue click preserves filter | 14D |
+| DB-ADM | `/admin/dashboard`, Phase 14A data | approved four primary KPI cards, previews and filtered links/read-only | 1440/1024/768 populated + empty/error | 14D |
+| DB-STF | `/staff/dashboard`, Phase 14A data | approved four primary KPI cards, queue order and two quick actions | 1440/1024/768, queue click preserves filter | 14D |
 | DB-DOC | `/doctor/dashboard`, active visit seed | banner only when active; own-only KPI/queues | 1440/1024/768, no billing action | 14D |
 | TEAM-L | `/admin/team`, Doctor/Staff seeds | tabs, search, paged rich rows, only supported fields | 1440/1024/768 + Team API/RBAC test | 14C.0/14D |
 | TEAM-D | `/admin/team/:memberId` | ordered profile/schedule/leave/workload/account; no fake activity | supported-field/error/readonly evidence | 14C.0/14D |
@@ -24,11 +24,11 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | USER-D | `/admin/users/:id` | separate role/reset/deactivate confirmations | transition/deactivation test + evidence | 14C.0/14D |
 | PAT-L | all role patient lists | rich row columns, role filters, server pagination | role/row keyboard/tablet tests | 14D |
 | PAT-P | all role profiles | ordered header/tabs; billing only Admin/Staff | ownership/archive/billing tests | 14D |
-| AP-D | appointment Day | exact toolbar/timeline/drawer and role actions | date/filter/action tests, 1440/768 | 14D |
+| AP-D | appointment Day | localized toolbar/timeline, centered details/form/status modals, role actions, dirty/focus safety | date/filter/action/modal tests, 1440/768 | 14D |
 | AP-W | appointment Week | readable 7-day contained grid | width/scroll/RTL evidence | 14D |
 | AP-M | appointment Month | count summary then day navigation | calendar selection test/evidence | 14D |
 | AP-L | appointment List | paged clickable rows/filter preservation | pagination/keyboard/tablet test | 14D |
-| AP-R | Needs Reschedule/reschedule | queue + availability, one-record confirmation | availability/RBAC test/evidence | 14D |
+| AP-R | Needs Reschedule/reschedule | localized queue + availability, centered one-record reschedule modal | availability/RBAC/modal test/evidence | 14D |
 | SCH-01 | `/admin/doctors` | default/employee 5/7 weekly master-detail | impact confirmation test + 1440/768 | 14E |
 | LEAVE-01 | `/admin/leave*` | filter/list-calendar/detail/cancel no DELETE | cancel/version/RBAC test | 14E |
 | VIS-A | `/doctor/visits/active` | five notes, dirty/save/complete separation | ownership/dirty test + 1440/768 | 14E |
@@ -46,3 +46,5 @@ Pass means seeded populated, loading, empty, error, permission/read-only/locked 
 | WIDTH-01 | all priority routes | 1440,1280,1024,768 geometry/no overflow | four screenshots each role | 14F |
 
 Any failed ID blocks the dependent phase and Phase 14G.
+
+Phase 14D automated closure covers dashboards, Team, Users & Access, appointments, and patients with EN/AR, RTL/bidi, role restrictions, and shared-overlay regression coverage. Browser QA is pending for Phase 14F; Phase 14E is next.

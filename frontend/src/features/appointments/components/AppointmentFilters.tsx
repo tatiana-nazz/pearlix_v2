@@ -1,5 +1,7 @@
 import type { AppointmentStatus } from "../../../types/appointments";
 import type { DoctorListItem } from "../../../types/schedule";
+import { useFeatureT } from "../../../layouts/i18n";
+import { statusLabel } from "../../../components/v2";
 
 export type AppointmentStatusFilter = AppointmentStatus | "ALL";
 
@@ -35,27 +37,28 @@ export function AppointmentFilters({
   onStatusChange,
   onDoctorChange,
 }: AppointmentFiltersProps) {
+  const t = useFeatureT();
   return (
-    <section className="appointment-filters" aria-label="Appointment filters">
+    <section className="appointment-filters" aria-label={t("appointments")}>
       <label>
-        Date
+        {t("date")}
         <input type="date" value={date} onChange={(event) => onDateChange(event.target.value)} />
       </label>
       <label>
-        Status
+        {t("status")}
         <select value={status} onChange={(event) => onStatusChange(event.target.value as AppointmentStatusFilter)}>
           {statusOptions.map((option) => (
             <option key={option} value={option}>
-              {option.split("_").join(" ")}
+              {option === "ALL" ? t("all") : statusLabel(option)}
             </option>
           ))}
         </select>
       </label>
       {showDoctorFilter ? (
         <label>
-          Doctor
+          {t("doctor")}
           <select value={doctorId} onChange={(event) => onDoctorChange(event.target.value)}>
-            <option value="">All Doctors</option>
+            <option value="">{t("allDoctors")}</option>
             {doctors.map((doctor) => (
               <option key={doctor.id} value={doctor.id}>
                 {doctor.full_name}

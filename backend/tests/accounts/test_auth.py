@@ -1,4 +1,5 @@
 import pytest
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 
@@ -76,9 +77,10 @@ def test_authenticated_user_can_fetch_me(staff_client, staff_user):
         "is_active": True,
         "theme_preference": User.ThemePreference.SYSTEM,
         "language_preference": User.LanguagePreference.EN,
-        "must_change_password": False,
-        "password_changed_at": None,
-    }
+            "must_change_password": False,
+            "password_changed_at": None,
+            "operational_status": None,
+        }
 
 
 @pytest.mark.django_db
@@ -139,3 +141,14 @@ def test_refresh_and_logout_endpoints(api_client, staff_user):
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {login_response.data['access']}")
     logout_response = api_client.post("/api/auth/logout/", {"refresh": refresh}, format="json")
     assert logout_response.status_code == 204
+
+
+@pytest.mark.django_db
+def test_refresh_for_deleted_user_is_rejected(api_client, staff_user):
+    refresh = str(RefreshToken.for_user(staff_user))
+    staff_user.delete()
+
+    response = api_client.post("/api/auth/refresh/", {"refresh": refresh}, format="json")
+
+    assert response.status_code == 401
+    assert response.data["code"] == "TOKEN_NOT_VALID"

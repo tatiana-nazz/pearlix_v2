@@ -7,6 +7,7 @@ from apps.visits.models import Visit
 
 class VisitAppointmentSummarySerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
+    doctor = UserSummarySerializer(read_only=True)
     start_datetime = serializers.DateTimeField(read_only=True)
     end_datetime = serializers.DateTimeField(read_only=True)
     duration_minutes = serializers.IntegerField(read_only=True)

@@ -1,15 +1,9 @@
 import type { UserRole } from "../../../types/auth";
 import { getPatientPermissions } from "../utils/patientPermissions";
+import { useFeatureT } from "../../../layouts/i18n";
 
 export type PatientProfileTab = "overview" | "medical" | "visits" | "appointments" | "xrays" | "billing";
 
-const baseTabs: Array<{ id: PatientProfileTab; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "medical", label: "Medical Summary" },
-  { id: "visits", label: "Visits" },
-  { id: "appointments", label: "Appointments" },
-  { id: "xrays", label: "X-rays & AI" },
-];
 
 interface PatientProfileTabsProps {
   role: UserRole;
@@ -18,10 +12,11 @@ interface PatientProfileTabsProps {
 }
 
 export function PatientProfileTabs({ role, activeTab, onTabChange }: PatientProfileTabsProps) {
-  const tabs = getPatientPermissions(role).canViewBillingTab ? [...baseTabs, { id: "billing" as const, label: "Billing/Handoff" }] : baseTabs;
+  const t = useFeatureT(); const baseTabs: Array<{ id: PatientProfileTab; label: string }> = [{ id:"overview", label:t("overview") }, { id:"medical", label:t("medicalSummary") }, { id:"visits", label:t("visits") }, { id:"appointments", label:t("appointments") }, { id:"xrays", label:t("xraysAi") }];
+  const tabs = getPatientPermissions(role).canViewBillingTab ? [...baseTabs, { id: "billing" as const, label: t("billingHandoff") }] : baseTabs;
 
   return (
-    <div className="profile-tabs" role="tablist" aria-label="Patient profile sections">
+    <div className="profile-tabs" role="tablist" aria-label={t("patientProfile")}>
       {tabs.map((tab) => (
         <button
           key={tab.id}

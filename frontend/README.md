@@ -61,7 +61,7 @@ npm run build
 
 ## Browser QA
 
-Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Use `frontend/QA_13K.md` for the final regression and browser UAT checklist, `frontend/QA_14A.md` for the integrated demo-story checklist, `frontend/QA_14B.md` for the design-freeze review, `frontend/QA_14C0.md` for Team API contract verification, and `frontend/QA_14C.md` for the shell foundation. Browser QA execution is still pending.
+Use `frontend/QA_13C.md` for the auth/layout browser QA checklist. Use `frontend/QA_13D.md` for dashboard QA with the local QA accounts. Use `frontend/QA_13J.md` for Admin user management, clinic-settings, and audit-log QA. Use `frontend/QA_13K.md` for the final regression and browser UAT checklist, `frontend/QA_14A.md` for the integrated demo-story checklist, `frontend/QA_14B.md` for the design-freeze review, `frontend/QA_14C0.md` for Team API contract verification, and `frontend/QA_14C.md` for the shell foundation. Phase 14F browser visual/UAT is complete; current-head evidence is in `frontend/design_v2/phase14f_evidence/current_head_acceptance/`.
 Use `frontend/QA_13E.md` for original patient list/profile QA and `frontend/QA_13E1.md` for the upgraded patient schema/version contract QA. Use `frontend/QA_13F.md` for appointment and reschedule QA, `frontend/QA_13F1.md` for schedules and leave, `frontend/QA_13G.md` for active visits and clinical notes, `frontend/QA_13H.md` for X-rays and AI, and `frontend/QA_13I.md` for billing handoffs, invoices, payments, and print-data QA.
 
 ## Local QA Accounts
@@ -89,7 +89,7 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 - Doctor dashboard uses `GET /dashboard/doctor/`.
 - Dashboards render real backend data only; no permanent demo dashboard data is hardcoded.
 - Patient workflows are implemented through Phase 13E.1; appointment/rescheduling through 13F; shift/availability through 13F.1; active visits through 13G; X-ray/AI through 13H; billing through 13I; Admin user management, clinic settings, and audit logs through 13J; and final regression/release-readiness polish through 13K. See `backend/project_docs/PROJECT_STATUS.md` for canonical current/next phase status.
-- Browser QA is still pending execution with the seeded local QA accounts to verify live role data, 401 refresh behavior, and backend 403 handling.
+- Current-head browser QA is complete with the seeded local QA accounts; see `frontend/design_v2/PHASE_14F_BROWSER_AUDIT.md`.
 
 ## Patient Management
 
@@ -191,10 +191,12 @@ The old `frontend/design/` documents (`DESIGN_SYSTEM.md`, `RESPONSIVE_LAYOUT_SPE
 ## Intentionally Not Implemented Yet
 
 - Real AI integration beyond the MVP `MOCK_ADAPTER`.
-- Email forgot-password and runtime Team/Users & Access redesign (the Phase 14C.0 professional-profile API is implemented; final screens are Phase 14D). Gender, qualifications, license, profile photo, Staff biography, and activity notes remain intentionally unsupported professional fields.
+- Email forgot-password. Gender, qualifications, license, profile photo, Staff biography, and activity notes remain intentionally unsupported professional fields.
 - Online payments, invoice itemization, tax, discount, and insurance workflows.
-- Browser QA execution for completed frontend phases remains pending.
+- Phase 14F completed browser visual/UAT acceptance for the required Staff, Admin, and Doctor route matrix.
 
 ## Project Status
 
-`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14C is complete with 75 frontend tests. Next is Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access. Deployment remains paused pending Phase 14D–14F and browser QA. See `frontend/design_v2/UI_REFOCUS_MANIFEST.md` and `frontend/QA_14C.md`.
+Phase 14D automated acceptance and Phase 14E supporting operations automated acceptance are complete. Phase 14F browser visual/UAT acceptance is complete. Frontend verification: 68 test files, 236 tests; TypeScript typecheck and production build passed. Focused protected-media backend verification: 50 passed; full backend verification: 423 passed; Django check passed; migration drift: no changes detected; backend runtime modified in Phase 14F: no; migrations: none. Current-head browser evidence is `frontend/design_v2/phase14f_evidence/current_head_acceptance/`.
+
+`backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14D, Phase 14E, and Phase 14F browser visual/UAT acceptance are complete. See `frontend/design_v2/PHASE_14F_BROWSER_AUDIT.md`.

@@ -1,6 +1,6 @@
 import pytest
 
-from apps.accounts.models import User
+from apps.accounts.models import DoctorProfile, User
 from apps.scheduling.models import Appointment, ClinicDefaultShift, WorkingShift
 
 
@@ -93,3 +93,13 @@ def test_split_shift_availability_has_midday_gap_and_ignores_staff_shift(admin_c
     starts = {slot["start_datetime"][11:16] for slot in response.data["available_slots"]}
     assert response.status_code == 200 and "09:00" in starts and "16:00" in starts
     assert not any("13:00" <= value < "16:00" for value in starts)
+
+
+@pytest.mark.django_db
+def test_active_professional_cannot_remove_final_active_shift(admin_client, doctor_user):
+    profile = DoctorProfile.objects.create(user=doctor_user, specialty="General", is_active=True)
+    shift = admin_client.post("/api/working-shifts/", shift_payload(doctor_user), format="json")
+    rejected = admin_client.post(f"/api/working-shifts/{shift.data['id']}/deactivate/", {"version": shift.data['version']}, format="json")
+    assert rejected.status_code == 409 and rejected.data["code"] == "ACTIVE_PROFESSIONAL_REQUIRES_SCHEDULE"
+    assert WorkingShift.objects.get(pk=shift.data["id"]).is_active is True
+    profile.refresh_from_db(); assert profile.is_active is True

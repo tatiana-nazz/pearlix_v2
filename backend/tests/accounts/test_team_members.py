@@ -1,9 +1,10 @@
 import pytest
 from rest_framework.test import APIClient
+from django.core.management import call_command
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
 from apps.audit.models import ActivityLog
-from apps.scheduling.models import Appointment
+from apps.scheduling.models import Appointment, Weekday, WorkingShift
 
 
 @pytest.mark.django_db
@@ -19,8 +20,34 @@ def test_team_member_onboarding_is_transactional_and_sanitized(admin_client):
     assert user.must_change_password and user.check_password("StrongTeam!4567")
     assert user.role == User.Role.DOCTOR and user.doctor_profile.specialty == "Endodontics"
     assert response.data["account"]["is_active"] is True
+    assert response.data["professional_status"] == "INACTIVE"
+    assert response.data["operational_status"] == "SETUP_REQUIRED"
     event = ActivityLog.objects.get(action="team_member_created", entity_id=str(user.id))
     assert "password" not in str(event.metadata_json).lower()
+
+
+@pytest.mark.django_db
+def test_professional_activation_requires_an_active_shift_and_preserves_version(admin_client, doctor_user):
+    profile = DoctorProfile.objects.create(user=doctor_user, specialty="General", is_active=False)
+    rejected = admin_client.post(f"/api/team-members/{doctor_user.id}/set-professional-status/", {"version": profile.version, "is_active": True}, format="json")
+    profile.refresh_from_db()
+    assert rejected.status_code == 409
+    assert rejected.data["code"] == "ACTIVE_PROFESSIONAL_REQUIRES_SCHEDULE"
+    assert profile.is_active is False and profile.version == 1 and doctor_user.is_active is True
+    WorkingShift.objects.create(employee=doctor_user, weekday=Weekday.MONDAY, name="Morning", start_time="09:00", end_time="12:00")
+    activated = admin_client.post(f"/api/team-members/{doctor_user.id}/set-professional-status/", {"version": profile.version, "is_active": True}, format="json")
+    assert activated.status_code == 200 and activated.data["operational_status"] == "ACTIVE"
+
+
+@pytest.mark.django_db
+def test_audit_professional_schedules_fixes_only_profile_status(capsys, doctor_user):
+    profile = DoctorProfile.objects.create(user=doctor_user, specialty="General", is_active=True)
+    call_command("audit_professional_schedules")
+    assert "violations=1" in capsys.readouterr().out
+    call_command("audit_professional_schedules", "--fix")
+    profile.refresh_from_db(); doctor_user.refresh_from_db()
+    assert profile.is_active is False and profile.version == 2 and doctor_user.is_active is True
+    assert ActivityLog.objects.filter(action="professional_schedule_invariant_repaired", entity_id=str(doctor_user.id)).exists()
 
 
 @pytest.mark.django_db
@@ -55,10 +82,41 @@ def test_team_list_excludes_admin_and_unlinked_professional_accounts(admin_clien
 
 
 @pytest.mark.django_db
-def test_team_endpoints_require_admin(api_client, staff_client, doctor_client):
-    for client in (api_client, staff_client, doctor_client):
+def test_team_endpoints_require_authentication_and_keep_doctors_denied(api_client, doctor_client):
+    for client in (api_client, doctor_client):
         response = client.get("/api/team-members/")
         assert response.status_code in {401, 403}
+
+
+@pytest.mark.django_db
+def test_staff_has_read_only_safe_team_directory_access(admin_client, staff_client, doctor_client, doctor_user, staff_user):
+    DoctorProfile.objects.create(user=doctor_user, specialty="Endodontics", phone="111")
+    StaffProfile.objects.create(user=staff_user, position="Coordinator", phone="222")
+    WorkingShift.objects.create(employee=doctor_user, weekday=Weekday.MONDAY, name="Morning", start_time="09:00", end_time="12:00", is_active=True)
+    WorkingShift.objects.create(employee=doctor_user, weekday=Weekday.TUESDAY, name="Afternoon", start_time="13:00", end_time="16:00", is_active=True)
+
+    listed = staff_client.get("/api/team-members/?role=DOCTOR")
+    detail = staff_client.get(f"/api/team-members/{doctor_user.id}/")
+
+    assert admin_client.get("/api/team-members/").status_code == 200
+    assert listed.status_code == 200 and listed.data["count"] == 1
+    assert detail.status_code == 200
+    assert listed.data["results"][0]["schedule_summary"] == {"has_active_schedule": True, "active_shift_count": 2}
+    assert {"id", "role", "full_name", "email", "availability", "today_workload", "schedule_summary"} <= set(detail.data)
+    forbidden = {"account", "version", "created_at", "updated_at"}
+    assert not (forbidden & set(detail.data))
+    assert "is_active" not in detail.data["profile"]
+    assert "id" not in detail.data["active_shifts"][0]
+    assert "id" not in detail.data["today_appointments"][0] if detail.data["today_appointments"] else True
+    for method, path, data in (
+        (staff_client.post, "/api/team-members/", {"role": "DOCTOR"}),
+        (staff_client.patch, f"/api/team-members/{doctor_user.id}/", {"version": 1, "specialty": "Changed"}),
+        (staff_client.post, f"/api/team-members/{doctor_user.id}/set-professional-status/", {"version": 1, "is_active": False}),
+        (staff_client.delete, f"/api/team-members/{doctor_user.id}/", {}),
+    ):
+        response = method(path, data, format="json")
+        assert response.status_code == 403
+    assert doctor_client.get("/api/team-members/").status_code == 403
 
 
 @pytest.mark.django_db

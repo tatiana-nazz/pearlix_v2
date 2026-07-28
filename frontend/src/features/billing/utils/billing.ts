@@ -13,3 +13,5 @@ export function canManageInvoice(role: UserRole, invoice: Invoice): boolean {
 export function canManageHandoff(role: UserRole, handoff: BillingHandoff): boolean {
   return role === "STAFF" && handoff.status === "PENDING";
 }
+
+export function isPositiveMoney(value: string): boolean { return /^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0; }

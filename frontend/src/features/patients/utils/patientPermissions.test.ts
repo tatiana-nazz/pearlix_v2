@@ -25,6 +25,7 @@ describe("getPatientPermissions", () => {
       canUnarchive: false,
     });
     expect(getPatientPermissions("STAFF", archivedPatient).canUnarchive).toBe(true);
+    expect(getPatientPermissions("STAFF", archivedPatient).canEdit).toBe(false);
   });
 
   it("allows Doctor profile editing but not archive controls", () => {

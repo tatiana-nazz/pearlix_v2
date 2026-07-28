@@ -233,6 +233,66 @@ def convert_handoff_to_invoice(*, handoff: BillingHandoff, user, data: dict) -> 
         return invoice
 
 
+def create_invoice_from_doctor_final_charge(*, visit: Visit, user, data: dict) -> Invoice:
+    """Create the official invoice as one transaction; pending handoffs are legacy-only."""
+    if user.role != "DOCTOR":
+        raise BillingRuleError("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
+
+    total_amount = _validate_positive_amount(data.get("total_amount"), "total_amount")
+    currency = _validate_currency(data.get("currency"))
+    with transaction.atomic():
+        locked_visit = Visit.objects.select_for_update().select_related("patient", "appointment", "doctor").get(pk=visit.pk)
+        if locked_visit.doctor_id != user.id:
+            raise BillingRuleError("NOT_FOUND", "Visit was not found.", status_code=status.HTTP_404_NOT_FOUND)
+        if locked_visit.status != Visit.Status.COMPLETED:
+            raise BillingRuleError("VISIT_NOT_COMPLETED", "Final charges can only be submitted for completed visits.", status_code=status.HTTP_409_CONFLICT)
+
+        existing_invoice = Invoice.objects.select_for_update().filter(visit=locked_visit).first()
+        if existing_invoice:
+            raise BillingRuleError(
+                "INVOICE_ALREADY_EXISTS",
+                "An invoice already exists for this visit.",
+                {"invoice_id": existing_invoice.id},
+                status_code=status.HTTP_409_CONFLICT,
+            )
+
+        handoff = BillingHandoff.objects.select_for_update().filter(visit=locked_visit).first()
+        if handoff and handoff.converted_invoice_id:
+            raise BillingRuleError("INVOICE_ALREADY_EXISTS", "An invoice already exists for this visit.", {"invoice_id": handoff.converted_invoice_id}, status_code=status.HTTP_409_CONFLICT)
+        if handoff and handoff.status == BillingHandoff.Status.PENDING:
+            # A historical pending record cannot become part of a new normal workflow.
+            raise BillingRuleError("LEGACY_PENDING_HANDOFF_EXISTS", "This visit has a legacy billing handoff that must be handled through the legacy workflow.", status_code=status.HTTP_409_CONFLICT)
+        if handoff is None:
+            handoff = BillingHandoff.objects.create(
+                patient=locked_visit.patient,
+                visit=locked_visit,
+                doctor=locked_visit.doctor,
+                note=data.get("notes", ""),
+                suggested_amount=total_amount,
+                currency=currency,
+                status=BillingHandoff.Status.CONVERTED_TO_INVOICE,
+                created_by=user,
+                updated_by=user,
+            )
+
+        invoice = _create_invoice_with_sequence(
+            patient=locked_visit.patient,
+            appointment=locked_visit.appointment,
+            visit=locked_visit,
+            billing_handoff=handoff,
+            created_by=user,
+            currency=currency,
+            total_amount=total_amount,
+            notes=data.get("notes", ""),
+            status=Invoice.Status.UNPAID,
+        )
+        handoff.status = BillingHandoff.Status.CONVERTED_TO_INVOICE
+        handoff.converted_invoice = invoice
+        handoff.updated_by = user
+        handoff.save(update_fields=["status", "converted_invoice", "updated_by", "updated_at"])
+        return invoice
+
+
 def _validate_invoice_relationships(*, patient, visit=None, appointment=None):
     details = {}
     if visit is not None and visit.patient_id != patient.id:

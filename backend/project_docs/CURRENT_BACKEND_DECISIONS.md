@@ -1,5 +1,9 @@
 # Current Backend Decisions
 
+## Billing workflow (Phase 14F Task M)
+
+The Doctor enters the final charge after completing the Visit. The system atomically creates the official Invoice immediately. Staff does not approve or convert the charge; Staff records Payments and performs only permitted audited Invoice corrections. Admin is read-only. `BillingHandoff` remains only as an internal and historical compatibility record; new Doctor final-charge submissions create it directly in `CONVERTED_TO_INVOICE` state and never create a pending handoff.
+
 Project: Dental Clinic Management System Website
 Backend: Django + Django REST Framework + PostgreSQL
 API base path: `/api/`

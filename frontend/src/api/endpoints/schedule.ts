@@ -1,5 +1,5 @@
 import type { Page, QueryParams } from "../../types/api";
-import type { AvailabilityCancelResponse, AvailabilityException, AvailabilityExceptionPayload, ClinicDefaultShift, DoctorListItem, ScheduleApplyMode, ScheduleMutationResult, WorkingHoursPayload, WorkingHoursResponse, WorkingShift, WorkingShiftPayload } from "../../types/schedule";
+import type { AvailabilityCancelResponse, AvailabilityException, AvailabilityExceptionMutationResult, AvailabilityExceptionPayload, ClinicDefaultShift, DoctorListItem, ScheduleApplyMode, ScheduleMutationResult, WorkingHoursPayload, WorkingHoursResponse, WorkingShift, WorkingShiftPayload } from "../../types/schedule";
 import { api } from "../http";
 
 export const scheduleApi = {
@@ -17,7 +17,8 @@ export const scheduleApi = {
   applyDefault: (employee_id: number, mode: ScheduleApplyMode, confirm_appointment_impact = false) => api.post<ScheduleMutationResult>("/working-shifts/apply-default/", { employee_id, mode, confirm_appointment_impact }),
   copySchedule: (source_employee_id: number, target_employee_id: number, mode: ScheduleApplyMode, confirm_appointment_impact = false) => api.post<ScheduleMutationResult>("/working-shifts/copy-schedule/", { source_employee_id, target_employee_id, mode, confirm_appointment_impact }),
   availabilityExceptions: (query?: QueryParams) => api.get<Page<AvailabilityException>>("/availability-exceptions/", query),
-  createAvailabilityException: (payload: AvailabilityExceptionPayload) => api.post<AvailabilityException, AvailabilityExceptionPayload>("/availability-exceptions/", payload),
-  updateAvailabilityException: (id: number, payload: Partial<AvailabilityExceptionPayload> & { version: number }) => api.patch<AvailabilityException>(`/availability-exceptions/${id}/`, payload),
+  availabilityException: (id: number) => api.get<AvailabilityException>(`/availability-exceptions/${id}/`),
+  createAvailabilityException: (payload: AvailabilityExceptionPayload) => api.post<AvailabilityExceptionMutationResult, AvailabilityExceptionPayload>("/availability-exceptions/", payload),
+  updateAvailabilityException: (id: number, payload: Partial<AvailabilityExceptionPayload> & { version: number }) => api.patch<AvailabilityExceptionMutationResult>(`/availability-exceptions/${id}/`, payload),
   cancelAvailabilityException: (id: number, version: number) => api.post<AvailabilityCancelResponse>(`/availability-exceptions/${id}/cancel/`, { version }),
 };

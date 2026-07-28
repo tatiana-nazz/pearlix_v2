@@ -1,118 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-
 import { getAdminDashboard } from "../../api/endpoints/dashboard";
-import { Card } from "../../components/Card";
-import { EmptyState } from "../../components/EmptyState";
-import { ErrorState } from "../../components/ErrorState";
-import { LoadingState } from "../../components/LoadingState";
-import { PageHeader } from "../../components/PageHeader";
-import { SectionHeader } from "../../components/SectionHeader";
-import { StatCard } from "../../components/StatCard";
-import { StatusPill } from "../../components/StatusPill";
-import { SummaryList } from "../../components/SummaryList";
-import type { DashboardAppointmentSummary, DashboardInvoiceSummary } from "../../types/dashboard";
-import { formatDateRange } from "../../utils/dates";
-import { formatCount, formatCurrencyAmount, displayText } from "../../utils/formatters";
-
-function renderAppointment(item: DashboardAppointmentSummary) {
-  return (
-    <li className="summary-row" key={item.id}>
-      <div>
-        <strong>{item.patient.full_name}</strong>
-        <span>{formatDateRange(item.start_datetime, item.end_datetime)}</span>
-        <span>
-          {item.doctor.full_name} - {displayText(item.reason, "No reason recorded")}
-        </span>
-      </div>
-      <StatusPill status={item.status} />
-    </li>
-  );
-}
-
-function renderInvoice(item: DashboardInvoiceSummary) {
-  return (
-    <li className="summary-row" key={item.id}>
-      <div>
-        <strong>{item.invoice_number}</strong>
-        <span>{item.patient.full_name}</span>
-        <span>Remaining {formatCurrencyAmount(item.remaining_amount, item.currency)}</span>
-      </div>
-      <StatusPill status={item.status} />
-    </li>
-  );
-}
+import { PageHeaderV2, PreviewList, SectionHeading, StatePanel, SurfaceCard, StatusBadge } from "../../components/v2";
+import { DashboardError, DashboardLoading, Icons, Kpis, useClinicDashboardDate } from "../dashboard/DashboardV2";
+import { useFeatureT } from "../../layouts/i18n";
 
 export function AdminDashboardPage() {
-  const dashboard = useQuery({
-    queryKey: ["dashboard", "admin"],
-    queryFn: getAdminDashboard,
-  });
-
-  if (dashboard.isLoading) return <LoadingState title="Loading admin dashboard..." />;
-  if (dashboard.isError) return <ErrorState error={dashboard.error} onRetry={() => void dashboard.refetch()} />;
-  if (!dashboard.data) return <EmptyState title="No admin dashboard data was returned." />;
-
-  const data = dashboard.data;
-
-  return (
-    <div className="dashboard-page">
-      <PageHeader
-        eyebrow="Admin dashboard"
-        title="Clinic operations overview"
-        description="Read-only operational status from the backend admin dashboard endpoint."
-        actions={
-          <div className="page-header-actions"><Link className="button secondary" to="/admin/clinic-settings">Clinic settings</Link><Link className="button secondary" to="/admin/billing/invoices">Invoices</Link></div>
-        }
-      />
-
-      <div className="dashboard-grid">
-        <StatCard label="Active patients" value={formatCount(data.total_active_patients)} description="Currently visible records" />
-        <StatCard label="Today's appointments" value={formatCount(data.today_appointments_count)} description="All clinic appointments" />
-        <StatCard
-          label="Needs reschedule"
-          value={formatCount(data.needs_reschedule_appointments_count)}
-          description="Created by availability changes"
-          tone={data.needs_reschedule_appointments_count ? "attention" : "default"}
-        />
-        <StatCard
-          label="Pending handoffs"
-          value={formatCount(data.pending_billing_handoffs_count)}
-          description="Awaiting Staff review"
-          tone={data.pending_billing_handoffs_count ? "attention" : "default"}
-        />
-      </div>
-
-      <div className="dashboard-columns">
-        <Card>
-          <SummaryList
-            title="Recent appointments"
-            description="Latest appointment activity across the clinic."
-            items={data.recent_appointments}
-            emptyMessage="No recent appointments were returned."
-            renderItem={renderAppointment}
-          />
-        </Card>
-
-        <Card>
-          <SummaryList
-            title="Recent invoices"
-            description="Read-only billing visibility for clinic supervision."
-            items={data.recent_invoices}
-            emptyMessage="No recent invoices were returned."
-            renderItem={renderInvoice}
-          />
-        </Card>
-      </div>
-
-      <Card className="dashboard-note">
-        <SectionHeader title="Clinic note" description="Admin dashboard records are supervisory in this phase." />
-        <p>
-          Checked-in appointments: <strong>{formatCount(data.checked_in_appointments_count)}</strong>. Active visits:{" "}
-          <strong>{formatCount(data.active_visits_count)}</strong>. Unpaid invoices:{" "}
-          <strong>{formatCount(data.unpaid_invoices_count)}</strong>.
-        </p>
-      </Card>
-    </div>
-  );
+  const t = useFeatureT();
+  const dashboard = useQuery({ queryKey: ["dashboard", "admin"], queryFn: getAdminDashboard });
+  const clinic = useClinicDashboardDate();
+  if (dashboard.isLoading) return <DashboardLoading />;
+  if (dashboard.isError || !dashboard.data) return <DashboardError retry={() => { void dashboard.refetch(); }} />;
+  const data = dashboard.data; const date = clinic.date ?? ""; const dated = (path: string) => date ? `${path}${path.includes("?") ? "&" : "?"}date=${date}` : path;
+  return <div className="dashboard-page"><PageHeaderV2 title={t("clinicOperations")} description={date ? `${t("clinicLocalDate")} · ${date}` : t("dateUnavailable")} action={<><Link className="v2-button secondary" to="/admin/clinic-settings">{t("clinicSettings")}</Link><Link className="v2-button secondary" to="/admin/users">{t("usersAccess")}</Link></>} />
+    <Kpis items={[
+      { label: t("activePatients"), value: data.total_active_patients, helper: t("activeRecords"), to: "/admin/patients?archive=active", icon: Icons.patients, tone: "info" },
+      { label: t("todayAppointments"), value: data.today_appointments_count, helper: date ? t("clinicLocalDate") : t("dateUnavailable"), to: dated("/admin/appointments/list"), icon: Icons.appointments, tone: "success" },
+      { label: t("needsReschedule"), value: data.needs_reschedule_appointments_count, helper: t("schedulingReview"), to: "/admin/appointments/needs-reschedule?status=NEEDS_RESCHEDULE", icon: Icons.reschedule, tone: "warning" },
+      { label: t("unpaidInvoices"), value: data.unpaid_invoices_count, helper: t("outstandingBalance"), to: "/admin/billing/invoices?status=UNPAID", icon: Icons.money, tone: "danger" },
+    ]} />
+    <div className="dashboard-columns"><SurfaceCard major><SectionHeading title={t("needsAttention")} /><PreviewList initialCount={4} items={data.recent_appointments.filter((item) => item.status === "NEEDS_RESCHEDULE")} viewAll={<Link className="v2-button secondary compact" to="/admin/appointments/needs-reschedule?status=NEEDS_RESCHEDULE">{t("viewAll")}</Link>} renderItem={(item) => <Link className="summary-row" key={item.id} to="/admin/appointments/needs-reschedule?status=NEEDS_RESCHEDULE"><span><strong>{item.patient.full_name}</strong><small>{item.reason || t("schedulingReviewFallback")}</small></span><StatusBadge status={item.status} /></Link>} />{!data.recent_appointments.some((item) => item.status === "NEEDS_RESCHEDULE") ? <StatePanel state="empty" title={t("noAppointmentsNeedAttention")} /> : null}</SurfaceCard>
+      <SurfaceCard><SectionHeading title={t("appointments")} /><PreviewList initialCount={4} items={data.recent_appointments} viewAll={<Link className="v2-button secondary compact" to={dated("/admin/appointments/list")}>{t("viewAll")}</Link>} renderItem={(item) => <Link className="summary-row" key={item.id} to={dated("/admin/appointments/list")}><span><strong>{item.patient.full_name}</strong><small>{item.doctor.full_name}</small></span><StatusBadge status={item.status} /></Link>} /></SurfaceCard></div>
+    <SurfaceCard><SectionHeading title={t("clinicSummary")} /><p>{t("checkedIn")}: <bdi>{data.checked_in_appointments_count}</bdi> · {t("activeVisits")}: <bdi>{data.active_visits_count}</bdi> · {t("unpaidInvoices")}: <bdi>{data.unpaid_invoices_count}</bdi></p></SurfaceCard>
+  </div>;
 }

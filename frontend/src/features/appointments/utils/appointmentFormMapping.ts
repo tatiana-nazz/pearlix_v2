@@ -18,34 +18,36 @@ export const defaultAppointmentFormValues: AppointmentFormValues = {
   patientId: "",
   doctorId: "",
   date: "",
-  time: "09:00",
-  durationMinutes: "30",
+  time: "",
+  durationMinutes: "",
   reason: "",
   notes: "",
 };
 
 export function appointmentToFormValues(appointment?: AppointmentDetail | AppointmentListItem | null): AppointmentFormValues {
   if (!appointment) return defaultAppointmentFormValues;
-  const startsAt = new Date(appointment.start_datetime);
+  const [date = "", time = ""] = appointment.start_datetime.split("T");
   return {
     patientId: String(appointment.patient.id),
     doctorId: String(appointment.doctor.id),
-    date: dateFromAppointment(appointment.start_datetime),
-    time: `${String(startsAt.getHours()).padStart(2, "0")}:${String(startsAt.getMinutes()).padStart(2, "0")}`,
+    date: dateFromAppointment(appointment.start_datetime) || date,
+    time: time.slice(0, 5),
     durationMinutes: String(appointment.duration_minutes),
     reason: appointment.reason ?? "",
     notes: "notes" in appointment ? appointment.notes : "",
   };
 }
 
-export function validateAppointmentForm(values: AppointmentFormValues): AppointmentFormErrors {
+export function validateAppointmentForm(values: AppointmentFormValues, options?: { allowedDurations?: readonly number[]; validTimes?: readonly string[]; allowCurrentTime?: boolean }): AppointmentFormErrors {
   const errors: AppointmentFormErrors = {};
-  if (!Number(values.patientId)) errors.patientId = "Patient ID is required.";
+  if (!Number(values.patientId)) errors.patientId = "Patient is required.";
   if (!Number(values.doctorId)) errors.doctorId = "Doctor is required.";
   if (!values.date) errors.date = "Date is required.";
   if (!values.time) errors.time = "Time is required.";
+  else if (options?.validTimes && !options.validTimes.includes(values.time) && !options.allowCurrentTime) errors.time = "Select an available time.";
   const duration = Number(values.durationMinutes);
   if (!Number.isFinite(duration) || duration <= 0) errors.durationMinutes = "Duration must be greater than zero.";
+  else if (options?.allowedDurations && !options.allowedDurations.includes(duration)) errors.durationMinutes = "Select an allowed duration.";
   return errors;
 }
 

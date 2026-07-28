@@ -1,24 +1,24 @@
 # Project Status
 
-This is the canonical current-phase tracker. Other project documents describe capabilities and defer current/next-phase status to this file.
+This is the canonical current-phase tracker for the Dental Clinic Management System Website.
 
-Project: Dental Clinic Management System Website
+- Current completed phase: **Phase 14F browser visual/UAT acceptance**
+- Phase 14D priority-workflow automated acceptance: complete
+- Phase 14E supporting-operations automated acceptance: complete
+- Phase 14F runtime-and-evidence commit: `4d8f00cdeed0001c1ee8de5fc47d9ec3917f4877`
+- Browser evidence: `frontend/design_v2/phase14f_evidence/current_head_acceptance/`
+- Frontend verification: 68 test files, 236 tests; TypeScript typecheck and production build passed
+- Focused protected-media backend verification: 50 passed
+- Full backend verification: 423 passed
+- Django check passed; migration drift: no changes detected
+- Backend runtime modified in Phase 14F: no; migrations: none
+- Browser QA/UAT: complete for the required Staff, Admin, and Doctor matrix; console and network gates passed
+- Release recommendation: the Phase 14F browser acceptance gate is complete. Proceed only through the repository’s normal deployment controls.
 
-- Current completed phase: 14C Shell, Tokens, Lucide Icons, and Shared Components
-- Phase 13 series: complete
-- Next phase: Phase 14D — Priority Workflows: Dashboards, Appointments, Patients, Team, and Users & Access
-- Next step: implement the complete approved Phase 14D priority-workflow scope
-- Final backend full regression: 414 passed
-- Final frontend regression: 75 passed
-- Backend runtime changes in Phase 14C: no
-- Migrations in Phase 14C: none
-- Backend runtime changes in Phase 14C.0: yes
-- Frontend visible UI changes in Phase 14C: shell/token/shared-component foundation
-- Frontend contract types, wrappers, and tests changed in Phase 14C.0: yes
-- Migrations in Phase 14C.0: accounts.0005 adds User/DoctorProfile/StaffProfile optimistic-lock versions
-- Browser QA/UAT: pending execution with seeded local QA accounts
-- Release recommendation: deployment paused; implement Phases 14D–14F, then complete visual browser QA before controlled deployment
+Phase 14F re-verified the historical 14F-FINAL-01 through 14F-FINAL-05 findings against the runtime-and-evidence commit above. The responsive geometry, Staff-safe Team access, setup-required Team cards, Arabic/RTL status copy, and documented no-active-visit empty state all passed. The pass also corrected protected-media requests whose API-rooted serializer links otherwise produced a doubled `/api/api/` path in the browser. No schema or backend contract change was required.
 
-Completed capability summary: authenticated role workspaces; patient, scheduling, visit, X-ray/AI, and billing workflows; Admin account management, clinic settings, and audit-log visibility; deterministic development-only integrated demo story; the Phase 14B UI refocus design freeze; and Phase 14C.0 Team APIs. Team uses the User ID as its stable member ID, has transactional Doctor/Staff onboarding, profile optimistic locking, professional/login status separation, linkage-state reporting, protected role transitions, reactivation, and sanitized audit events. Phase 14A seed story remains available.
+Remaining post-MVP limitations include real AI integration, email forgot-password, unsupported professional fields, online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.
 
-Remaining post-MVP limitations: real AI integration, email forgot-password, unsupported professional fields (gender, qualifications, license, profile photo, Staff biography, and activity notes), online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization. Team and Users & Access runtime UI is remaining in-scope Phase 14D redesign work.
+## Historical context
+
+Phase 13 is complete. Phase 14A provided deterministic development data; Phase 14B froze the UI refocus design; Phase 14C.0 added Team/account-linkage APIs; Phase 14C added shell, token, icon, preference, and shared-component foundations; Phase 14D completed priority workflows; Phase 14E completed supporting operations; and Phase 14F completed browser visual/UAT acceptance.

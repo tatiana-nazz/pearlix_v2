@@ -78,19 +78,19 @@ export function updatePayloadFromForm(values: PatientFormValues, version: number
 
 export function validatePatientForm(values: PatientFormValues): PatientFormErrors {
   const errors: PatientFormErrors = {};
-  if (!values.first_name.trim()) errors.first_name = "First name is required.";
-  if (!values.last_name.trim()) errors.last_name = "Last name is required.";
-  if (!values.gender) errors.gender = "Gender is required.";
+  if (!values.first_name.trim()) errors.first_name = "firstNameRequired";
+  if (!values.last_name.trim()) errors.last_name = "lastNameRequired";
+  if (!values.gender) errors.gender = "genderRequired";
   if (values.date_of_birth && values.date_of_birth > new Date().toISOString().slice(0, 10)) {
-    errors.date_of_birth = "Date of birth cannot be in the future.";
+    errors.date_of_birth = "dobFuture";
   }
   return errors;
 }
 
 export function apiErrorToFormErrors(error: unknown): PatientFormErrors {
-  if (!(error instanceof ApiClientError)) return { form: "Request failed." };
+  if (!(error instanceof ApiClientError)) return { form: "requestFailed" };
   if (error.code === "VERSION_CONFLICT") {
-    return { conflict: "This patient was changed elsewhere. Reload the latest record before saving over it." };
+    return { conflict: "patientChangedElsewhere" };
   }
   const errors: PatientFormErrors = {};
   for (const field of Object.keys(emptyPatientFormValues) as Array<keyof PatientFormValues>) {

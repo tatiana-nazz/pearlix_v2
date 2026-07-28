@@ -69,7 +69,7 @@ class VisitViewSet(viewsets.ReadOnlyModelViewSet):
     def active(self, request):
         visit = self.get_queryset().filter(status=Visit.Status.ACTIVE).first()
         if not visit:
-            return error_response("NOT_FOUND", "No active visit found.", status_code=status.HTTP_404_NOT_FOUND)
+            return error_response("NO_ACTIVE_VISIT", "No active visit found.", status_code=status.HTTP_404_NOT_FOUND)
         return Response(VisitDetailSerializer(visit).data)
 
     @action(detail=True, methods=["post"])
@@ -158,3 +158,35 @@ class VisitViewSet(viewsets.ReadOnlyModelViewSet):
             metadata={"handoff_id": handoff.id, "visit_id": handoff.visit_id, "patient_id": handoff.patient_id},
         )
         return Response(BillingHandoffSerializer(handoff).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="create-invoice")
+    def create_invoice(self, request, pk=None):
+        from apps.billing.serializers import DoctorFinalChargeSerializer, DoctorInvoiceSummarySerializer
+        from apps.billing.services import BillingRuleError, create_invoice_from_doctor_final_charge
+
+        visit = self.get_object()
+        serializer = DoctorFinalChargeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            invoice = create_invoice_from_doctor_final_charge(visit=visit, user=request.user, data=serializer.validated_data)
+        except BillingRuleError as exc:
+            return exc.to_response()
+        log_activity(
+            request=request,
+            action="invoice_created",
+            entity_type="invoice",
+            entity_id=invoice.id,
+            metadata={"invoice_id": invoice.id, "visit_id": visit.id, "patient_id": invoice.patient_id, "source": "doctor_final_charge"},
+        )
+        return Response(DoctorInvoiceSummarySerializer(invoice).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get"], url_path="invoice")
+    def invoice(self, request, pk=None):
+        from apps.billing.models import Invoice
+        from apps.billing.serializers import DoctorInvoiceSummarySerializer
+
+        visit = self.get_object()
+        invoice = Invoice.objects.filter(visit=visit).first()
+        if invoice is None:
+            return Response(None)
+        return Response(DoctorInvoiceSummarySerializer(invoice).data)

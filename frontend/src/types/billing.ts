@@ -15,6 +15,7 @@ export interface BillingVisitSummary {
   completed_at: string | null;
   appointment: {
     id: number;
+    doctor: UserSummary;
     start_datetime: string;
     end_datetime: string;
     duration_minutes: number;
@@ -66,6 +67,7 @@ export interface Invoice extends Timestamped {
   patient: PatientList;
   appointment: {
     id: number;
+    doctor: UserSummary;
     start_datetime: string;
     end_datetime: string;
     duration_minutes: number;
@@ -116,4 +118,24 @@ export interface PaymentPayload {
 export interface PaymentResponse {
   payment: Payment;
   invoice: InvoiceSummary;
+}
+
+export interface DoctorFinalChargePayload {
+  total_amount: string;
+  currency: Currency;
+  notes?: string;
+}
+
+export interface InvoicePrintData {
+  clinic: { clinic_name: string; address: string; phone_number: string; email: string };
+  invoice: { invoice_number: string; status: InvoiceStatus; created_at: string; cancelled_at: string | null; cancelled_reason: string };
+  patient: { id: number; full_name: string; phone_number: string };
+  visit: BillingVisitSummary | null;
+  appointment: Invoice["appointment"];
+  currency: Currency;
+  total_amount: string;
+  paid_amount: string;
+  remaining_amount: string;
+  notes: string;
+  payments: Payment[];
 }

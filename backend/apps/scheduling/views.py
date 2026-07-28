@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.audit.services import log_activity
+from apps.accounts.professional_schedule import ProfessionalScheduleRuleError
 from apps.common.errors import error_response
 from apps.scheduling.models import Appointment, AvailabilityException, ClinicDefaultShift, WorkingShift
 from apps.scheduling.permissions import AppointmentPermission, AvailabilityExceptionPermission, ScheduleAdminPermission, WorkingShiftPermission
@@ -49,7 +50,7 @@ def doctor_working_hours(request, doctor_id):
     try:
         from apps.scheduling.services import _apply_schedule
         _apply_schedule(employee=doctor, templates=templates, mode="REPLACE_ALL", user=request.user, confirm_appointment_impact=serializer.validated_data["confirm_appointment_impact"], request=request)
-    except AppointmentRuleError as exc: return _rule_error(exc)
+    except (AppointmentRuleError, ProfessionalScheduleRuleError) as exc: return _rule_error(exc)
     shifts = WorkingShift.objects.filter(employee=doctor).order_by("weekday", "start_time", "id")
     return Response({"working_hours": WorkingShiftSerializer(shifts, many=True).data})
 
@@ -63,14 +64,14 @@ class ClinicDefaultShiftViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data); serializer.is_valid(raise_exception=True)
         try: instance = save_default_shift(serializer=serializer, user=request.user)
-        except AppointmentRuleError as exc: return _rule_error(exc)
+        except (AppointmentRuleError, ProfessionalScheduleRuleError) as exc: return _rule_error(exc)
         log_activity(request=request, action="clinic_default_shift_created", entity_type="clinic_default_shift", entity_id=instance.id, metadata={"weekday": instance.weekday})
         return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object(); serializer = self.get_serializer(instance, data=request.data, partial=True); serializer.is_valid(raise_exception=True)
         try: instance = update_default_shift(instance=instance, serializer=serializer, user=request.user)
-        except AppointmentRuleError as exc: return _rule_error(exc)
+        except (AppointmentRuleError, ProfessionalScheduleRuleError) as exc: return _rule_error(exc)
         log_activity(request=request, action="clinic_default_shift_updated", entity_type="clinic_default_shift", entity_id=instance.id, metadata={"weekday": instance.weekday})
         return Response(self.get_serializer(instance).data)
 
@@ -81,7 +82,7 @@ class ClinicDefaultShiftViewSet(viewsets.ModelViewSet):
     def _set_active(self, request, active, audit_action):
         instance = self.get_object()
         try: instance = set_default_shift_active(instance=instance, version=request.data.get("version"), is_active=active, user=request.user)
-        except AppointmentRuleError as exc: return _rule_error(exc)
+        except (AppointmentRuleError, ProfessionalScheduleRuleError) as exc: return _rule_error(exc)
         log_activity(request=request, action=audit_action, entity_type="clinic_default_shift", entity_id=instance.id, metadata={"weekday": instance.weekday})
         return Response(self.get_serializer(instance).data)
 
@@ -105,14 +106,14 @@ class WorkingShiftViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data); serializer.is_valid(raise_exception=True)
         try: instance = create_working_shift(serializer=serializer, user=request.user)
-        except AppointmentRuleError as exc: return _rule_error(exc)
+        except (AppointmentRuleError, ProfessionalScheduleRuleError) as exc: return _rule_error(exc)
         log_activity(request=request, action="working_shift_created", entity_type="working_shift", entity_id=instance.id, metadata={"employee_id": instance.employee_id, "weekday": instance.weekday})
         return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object(); serializer = self.get_serializer(instance, data=request.data, partial=True); serializer.is_valid(raise_exception=True)
         try: instance, impacted = update_working_shift(instance=instance, serializer=serializer, user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
-        except AppointmentRuleError as exc: return _rule_error(exc)
+        except (AppointmentRuleError, ProfessionalScheduleRuleError) as exc: return _rule_error(exc)
         log_activity(request=request, action="working_shift_updated", entity_type="working_shift", entity_id=instance.id, metadata={"employee_id": instance.employee_id, "weekday": instance.weekday, "impacted_appointments_count": impacted})
         return Response({**self.get_serializer(instance).data, "impacted_appointments_count": impacted})
 
@@ -123,7 +124,7 @@ class WorkingShiftViewSet(viewsets.ModelViewSet):
     def _set_active(self, request, active, audit_action):
         instance = self.get_object()
         try: instance, impacted = set_working_shift_active(instance=instance, version=request.data.get("version"), is_active=active, user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
-        except AppointmentRuleError as exc: return _rule_error(exc)
+        except (AppointmentRuleError, ProfessionalScheduleRuleError) as exc: return _rule_error(exc)
         log_activity(request=request, action=audit_action, entity_type="working_shift", entity_id=instance.id, metadata={"employee_id": instance.employee_id, "impacted_appointments_count": impacted})
         return Response({**self.get_serializer(instance).data, "impacted_appointments_count": impacted})
 
@@ -131,7 +132,7 @@ class WorkingShiftViewSet(viewsets.ModelViewSet):
     def apply_default(self, request):
         employee = _employee_or_404(request.data.get("employee_id"))
         try: result = apply_default_schedule(employee=employee, mode=request.data.get("mode"), user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
-        except AppointmentRuleError as exc: return _rule_error(exc)
+        except (AppointmentRuleError, ProfessionalScheduleRuleError) as exc: return _rule_error(exc)
         log_activity(request=request, action="default_schedule_applied", entity_type="user", entity_id=employee.id, metadata={"employee_id": employee.id, "mode": request.data.get("mode"), **result})
         return Response({"employee": {"id": employee.id, "full_name": employee.full_name, "role": employee.role}, "mode": request.data.get("mode"), **result, "working_shifts": self.get_serializer(WorkingShift.objects.filter(employee=employee), many=True).data})
 
@@ -139,7 +140,7 @@ class WorkingShiftViewSet(viewsets.ModelViewSet):
     def copy_schedule(self, request):
         source = _employee_or_404(request.data.get("source_employee_id")); target = _employee_or_404(request.data.get("target_employee_id"))
         try: result = copy_employee_schedule(source=source, target=target, mode=request.data.get("mode"), user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
-        except AppointmentRuleError as exc: return _rule_error(exc)
+        except (AppointmentRuleError, ProfessionalScheduleRuleError) as exc: return _rule_error(exc)
         log_activity(request=request, action="employee_schedule_copied", entity_type="user", entity_id=target.id, metadata={"source_employee_id": source.id, "target_employee_id": target.id, "mode": request.data.get("mode"), **result})
         return Response({"employee": {"id": target.id, "full_name": target.full_name, "role": target.role}, "mode": request.data.get("mode"), **result, "working_shifts": self.get_serializer(WorkingShift.objects.filter(employee=target), many=True).data})
 
