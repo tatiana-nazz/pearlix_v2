@@ -35,6 +35,7 @@ def invoice_for(patient, staff_user, *, number, currency="SYP", amount="100.00",
     invoice = Invoice.objects.create(
         invoice_number=number,
         patient=patient,
+        description="Dashboard invoice",
         currency=currency,
         total_amount=amount,
         status=status,
@@ -108,10 +109,12 @@ def test_admin_needs_reschedule_count_is_exact(admin_client, appointment_factory
     assert admin_client.get("/api/dashboard/admin/").data["needs_reschedule_appointments_count"] == 2
 
 
-def test_admin_pending_handoff_count_is_exact(admin_client, patient_factory, doctor_user, appointment_factory, visit_factory):
-    patient = patient_factory(full_name="Pending Patient")
-    pending_handoff(patient, doctor_user, appointment_factory, visit_factory)
-    assert admin_client.get("/api/dashboard/admin/").data["pending_billing_handoffs_count"] == 1
+def test_admin_invoice_counts_are_exact(admin_client, patient, staff_user):
+    invoice_for(patient, staff_user, number="INV-DASH-COUNT-1", status=Invoice.Status.UNPAID)
+    invoice_for(patient, staff_user, number="INV-DASH-COUNT-2", status=Invoice.Status.PAID)
+    data = admin_client.get("/api/dashboard/admin/").data
+    assert data["open_invoices_count"] == 1
+    assert data["today_invoices_count"] == 2
 
 
 def test_admin_seven_day_status_aggregation_is_correct(admin_client, appointment_factory):
@@ -192,9 +195,10 @@ def test_staff_ready_count_is_current_clinic_day_only(staff_client, appointment_
     assert staff_client.get("/api/dashboard/staff/").data["patients_ready_count"] == 1
 
 
-def test_staff_pending_billing_count_is_exact(staff_client, patient_factory, doctor_user, appointment_factory, visit_factory):
-    pending_handoff(patient_factory(full_name="Billing Patient"), doctor_user, appointment_factory, visit_factory)
-    assert staff_client.get("/api/dashboard/staff/").data["pending_billing_count"] == 1
+def test_staff_open_invoice_count_is_exact(staff_client, patient, staff_user):
+    invoice_for(patient, staff_user, number="INV-DASH-STAFF-COUNT-1", status=Invoice.Status.UNPAID)
+    invoice_for(patient, staff_user, number="INV-DASH-STAFF-COUNT-2", status=Invoice.Status.PAID)
+    assert staff_client.get("/api/dashboard/staff/").data["open_invoices_count"] == 1
 
 
 def test_staff_needs_reschedule_count_is_exact(staff_client, appointment_factory):

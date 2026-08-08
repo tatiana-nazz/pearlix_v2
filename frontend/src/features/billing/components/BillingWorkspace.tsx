@@ -9,7 +9,7 @@ import { Pagination } from "../../../components/v2";
 import type { UserRole } from "../../../types/auth";
 import type { InvoiceFinancialSummary, InvoiceStatus } from "../../../types/billing";
 import { billingCopy, billingStatusLabel } from "../i18n";
-import { useHandoffs, useInvoiceSummary, useInvoices } from "../hooks/useBilling";
+import { useInvoiceSummary, useInvoices } from "../hooks/useBilling";
 import { formatMoney } from "../utils/billing";
 import { activeDatePreset, dateRangeForPreset, invoiceQueryFromSearch, type InvoiceDatePreset } from "../utils/billingQuery";
 import { InvoiceList } from "./BillingLists";
@@ -33,7 +33,7 @@ export function BillingWorkspaceHeader({ role }: { role: Exclude<UserRole, "DOCT
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = billingCopy(language);
   const base = `/${role.toLowerCase()}/billing`;
-  return <header className="billing-workspace-header"><div><p>{role === "ADMIN" ? c.adminWorkspace : c.staffWorkspace}</p><h1>{c.billing}</h1><span>{c.billingDescription}</span></div><nav className="billing-workspace-tabs" aria-label={c.billing}><NavLink to={`${base}/overview`}>{c.overview}</NavLink><NavLink to={`${base}/handoffs`}>{c.handoffs}</NavLink><NavLink to={`${base}/invoices`}>{c.invoices}</NavLink></nav></header>;
+  return <header className="billing-workspace-header"><div><p>{role === "ADMIN" ? c.adminWorkspace : c.staffWorkspace}</p><h1>{c.billing}</h1><span>{c.billingDescription}</span></div><nav className="billing-workspace-tabs" aria-label={c.billing}><NavLink to={`${base}/overview`}>{c.overview}</NavLink><NavLink to={`${base}/invoices`}>{c.invoices}</NavLink></nav></header>;
 }
 
 function CurrencyLines({ values }: { values: Record<"SYP" | "USD", string> }) {
@@ -56,24 +56,22 @@ export function BillingOverviewPage({ role }: { role: Exclude<UserRole, "DOCTOR"
   const clinicDate = allSummary.data?.clinic_date;
   const todayQuery = clinicDate ? { date_from: clinicDate, date_to: clinicDate } : undefined;
   const todaySummary = useInvoiceSummary(todayQuery, Boolean(clinicDate));
-  const pendingHandoffs = useHandoffs({ status: "PENDING", page: 1 });
   const recentInvoices = useInvoices({ page: 1 });
-  const todayInvoices = useInvoices(todayQuery, Boolean(clinicDate));
-  const queries = [allSummary, todaySummary, pendingHandoffs, recentInvoices, todayInvoices];
+  const queries = [allSummary, todaySummary, recentInvoices];
   const firstError = queries.find((query) => query.isError);
 
   return <main className="billing-page billing-overview-page"><BillingWorkspaceHeader role={role} /><div className="billing-page-intro"><div><p className="billing-eyebrow">{clinicDate ? `${c.clinicDate}: ${clinicDate}` : c.overview}</p><h2>{c.overviewTitle}</h2><p>{c.overviewDescription}</p></div>{role === "STAFF" ? <Link className="button primary" to="/staff/billing/invoices/new">{c.newInvoice}</Link> : null}</div>
     {queries.some((query) => query.isLoading) && !allSummary.data ? <LoadingState title={c.loadingOverview} /> : null}
     {firstError ? <ErrorState error={firstError.error} title={c.unavailableOverview} onRetry={() => { queries.forEach((query) => void query.refetch()); }} /> : null}
-    {allSummary.data && todaySummary.data && pendingHandoffs.data ? <section className="billing-kpi-grid" aria-label={c.overviewTitle}>
+    {allSummary.data && todaySummary.data ? <section className="billing-kpi-grid" aria-label={c.overviewTitle}>
       <Link className="billing-kpi-card" to={`${base}/invoices?date_from=${clinicDate}&date_to=${clinicDate}`}><span>{c.invoicesToday}</span><strong>{todaySummary.data.invoice_count}</strong><small>{c.viewToday}</small></Link>
-      <Link className="billing-kpi-card" to={`${base}/handoffs?status=PENDING`}><span>{c.pendingHandoffs}</span><strong>{pendingHandoffs.data.count}</strong><small>{c.reviewPending}</small></Link>
       <Link className="billing-kpi-card" to={`${base}/invoices`}><span>{c.openInvoices}</span><strong>{allSummary.data.open_invoice_count}</strong><small>{c.viewOpen}</small></Link>
       <Card className="billing-kpi-card billing-kpi-static"><span>{c.collectedToday}</span><strong><CurrencyLines values={todaySummary.data.payments_collected_in_period} /></strong><small>{clinicDate}</small></Card>
+      <Card className="billing-kpi-card billing-kpi-static"><span>{c.outstandingByCurrency}</span><strong><SummaryCurrencyLines summary={allSummary.data} field="outstanding" /></strong><small>{c.openInvoices}</small></Card>
     </section> : null}
     {allSummary.data ? <Card className="billing-outstanding-card"><SectionHeading title={c.outstandingByCurrency} description={c.outstandingDescription} action={<span className="billing-open-statuses">{billingStatusLabel(language, "UNPAID")}: {allSummary.data.status_counts.UNPAID} · {billingStatusLabel(language, "PARTIALLY_PAID")}: {allSummary.data.status_counts.PARTIALLY_PAID}</span>} /><div className="billing-currency-summary">{(["SYP", "USD"] as const).map((currency) => <div key={currency}><strong className="bidi-ltr">{currency}</strong><span>{c.invoiced}<b className="bidi-ltr">{formatMoney(allSummary.data.currency_totals[currency].invoiced, currency)}</b></span><span>{c.paidAmount}<b className="bidi-ltr">{formatMoney(allSummary.data.currency_totals[currency].paid, currency)}</b></span><span>{c.outstanding}<b className="bidi-ltr">{formatMoney(allSummary.data.currency_totals[currency].outstanding, currency)}</b></span></div>)}</div></Card> : null}
     {recentInvoices.data ? <section className="billing-overview-section"><SectionHeading title={c.recentInvoices} description={c.recentDescription} action={<Link to={`${base}/invoices`}>{c.viewAllInvoices}</Link>} /><InvoiceList role={role} invoices={recentInvoices.data.results.slice(0, 6)} variant="overview" emptyTitle={c.noRecentInvoices} /></section> : null}
-    {todayInvoices.data && clinicDate ? <section className="billing-overview-section"><SectionHeading title={c.todayInvoices} description={c.todayDescription} action={<Link to={`${base}/invoices?date_from=${clinicDate}&date_to=${clinicDate}`}>{c.viewAllToday}</Link>} /><InvoiceList role={role} invoices={todayInvoices.data.results.slice(0, 8)} variant="overview" emptyTitle={c.noTodayInvoices} /></section> : null}
+    {todaySummary.data && clinicDate ? <section className="billing-overview-section billing-today-summary"><SectionHeading title={c.todayInvoices} description={c.todayDescription} action={<Link to={`${base}/invoices?date_from=${clinicDate}&date_to=${clinicDate}`}>{c.viewAllToday}</Link>} /><Card className="billing-today-activity"><div><span>{c.invoicesToday}</span><strong>{todaySummary.data.invoice_count}</strong></div><div><span>{c.collectedToday}</span><strong><CurrencyLines values={todaySummary.data.payments_collected_in_period} /></strong></div></Card></section> : null}
   </main>;
 }
 

@@ -4,11 +4,21 @@ import { archivePatient, createPatient, unarchivePatient, updatePatient } from "
 import type { CreatePatientPayload, PatientVersionPayload, UpdatePatientPayload } from "../../../types/patients";
 import { patientKey } from "./usePatient";
 
-function invalidatePatients(queryClient: ReturnType<typeof useQueryClient>, patientId?: number) {
-  void queryClient.invalidateQueries({ queryKey: ["patients"] });
-  void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-  void queryClient.invalidateQueries({ queryKey: ["appointment-availability"] });
-  if (patientId) void queryClient.invalidateQueries({ queryKey: patientKey(patientId) });
+async function invalidatePatients(queryClient: ReturnType<typeof useQueryClient>, patientId?: number) {
+  const invalidations = [
+    queryClient.invalidateQueries({ queryKey: ["patients"] }),
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+    queryClient.invalidateQueries({ queryKey: ["appointment-availability"] }),
+    queryClient.invalidateQueries({ queryKey: ["invoices"] }),
+    queryClient.invalidateQueries({ queryKey: ["invoice-summary"] }),
+  ];
+  if (patientId) {
+    invalidations.push(
+      queryClient.invalidateQueries({ queryKey: patientKey(patientId) }),
+      queryClient.invalidateQueries({ queryKey: ["patient", patientId, "billing"] }),
+    );
+  }
+  await Promise.all(invalidations);
 }
 
 export function useCreatePatient() {

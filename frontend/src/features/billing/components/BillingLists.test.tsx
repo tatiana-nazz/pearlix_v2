@@ -12,7 +12,7 @@ const handoff = {
   id: 1, patient: { full_name: "Maya Patient" }, doctor: { full_name: "Dr. Lin" }, visit: { appointment: { reason: "Cleaning" } }, note: "Please invoice", suggested_amount: "75.00", currency: "USD", status: "PENDING", created_at: "2026-07-26T09:00:00Z",
 } as BillingHandoff;
 const invoice = {
-  id: 2, invoice_number: "INV-20260726-000001", patient: { full_name: "Maya Patient" }, visit: { appointment: { reason: "Cleaning" } }, total_amount: "75.00", paid_amount: "25.00", remaining_amount: "50.00", currency: "USD", status: "PARTIALLY_PAID", created_at: "2026-07-26T09:00:00Z",
+  id: 2, invoice_number: "INV-20260726-000001", origin: "VISIT_COMPLETION", description: "Cleaning and fluoride treatment", patient: { id: 44, full_name: "Maya Patient" }, visit: { appointment: { reason: "Cleaning" } }, total_amount: "75.00", paid_amount: "25.00", remaining_amount: "50.00", currency: "USD", status: "PARTIALLY_PAID", created_at: "2026-07-26T09:00:00Z",
 } as Invoice;
 
 describe("Billing collections", () => {
@@ -37,5 +37,15 @@ describe("Billing collections", () => {
     const row = screen.getByRole("row", { name: /invoice inv-20260726-000001/i });
     fireEvent.keyDown(row, { key: " " });
     expect(navigate).toHaveBeenCalledWith(`/${role.toLowerCase()}/billing/invoices/2`);
+    expect(screen.getByText("Cleaning and fluoride treatment")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Maya Patient" })).toHaveAttribute("href", `/${role.toLowerCase()}/patients/44?tab=billing`);
+  });
+
+  it("opens the patient billing tab on patient-cell double click without opening the invoice", () => {
+    navigate.mockClear();
+    render(<MemoryRouter><InvoiceList role="STAFF" invoices={[invoice]} /></MemoryRouter>);
+    fireEvent.doubleClick(screen.getByRole("link", { name: "Maya Patient" }).closest("td")!);
+    expect(navigate).toHaveBeenCalledWith("/staff/patients/44?tab=billing");
+    expect(navigate).not.toHaveBeenCalledWith("/staff/billing/invoices/2");
   });
 });

@@ -179,18 +179,17 @@ def test_important_actions_create_safe_audit_logs(
         {
             "version": notes_response.data["updated_at"],
             "notes": {"diagnosis": "Sensitive diagnosis body", "clinical_notes": "Sensitive clinical body"},
-            "billing_handoff": {
+            "billing": {
                 "description": "Clinical audit treatment",
-                "suggested_amount": "90.00",
+                "total_amount": "90.00",
                 "currency": "SYP",
                 "note": "Invoice after clinical audit",
             },
         },
         format="json",
     )
-    handoff = completion.data["billing_handoff"]
-    invoice = staff_client.post(f"/api/billing-handoffs/{handoff['id']}/convert-to-invoice/", {}, format="json")
-    staff_client.post(f"/api/invoices/{invoice.data['id']}/payments/", {"amount": "90.00", "currency": "SYP"}, format="json")
+    invoice = completion.data["created_invoice"]
+    staff_client.post(f"/api/invoices/{invoice['id']}/payments/", {"amount": "90.00", "currency": "SYP"}, format="json")
 
     patient = Patient.objects.get(id=patient_id)
     second_appointment = appointment_factory(
@@ -210,7 +209,7 @@ def test_important_actions_create_safe_audit_logs(
 
     direct_invoice = staff_client.post(
         "/api/invoices/",
-        {"patient_id": patient_id, "total_amount": "30.00", "currency": "SYP"},
+        {"patient_id": patient_id, "description": "Direct audit invoice", "total_amount": "30.00", "currency": "SYP"},
         format="json",
     )
     staff_client.patch(f"/api/invoices/{direct_invoice.data['id']}/", {"notes": "invoice note update"}, format="json")
@@ -246,7 +245,6 @@ def test_important_actions_create_safe_audit_logs(
         "external_xray_attached_to_patient",
         "billing_handoff_created",
         "billing_handoff_dismissed",
-        "billing_handoff_converted_to_invoice",
         "invoice_created",
         "invoice_updated",
         "invoice_cancelled",

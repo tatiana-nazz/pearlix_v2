@@ -118,7 +118,7 @@ export function VisitWorkspace({ role, visit, onReloadVisit }: VisitWorkspacePro
   const [saveNotice, setSaveNotice] = useState(false);
   const [billingDraft, setBillingDraft] = useState<VisitBillingDraft>(emptyBillingDraft);
   const [billingErrors, setBillingErrors] = useState<VisitBillingErrors>({});
-  const [completionResult, setCompletionResult] = useState<{ amount: string; currency: Currency } | null>(null);
+  const [completionResult, setCompletionResult] = useState<{ amount: string; currency: Currency; invoiceNumber: string; invoiceStatus: string } | null>(null);
   const updateNotes = useUpdateClinicalNotes(visit.id);
   const completeVisit = useCompleteVisit(visit.id);
 
@@ -163,18 +163,23 @@ export function VisitWorkspace({ role, visit, onReloadVisit }: VisitWorkspacePro
   }
   async function complete() {
     const currency = billingDraft.currency as Currency;
-    await completeVisit.mutateAsync({
+    const result = await completeVisit.mutateAsync({
       version: visit.updated_at,
       notes: values,
-      billing_handoff: {
+      billing: {
         description: billingDraft.description.trim(),
-        suggested_amount: billingDraft.amount.trim(),
+        total_amount: billingDraft.amount.trim(),
         currency,
         note: billingDraft.note.trim(),
       },
     });
     setSavedValues(values);
-    setCompletionResult({ amount: billingDraft.amount.trim(), currency });
+    setCompletionResult({
+      amount: billingDraft.amount.trim(),
+      currency,
+      invoiceNumber: result.created_invoice.invoice_number,
+      invoiceStatus: result.created_invoice.status,
+    });
     setConfirmOpen(false);
   }
   const isCompleting = updateNotes.isPending || completeVisit.isPending;
@@ -182,7 +187,7 @@ export function VisitWorkspace({ role, visit, onReloadVisit }: VisitWorkspacePro
   const isConflict = (updateNotes.error as { code?: string } | null)?.code === "VERSION_CONFLICT" || (completeVisit.error as { code?: string } | null)?.code === "VERSION_CONFLICT";
   const saveStatus = isDirty ? c.notesUnsaved : saveNotice ? c.notesSaved : c.notesUpToDate;
 
-  if (completionResult) return <Card className="active-visit-completion-success"><StatePanel state="empty" title={c.visitCompleted} description={c.visitBillingSuccess} /><dl className="active-visit-billing-details"><div><dt>{c.sentToStaffBilling}</dt><dd>{c.handoffStatus}: PENDING</dd></div><div><dt>{c.totalTreatmentCharge}</dt><dd dir="ltr">{new Intl.NumberFormat("en-US", { style: "currency", currency: completionResult.currency }).format(Number(completionResult.amount))}</dd></div></dl><div className="form-actions"><Link className="button secondary" to={`/${role.toLowerCase()}/appointments`}>{c.backAppointments}</Link><Link className="button primary" to={`/${role.toLowerCase()}/patients/${visit.patient.id}`}>{c.openPatient.replace("{patient}", visit.patient.full_name)}</Link></div></Card>;
+  if (completionResult) return <Card className="active-visit-completion-success"><StatePanel state="empty" title={c.visitCompleted} description={c.visitBillingSuccess} /><dl className="active-visit-billing-details"><div><dt>{c.invoiceReference}</dt><dd dir="ltr">{completionResult.invoiceNumber}</dd></div><div><dt>{c.invoiceStatus}</dt><dd>{completionResult.invoiceStatus}</dd></div><div><dt>{c.totalTreatmentCharge}</dt><dd dir="ltr">{new Intl.NumberFormat("en-US", { style: "currency", currency: completionResult.currency }).format(Number(completionResult.amount))}</dd></div></dl><div className="form-actions"><Link className="button secondary" to={`/${role.toLowerCase()}/appointments`}>{c.backAppointments}</Link><Link className="button primary" to={`/${role.toLowerCase()}/patients/${visit.patient.id}`}>{c.openPatient.replace("{patient}", visit.patient.full_name)}</Link></div></Card>;
 
   return <div className="visit-workspace">
     <div className="active-visit-context-stack">

@@ -78,32 +78,25 @@ class VisitViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = VisitCompletionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            visit, handoff = complete_visit(
+            visit, invoice, handoff = complete_visit(
                 visit=visit,
                 user=request.user,
                 expected_updated_at=serializer.validated_data["version"],
                 notes=serializer.validated_data["notes"],
-                billing_handoff=serializer.validated_data["billing_handoff"],
+                billing=serializer.validated_data["billing"],
+                request=request,
             )
         except VisitRuleError as exc:
             return exc.to_response()
-        log_activity(
-            request=request,
-            action="visit_completed",
-            entity_type="visit",
-            entity_id=visit.id,
-            metadata={"visit_id": visit.id, "appointment_id": visit.appointment_id, "patient_id": visit.patient_id, "doctor_id": visit.doctor_id},
-        )
-        log_activity(
-            request=request,
-            action="billing_handoff_created",
-            entity_type="billing_handoff",
-            entity_id=handoff.id,
-            metadata={"handoff_id": handoff.id, "visit_id": handoff.visit_id, "patient_id": handoff.patient_id},
-        )
-        from apps.billing.serializers import BillingHandoffSerializer
+        from apps.billing.serializers import BillingHandoffSerializer, InvoiceSerializer
 
-        return Response({"visit": VisitDetailSerializer(visit).data, "billing_handoff": BillingHandoffSerializer(handoff).data})
+        return Response(
+            {
+                "visit": VisitDetailSerializer(visit).data,
+                "created_invoice": InvoiceSerializer(invoice).data,
+                "billing_provenance": BillingHandoffSerializer(handoff).data,
+            }
+        )
 
     @action(detail=True, methods=["patch"], url_path="clinical-notes")
     def clinical_notes(self, request, pk=None):

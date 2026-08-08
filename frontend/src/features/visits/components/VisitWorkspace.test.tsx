@@ -56,7 +56,7 @@ describe("VisitWorkspace", () => {
     mutationState.update.mockReset();
     mutationState.update.mockResolvedValue(visit);
     mutationState.complete.mockReset();
-    mutationState.complete.mockResolvedValue({ visit: { ...visit, status: "COMPLETED", completed_at: "2026-07-26T10:00:00Z" }, billing_handoff: { id: 5, status: "PENDING", suggested_amount: "250.00", currency: "SYP" } });
+    mutationState.complete.mockResolvedValue({ visit: { ...visit, status: "COMPLETED", completed_at: "2026-07-26T10:00:00Z" }, created_invoice: { id: 8, invoice_number: "INV-20260726-000008", status: "UNPAID", description: "Restorative dental treatment", origin: "VISIT_COMPLETION", total_amount: "250.00", paid_amount: "0.00", remaining_amount: "250.00", currency: "SYP" }, billing_provenance: { id: 5, status: "CONVERTED_TO_INVOICE" } });
   });
 
   it("uses one accessible three-tab workspace with the action bar after the active panel", () => {
@@ -100,21 +100,23 @@ describe("VisitWorkspace", () => {
     expect(mutationState.complete).not.toHaveBeenCalled();
   });
 
-  it("summarizes billing and completes notes plus handoff through one coordinated mutation", async () => {
+  it("summarizes billing and creates the final invoice through one coordinated mutation", async () => {
     renderWorkspace();
     fireEvent.change(screen.getByLabelText("Objective Notes"), { target: { value: "Atomic note" } });
     openBilling();
     fillBilling();
     fireEvent.click(screen.getByRole("button", { name: "Complete Visit" }));
     expect(screen.getByRole("dialog", { name: "Complete this visit?" })).toBeInTheDocument();
-    expect(screen.getByText("The visit will be completed and the billing handoff will be sent to Staff.")).toBeInTheDocument();
+    expect(screen.getByText("The visit and appointment will be completed, and an unpaid invoice will be created immediately.")).toBeInTheDocument();
     expect(screen.getByText("Restorative dental treatment")).toBeInTheDocument();
     expect(screen.getByText("250.00")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Complete Visit and Send to Billing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete Visit and Create Invoice" }));
     await waitFor(() => expect(mutationState.complete).toHaveBeenCalledTimes(1));
-    expect(mutationState.complete).toHaveBeenCalledWith({ version: visit.updated_at, notes: expect.objectContaining({ clinical_notes: "Atomic note" }), billing_handoff: { description: "Restorative dental treatment", suggested_amount: "250.00", currency: "SYP", note: "Collect at reception" } });
+    expect(mutationState.complete).toHaveBeenCalledWith({ version: visit.updated_at, notes: expect.objectContaining({ clinical_notes: "Atomic note" }), billing: { description: "Restorative dental treatment", total_amount: "250.00", currency: "SYP", note: "Collect at reception" } });
     expect(mutationState.update).not.toHaveBeenCalled();
-    expect(await screen.findByText("Visit completed and sent to Staff Billing.")).toBeInTheDocument();
+    expect(await screen.findByText("Visit completed and the invoice was created immediately.")).toBeInTheDocument();
+    expect(screen.getByText("INV-20260726-000008")).toBeInTheDocument();
+    expect(screen.getByText("UNPAID")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /payment/i })).not.toBeInTheDocument();
   });
 

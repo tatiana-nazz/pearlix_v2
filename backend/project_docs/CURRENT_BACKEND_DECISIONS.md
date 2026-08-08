@@ -63,8 +63,10 @@ This document summarizes current accepted backend decisions for human developers
 - Doctor cannot start or complete another Doctor's appointment/visit.
 - Doctor cannot archive or unarchive patients.
 - Doctor cannot access invoices, payments, or global billing.
-- Doctor can create billing handoff for their own completed visit with suggested amount, currency, and note.
-- Staff handles invoice creation and payment recording from the handoff.
+- The owning Doctor completes an active visit with required final billing (`description`, `total_amount`, `currency`, optional `note`) in one atomic transaction.
+- Successful completion marks the visit and appointment completed and creates exactly one immediate `UNPAID` invoice with origin `VISIT_COMPLETION`; no Staff approval or conversion step exists in the current workflow.
+- A linked billing handoff may be retained only as provenance and is committed directly as `CONVERTED_TO_INVOICE`, never as a current pending queue item.
+- Staff creates manual invoices and manages eligible invoice edits, payments, cancellation, and print. Doctor direct invoice access remains forbidden.
 - Staff can archive/unarchive patients.
 - Admin remains read-only for patient records.
 - Doctor default patient list shows active/non-archived patients.
@@ -107,13 +109,18 @@ This document summarizes current accepted backend decisions for human developers
 - Do not silently run mock analysis when settings claim a real or separate AI mode.
 - Real AI should replace the adapter later without changing API contracts.
 
-## Invoice and Handoff Immutability
+## Invoice Creation, Description, and Immutability
+
+- Every invoice requires a meaningful `description` and records an origin: `MANUAL`, `VISIT_COMPLETION`, or `LEGACY_HANDOFF`.
+- A conditional database uniqueness constraint permits at most one invoice for a visit.
+- Manual invoice creation is Staff-only. Doctor-originated invoice creation is accepted only inside the trusted atomic visit-completion service.
+- Legacy pending handoffs remain available for historical compatibility and can still be converted by Staff, but they are not produced by the current completion flow or presented as a primary operational queue.
 
 When `invoice.billing_handoff` exists:
 
 - Patient, visit, appointment, and billing handoff cannot change.
 - `total_amount` can change before payment.
-- `notes` can change before payment.
+- `description` and `notes` can change before or after payment while the invoice remains otherwise editable.
 - Currency cannot change after payment.
 
 After any payment exists:
@@ -122,6 +129,7 @@ After any payment exists:
 - Currency is locked.
 - Patient, visit, appointment, and handoff are locked.
 - Status remains backend-controlled.
+- Description and notes remain editable; financial fields and relationships remain locked.
 
 ## Doctor Leave and Reschedule
 

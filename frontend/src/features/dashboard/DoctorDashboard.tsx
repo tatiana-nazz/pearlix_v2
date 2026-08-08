@@ -13,7 +13,7 @@ import { dashboardCopy } from "./i18n";
 export function DoctorDashboard() {
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = dashboardCopy(language);
-  const query = useQuery({ queryKey: ["dashboard", "doctor"], queryFn: dashboardApi.doctor, staleTime: 30_000 });
+  const query = useQuery({ queryKey: ["dashboard", "doctor"], queryFn: dashboardApi.doctor, staleTime: 15_000, refetchOnWindowFocus: "always", refetchInterval: 30_000 });
   if (query.isLoading) return <DashboardLoading language={language} />;
   if (query.isError) return <DashboardError language={language} onRetry={() => void query.refetch()} />;
   if (!query.data) return <DashboardEmpty language={language} />;

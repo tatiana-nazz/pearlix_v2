@@ -51,7 +51,7 @@ def test_invoice_role_permissions(admin_client, staff_client, doctor_client, inv
     assert admin_client.post(f"/api/invoices/{read_invoice.id}/cancel/").status_code == 403
     assert admin_client.post(f"/api/invoices/{read_invoice.id}/payments/", {"amount": "10.00", "currency": "SYP"}, format="json").status_code == 403
 
-    staff_create = staff_client.post("/api/invoices/", {"patient_id": patient.id, "total_amount": "90.00", "currency": "SYP"}, format="json")
+    staff_create = staff_client.post("/api/invoices/", {"patient_id": patient.id, "description": "Role test", "total_amount": "90.00", "currency": "SYP"}, format="json")
     staff_update = staff_client.patch(f"/api/invoices/{mutate_invoice.id}/", {"notes": "Updated"}, format="json")
     staff_cancel = staff_client.post(f"/api/invoices/{cancel_invoice.id}/cancel/", {"cancelled_reason": "Void"}, format="json")
     staff_print = staff_client.get(f"/api/invoices/{read_invoice.id}/print-data/")
@@ -104,6 +104,7 @@ def test_staff_can_create_invoice_and_frontend_calculated_fields_are_rejected(st
         "/api/invoices/",
         {
             "patient_id": patient.id,
+            "description": "Simple dental service",
             "total_amount": "150.00",
             "currency": "SYP",
             "notes": "Simple invoice",
@@ -123,6 +124,7 @@ def test_staff_can_create_invoice_and_frontend_calculated_fields_are_rejected(st
         "/api/invoices/",
         {
             "patient_id": patient.id,
+            "description": "Blocked fields test",
             "total_amount": "150.00",
             "currency": "SYP",
             "status": Invoice.Status.PAID,
@@ -153,12 +155,12 @@ def test_invoice_create_validation(staff_client, patient, patient_factory, appoi
     cases = [
         ({}, "patient_id"),
         ({"patient_id": 99999, "total_amount": "20.00", "currency": "SYP"}, "patient_id"),
-        ({"patient_id": patient.id, "visit_id": 99999, "total_amount": "20.00", "currency": "SYP"}, "visit_id"),
-        ({"patient_id": patient.id, "appointment_id": 99999, "total_amount": "20.00", "currency": "SYP"}, "appointment_id"),
-        ({"patient_id": patient.id, "total_amount": "0", "currency": "SYP"}, "total_amount"),
-        ({"patient_id": patient.id, "total_amount": "20.00", "currency": "EUR"}, "currency"),
-        ({"patient_id": patient.id, "visit_id": other_visit.id, "total_amount": "20.00", "currency": "SYP"}, "visit_id"),
-        ({"patient_id": patient.id, "appointment_id": other_appointment.id, "total_amount": "20.00", "currency": "SYP"}, "appointment_id"),
+        ({"patient_id": patient.id, "description": "Validation", "visit_id": 99999, "total_amount": "20.00", "currency": "SYP"}, "visit_id"),
+        ({"patient_id": patient.id, "description": "Validation", "appointment_id": 99999, "total_amount": "20.00", "currency": "SYP"}, "appointment_id"),
+        ({"patient_id": patient.id, "description": "Validation", "total_amount": "0", "currency": "SYP"}, "total_amount"),
+        ({"patient_id": patient.id, "description": "Validation", "total_amount": "20.00", "currency": "EUR"}, "currency"),
+        ({"patient_id": patient.id, "description": "Validation", "visit_id": other_visit.id, "total_amount": "20.00", "currency": "SYP"}, "visit_id"),
+        ({"patient_id": patient.id, "description": "Validation", "appointment_id": other_appointment.id, "total_amount": "20.00", "currency": "SYP"}, "appointment_id"),
     ]
 
     for payload, field in cases:
@@ -170,8 +172,8 @@ def test_invoice_create_validation(staff_client, patient, patient_factory, appoi
 
 @pytest.mark.django_db
 def test_invoice_numbers_are_unique(staff_client, patient):
-    first = staff_client.post("/api/invoices/", {"patient_id": patient.id, "total_amount": "100.00", "currency": "SYP"}, format="json")
-    second = staff_client.post("/api/invoices/", {"patient_id": patient.id, "total_amount": "120.00", "currency": "SYP"}, format="json")
+    first = staff_client.post("/api/invoices/", {"patient_id": patient.id, "description": "First", "total_amount": "100.00", "currency": "SYP"}, format="json")
+    second = staff_client.post("/api/invoices/", {"patient_id": patient.id, "description": "Second", "total_amount": "120.00", "currency": "SYP"}, format="json")
     prefix = timezone.localdate().strftime("INV-%Y%m%d-")
     scope = timezone.localdate().strftime("%Y%m%d")
 
@@ -191,7 +193,7 @@ def test_invoice_sequence_continues_from_preexisting_sequence_row(staff_client, 
     prefix = timezone.localdate().strftime("INV-%Y%m%d-")
     InvoiceSequence.objects.create(scope=scope, last_number=41)
 
-    response = staff_client.post("/api/invoices/", {"patient_id": patient.id, "total_amount": "100.00", "currency": "SYP"}, format="json")
+    response = staff_client.post("/api/invoices/", {"patient_id": patient.id, "description": "Sequence test", "total_amount": "100.00", "currency": "SYP"}, format="json")
 
     assert response.status_code == 201
     assert response.data["invoice_number"] == f"{prefix}000042"
@@ -359,7 +361,7 @@ def test_invoice_payment_locks_amount_currency_and_relationships(
 
 
 @pytest.mark.django_db
-def test_handoff_invoice_payment_locks_notes_and_does_not_emit_update_audit_for_failed_attempt(
+def test_handoff_invoice_allows_non_financial_notes_after_payment_and_emits_audit(
     staff_client,
     billing_handoff_factory,
 ):
@@ -373,12 +375,10 @@ def test_handoff_invoice_payment_locks_notes_and_does_not_emit_update_audit_for_
 
     assert convert_response.status_code == 201
     assert payment_response.status_code == 201
-    assert response.status_code == 409
-    assert response.data["code"] == "INVALID_STATUS_TRANSITION"
-    assert "notes" in response.data["details"]
+    assert response.status_code == 200
     invoice.refresh_from_db()
-    assert invoice.notes == ""
-    assert ActivityLog.objects.filter(action="invoice_updated", entity_id=str(invoice.id)).count() == before_count
+    assert invoice.notes == "Too late"
+    assert ActivityLog.objects.filter(action="invoice_updated", entity_id=str(invoice.id)).count() == before_count + 1
 
 
 @pytest.mark.django_db
@@ -464,4 +464,4 @@ def test_print_data_includes_safe_invoice_summary(staff_client, admin_client, do
     assert staff_response.data["paid_amount"] == Decimal("25.00")
     assert staff_response.data["remaining_amount"] == Decimal("75.00")
     assert len(staff_response.data["payments"]) == 1
-    assert "email" not in staff_response.data["patient"]
+    assert staff_response.data["patient"]["email"] == invoice.patient.email

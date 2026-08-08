@@ -1,10 +1,8 @@
-import type { PropsWithChildren } from "react";
+import type { ComponentPropsWithoutRef } from "react";
 import { SurfaceCard } from "./v2";
 
-type CardProps = PropsWithChildren<{
-  className?: string;
-}>;
+type CardProps = ComponentPropsWithoutRef<"section">;
 
-export function Card({ children, className }: CardProps) {
-  return <SurfaceCard className={["card", className].filter(Boolean).join(" ")}>{children}</SurfaceCard>;
+export function Card({ children, className, ...props }: CardProps) {
+  return <SurfaceCard {...props} className={["card", className].filter(Boolean).join(" ")}>{children}</SurfaceCard>;
 }

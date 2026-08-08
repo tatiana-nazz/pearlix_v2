@@ -58,6 +58,13 @@ def _validate_currency(currency: str | None, *, field: str = "currency") -> str:
     return currency
 
 
+def _validate_description(value, field: str = "description") -> str:
+    description = str(value or "").strip()
+    if not description:
+        raise _validation({field: ["This field is required."]})
+    return description
+
+
 def calculate_paid_amount(invoice: Invoice) -> Decimal:
     total = invoice.payments.aggregate(total=Sum("amount"))["total"]
     return total or Decimal("0.00")
@@ -109,7 +116,14 @@ def _create_invoice_with_sequence(**kwargs) -> Invoice:
         try:
             with transaction.atomic():
                 return Invoice.objects.create(invoice_number=generate_invoice_number(), **kwargs)
-        except IntegrityError:
+        except IntegrityError as exc:
+            visit = kwargs.get("visit")
+            if visit is not None and Invoice.objects.filter(visit=visit).exists():
+                raise BillingRuleError(
+                    "VISIT_INVOICE_EXISTS",
+                    "An invoice already exists for this visit.",
+                    status_code=status.HTTP_409_CONFLICT,
+                ) from exc
             continue
     raise BillingRuleError(
         "INVOICE_NUMBER_GENERATION_FAILED",
@@ -176,6 +190,73 @@ def create_billing_handoff(*, visit: Visit, user, data: dict) -> BillingHandoff:
         return handoff
 
 
+def create_visit_completion_invoice(*, visit: Visit, user, data: dict) -> tuple[Invoice, BillingHandoff]:
+    """Create the trusted Doctor-origin invoice and provenance record in one transaction."""
+    if user.role != "DOCTOR":
+        raise BillingRuleError(
+            "PERMISSION_DENIED",
+            "You do not have permission to perform this action.",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    description = _validate_description(data.get("description"))
+    total_amount = _validate_positive_amount(data.get("total_amount"), "total_amount")
+    currency = _validate_currency(data.get("currency"))
+
+    with transaction.atomic():
+        visit = (
+            Visit.objects.select_for_update()
+            .select_related("patient", "doctor", "appointment")
+            .get(pk=visit.pk)
+        )
+        if visit.doctor_id != user.id:
+            raise BillingRuleError("NOT_FOUND", "Visit was not found.", status_code=status.HTTP_404_NOT_FOUND)
+        if visit.status != Visit.Status.COMPLETED:
+            raise _invalid_transition("Invoice generation requires a completed visit.")
+        if Invoice.objects.select_for_update().filter(visit=visit).exists():
+            raise BillingRuleError(
+                "VISIT_INVOICE_EXISTS",
+                "An invoice already exists for this visit.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        if BillingHandoff.objects.select_for_update().filter(visit=visit).exists():
+            raise BillingRuleError(
+                "BILLING_PROVENANCE_EXISTS",
+                "Billing provenance already exists for this visit.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+
+        handoff = BillingHandoff.objects.create(
+            patient=visit.patient,
+            visit=visit,
+            doctor=visit.doctor,
+            description=description,
+            note=data.get("note", ""),
+            suggested_amount=total_amount,
+            currency=currency,
+            status=BillingHandoff.Status.PENDING,
+            created_by=user,
+            updated_by=user,
+        )
+        invoice = _create_invoice_with_sequence(
+            patient=visit.patient,
+            appointment=visit.appointment,
+            visit=visit,
+            billing_handoff=handoff,
+            created_by=user,
+            origin=Invoice.Origin.VISIT_COMPLETION,
+            description=description,
+            currency=currency,
+            total_amount=total_amount,
+            notes=data.get("note", ""),
+            status=Invoice.Status.UNPAID,
+        )
+        handoff.status = BillingHandoff.Status.CONVERTED_TO_INVOICE
+        handoff.converted_invoice = invoice
+        handoff.updated_by = user
+        handoff.save(update_fields=["status", "converted_invoice", "updated_by", "updated_at"])
+        return invoice, handoff
+
+
 def dismiss_handoff(*, handoff: BillingHandoff, user, data: dict | None = None) -> BillingHandoff:
     if user.role != "STAFF":
         raise BillingRuleError("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
@@ -214,6 +295,7 @@ def convert_handoff_to_invoice(*, handoff: BillingHandoff, user, data: dict) -> 
 
         currency = data.get("currency") or handoff.currency
         currency = _validate_currency(currency)
+        description = _validate_description(data.get("description") or handoff.description or handoff.note)
 
         invoice = _create_invoice_with_sequence(
             patient=handoff.patient,
@@ -221,6 +303,8 @@ def convert_handoff_to_invoice(*, handoff: BillingHandoff, user, data: dict) -> 
             visit=handoff.visit,
             billing_handoff=handoff,
             created_by=user,
+            origin=Invoice.Origin.LEGACY_HANDOFF,
+            description=description,
             currency=currency,
             total_amount=total_amount,
             notes=data.get("notes", ""),
@@ -271,6 +355,7 @@ def create_invoice(*, user, data: dict) -> Invoice:
         raise _validation({"patient_id": ["This field is required."]})
     total_amount = _validate_positive_amount(data.get("total_amount"), "total_amount")
     currency = _validate_currency(data.get("currency"))
+    description = _validate_description(data.get("description"))
     visit = data.get("visit")
     appointment = data.get("appointment")
     _validate_invoice_relationships(patient=patient, visit=visit, appointment=appointment)
@@ -281,6 +366,8 @@ def create_invoice(*, user, data: dict) -> Invoice:
             appointment=appointment,
             visit=visit,
             created_by=user,
+            origin=Invoice.Origin.MANUAL,
+            description=description,
             currency=currency,
             total_amount=total_amount,
             notes=data.get("notes", ""),
@@ -321,8 +408,6 @@ def update_invoice(*, invoice: Invoice, user, data: dict) -> Invoice:
                 payment_locked_fields.append("currency")
             if "total_amount" in data and _validate_positive_amount(data["total_amount"], "total_amount") != invoice.total_amount:
                 payment_locked_fields.append("total_amount")
-            if invoice.billing_handoff_id and "notes" in data and data["notes"] != invoice.notes:
-                payment_locked_fields.append("notes")
         if payment_locked_fields:
             raise _immutable_invoice_update(payment_locked_fields, after_payment=True)
 
@@ -339,6 +424,8 @@ def update_invoice(*, invoice: Invoice, user, data: dict) -> Invoice:
             invoice.total_amount = _validate_positive_amount(data["total_amount"], "total_amount")
         if "currency" in data:
             invoice.currency = _validate_currency(data["currency"])
+        if "description" in data:
+            invoice.description = _validate_description(data["description"])
         if "notes" in data:
             invoice.notes = data["notes"]
 
@@ -419,11 +506,13 @@ def invoice_print_data(invoice: Invoice) -> dict:
             "id": invoice.id,
             "invoice_number": invoice.invoice_number,
             "created_at": invoice.created_at,
+            "origin": invoice.origin,
         },
         "patient": {
             "id": invoice.patient_id,
             "full_name": invoice.patient.full_name,
             "phone_number": invoice.patient.phone_number,
+            "email": invoice.patient.email,
         },
         "visit": {
             "id": invoice.visit_id,
@@ -447,6 +536,7 @@ def invoice_print_data(invoice: Invoice) -> dict:
         "remaining_amount": remaining_amount if remaining_amount > Decimal("0.00") else Decimal("0.00"),
         "status": invoice.status,
         "payments": PaymentSerializer(invoice.payments.all(), many=True).data,
+        "description": invoice.description,
         "notes": invoice.notes,
         "created_at": invoice.created_at,
     }

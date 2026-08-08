@@ -194,6 +194,7 @@ class InvoiceViewSet(
                 Q(invoice_number__icontains=search)
                 | Q(patient__first_name__icontains=search)
                 | Q(patient__last_name__icontains=search)
+                | Q(description__icontains=search)
             )
 
         if include_invoice_dates:
@@ -306,7 +307,7 @@ class InvoiceViewSet(
             action="invoice_created",
             entity_type="invoice",
             entity_id=invoice.id,
-            metadata={"invoice_id": invoice.id, "patient_id": invoice.patient_id},
+            metadata={"invoice_id": invoice.id, "patient_id": invoice.patient_id, "origin": invoice.origin},
         )
         return Response(InvoiceSerializer(invoice).data, status=status.HTTP_201_CREATED)
 

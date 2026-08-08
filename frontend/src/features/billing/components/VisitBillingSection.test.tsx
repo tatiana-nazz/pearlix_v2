@@ -40,7 +40,7 @@ describe("VisitBillingSection", () => {
 
   it("keeps the active-visit billing form editable and uses the clinic currency", async () => {
     render(<BillingHarness />);
-    expect(screen.getByText("Billing details will be sent to Staff when the visit is completed.")).toBeInTheDocument();
+    expect(screen.getByText("Completing the visit creates the final invoice immediately for Staff follow-up.")).toBeInTheDocument();
     expect(screen.queryByText("Complete the visit before sending the invoice handoff to Billing.")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Treatment / invoice description"), { target: { value: "Restorative dental treatment" } });
     fireEvent.change(screen.getByLabelText("Total treatment charge"), { target: { value: "250.00" } });
@@ -55,12 +55,12 @@ describe("VisitBillingSection", () => {
 
   it("shows a persisted handoff and linked invoice read-only without Doctor payment actions", () => {
     state.data = { count: 1, next: null, previous: null, results: [{
-      id: 4, description: "Restorative dental treatment", patient: visit.patient, visit: { id: 91, status: "COMPLETED", started_at: visit.started_at, completed_at: "2026-07-26T10:00:00Z", appointment: visit.appointment }, doctor: visit.doctor, note: "Front desk note", suggested_amount: "1250.00", currency: "SYP", status: "CONVERTED_TO_INVOICE", converted_invoice: { id: 8, invoice_number: "INV-2026-008", currency: "SYP", total_amount: "1250.00", paid_amount: "250.00", remaining_amount: "1000.00", status: "PARTIALLY_PAID" }, dismissed_reason: "", created_by: visit.doctor, updated_by: visit.doctor, created_at: "2026-07-26T10:00:00Z", updated_at: "2026-07-26T11:00:00Z",
+      id: 4, description: "Restorative dental treatment", patient: visit.patient, visit: { id: 91, status: "COMPLETED", started_at: visit.started_at, completed_at: "2026-07-26T10:00:00Z", appointment: visit.appointment }, doctor: visit.doctor, note: "Front desk note", suggested_amount: "1250.00", currency: "SYP", status: "CONVERTED_TO_INVOICE", converted_invoice: { id: 8, invoice_number: "INV-2026-008", origin: "VISIT_COMPLETION", description: "Restorative dental treatment", currency: "SYP", total_amount: "1250.00", paid_amount: "250.00", remaining_amount: "1000.00", status: "PARTIALLY_PAID" }, dismissed_reason: "", created_by: visit.doctor, updated_by: visit.doctor, created_at: "2026-07-26T10:00:00Z", updated_at: "2026-07-26T11:00:00Z",
     } as BillingHandoff & { description: string }] };
     render(<BillingHarness currentVisit={{ ...visit, status: "COMPLETED" }} />);
     expect(screen.getByText("Restorative dental treatment")).toBeInTheDocument();
     expect(screen.getByText("INV-2026-008")).toBeInTheDocument();
-    expect(screen.getByText("PARTIALLY PAID")).toBeInTheDocument();
+    expect(screen.getAllByText("PARTIALLY PAID")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /payment|paid|invoice/i })).not.toBeInTheDocument();
   });
 });

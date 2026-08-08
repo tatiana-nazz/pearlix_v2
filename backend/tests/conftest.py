@@ -308,6 +308,7 @@ def billing_handoff_factory(db, completed_visit, doctor_user):
             "patient": completed_visit.patient,
             "visit": completed_visit,
             "doctor": completed_visit.doctor,
+            "description": "Completed treatment",
             "note": "Please invoice patient.",
             "suggested_amount": "100.00",
             "currency": BillingHandoff.Currency.SYP,
@@ -327,6 +328,7 @@ def invoice_factory(db, patient, staff_user):
         defaults = {
             "invoice_number": f"INV-FACTORY-{Invoice.objects.count() + 1:06d}",
             "patient": patient,
+            "description": "Dental services",
             "currency": Invoice.Currency.SYP,
             "total_amount": "100.00",
             "notes": "",

@@ -3,7 +3,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
-from apps.billing.models import BillingHandoff
+from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.services import BillingRuleError
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment
@@ -42,7 +42,7 @@ def _visit_for(visit_factory, appointment_factory, doctor, status=Visit.Status.A
 def _completion_payload(visit, **billing_overrides):
     billing = {
         "description": "Restorative dental treatment",
-        "suggested_amount": "250.00",
+        "total_amount": "250.00",
         "currency": "SYP",
         "note": "Collect payment at reception after treatment.",
     }
@@ -56,7 +56,7 @@ def _completion_payload(visit, **billing_overrides):
             "clinical_notes": "Completed with billing handoff.",
             "follow_up_notes": "Review in six months.",
         },
-        "billing_handoff": billing,
+        "billing": billing,
     }
 
 
@@ -349,14 +349,20 @@ def test_doctor_can_complete_own_active_visit(doctor_client, doctor_user, appoin
     assert visit.appointment.status == Appointment.Status.COMPLETED
     assert visit.appointment.updated_by == doctor_user
     handoff = BillingHandoff.objects.get(visit=visit)
+    invoice = Invoice.objects.get(visit=visit)
     assert response.data["visit"]["id"] == visit.id
-    assert response.data["billing_handoff"]["id"] == handoff.id
+    assert response.data["billing_provenance"]["id"] == handoff.id
+    assert response.data["created_invoice"]["id"] == invoice.id
     assert handoff.patient_id == visit.patient_id
     assert handoff.doctor_id == doctor_user.id
     assert handoff.description == "Restorative dental treatment"
     assert str(handoff.suggested_amount) == "250.00"
     assert handoff.currency == "SYP"
     assert handoff.note == "Collect payment at reception after treatment."
+    assert handoff.status == BillingHandoff.Status.CONVERTED_TO_INVOICE
+    assert handoff.converted_invoice_id == invoice.id
+    assert invoice.description == "Restorative dental treatment"
+    assert invoice.status == Invoice.Status.UNPAID
     assert visit.clinical_notes == "Completed with billing handoff."
 
 
@@ -365,7 +371,7 @@ def test_doctor_can_complete_own_active_visit(doctor_client, doctor_user, appoin
     "billing_overrides",
     [
         {"description": ""},
-        {"suggested_amount": "0"},
+        {"total_amount": "0"},
         {"currency": "EUR"},
     ],
 )
@@ -387,10 +393,10 @@ def test_complete_visit_rejects_invalid_billing_without_state_change(doctor_clie
 def test_complete_visit_rolls_back_when_handoff_creation_fails(monkeypatch, doctor_client, doctor_user, appointment_factory, visit_factory):
     visit = _visit_for(visit_factory, appointment_factory, doctor_user, clinical_notes="Original")
 
-    def fail_handoff(**_kwargs):
+    def fail_invoice(**_kwargs):
         raise BillingRuleError("VALIDATION_ERROR", "Some fields are invalid.", {"note": ["Rejected."]})
 
-    monkeypatch.setattr("apps.billing.services.create_billing_handoff", fail_handoff)
+    monkeypatch.setattr("apps.billing.services.create_visit_completion_invoice", fail_invoice)
     response = doctor_client.post(f"/api/visits/{visit.id}/complete/", _completion_payload(visit), format="json")
 
     assert response.status_code == 400
@@ -420,14 +426,14 @@ def test_complete_visit_conflict_and_existing_handoff_preserve_active_visit(doct
     BillingHandoff.objects.create(patient=second_visit.patient, visit=second_visit, doctor=doctor_user, description="Existing", suggested_amount="10.00", currency="SYP", status=BillingHandoff.Status.PENDING)
     existing_response = doctor_client.post(f"/api/visits/{second_visit.id}/complete/", _completion_payload(second_visit), format="json")
     assert existing_response.status_code == 409
-    assert existing_response.data["code"] == "BILLING_HANDOFF_EXISTS"
+    assert existing_response.data["code"] == "VISIT_BILLING_EXISTS"
     second_visit.refresh_from_db()
     assert second_visit.status == Visit.Status.ACTIVE
     assert BillingHandoff.objects.filter(visit=second_visit).count() == 1
 
 
 @pytest.mark.django_db
-def test_repeated_complete_request_cannot_create_duplicate_handoff(doctor_client, doctor_user, appointment_factory, visit_factory):
+def test_repeated_complete_request_cannot_create_duplicate_invoice(doctor_client, doctor_user, appointment_factory, visit_factory):
     visit = _visit_for(visit_factory, appointment_factory, doctor_user)
     payload = _completion_payload(visit)
 
@@ -437,6 +443,7 @@ def test_repeated_complete_request_cannot_create_duplicate_handoff(doctor_client
     assert first.status_code == 200
     assert second.status_code == 409
     assert BillingHandoff.objects.filter(visit=visit).count() == 1
+    assert Invoice.objects.filter(visit=visit).count() == 1
 
 
 @pytest.mark.django_db

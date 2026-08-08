@@ -17,8 +17,8 @@ const appointment = (id: number, status: DashboardAppointmentSummary["status"] =
 const invoice = { id: 12, invoice_number: "INV-2026-0012", patient: { id: 8, full_name: "Maya Hassan", phone_number: "0911000000" }, currency: "SYP" as const, total_amount: "120000.00", paid_amount: "20000.00", remaining_amount: "100000.00", status: "PARTIALLY_PAID" as const, created_at: "2026-07-20T08:00:00+03:00" };
 const counts = { UPCOMING: 4, CHECKED_IN: 2, ACTIVE: 1, COMPLETED: 8, NEEDS_RESCHEDULE: 3, CANCELLED: 1, NO_SHOW: 0 };
 const activity = [{ date: "2026-07-19", SYP: { invoiced: "100000.00", collected: "50000.00" }, USD: { invoiced: "25.00", collected: "10.00" } }, { date: "2026-07-20", SYP: { invoiced: "200000.00", collected: "100000.00" }, USD: { invoiced: "50.00", collected: "30.00" } }];
-const adminData: AdminDashboardResponse = { clinic_date: "2026-07-20", clinic_timezone: "Asia/Damascus", today_appointments_count: 2, checked_in_appointments_count: 1, needs_reschedule_appointments_count: 3, active_visits_count: 2, pending_billing_handoffs_count: 4, today_appointments: [appointment(4), appointment(5, "UPCOMING", 10)], appointment_status_last_7_days: counts, billing_activity_last_30_days: activity, recent_invoices: [invoice] };
-const staffData: StaffDashboardResponse = { clinic_date: "2026-07-20", clinic_timezone: "Asia/Damascus", today_appointments_count: 2, patients_ready_count: 1, needs_reschedule_count: 3, pending_billing_count: 4, today_appointments: [appointment(4), appointment(5, "UPCOMING", 10)], open_invoices: [invoice] };
+const adminData: AdminDashboardResponse = { clinic_date: "2026-07-20", clinic_timezone: "Asia/Damascus", today_appointments_count: 2, checked_in_appointments_count: 1, needs_reschedule_appointments_count: 3, active_visits_count: 2, open_invoices_count: 7, today_invoices_count: 4, today_appointments: [appointment(4), appointment(5, "UPCOMING", 10)], appointment_status_last_7_days: counts, billing_activity_last_30_days: activity, recent_invoices: [invoice] };
+const staffData: StaffDashboardResponse = { clinic_date: "2026-07-20", clinic_timezone: "Asia/Damascus", today_appointments_count: 2, patients_ready_count: 1, needs_reschedule_count: 3, open_invoices_count: 4, today_appointments: [appointment(4), appointment(5, "UPCOMING", 10)], open_invoices: [invoice] };
 const doctorData: DoctorDashboardResponse = { clinic_date: "2026-07-20", clinic_timezone: "Asia/Damascus", today_appointments_count: 3, patients_ready_count: 1, completed_today_count: 2, needs_reschedule_count: 1, today_appointments: [appointment(4), appointment(5, "UPCOMING", 10), appointment(6, "COMPLETED", 8)], own_active_visit: { id: 70, patient: appointment(4).patient, appointment_id: 4, appointment_reason: "Review", appointment_start_datetime: appointment(4).start_datetime, status: "ACTIVE", started_at: "2026-07-20T09:05:00+03:00", completed_at: null } };
 const summary: InvoiceFinancialSummary = { clinic_date: "2026-07-20", clinic_timezone: "Asia/Damascus", invoice_count: 20, status_counts: { UNPAID: 5, PARTIALLY_PAID: 2, PAID: 12, CANCELLED: 1 }, open_invoice_count: 7, currency_totals: { SYP: { invoiced: "1", paid: "1", outstanding: "0" }, USD: { invoiced: "1", paid: "1", outstanding: "0" } }, payments_collected_in_period: { SYP: "1", USD: "1" } };
 
@@ -34,8 +34,8 @@ describe("role dashboards", () => {
     expect(screen.getByRole("link", { name: "Today's appointments: 2" })).toHaveAttribute("href", "/admin/appointments/day?date=2026-07-20");
     expect(screen.getByText("Active visits").closest(".v2-card")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Needs reschedule: 3" })).toHaveAttribute("href", "/admin/appointments/needs-reschedule");
-    expect(screen.getByRole("link", { name: "Pending handoffs: 4" })).toHaveAttribute("href", "/admin/billing/handoffs?status=PENDING");
-    expect(screen.getByRole("link", { name: "Open invoices: 7" })).toHaveAttribute("href", "/admin/billing/invoices");
+    expect(screen.getByRole("link", { name: "Open invoices: 7" })).toHaveAttribute("href", "/admin/billing/invoices?status=UNPAID");
+    expect(screen.getByRole("link", { name: "Today's invoices: 4" })).toHaveAttribute("href", "/admin/billing/invoices?date_from=2026-07-20&date_to=2026-07-20");
     expect(document.querySelectorAll(".dashboard-v2-metrics .v2-card")).toHaveLength(5);
   });
 
@@ -49,8 +49,8 @@ describe("role dashboards", () => {
   it("renders only meaningful Admin attention items and a calm empty state", async () => {
     setUser("ADMIN"); mockAdmin(); const { unmount } = renderDashboard(<AdminDashboard />);
     const attention = await screen.findByRole("navigation", { name: "Dashboard attention items" });
-    expect(within(attention).getAllByRole("link")).toHaveLength(4); unmount(); vi.restoreAllMocks();
-    mockAdmin({ ...adminData, checked_in_appointments_count: 0, needs_reschedule_appointments_count: 0, pending_billing_handoffs_count: 0 }, { ...summary, open_invoice_count: 0 });
+    expect(within(attention).getAllByRole("link")).toHaveLength(3); unmount(); vi.restoreAllMocks();
+    mockAdmin({ ...adminData, checked_in_appointments_count: 0, needs_reschedule_appointments_count: 0, open_invoices_count: 0 }, { ...summary, open_invoice_count: 0 });
     renderDashboard(<AdminDashboard />); expect(await screen.findByText("No urgent operational issues.")).toBeInTheDocument();
   });
 
@@ -77,7 +77,7 @@ describe("role dashboards", () => {
     expect(screen.getByRole("link", { name: "Today's appointments: 2" })).toHaveAttribute("href", "/staff/appointments/day?date=2026-07-20");
     expect(screen.getByRole("link", { name: "Patients ready: 1" })).toHaveAttribute("href", "/staff/appointments/day?date=2026-07-20&status=CHECKED_IN");
     expect(screen.getByRole("link", { name: "Needs reschedule: 3" })).toHaveAttribute("href", "/staff/appointments/needs-reschedule");
-    expect(screen.getByRole("link", { name: "Pending billing: 4" })).toHaveAttribute("href", "/staff/billing/handoffs?status=PENDING");
+    expect(screen.getByRole("link", { name: "Open invoices: 4" })).toHaveAttribute("href", "/staff/billing/invoices");
     expect(screen.getByRole("link", { name: "Open appointment 4: Patient 4" })).toHaveAttribute("href", "/staff/appointments/4");
     expect(screen.getByRole("link", { name: "Invoice INV-2026-0012: Maya Hassan" })).toHaveAttribute("href", "/staff/billing/invoices/12");
     expect(screen.getByRole("link", { name: "View billing" })).toHaveAttribute("href", "/staff/billing/overview");
@@ -132,10 +132,9 @@ describe("role dashboards", () => {
     setUser("STAFF", "AR"); vi.spyOn(dashboardApi, "staff").mockResolvedValue(staffData); renderDashboard(<StaffDashboard />); expect(await screen.findByRole("heading", { name: "لوحة موظفي الاستقبال" })).toBeInTheDocument();
   });
 
-  it("shows loading and retries both authoritative Admin requests after failure", async () => {
+  it("shows loading and retries the authoritative Admin request after failure", async () => {
     setUser("ADMIN"); let resolveDashboard: (value: AdminDashboardResponse) => void = () => undefined;
     vi.spyOn(dashboardApi, "admin").mockImplementationOnce(() => Promise.reject(new Error("unavailable"))).mockImplementationOnce(() => new Promise((resolve) => { resolveDashboard = resolve; }));
-    vi.spyOn(billingApi, "invoiceSummary").mockRejectedValueOnce(new Error("unavailable")).mockResolvedValue(summary);
     renderDashboard(<AdminDashboard />); expect(await screen.findByText("Dashboard unavailable")).toBeInTheDocument(); fireEvent.click(screen.getByRole("button", { name: "Retry" })); await screen.findByLabelText("Loading dashboard"); await act(async () => resolveDashboard(adminData)); expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
   });
 });

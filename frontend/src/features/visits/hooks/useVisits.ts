@@ -3,17 +3,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { visitsApi } from "../../../api/endpoints/visits";
 import { ApiClientError } from "../../../api/errors";
 import type { ClinicalNotesPayload, VisitDetail } from "../../../types/visits";
+import { invalidateBillingQueries } from "../../billing/hooks/billingCache";
 
 export function visitKey(visitId: number) {
   return ["visit", visitId] as const;
 }
 
-function invalidateVisitContext(queryClient: ReturnType<typeof useQueryClient>, visit: VisitDetail, refetchActive = true) {
+async function invalidateVisitContext(queryClient: ReturnType<typeof useQueryClient>, visit: VisitDetail, refetchActive = true) {
   queryClient.setQueryData(visitKey(visit.id), visit);
-  void queryClient.invalidateQueries({ queryKey: ["active-visit"], refetchType: refetchActive ? "active" : "none" });
-  void queryClient.invalidateQueries({ queryKey: ["appointments"] });
-  void queryClient.invalidateQueries({ queryKey: ["patient", visit.patient.id, "visits"] });
-  void queryClient.invalidateQueries({ queryKey: ["dashboard", "doctor"] });
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["active-visit"], refetchType: refetchActive ? "active" : "none" }),
+    queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+    queryClient.invalidateQueries({ queryKey: ["patient", visit.patient.id, "visits"] }),
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+  ]);
 }
 
 export function useVisit(visitId: number) {
@@ -50,10 +53,18 @@ export function useCompleteVisit(visitId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: Parameters<typeof visitsApi.complete>[1]) => visitsApi.complete(visitId, payload),
-    onSuccess: (result) => {
-      invalidateVisitContext(queryClient, result.visit, false);
-      void queryClient.invalidateQueries({ queryKey: ["billing-handoffs"] });
-      void queryClient.invalidateQueries({ queryKey: ["patient", result.visit.patient.id, "billing"] });
+    onSuccess: async (result) => {
+      await Promise.all([
+        invalidateVisitContext(queryClient, result.visit, false),
+        invalidateBillingQueries(queryClient, {
+          invoiceId: result.created_invoice.id,
+          handoffId: result.billing_provenance.id,
+          patientId: result.visit.patient.id,
+          visitId: result.visit.id,
+          appointmentId: result.visit.appointment.id,
+          refetchActiveVisit: false,
+        }),
+      ]);
     },
   });
 }

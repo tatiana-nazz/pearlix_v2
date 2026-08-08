@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
@@ -26,6 +27,7 @@ from apps.billing.services import (
     convert_handoff_to_invoice,
     create_billing_handoff,
     create_invoice,
+    create_visit_completion_invoice,
     dismiss_handoff,
     record_payment,
 )
@@ -178,7 +180,10 @@ class Command(BaseCommand):
             self._log_story(accounts, patients, story)
 
         self.stdout.write(self.style.SUCCESS(
-            f"Seeded {DEMO_TAG}: {len(patients)} patients, {Appointment.objects.filter(patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX).count()} appointments."
+            f"Seeded {DEMO_TAG}: {len(patients)} patients, "
+            f"{Appointment.objects.filter(patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX).count()} appointments, "
+            f"{Invoice.objects.filter(patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX).count()} invoices, "
+            f"{Payment.objects.filter(invoice__patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX).count()} payments."
         ))
         self.stdout.write("QA accounts (local development only):")
         for key in ("admin", "staff.one", "staff.two", "doctor.one", "doctor.two", "doctor.three", "doctor.four", "doctor.mustchange"):
@@ -276,9 +281,18 @@ class Command(BaseCommand):
     def _appointment(self, *, patient, doctor, start, duration, status, staff, reason):
         end = start + timedelta(minutes=duration)
         appointment = Appointment.objects.create(patient=patient, doctor=doctor, start_datetime=start, end_datetime=end, duration_minutes=duration, status=status, reason=reason, notes="Synthetic Phase 14A appointment.", created_by=staff, updated_by=staff)
+        timestamp_fields = []
         if status == Appointment.Status.CHECKED_IN:
             appointment.checked_in_at = start
-            appointment.save(update_fields=["checked_in_at", "updated_at"])
+            timestamp_fields.append("checked_in_at")
+        elif status == Appointment.Status.CANCELLED:
+            appointment.cancelled_at = start - timedelta(days=1)
+            timestamp_fields.append("cancelled_at")
+        elif status == Appointment.Status.NO_SHOW:
+            appointment.no_show_at = end
+            timestamp_fields.append("no_show_at")
+        if timestamp_fields:
+            appointment.save(update_fields=[*timestamp_fields, "updated_at"])
         return appointment
 
     def _completed_visit(self, appointment, doctor, staff, *, notes=True):
@@ -292,12 +306,13 @@ class Command(BaseCommand):
         previous_day = lambda weekday: today - timedelta(days=((today.weekday() - weekday) % 7 or 7))
         app = {}
         app["today_confirmed"] = self._appointment(patient=patients[0], doctor=d4, start=self._dt(today, 14), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Today confirmed")
-        app["checked_in"] = self._appointment(patient=patients[1], doctor=d2, start=self._dt(previous_day(4), 10), duration=45, status=Appointment.Status.CHECKED_IN, staff=staff, reason="Checked in and ready to start")
+        app["checked_in"] = self._appointment(patient=patients[1], doctor=d3, start=self._dt(today, 10), duration=45, status=Appointment.Status.CHECKED_IN, staff=staff, reason="Checked in and ready to start")
         active_app = self._appointment(patient=patients[2], doctor=d1, start=self._dt(previous_day(4), 14), duration=30, status=Appointment.Status.CHECKED_IN, staff=staff, reason="Active clinical review")
         active_visit = start_visit_from_appointment(appointment=active_app, user=d1)
         active_visit.symptoms = "Synthetic sensitivity for active-visit QA."
         active_visit.clinical_notes = "Editable synthetic note created by the deterministic demo story."
-        active_visit.save(update_fields=["symptoms", "clinical_notes", "updated_at"])
+        active_visit.started_at = active_app.start_datetime + timedelta(minutes=5)
+        active_visit.save(update_fields=["symptoms", "clinical_notes", "started_at", "updated_at"])
         completed = []
         for index in range(3, 14):
             doctor = (d1, d2, d4)[index % 3]
@@ -377,22 +392,114 @@ class Command(BaseCommand):
         discard_external_case(external_case=discarded, user=d1)
         return {"xray": xray, "temporary": temporary, "attached": attached, "discarded": discarded}
 
+    def _set_story_timestamp(self, instance, value, **extra_fields):
+        update = {"created_at": value, "updated_at": value, **extra_fields}
+        type(instance).objects.filter(pk=instance.pk).update(**update)
+        instance.refresh_from_db()
+        return instance
+
     def _create_billing_story(self, accounts, patients, story):
-        doctor, staff = accounts["doctor.one"], accounts["staff.one"]
+        staff = accounts["staff.one"]
         visits = story["completed_visits"]
-        pending = create_billing_handoff(visit=visits[7], user=visits[7].doctor, data={"note": "Pending demo handoff", "suggested_amount": "250000.00", "currency": "SYP"})
-        converted = create_billing_handoff(visit=visits[8], user=visits[8].doctor, data={"note": "Convert demo handoff", "suggested_amount": "100.00", "currency": "USD"})
-        converted_invoice = convert_handoff_to_invoice(handoff=converted, user=staff, data={"total_amount": "100.00", "currency": "USD", "notes": "Converted demo invoice"})
-        dismissed = create_billing_handoff(visit=visits[9], user=visits[9].doctor, data={"note": "Dismiss demo handoff", "suggested_amount": "125000.00", "currency": "SYP"})
+        reference_date = timezone.localtime(story["appointments"]["today_confirmed"].start_datetime).date()
+
+        generated_today_invoice, generated_today_handoff = create_visit_completion_invoice(
+            visit=visits[6],
+            user=visits[6].doctor,
+            data={
+                "description": "Comprehensive restorative treatment",
+                "total_amount": "250000.00",
+                "currency": "SYP",
+                "note": "Invoice generated with visit completion",
+            },
+        )
+        today_invoice_at = self._dt(reference_date, 11, 15)
+        self._set_story_timestamp(generated_today_handoff, today_invoice_at)
+        self._set_story_timestamp(generated_today_invoice, today_invoice_at)
+
+        generated_historical_invoice, generated_historical_handoff = create_visit_completion_invoice(
+            visit=visits[7],
+            user=visits[7].doctor,
+            data={
+                "description": "Historical automatic root-canal treatment",
+                "total_amount": "140.00",
+                "currency": "USD",
+                "note": "Historical invoice generated automatically when the visit completed",
+            },
+        )
+        historical_invoice_at = self._dt(reference_date - timedelta(days=21), 15, 30)
+        self._set_story_timestamp(generated_historical_handoff, historical_invoice_at)
+        self._set_story_timestamp(generated_historical_invoice, historical_invoice_at)
+
+        converted = create_billing_handoff(visit=visits[8], user=visits[8].doctor, data={"description": "Legacy completed treatment", "note": "Historical converted handoff", "suggested_amount": "100.00", "currency": "USD"})
+        converted_invoice = convert_handoff_to_invoice(handoff=converted, user=staff, data={"description": "Legacy completed treatment", "total_amount": "100.00", "currency": "USD", "notes": "Historical converted invoice"})
+        legacy_invoice_at = self._dt(reference_date - timedelta(days=8), 16)
+        self._set_story_timestamp(converted, legacy_invoice_at)
+        self._set_story_timestamp(converted_invoice, legacy_invoice_at)
+
+        dismissed = create_billing_handoff(visit=visits[9], user=visits[9].doctor, data={"description": "Historical duplicate record", "note": "Historical dismissed handoff", "suggested_amount": "125000.00", "currency": "SYP"})
         dismiss_handoff(handoff=dismissed, user=staff, data={"dismissed_reason": "Synthetic duplicate billing route"})
-        unpaid = create_invoice(user=staff, data={"patient": patients[14], "currency": "SYP", "total_amount": "300000.00", "notes": "Unpaid demo invoice"})
-        partial = create_invoice(user=staff, data={"patient": patients[15], "currency": "SYP", "total_amount": "200000.00", "notes": "Partial demo invoice"})
-        record_payment(invoice=partial, user=staff, data={"amount": "75000.00", "currency": "SYP"})
-        paid = create_invoice(user=staff, data={"patient": patients[16], "currency": "USD", "total_amount": "120.00", "notes": "Paid demo invoice"})
-        record_payment(invoice=paid, user=staff, data={"amount": "120.00", "currency": "USD"})
-        cancelled = create_invoice(user=staff, data={"patient": patients[17], "currency": "SYP", "total_amount": "180000.00", "notes": "Cancelled demo invoice"})
+        self._set_story_timestamp(dismissed, self._dt(reference_date - timedelta(days=45), 12))
+
+        unpaid = create_invoice(user=staff, data={"patient": visits[6].patient, "description": "Orthodontic consultation", "currency": "SYP", "total_amount": "300000.00", "notes": "Unpaid demo invoice"})
+        self._set_story_timestamp(unpaid, self._dt(reference_date, 12, 30))
+
+        partial = create_invoice(user=staff, data={"patient": visits[7].patient, "description": "Restorative treatment plan", "currency": "SYP", "total_amount": "200000.00", "notes": "Partial demo invoice"})
+        self._set_story_timestamp(partial, self._dt(reference_date - timedelta(days=4), 10))
+        partial_payment = record_payment(
+            invoice=partial,
+            user=staff,
+            data={
+                "amount": "75000.00",
+                "currency": "SYP",
+                "payment_date": self._dt(reference_date, 10, 15),
+                "notes": "Deposit collected today",
+            },
+        )
+        self._set_story_timestamp(partial_payment, self._dt(reference_date, 10, 15))
+
+        paid = create_invoice(user=staff, data={"patient": patients[16], "description": "Dental cleaning", "currency": "USD", "total_amount": "120.00", "notes": "Paid demo invoice"})
+        self._set_story_timestamp(paid, self._dt(reference_date - timedelta(days=18), 9))
+        paid_deposit = record_payment(
+            invoice=paid,
+            user=staff,
+            data={
+                "amount": "50.00",
+                "currency": "USD",
+                "payment_date": self._dt(reference_date - timedelta(days=18), 9, 30),
+                "notes": "Initial payment",
+            },
+        )
+        self._set_story_timestamp(paid_deposit, self._dt(reference_date - timedelta(days=18), 9, 30))
+        paid_balance = record_payment(
+            invoice=paid,
+            user=staff,
+            data={
+                "amount": "70.00",
+                "currency": "USD",
+                "payment_date": self._dt(reference_date - timedelta(days=17), 11),
+                "notes": "Remaining balance",
+            },
+        )
+        self._set_story_timestamp(paid_balance, self._dt(reference_date - timedelta(days=17), 11))
+
+        cancelled = create_invoice(user=staff, data={"patient": patients[17], "description": "Cancelled treatment estimate", "currency": "SYP", "total_amount": "180000.00", "notes": "Cancelled demo invoice"})
         cancel_invoice(invoice=cancelled, user=staff, data={"cancelled_reason": "Synthetic cancellation"})
-        return {"pending": pending, "converted": converted, "converted_invoice": converted_invoice, "dismissed": dismissed, "unpaid": unpaid, "partial": partial, "paid": paid, "cancelled": cancelled}
+        cancelled_at = self._dt(reference_date - timedelta(days=60), 13)
+        self._set_story_timestamp(cancelled, cancelled_at, cancelled_at=cancelled_at)
+        return {
+            "generated_today_handoff": generated_today_handoff,
+            "generated_today_invoice": generated_today_invoice,
+            "generated_historical_handoff": generated_historical_handoff,
+            "generated_historical_invoice": generated_historical_invoice,
+            "converted": converted,
+            "converted_invoice": converted_invoice,
+            "dismissed": dismissed,
+            "unpaid": unpaid,
+            "partial": partial,
+            "paid": paid,
+            "cancelled": cancelled,
+        }
 
     def _log_story(self, accounts, patients, story):
         actor = accounts["admin"]
@@ -412,7 +519,8 @@ class Command(BaseCommand):
             if item:
                 log_activity(actor=item.uploaded_by, action=action, entity_type="xray", entity_id=item.id, metadata={"demo_story": DEMO_TAG, "xray_id": item.id})
         for action, entity_type, entity_id, actor in (
-            ("billing_handoff_created", "billing_handoff", story["billing"]["pending"].id, story["billing"]["pending"].doctor),
+            ("invoice_created", "invoice", story["billing"]["generated_today_invoice"].id, story["billing"]["generated_today_handoff"].doctor),
+            ("invoice_created", "invoice", story["billing"]["generated_historical_invoice"].id, story["billing"]["generated_historical_handoff"].doctor),
             ("billing_handoff_converted", "billing_handoff", story["billing"]["converted"].id, accounts["staff.one"]),
             ("billing_handoff_dismissed", "billing_handoff", story["billing"]["dismissed"].id, accounts["staff.one"]),
             ("invoice_created", "invoice", story["billing"]["converted_invoice"].id, accounts["staff.one"]),
@@ -429,7 +537,9 @@ class Command(BaseCommand):
             files.extend(ExternalXrayCase.objects.filter(uploaded_by_id__in=user_ids).values_list(field, flat=True))
         files.extend(AIResult.objects.filter(xray_attachment__patient_id__in=patient_ids).values_list("overlay_file", flat=True))
         with transaction.atomic():
-            ActivityLog.objects.filter(metadata_json__demo_story=DEMO_TAG).delete()
+            ActivityLog.objects.filter(
+                Q(metadata_json__demo_story=DEMO_TAG) | Q(actor_id__in=user_ids)
+            ).delete()
             Payment.objects.filter(invoice__patient_id__in=patient_ids).delete()
             Invoice.objects.filter(patient_id__in=patient_ids).delete()
             BillingHandoff.objects.filter(patient_id__in=patient_ids).delete()
@@ -438,7 +548,7 @@ class Command(BaseCommand):
             XrayAttachment.objects.filter(patient_id__in=patient_ids).delete()
             Visit.objects.filter(patient_id__in=patient_ids).delete()
             Appointment.objects.filter(patient_id__in=patient_ids).delete()
-            AvailabilityException.objects.filter(doctor_id__in=user_ids).delete()
+            AvailabilityException.objects.filter(Q(doctor_id__in=user_ids) | Q(staff_id__in=user_ids)).delete()
             WorkingShift.objects.filter(employee_id__in=user_ids).delete()
             Patient.objects.filter(id__in=patient_ids).delete()
             User.objects.filter(id__in=user_ids).delete()

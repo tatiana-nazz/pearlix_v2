@@ -6,7 +6,7 @@ The Phase 14A demo is a deterministic, development-only dataset for exercising e
 
 ```powershell
 cd backend
-python manage.py seed_demo_clinic_story --password "<LOCAL_QA_PASSWORD>" --reset-demo --reference-date 2026-07-26
+python manage.py seed_demo_clinic_story --password "<LOCAL_QA_PASSWORD>" --reset-demo --reference-date 2026-08-08
 ```
 
 `--password` accepts a local QA password and defaults to a development-only value. Do not commit or reuse it outside local development. The command refuses to run unless `DEBUG=true`. `--reference-date YYYY-MM-DD` makes the relative story dates deterministic; without it the command derives the date in the configured clinic timezone. `--include-must-change-user` remains accepted for compatibility, but the must-change QA account is now always included.
@@ -29,13 +29,13 @@ Phase 14C.0 gives the Doctors distinct stored specialties, phones, and biographi
 
 ## Anchor story
 
-The 24 synthetic patients include today's confirmed and checked-in appointments, one active visit, completed clinical history with all five note fields, a returning patient with multiple visits, saved X-rays with and without mock AI, temporary/attached/discarded external X-rays, cancelled/no-show/future appointments, archived history, and pending/converted/dismissed handoffs with unpaid/partial/paid/cancelled invoices. Doctors have schedules, Doctor Four and Staff Two demonstrate split shifts, and Staff leave is visible in the consolidated profile.
+The 24 synthetic patients include today's confirmed and checked-in appointments, one Doctor One active visit with no invoice, completed clinical history with all five note fields, a returning patient with multiple visits, saved X-rays with and without mock AI, temporary/attached/discarded external X-rays, cancelled/no-show/future appointments, archived history, historical converted/dismissed billing provenance, and manual or completed-visit unpaid/partial/paid/cancelled invoices. The current demo has no pending handoff queue. Doctors have schedules, Doctor Four and Staff Two demonstrate split shifts, and Staff leave is visible in the consolidated profile.
 
 The reschedule story uses real domain transitions: three future appointments are created before Doctor leave, the leave service marks them, one is then rescheduled to a valid doctor/time and logged with old/new slots, and two remain in the queue. A later Doctor shift reduction marks one additional appointment through the confirmed shift-impact service. A second Doctor leave and parallel same-time appointments across different Doctors make Admin and Staff views meaningfully populated.
 
 Generated demo images are deterministic 320×180 synthetic grayscale illustrations rather than one-pixel placeholders. They are explicitly non-clinical and remain unsuitable for diagnosis.
 
-The seeded Admin, Staff, and Doctor dashboards are non-empty and their related route screens are populated. Browser QA is still pending; use `frontend/QA_14A.md` for the live checklist.
+The seeded Admin, Staff, and Doctor dashboards are non-empty and their related route screens are populated. Stage 6 focused browser coverage verifies the current invoice-centric workflow; use `frontend/QA_14A.md` for the broader historical live checklist.
 
 ## Automated verification
 

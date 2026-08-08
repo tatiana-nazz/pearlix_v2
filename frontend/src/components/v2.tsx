@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, ChevronRight, Circle, Info, Lock, MoreHorizontal, Search, X } from "lucide-react";
-import type { ButtonHTMLAttributes, InputHTMLAttributes, PropsWithChildren, ReactNode, SelectHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ComponentPropsWithoutRef, InputHTMLAttributes, PropsWithChildren, ReactNode, SelectHTMLAttributes } from "react";
 import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 
 export function Button({ children, variant = "primary", compact, loading = false, disabled, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger"; compact?: boolean; loading?: boolean }) { return <button {...props} disabled={disabled || loading} aria-busy={loading || undefined} className={["v2-button", variant === "primary" ? "" : variant, compact ? "compact" : "", props.className].filter(Boolean).join(" ")}>{children}</button>; }
@@ -59,7 +59,7 @@ export function ActionMenuItem({ children, danger = false, onSelect, disabled = 
 export function ActionMenuSeparator() { return <div className="v2-action-menu-separator" role="separator" />; }
 export function PageHeaderV2({ title, description, action }: { title:string; description?:string; action?:ReactNode }) { return <div className="page-header"><div><h2>{title}</h2>{description ? <p>{description}</p> : null}</div>{action ? <div className="page-header-actions">{action}</div> : null}</div>; }
 export function SectionHeading({ title, description }: { title:string; description?:string }) { return <div className="section-header"><h3>{title}</h3>{description ? <p>{description}</p> : null}</div>; }
-export function SurfaceCard({ children, major = false, className }: PropsWithChildren<{ major?:boolean; className?:string }>) { return <section className={["v2-card", major ? "major" : "", className].filter(Boolean).join(" ")}>{children}</section>; }
+export function SurfaceCard({ children, major = false, className, ...props }: ComponentPropsWithoutRef<"section"> & { major?:boolean }) { return <section {...props} className={["v2-card", major ? "major" : "", className].filter(Boolean).join(" ")}>{children}</section>; }
 export type KpiTone = "blue" | "violet" | "teal" | "green" | "amber" | "orange" | "rose";
 export function KpiCard({ icon, label, value, support, tone = "blue" }: { icon:ReactNode; label:string; value:string|number; support?:string; tone?:KpiTone }) { return <SurfaceCard className={`v2-kpi ${tone}`}><div className="kpi-icon">{icon}</div><p>{label}</p><strong>{value}</strong><span className="v2-kpi-support" aria-hidden={support ? undefined : "true"}>{support ?? ""}</span></SurfaceCard>; }
 
@@ -204,7 +204,56 @@ export function FormSection({ title, children }: PropsWithChildren<{ title:strin
 export function StickyActionBar({ children }: PropsWithChildren) { return <div className="v2-sticky-actions">{children}</div>; }
 
 type OverlayProps = PropsWithChildren<{ open:boolean; title:string; description?:string; onClose:()=>void; dirty?:boolean; pending?:boolean; wide?:boolean }>;
-function Overlay({ open, title, description, onClose, dirty, pending, wide, children, drawer = false }: OverlayProps & { drawer?:boolean }) { const dialog = useRef<HTMLDivElement>(null); const trigger = useRef<HTMLElement | null>(null); const [confirmDiscard, setConfirmDiscard] = useState(false); useEffect(() => { if (!open) { setConfirmDiscard(false); return; } trigger.current = document.activeElement as HTMLElement; const timer = window.setTimeout(() => dialog.current?.querySelector<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])")?.focus(), 0); const onKey = (event:KeyboardEvent) => { if (event.key === "Escape") requestClose(); if (event.key === "Tab" && dialog.current) { const focusable = Array.from(dialog.current.querySelectorAll<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])")); const last = focusable[focusable.length - 1]; if (!focusable.length) return; if (event.shiftKey && document.activeElement === focusable[0]) { event.preventDefault(); last?.focus(); } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); focusable[0].focus(); } } }; document.addEventListener("keydown", onKey); return () => { clearTimeout(timer); document.removeEventListener("keydown", onKey); window.setTimeout(() => trigger.current?.focus(), 0); }; }, [open, dirty, pending]); if (!open) return null; function requestClose() { if (pending) return; if (dirty) { setConfirmDiscard(true); return; } onClose(); } return <div className="v2-overlay-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><div className={`v2-overlay ${drawer ? "drawer" : ""} ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-labelledby="overlay-title" aria-describedby={description ? "overlay-description" : undefined} ref={dialog}><div className="v2-overlay-header"><div><h2 id="overlay-title">{title}</h2>{description ? <p id="overlay-description">{description}</p> : null}</div><IconButton label="Close" onClick={requestClose} disabled={pending}><X size={20} /></IconButton></div>{children}{confirmDiscard ? <div role="alertdialog" aria-label="Discard changes"><p>Discard unsaved changes?</p><Button variant="danger" onClick={onClose}>Discard</Button><Button variant="secondary" onClick={() => setConfirmDiscard(false)}>Keep editing</Button></div> : null}</div></div>; }
+function Overlay({ open, title, description, onClose, dirty, pending, wide, children, drawer = false }: OverlayProps & { drawer?:boolean }) {
+  const dialog = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLElement | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  function requestClose() {
+    if (pending) return;
+    if (dirty) {
+      setConfirmDiscard(true);
+      return;
+    }
+    onClose();
+  }
+
+  useEffect(() => {
+    if (!open) {
+      setConfirmDiscard(false);
+      return undefined;
+    }
+    trigger.current = document.activeElement as HTMLElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const timer = window.setTimeout(() => dialog.current?.querySelector<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])")?.focus(), 0);
+    const onKey = (event:KeyboardEvent) => {
+      if (event.key === "Escape") requestClose();
+      if (event.key === "Tab" && dialog.current) {
+        const focusable = Array.from(dialog.current.querySelectorAll<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])"));
+        if (!focusable.length) return;
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === focusable[0]) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          focusable[0].focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+      window.setTimeout(() => trigger.current?.focus(), 0);
+    };
+  }, [open, dirty, pending]);
+
+  if (!open) return null;
+  return <div className="v2-overlay-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><div className={`v2-overlay ${drawer ? "drawer" : ""} ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-labelledby="overlay-title" aria-describedby={description ? "overlay-description" : undefined} ref={dialog}><div className="v2-overlay-header"><div><h2 id="overlay-title">{title}</h2>{description ? <p id="overlay-description">{description}</p> : null}</div><IconButton label="Close" onClick={requestClose} disabled={pending}><X size={20} /></IconButton></div><div className="v2-overlay-body">{children}{confirmDiscard ? <div role="alertdialog" aria-label="Discard changes"><p>Discard unsaved changes?</p><Button variant="danger" onClick={onClose}>Discard</Button><Button variant="secondary" onClick={() => setConfirmDiscard(false)}>Keep editing</Button></div> : null}</div></div></div>;
+}
 export function Modal(props:OverlayProps) { return <Overlay {...props} />; } export function Drawer(props:OverlayProps) { return <Overlay {...props} drawer />; } export function ConfirmDialog(props:OverlayProps) { return <Overlay {...props}>{props.children}</Overlay>; }
 export function StatePanel({ state, title, description, action }: { state:"loading"|"empty"|"error"|"denied"|"readonly"|"locked"|"notFound"; title:string; description?:string; action?:ReactNode }) { const Icon = state === "error" ? AlertCircle : state === "locked" ? Lock : state === "denied" ? AlertCircle : Info; return <div className="v2-state" role={state === "error" ? "alert" : "status"}><Icon size={24} aria-hidden="true" /><h3>{title}</h3>{description ? <p>{description}</p> : null}{action}</div>; }
 export function Skeleton({ height = 20 }: { height?:number }) { return <div className="v2-skeleton" style={{ height }} aria-hidden="true" />; }

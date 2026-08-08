@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from apps.billing.models import BillingHandoff, Invoice, Payment
+from apps.billing.models import Invoice, Payment
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
 from apps.scheduling.models import Appointment
@@ -171,7 +171,13 @@ def admin_dashboard(request):
             "checked_in_appointments_count": today_appointments.filter(status=Appointment.Status.CHECKED_IN).count(),
             "needs_reschedule_appointments_count": Appointment.objects.filter(status=Appointment.Status.NEEDS_RESCHEDULE).count(),
             "active_visits_count": Visit.objects.filter(status=Visit.Status.ACTIVE).count(),
-            "pending_billing_handoffs_count": BillingHandoff.objects.filter(status=BillingHandoff.Status.PENDING).count(),
+            "open_invoices_count": Invoice.objects.filter(
+                status__in=[Invoice.Status.UNPAID, Invoice.Status.PARTIALLY_PAID]
+            ).count(),
+            "today_invoices_count": Invoice.objects.filter(
+                created_at__gte=today_start,
+                created_at__lt=tomorrow_start,
+            ).count(),
             "today_appointments": [_appointment_summary(item) for item in today_appointments[:7]],
             "appointment_status_last_7_days": _appointment_status_activity(today, clinic_timezone),
             "billing_activity_last_30_days": _billing_activity(today, clinic_timezone),
@@ -196,7 +202,6 @@ def staff_dashboard(request):
         .order_by("start_datetime", "id")
     )
     needs_reschedule_count = Appointment.objects.filter(status=Appointment.Status.NEEDS_RESCHEDULE).count()
-    pending_billing_count = BillingHandoff.objects.filter(status=BillingHandoff.Status.PENDING).count()
     due_invoices = (
         Invoice.objects.select_related("patient")
         .filter(status__in=[Invoice.Status.UNPAID, Invoice.Status.PARTIALLY_PAID])
@@ -210,7 +215,9 @@ def staff_dashboard(request):
             "today_appointments_count": today_appointments.count(),
             "patients_ready_count": today_appointments.filter(status=Appointment.Status.CHECKED_IN).count(),
             "needs_reschedule_count": needs_reschedule_count,
-            "pending_billing_count": pending_billing_count,
+            "open_invoices_count": Invoice.objects.filter(
+                status__in=[Invoice.Status.UNPAID, Invoice.Status.PARTIALLY_PAID]
+            ).count(),
             "today_appointments": [_appointment_summary(item) for item in today_appointments[:12]],
             "open_invoices": [_invoice_summary(item) for item in due_invoices],
         }

@@ -16,6 +16,7 @@ export function usePatient(patientId: number) {
   return useQuery({
     queryKey: patientKey(patientId),
     queryFn: () => getPatient(patientId),
+    enabled: Number.isFinite(patientId) && patientId > 0,
   });
 }
 

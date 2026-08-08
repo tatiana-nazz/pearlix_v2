@@ -10,7 +10,7 @@ import { dashboardCopy } from "./i18n";
 export function StaffDashboard() {
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = dashboardCopy(language);
-  const query = useQuery({ queryKey: ["dashboard", "staff"], queryFn: dashboardApi.staff, staleTime: 30_000 });
+  const query = useQuery({ queryKey: ["dashboard", "staff"], queryFn: dashboardApi.staff, staleTime: 15_000, refetchOnWindowFocus: "always", refetchInterval: 30_000 });
   if (query.isLoading) return <DashboardLoading language={language} />;
   if (query.isError) return <DashboardError language={language} onRetry={() => void query.refetch()} />;
   if (!query.data) return <DashboardEmpty language={language} />;
@@ -22,14 +22,14 @@ export function StaffDashboard() {
       <DashboardMetric tone="blue" icon={<CalendarDays size={21} />} label={c.todaysAppointments} value={data.today_appointments_count} to={dayPath} />
       <DashboardMetric tone="teal" icon={<CalendarCheck2 size={21} />} label={c.patientsReady} value={data.patients_ready_count} to={`${dayPath}&status=CHECKED_IN`} />
       <DashboardMetric tone="orange" icon={<CircleAlert size={21} />} label={c.needsReschedule} value={data.needs_reschedule_count} to="/staff/appointments/needs-reschedule" />
-      <DashboardMetric tone="amber" icon={<ReceiptText size={21} />} label={c.pendingBilling} value={data.pending_billing_count} to="/staff/billing/handoffs?status=PENDING" />
+      <DashboardMetric tone="amber" icon={<ReceiptText size={21} />} label={c.openInvoices} value={data.open_invoices_count} to="/staff/billing/invoices" />
     </DashboardMetrics>
     <div className="dashboard-v2-operational-grid">
       <DashboardSection title={c.todaysQueue} action={<Link to={dayPath}>{c.viewDay}</Link>} className="dashboard-v2-queue"><DashboardAppointmentList language={language} clinicTimezone={data.clinic_timezone} items={data.today_appointments} empty={c.noAppointmentsToday} role="STAFF" showDoctor /></DashboardSection>
       <DashboardSection title={c.attentionRequired}><AttentionList empty={c.noUrgentIssues} items={[
         { label: c.patientsReady, count: data.patients_ready_count, to: `${dayPath}&status=CHECKED_IN`, tone: "info" },
         { label: c.needsReschedule, count: data.needs_reschedule_count, to: "/staff/appointments/needs-reschedule", tone: "warning" },
-        { label: c.pendingBilling, count: data.pending_billing_count, to: "/staff/billing/handoffs?status=PENDING", tone: "warning" },
+        { label: c.openInvoices, count: data.open_invoices_count, to: "/staff/billing/invoices", tone: "info" },
       ]} /></DashboardSection>
     </div>
     <DashboardSection title={c.openInvoicesFollowUp} action={<Link to="/staff/billing/overview">{c.viewBilling}</Link>}><DashboardInvoiceList language={language} items={data.open_invoices} role="STAFF" empty={c.noOpenInvoices} /></DashboardSection>

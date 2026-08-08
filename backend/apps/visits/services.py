@@ -2,6 +2,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import status
 
+from apps.audit.services import log_activity
 from apps.common.errors import error_response
 from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
@@ -63,9 +64,9 @@ def start_visit_from_appointment(*, appointment: Appointment, user):
         return visit
 
 
-def complete_visit(*, visit: Visit, user, expected_updated_at, notes: dict, billing_handoff: dict):
-    from apps.billing.models import BillingHandoff
-    from apps.billing.services import BillingRuleError, create_billing_handoff
+def complete_visit(*, visit: Visit, user, expected_updated_at, notes: dict, billing: dict, request=None):
+    from apps.billing.models import BillingHandoff, Invoice
+    from apps.billing.services import BillingRuleError, create_visit_completion_invoice
 
     with transaction.atomic():
         visit = Visit.objects.select_for_update().select_related("appointment").get(pk=visit.pk)
@@ -83,10 +84,10 @@ def complete_visit(*, visit: Visit, user, expected_updated_at, notes: dict, bill
                 "This visit was updated elsewhere. Refresh before completing it.",
                 status_code=status.HTTP_409_CONFLICT,
             )
-        if BillingHandoff.objects.select_for_update().filter(visit=visit).exists():
+        if BillingHandoff.objects.select_for_update().filter(visit=visit).exists() or Invoice.objects.select_for_update().filter(visit=visit).exists():
             raise VisitRuleError(
-                "BILLING_HANDOFF_EXISTS",
-                "A billing handoff already exists for this visit.",
+                "VISIT_BILLING_EXISTS",
+                "Billing already exists for this visit.",
                 status_code=status.HTTP_409_CONFLICT,
             )
 
@@ -103,12 +104,39 @@ def complete_visit(*, visit: Visit, user, expected_updated_at, notes: dict, bill
         appointment.updated_by = user
         appointment.save(update_fields=["status", "updated_by", "updated_at"])
         try:
-            handoff = create_billing_handoff(visit=visit, user=user, data=billing_handoff)
-            handoff.description = billing_handoff["description"]
-            handoff.save(update_fields=["description", "updated_at"])
+            invoice, handoff = create_visit_completion_invoice(visit=visit, user=user, data=billing)
         except BillingRuleError as exc:
             raise VisitRuleError(exc.code, exc.message, exc.details, exc.status_code) from exc
-        return visit, handoff
+        audit_metadata = {
+            "visit_id": visit.id,
+            "appointment_id": visit.appointment_id,
+            "patient_id": visit.patient_id,
+            "doctor_id": visit.doctor_id,
+            "invoice_id": invoice.id,
+        }
+        log_activity(
+            request=request,
+            actor=user,
+            action="visit_completed",
+            entity_type="visit",
+            entity_id=visit.id,
+            metadata=audit_metadata,
+            raise_on_error=True,
+        )
+        log_activity(
+            request=request,
+            actor=user,
+            action="invoice_created",
+            entity_type="invoice",
+            entity_id=invoice.id,
+            metadata={
+                **audit_metadata,
+                "billing_handoff_id": handoff.id,
+                "origin": invoice.origin,
+            },
+            raise_on_error=True,
+        )
+        return visit, invoice, handoff
 
 
 def update_clinical_notes(*, visit: Visit, data: dict, user):

@@ -15,5 +15,10 @@ def test_doctor_patient_access_docs_reflect_connected_full_history_rule():
         assert "All active Doctors can update allowed patient profile fields." in text
         assert "All active Doctors can read the full clinical history for all active/non-archived patients." in text
         assert "Doctor can only edit their own visit notes." in text
-        assert "Doctor can create billing handoff for their own completed visit" in text
-        assert "Staff handles invoice creation and payment recording from the handoff." in text
+        if path.name == "CURRENT_BACKEND_DECISIONS.md":
+            assert "The owning Doctor completes an active visit with required final billing" in text
+            assert "no Staff approval or conversion step exists" in text
+            assert "Staff creates manual invoices and manages eligible invoice edits" in text
+        else:
+            assert "Doctor can create billing handoff for their own completed visit" in text
+            assert "Staff handles invoice creation and payment recording from the handoff." in text

@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../../../auth/authStore";
 import { Card } from "../../../components/Card";
@@ -31,6 +31,7 @@ export function InvoiceList({ role, invoices, variant = "history", emptyTitle }:
   if (!invoices.length) return <EmptyState title={emptyTitle ?? c.noInvoices} />;
   return <Card className="billing-collection-card"><div className="table-scroll"><table className="billing-table"><thead><tr><th>{variant === "overview" ? c.invoiceNumber : c.invoice}</th><th>{c.patient}</th><th>{variant === "overview" ? c.created : c.date}</th><th className="amount-cell">{c.total}</th>{variant === "history" ? <th className="amount-cell">{c.paidAmount}</th> : null}<th className="amount-cell">{c.balance}</th><th>{c.status}</th></tr></thead><tbody>{invoices.map((invoice) => {
     const open = () => navigate(`/${role.toLowerCase()}/billing/invoices/${invoice.id}`);
-    return <tr key={invoice.id} className="clickable-row" tabIndex={0} aria-label={`${c.invoice} ${invoice.invoice_number}, ${invoice.patient.full_name}`} onClick={open} onKeyDown={(event) => rowKeyboardOpen(event, open)}><td className="bidi-ltr">{invoice.invoice_number}</td><td>{invoice.patient.full_name}</td><td className="bidi-ltr">{displayBillingDate(invoice.created_at)}</td><td className="amount-cell bidi-ltr">{formatMoney(invoice.total_amount, invoice.currency)}</td>{variant === "history" ? <td className="amount-cell bidi-ltr">{formatMoney(invoice.paid_amount, invoice.currency)}</td> : null}<td className="amount-cell bidi-ltr">{formatMoney(invoice.remaining_amount, invoice.currency)}</td><td><StatusPill status={invoice.status} label={billingStatusLabel(language, invoice.status)} /></td></tr>;
+    const patientPath = `/${role.toLowerCase()}/patients/${invoice.patient.id}?tab=billing`;
+    return <tr key={invoice.id} className="clickable-row" tabIndex={0} aria-label={`${c.invoice} ${invoice.invoice_number}, ${invoice.patient.full_name}`} onClick={open} onKeyDown={(event) => rowKeyboardOpen(event, open)}><td className="bidi-ltr"><strong>{invoice.invoice_number}</strong><small className="billing-row-description">{displayBillingText(invoice.description)}</small></td><td onDoubleClick={(event) => { event.stopPropagation(); navigate(patientPath); }}><Link className="billing-patient-link" to={patientPath} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>{invoice.patient.full_name}</Link></td><td className="bidi-ltr">{displayBillingDate(invoice.created_at)}</td><td className="amount-cell bidi-ltr">{formatMoney(invoice.total_amount, invoice.currency)}</td>{variant === "history" ? <td className="amount-cell bidi-ltr">{formatMoney(invoice.paid_amount, invoice.currency)}</td> : null}<td className="amount-cell bidi-ltr">{formatMoney(invoice.remaining_amount, invoice.currency)}</td><td><StatusPill status={invoice.status} label={billingStatusLabel(language, invoice.status)} /></td></tr>;
   })}</tbody></table></div></Card>;
 }

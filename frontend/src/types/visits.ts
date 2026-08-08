@@ -1,6 +1,7 @@
 import type { Timestamped } from "./api";
 import type { UserSummary } from "./auth";
 import type { PatientList } from "./patients";
+import type { BillingHandoff, Invoice } from "./billing";
 
 export type VisitStatus = "ACTIVE" | "COMPLETED";
 
@@ -36,4 +37,21 @@ export interface ClinicalNotesPayload {
   treatment?: string;
   clinical_notes?: string;
   follow_up_notes?: string;
+}
+
+export interface VisitCompletionPayload {
+  version: string;
+  notes: ClinicalNotesPayload;
+  billing: {
+    description: string;
+    total_amount: string;
+    currency: "SYP" | "USD";
+    note: string;
+  };
+}
+
+export interface VisitCompletionResponse {
+  visit: VisitDetail;
+  created_invoice: Invoice;
+  billing_provenance: BillingHandoff;
 }

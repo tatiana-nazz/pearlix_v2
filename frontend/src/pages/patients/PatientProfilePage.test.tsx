@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -89,10 +89,10 @@ describe("PatientProfilePage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole("tab", { name: "Billing/Handoff" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Billing" })).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "patient-profile-tab-overview");
-    expect(screen.getByText("Contact, demographic, and record metadata.")).toBeInTheDocument();
+    expect(within(screen.getByRole("tabpanel")).getByText("Contact, demographic, and record metadata.")).toBeInTheDocument();
   });
 
   it("keeps one desktop identity rail before the scrolling patient content while tabs change", () => {

@@ -55,6 +55,7 @@ def log_activity(
     entity_type: str,
     entity_id=None,
     metadata: dict | None = None,
+    raise_on_error: bool = False,
 ) -> None:
     try:
         actor = actor or getattr(request, "user", None)
@@ -74,4 +75,6 @@ def log_activity(
             user_agent=user_agent,
         )
     except Exception:
+        if raise_on_error:
+            raise
         return

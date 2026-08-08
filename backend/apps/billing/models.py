@@ -100,6 +100,11 @@ class Invoice(TimeStampedModel):
         SYP = "SYP", "Syrian Pound"
         USD = "USD", "US Dollar"
 
+    class Origin(models.TextChoices):
+        MANUAL = "MANUAL", "Manual"
+        VISIT_COMPLETION = "VISIT_COMPLETION", "Visit completion"
+        LEGACY_HANDOFF = "LEGACY_HANDOFF", "Legacy handoff"
+
     invoice_number = models.CharField(max_length=40, unique=True)
     patient = models.ForeignKey("patients.Patient", on_delete=models.PROTECT, related_name="invoices")
     appointment = models.ForeignKey(
@@ -124,6 +129,8 @@ class Invoice(TimeStampedModel):
         on_delete=models.SET_NULL,
         related_name="invoices_created",
     )
+    origin = models.CharField(max_length=30, choices=Origin.choices, default=Origin.MANUAL)
+    description = models.TextField()
     currency = models.CharField(max_length=3, choices=Currency.choices)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
     notes = models.TextField(blank=True)
@@ -140,12 +147,30 @@ class Invoice(TimeStampedModel):
             models.Index(fields=["appointment"]),
             models.Index(fields=["currency"]),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["visit"],
+                condition=Q(visit__isnull=False),
+                name="unique_invoice_per_visit",
+            ),
+        ]
         ordering = ["-created_at", "-id"]
 
     def clean(self):
         errors = {}
         if self.created_by_id and self.created_by.role != "STAFF":
-            errors["created_by"] = "Invoice creator must be a STAFF user."
+            trusted_doctor_origin = (
+                self.created_by.role == "DOCTOR"
+                and self.origin == self.Origin.VISIT_COMPLETION
+                and self.visit_id
+                and self.visit.doctor_id == self.created_by_id
+                and self.visit.status == "COMPLETED"
+                and self.billing_handoff_id
+            )
+            if not trusted_doctor_origin:
+                errors["created_by"] = "Invoice creator must be Staff unless it was generated from their completed visit."
+        if not self.description or not self.description.strip():
+            errors["description"] = "Invoice description is required."
         if self.total_amount is not None and self.total_amount <= Decimal("0"):
             errors["total_amount"] = "Total amount must be positive."
         if self.visit_id and self.patient_id and self.visit.patient_id != self.patient_id:

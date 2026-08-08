@@ -65,7 +65,8 @@ export interface AdminDashboardResponse {
   checked_in_appointments_count: number;
   needs_reschedule_appointments_count: number;
   active_visits_count: number;
-  pending_billing_handoffs_count: number;
+  open_invoices_count: number;
+  today_invoices_count: number;
   today_appointments: DashboardAppointmentSummary[];
   appointment_status_last_7_days: DashboardAppointmentStatusCounts;
   billing_activity_last_30_days: DashboardBillingActivityDay[];
@@ -78,7 +79,7 @@ export interface StaffDashboardResponse {
   today_appointments_count: number;
   patients_ready_count: number;
   needs_reschedule_count: number;
-  pending_billing_count: number;
+  open_invoices_count: number;
   today_appointments: DashboardAppointmentSummary[];
   open_invoices: DashboardInvoiceSummary[];
 }

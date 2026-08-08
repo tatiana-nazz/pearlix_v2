@@ -7,6 +7,7 @@ import type { VisitStatus } from "./visits";
 
 export type BillingHandoffStatus = "PENDING" | "CONVERTED_TO_INVOICE" | "DISMISSED";
 export type InvoiceStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
+export type InvoiceOrigin = "MANUAL" | "VISIT_COMPLETION" | "LEGACY_HANDOFF";
 
 export interface BillingVisitSummary {
   id: number;
@@ -26,6 +27,8 @@ export interface BillingVisitSummary {
 export interface InvoiceSummary {
   id: number;
   invoice_number: string;
+  description: string;
+  origin: InvoiceOrigin;
   currency: Currency;
   total_amount: string;
   paid_amount: string;
@@ -38,6 +41,7 @@ export interface BillingHandoff extends Timestamped {
   patient: PatientList;
   visit: BillingVisitSummary;
   doctor: UserSummary;
+  description: string;
   note: string;
   suggested_amount: string | null;
   currency: Currency | null;
@@ -49,12 +53,14 @@ export interface BillingHandoff extends Timestamped {
 }
 
 export interface BillingHandoffCreatePayload {
+  description?: string;
   note?: string;
   suggested_amount?: string | null;
   currency?: Currency | null;
 }
 
 export interface HandoffConversionPayload {
+  description?: string;
   total_amount?: string;
   currency?: Currency;
   notes?: string;
@@ -75,6 +81,8 @@ export interface Invoice extends Timestamped {
   visit: BillingVisitSummary | null;
   billing_handoff: number | null;
   created_by: UserSummary | null;
+  origin: InvoiceOrigin;
+  description: string;
   currency: Currency;
   total_amount: string;
   paid_amount: string;
@@ -91,6 +99,7 @@ export interface InvoicePayload {
   patient_id?: number;
   visit_id?: number | null;
   appointment_id?: number | null;
+  description?: string;
   total_amount?: string;
   currency?: Currency;
   notes?: string;

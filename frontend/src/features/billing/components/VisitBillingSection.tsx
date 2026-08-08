@@ -60,7 +60,7 @@ export function VisitBillingSection({
 
     {!handoffs.isLoading && !handoffs.error && existing ? <div className="active-visit-billing-summary">
       <dl className="active-visit-billing-details">
-        <div><dt>{c.handoffStatus}</dt><dd><StatusPill status={existing.status} /></dd></div>
+        <div><dt>{invoice ? c.invoiceStatus : c.handoffStatus}</dt><dd><StatusPill status={invoice?.status ?? existing.status} /></dd></div>
         <div><dt>{c.treatmentDescription}</dt><dd>{displayBillingText((existing as BillingHandoff & { description?: string }).description)}</dd></div>
         <div><dt>{c.totalTreatmentCharge}</dt><dd dir="ltr">{existing.suggested_amount && existing.currency ? formatMoney(existing.suggested_amount, existing.currency) : c.notRecorded}</dd></div>
         <div><dt>{c.currency}</dt><dd dir="ltr">{existing.currency ?? c.notRecorded}</dd></div>

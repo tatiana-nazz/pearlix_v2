@@ -11,15 +11,32 @@
 
 .v2-overlay {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: min(100%, 600px);
   max-height: calc(100dvh - 48px);
-  overflow: auto;
+  overflow: hidden;
   gap: 24px;
   border: 1px solid color-mix(in srgb, var(--v2-border) 85%, transparent);
   border-radius: 24px;
   background: var(--v2-surface);
   padding: 28px;
   box-shadow: var(--v2-shadow-modal);
+}
+
+.v2-overlay-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 2px;
+  scrollbar-gutter: stable;
+}
+
+.v2-overlay > .v2-overlay-body > .patient-form > .form-actions {
+  position: sticky;
+  z-index: 1;
+  inset-block-end: -2px;
+  border-block-start: 1px solid var(--v2-divider);
+  padding-block: 16px 2px;
+  background: var(--v2-surface);
 }
 
 .v2-overlay.wide {

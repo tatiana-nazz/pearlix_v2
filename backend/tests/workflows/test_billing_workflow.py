@@ -6,7 +6,7 @@ from apps.visits.models import Visit
 
 
 @pytest.mark.django_db
-def test_wf_008_billing_handoff_to_invoice_payment_workflow(admin_client, staff_client, doctor_client, doctor_user):
+def test_wf_008_visit_completion_to_immediate_invoice_payment_workflow(admin_client, staff_client, doctor_client, doctor_user):
     WorkingShift.objects.create(employee=doctor_user, name="Test shift", weekday=0, start_time="09:00", end_time="15:00")
 
     patient_response = staff_client.post(
@@ -44,10 +44,10 @@ def test_wf_008_billing_handoff_to_invoice_payment_workflow(admin_client, staff_
         {
             "version": notes_response.data["updated_at"],
             "notes": {"treatment": "Exam"},
-            "billing_handoff": {
+            "billing": {
                 "description": "Exam",
                 "note": "Invoice after exam",
-                "suggested_amount": "75.00",
+                "total_amount": "75.00",
                 "currency": "SYP",
             },
         },
@@ -60,15 +60,12 @@ def test_wf_008_billing_handoff_to_invoice_payment_workflow(admin_client, staff_
     assert notes_response.status_code == 200
     assert complete_response.status_code == 200
     assert complete_response.data["visit"]["status"] == Visit.Status.COMPLETED
-    assert complete_response.data["billing_handoff"]["status"] == BillingHandoff.Status.PENDING
+    assert complete_response.data["billing_provenance"]["status"] == BillingHandoff.Status.CONVERTED_TO_INVOICE
+    assert complete_response.data["created_invoice"]["status"] == Invoice.Status.UNPAID
+    assert complete_response.data["created_invoice"]["total_amount"] == "75.00"
 
-    handoff_id = complete_response.data["billing_handoff"]["id"]
-    invoice_response = staff_client.post(f"/api/billing-handoffs/{handoff_id}/convert-to-invoice/", {}, format="json")
-    assert invoice_response.status_code == 201
-    assert invoice_response.data["status"] == Invoice.Status.UNPAID
-    assert invoice_response.data["total_amount"] == "75.00"
-
-    invoice_id = invoice_response.data["id"]
+    handoff_id = complete_response.data["billing_provenance"]["id"]
+    invoice_id = complete_response.data["created_invoice"]["id"]
     payment_response = staff_client.post(f"/api/invoices/{invoice_id}/payments/", {"amount": "75.00", "currency": "SYP"}, format="json")
     doctor_invoice_response = doctor_client.get(f"/api/invoices/{invoice_id}/")
     admin_invoice_response = admin_client.get(f"/api/invoices/{invoice_id}/")

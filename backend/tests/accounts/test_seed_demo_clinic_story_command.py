@@ -1,10 +1,12 @@
+from datetime import date, datetime, time, timedelta
 from io import StringIO
 from pathlib import Path
 import struct
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.core.management import call_command
-from django.db.models import F
+from django.db.models import Count, F
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
@@ -12,7 +14,7 @@ from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
 from apps.accounts.models import StaffProfile, User
 from apps.ai_results.models import AIResult
 from apps.audit.models import ActivityLog
-from apps.billing.models import BillingHandoff, Invoice
+from apps.billing.models import BillingHandoff, Invoice, Payment
 from apps.dashboard.views import admin_dashboard, doctor_dashboard, staff_dashboard
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
@@ -31,6 +33,24 @@ def seed(*args):
     return output.getvalue()
 
 
+def demo_counts():
+    return {
+        "users": User.objects.filter(email__endswith=f"@{DOMAIN}").count(),
+        "patients": Patient.objects.filter(national_id_or_passport__startswith=PREFIX).count(),
+        "appointments": Appointment.objects.filter(patient__national_id_or_passport__startswith=PREFIX).count(),
+        "visits": Visit.objects.filter(patient__national_id_or_passport__startswith=PREFIX).count(),
+        "invoices": Invoice.objects.filter(patient__national_id_or_passport__startswith=PREFIX).count(),
+        "payments": Payment.objects.filter(invoice__patient__national_id_or_passport__startswith=PREFIX).count(),
+        "handoffs": BillingHandoff.objects.filter(patient__national_id_or_passport__startswith=PREFIX).count(),
+    }
+
+
+def clinic_day_window(day):
+    clinic_timezone = ZoneInfo("Asia/Damascus")
+    start = datetime.combine(day, time.min, tzinfo=clinic_timezone)
+    return start, start + timedelta(days=1)
+
+
 @pytest.mark.django_db
 @override_settings(DEBUG=True)
 def test_demo_story_is_idempotent_and_reset_preserves_non_demo_data(tmp_path):
@@ -38,7 +58,18 @@ def test_demo_story_is_idempotent_and_reset_preserves_non_demo_data(tmp_path):
         assert "Seeded phase-14a-integrated-demo-story" in seed("--reference-date", "2026-08-15")
         patient_ids = list(Patient.objects.filter(national_id_or_passport__startswith=PREFIX).values_list("id", flat=True))
         assert len(patient_ids) == 24
-        assert "already exists" in seed()
+        expected_counts = {
+            "users": 9,
+            "patients": 24,
+            "appointments": 23,
+            "visits": 13,
+            "invoices": 7,
+            "payments": 3,
+            "handoffs": 4,
+        }
+        assert demo_counts() == expected_counts
+        assert "already exists" in seed("--reference-date", "2026-08-15")
+        assert demo_counts() == expected_counts
         assert list(Patient.objects.filter(national_id_or_passport__startswith=PREFIX).values_list("id", flat=True)) == patient_ids
         non_demo = Patient.objects.create(first_name="Independent", last_name="Record", gender="Female", national_id_or_passport="NON-DEMO-14A")
         legacy_qa_user = User.objects.create_user(
@@ -50,7 +81,7 @@ def test_demo_story_is_idempotent_and_reset_preserves_non_demo_data(tmp_path):
         seed("--reset-demo", "--reference-date", "2026-08-15")
         assert Patient.objects.filter(pk=non_demo.pk).exists()
         assert User.objects.filter(pk=legacy_qa_user.pk, email="legacy.qa@pearlix.local").exists()
-        assert Patient.objects.filter(national_id_or_passport__startswith=PREFIX).count() == 24
+        assert demo_counts() == expected_counts
 
 
 @pytest.mark.django_db
@@ -85,8 +116,9 @@ def test_demo_story_relationships_dashboards_and_media_are_coherent(tmp_path):
         assert ExternalXrayCase.objects.filter(status=ExternalXrayCase.Status.TEMPORARY).exists()
         assert ExternalXrayCase.objects.filter(status=ExternalXrayCase.Status.ATTACHED_TO_PATIENT, attached_xray__isnull=False).exists()
         assert ExternalXrayCase.objects.filter(status=ExternalXrayCase.Status.DISCARDED).exists()
-        assert set(BillingHandoff.objects.values_list("status", flat=True)) >= {"PENDING", "CONVERTED_TO_INVOICE", "DISMISSED"}
-        converted_handoff = BillingHandoff.objects.get(status=BillingHandoff.Status.CONVERTED_TO_INVOICE)
+        assert not BillingHandoff.objects.filter(status=BillingHandoff.Status.PENDING).exists()
+        assert set(BillingHandoff.objects.values_list("status", flat=True)) >= {"CONVERTED_TO_INVOICE", "DISMISSED"}
+        converted_handoff = BillingHandoff.objects.filter(status=BillingHandoff.Status.CONVERTED_TO_INVOICE).first()
         assert converted_handoff.converted_invoice_id
         assert converted_handoff.converted_invoice.patient_id == converted_handoff.patient_id == converted_handoff.visit.patient_id
         assert set(Invoice.objects.values_list("status", flat=True)) >= {"UNPAID", "PARTIALLY_PAID", "PAID", "CANCELLED"}
@@ -109,6 +141,54 @@ def test_demo_story_relationships_dashboards_and_media_are_coherent(tmp_path):
             assert struct.unpack(">II", image.read(24)[16:24]) == (320, 180)
         reschedule_logs = ActivityLog.objects.filter(action="appointment_rescheduled", metadata_json__demo_story="phase-14a-integrated-demo-story")
         assert any("old" in item.metadata_json and "new" in item.metadata_json for item in reschedule_logs)
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_demo_story_financial_timeline_matches_the_immediate_invoice_workflow(tmp_path):
+    reference_date = date(2026, 8, 15)
+    with override_settings(MEDIA_ROOT=tmp_path):
+        seed("--reset-demo", "--reference-date", reference_date.isoformat())
+
+        doctor_one = User.objects.get(email="doctor.one@pearlix-demo.local")
+        active_visit = Visit.objects.get(doctor=doctor_one, status=Visit.Status.ACTIVE)
+        assert active_visit.patient.full_name == "Lina Mansour"
+        assert active_visit.completed_at is None
+        assert active_visit.appointment.status == Appointment.Status.ACTIVE
+        assert not Invoice.objects.filter(visit=active_visit).exists()
+        assert not BillingHandoff.objects.filter(visit=active_visit).exists()
+        assert not BillingHandoff.objects.filter(status=BillingHandoff.Status.PENDING).exists()
+
+        assert Invoice.objects.filter(status=Invoice.Status.UNPAID).count() == 4
+        assert Invoice.objects.filter(status=Invoice.Status.PARTIALLY_PAID).count() == 1
+        assert Invoice.objects.filter(status=Invoice.Status.PAID).count() == 1
+        assert Invoice.objects.filter(status=Invoice.Status.CANCELLED).count() == 1
+        assert Invoice.objects.filter(currency=Invoice.Currency.SYP).count() == 4
+        assert Invoice.objects.filter(currency=Invoice.Currency.USD).count() == 3
+
+        today_start, tomorrow_start = clinic_day_window(reference_date)
+        week_start, _ = clinic_day_window(reference_date - timedelta(days=6))
+        month_start, _ = clinic_day_window(reference_date - timedelta(days=29))
+        assert Invoice.objects.filter(created_at__gte=today_start, created_at__lt=tomorrow_start).count() == 2
+        assert Invoice.objects.filter(created_at__gte=week_start, created_at__lt=tomorrow_start).count() == 3
+        assert Invoice.objects.filter(created_at__gte=month_start, created_at__lt=tomorrow_start).count() == 6
+        assert Invoice.objects.filter(created_at__lt=month_start).count() == 1
+        assert Payment.objects.filter(payment_date__gte=today_start, payment_date__lt=tomorrow_start).count() == 1
+        assert Appointment.objects.filter(start_datetime__gte=today_start, start_datetime__lt=tomorrow_start).count() >= 2
+
+        generated = Invoice.objects.filter(origin=Invoice.Origin.VISIT_COMPLETION)
+        assert generated.count() == 2
+        assert not generated.exclude(created_by__role=User.Role.DOCTOR).exists()
+        assert not generated.exclude(visit__status=Visit.Status.COMPLETED, appointment__status=Appointment.Status.COMPLETED).exists()
+        assert not generated.exclude(billing_handoff__status=BillingHandoff.Status.CONVERTED_TO_INVOICE).exists()
+        assert not generated.exclude(billing_handoff__converted_invoice_id=F("id")).exists()
+        assert (
+            Patient.objects.filter(national_id_or_passport__startswith=PREFIX)
+            .annotate(invoice_count=Count("invoices"))
+            .filter(invoice_count__gte=2)
+            .count()
+            >= 2
+        )
 
 
 @pytest.mark.django_db
@@ -151,6 +231,7 @@ def test_demo_story_has_one_service_started_doctor_one_visit_and_an_independent_
         seed("--reset-demo", "--reference-date", "2026-07-26")
         doctor_one = User.objects.get(email="doctor.one@pearlix-demo.local")
         doctor_two = User.objects.get(email="doctor.two@pearlix-demo.local")
+        doctor_three = User.objects.get(email="doctor.three@pearlix-demo.local")
         assert doctor_one.full_name == "Dr. Samir Nasser"
         assert Visit.objects.filter(doctor=doctor_one, status=Visit.Status.ACTIVE).count() == 1
         active = Visit.objects.get(doctor=doctor_one, status=Visit.Status.ACTIVE)
@@ -160,8 +241,9 @@ def test_demo_story_has_one_service_started_doctor_one_visit_and_an_independent_
         assert active.patient_id == active.appointment.patient_id
         assert active.completed_at is None
         assert not BillingHandoff.objects.filter(visit=active).exists()
+        assert not Invoice.objects.filter(visit=active).exists()
         checked_in = Appointment.objects.get(status=Appointment.Status.CHECKED_IN)
-        assert checked_in.doctor == doctor_two
+        assert checked_in.doctor == doctor_three
         assert not Visit.objects.filter(appointment=checked_in).exists()
 
         client = APIClient()

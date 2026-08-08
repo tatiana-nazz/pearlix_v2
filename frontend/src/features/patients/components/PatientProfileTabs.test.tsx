@@ -7,12 +7,12 @@ import { PatientProfileTabs } from "./PatientProfileTabs";
 describe("PatientProfileTabs", () => {
   it("shows Billing tab for Admin and Staff", () => {
     render(<PatientProfileTabs role="ADMIN" activeTab="overview" onTabChange={vi.fn()} />);
-    expect(screen.getByRole("tab", { name: "Billing/Handoff" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Billing" })).toBeInTheDocument();
   });
 
   it("hides Billing tab for Doctor", () => {
     render(<PatientProfileTabs role="DOCTOR" activeTab="overview" onTabChange={vi.fn()} />);
-    expect(screen.queryByRole("tab", { name: "Billing/Handoff" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Billing" })).not.toBeInTheDocument();
   });
 
   it("marks active tab selected", () => {

@@ -11,6 +11,8 @@ import { BillingOverviewPage, InvoiceHistoryPage } from "./BillingWorkspace";
 const invoice = {
   id: 9,
   invoice_number: "INV-20260715-000009",
+  origin: "MANUAL",
+  description: "Comprehensive dental treatment",
   patient: { id: 4, full_name: "Maya Hassan" },
   total_amount: "100.00",
   paid_amount: "25.00",
@@ -65,12 +67,13 @@ describe("billing overview and invoice history", () => {
     renderBilling(<BillingOverviewPage role="STAFF" />);
     expect(await screen.findByRole("link", { name: /Invoices today/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Invoices today/ })).toHaveAttribute("href", "/staff/billing/invoices?date_from=2026-07-15&date_to=2026-07-15");
-    expect(screen.getByRole("link", { name: /Pending handoffs/ })).toHaveAttribute("href", "/staff/billing/handoffs?status=PENDING");
+    expect(screen.queryByText(/Pending handoffs/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Open invoices/ })).toHaveAttribute("href", "/staff/billing/invoices");
     expect(screen.getByRole("link", { name: "New invoice" })).toHaveAttribute("href", "/staff/billing/invoices/new");
     expect(screen.getAllByText(/SYP/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/USD/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("INV-20260715-000009")).toHaveLength(2);
+    expect(screen.getAllByText("INV-20260715-000009")).toHaveLength(1);
+    expect(screen.getByText("Comprehensive dental treatment")).toBeInTheDocument();
     expect(screen.getByText(/Unpaid: 2/)).toBeInTheDocument();
   });
 
@@ -80,6 +83,7 @@ describe("billing overview and invoice history", () => {
     expect(await screen.findByRole("heading", { name: "Billing overview" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "New invoice" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /payment|cancel|convert|dismiss/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Handoffs/i })).not.toBeInTheDocument();
   });
 
   it("loads all-time history from the summary endpoint rather than page rows", async () => {
@@ -134,7 +138,7 @@ describe("billing overview and invoice history", () => {
     expect(screen.getByRole("heading", { name: "سجل الفواتير" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "نظرة عامة" })).toHaveAttribute("href", "/admin/billing/overview");
     expect(screen.getByRole("columnheader", { name: "الفاتورة" })).toBeInTheDocument();
-    expect(screen.getByText("INV-20260715-000009")).toHaveClass("bidi-ltr");
+    expect(screen.getByText("INV-20260715-000009").closest("td")).toHaveClass("bidi-ltr");
     expect(screen.getByLabelText("Status: مدفوعة جزئياً")).toBeInTheDocument();
   });
 });

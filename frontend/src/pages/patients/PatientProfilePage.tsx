@@ -132,9 +132,11 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
           </span>
           <div>
             <h2>{patient.data.full_name}</h2>
-            <p>{patient.data.gender === "Female" ? c.female : c.male} · {patient.data.age ? `${patient.data.age} ${c.yearsOld}` : c.ageNotRecorded}</p>
+            <p>{c.patientProfile}</p>
           </div>
           <dl className="identity-details">
+            <div><dt>{c.gender}</dt><dd>{patient.data.gender === "Female" ? c.female : c.male}</dd></div>
+            <div><dt>{c.age}</dt><dd>{patient.data.age !== null ? `${patient.data.age} ${c.yearsOld}` : c.ageNotRecorded}</dd></div>
             <div><dt>{c.phone}</dt><dd dir="ltr">{patient.data.phone_number || c.notRecorded}</dd></div>
             <div><dt>{c.email}</dt><dd dir="ltr">{patient.data.email || c.notRecorded}</dd></div>
             <div><dt>{c.bloodGroup}</dt><dd>{patient.data.blood_group || c.notRecorded}</dd></div>

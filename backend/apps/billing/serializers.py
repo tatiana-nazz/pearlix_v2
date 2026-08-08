@@ -26,7 +26,17 @@ class InvoiceSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Invoice
-        fields = ("id", "invoice_number", "currency", "total_amount", "paid_amount", "remaining_amount", "status")
+        fields = (
+            "id",
+            "invoice_number",
+            "description",
+            "origin",
+            "currency",
+            "total_amount",
+            "paid_amount",
+            "remaining_amount",
+            "status",
+        )
         read_only_fields = fields
 
 
@@ -79,6 +89,7 @@ class BillingHandoffCreateSerializer(serializers.Serializer):
 
 
 class HandoffConversionSerializer(serializers.Serializer):
+    description = serializers.CharField(required=False, allow_blank=False, trim_whitespace=True)
     total_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     currency = serializers.ChoiceField(choices=Invoice.Currency.choices, required=False)
     notes = serializers.CharField(required=False, allow_blank=True)
@@ -138,6 +149,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "visit",
             "billing_handoff",
             "created_by",
+            "origin",
+            "description",
             "currency",
             "total_amount",
             "paid_amount",
@@ -166,6 +179,7 @@ class InvoiceCreateUpdateSerializer(serializers.Serializer):
         required=False,
         allow_null=True,
     )
+    description = serializers.CharField(required=False, allow_blank=False, trim_whitespace=True)
     total_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     currency = serializers.ChoiceField(choices=Invoice.Currency.choices, required=False)
     notes = serializers.CharField(required=False, allow_blank=True)

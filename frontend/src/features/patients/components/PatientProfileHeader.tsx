@@ -1,7 +1,6 @@
 import type { UserRole } from "../../../types/auth";
 import { useAuthStore } from "../../../auth/authStore";
 import type { PatientDetail } from "../../../types/patients";
-import { displayText } from "../../../utils/formatters";
 import { getPatientPermissions } from "../utils/patientPermissions";
 import { PatientStatusBadge } from "./PatientStatusBadge";
 import { patientCopy } from "../i18n";
@@ -24,9 +23,7 @@ export function PatientProfileHeader({ role, patient, onEdit, onArchive, onUnarc
       <div>
         <p className="eyebrow">{c.patientProfile}</p>
         <h2>{patient.full_name}</h2>
-        <p>
-          {displayText(patient.phone_number)} - {patient.age ? `${patient.age} ${c.yearsOld}` : c.ageNotRecorded} - {patient.gender === "Female" ? c.female : c.male}
-        </p>
+        <p>{c.overviewDescription}</p>
       </div>
       <div className="profile-actions">
         {canShowStatus ? <PatientStatusBadge patient={patient} /> : null}
