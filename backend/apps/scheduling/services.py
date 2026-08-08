@@ -39,8 +39,8 @@ def clinic_localtime(value, settings=None):
     return timezone.localtime(value, get_clinic_timezone(settings))
 
 
-def clinic_now(settings=None):
-    return clinic_localtime(timezone.now(), settings)
+def clinic_now(settings=None, current_time=None):
+    return clinic_localtime(current_time or timezone.now(), settings)
 
 
 def require_version(instance, submitted_version):
@@ -57,8 +57,8 @@ def validate_duration(duration_minutes):
     return settings
 
 
-def validate_start_not_past(start_datetime, settings=None):
-    if clinic_localtime(start_datetime, settings) < clinic_now(settings):
+def validate_start_not_past(start_datetime, settings=None, current_time=None):
+    if clinic_localtime(start_datetime, settings) < clinic_now(settings, current_time):
         raise AppointmentRuleError("VALIDATION_ERROR", "Some fields are invalid.", {"start_datetime": ["Start datetime cannot be in the past."]})
 
 
@@ -107,9 +107,9 @@ def validate_doctor_conflict(doctor, start_datetime, end_datetime, exclude_id=No
         raise AppointmentRuleError("DOCTOR_ALREADY_BOOKED", "Doctor already has an appointment in this time range.", status_code=status.HTTP_409_CONFLICT)
 
 
-def validate_appointment_slot(doctor, start_datetime, duration_minutes, exclude_id=None, ignore_exception_id=None, settings=None):
+def validate_appointment_slot(doctor, start_datetime, duration_minutes, exclude_id=None, ignore_exception_id=None, settings=None, current_time=None):
     settings = settings or validate_duration(duration_minutes)
-    validate_duration(duration_minutes); validate_start_not_past(start_datetime, settings); end_datetime = calculate_end_datetime(start_datetime, duration_minutes)
+    validate_duration(duration_minutes); validate_start_not_past(start_datetime, settings, current_time); end_datetime = calculate_end_datetime(start_datetime, duration_minutes)
     validate_working_hours(doctor, start_datetime, end_datetime, settings); validate_unavailable_exception(doctor, start_datetime, end_datetime, ignore_exception_id=ignore_exception_id)
     validate_capacity(start_datetime, end_datetime, exclude_id, settings); validate_doctor_conflict(doctor, start_datetime, end_datetime, exclude_id)
     return end_datetime
@@ -123,14 +123,14 @@ def create_appointment(*, serializer, user):
         return serializer.save(end_datetime=end, created_by=user, updated_by=user)
 
 
-def update_appointment(*, appointment, serializer, user):
+def update_appointment(*, appointment, serializer, user, current_time=None):
     if appointment.status in LOCKED_EDIT_STATUSES: raise AppointmentRuleError("INVALID_STATUS_TRANSITION", "Locked appointments cannot be edited.", status_code=status.HTTP_409_CONFLICT)
     with transaction.atomic():
         settings = ClinicSettings.get_solo()
         settings = ClinicSettings.objects.select_for_update().get(pk=settings.pk)
         locked = Appointment.objects.select_for_update().get(pk=appointment.pk)
         data = serializer.validated_data; doctor = data.get("doctor", locked.doctor); start = data.get("start_datetime", locked.start_datetime); duration = data.get("duration_minutes", locked.duration_minutes)
-        end = validate_appointment_slot(doctor, start, duration, exclude_id=locked.id, settings=settings)
+        end = validate_appointment_slot(doctor, start, duration, exclude_id=locked.id, settings=settings, current_time=current_time)
         for field, value in data.items():
             setattr(locked, field, value)
         locked.end_datetime = end
@@ -162,9 +162,9 @@ def _safe_appointment_summary(appointment):
     return {"id": appointment.id, "patient_name": appointment.patient.full_name, "start_datetime": appointment.start_datetime.isoformat(), "end_datetime": appointment.end_datetime.isoformat(), "status": appointment.status}
 
 
-def _impacted_appointments(employee, proposed_shifts):
+def _impacted_appointments(employee, proposed_shifts, current_time=None):
     if employee.role != "DOCTOR": return []
-    now = timezone.now(); impacted = []
+    now = current_time or timezone.now(); impacted = []
     for appointment in Appointment.objects.select_for_update().select_related("patient").filter(doctor=employee, status__in=NEEDS_RESCHEDULE_SOURCE_STATUSES, start_datetime__gte=now).order_by("start_datetime", "id"):
         start, end = clinic_localtime(appointment.start_datetime), clinic_localtime(appointment.end_datetime)
         if not any(row["is_active"] and row["weekday"] == start.weekday() and row["start_time"] <= start.time() and row["end_time"] >= end.time() for row in proposed_shifts):
@@ -214,13 +214,13 @@ def create_working_shift(*, serializer, user):
     return serializer.save(created_by=user, updated_by=user)
 
 
-def update_working_shift(*, instance, serializer, user, confirm_appointment_impact=False, request=None):
+def update_working_shift(*, instance, serializer, user, confirm_appointment_impact=False, request=None, current_time=None):
     with transaction.atomic():
         locked = WorkingShift.objects.select_for_update().select_related("employee").get(pk=instance.pk); require_version(locked, serializer.validated_data.get("version"))
         data = serializer.validated_data; candidate = {"weekday": data.get("weekday", locked.weekday), "start_time": data.get("start_time", locked.start_time), "end_time": data.get("end_time", locked.end_time), "is_active": data.get("is_active", locked.is_active)}
         validate_shift_overlap(model=WorkingShift, employee=locked.employee, exclude_id=locked.id, **candidate)
         rows = list(WorkingShift.objects.filter(employee=locked.employee, is_active=True).exclude(id=locked.id).values("weekday", "start_time", "end_time", "is_active")) + [candidate]
-        impacted = _impacted_appointments(locked.employee, rows)
+        impacted = _impacted_appointments(locked.employee, rows, current_time)
         if impacted and not confirm_appointment_impact: raise _impact_error(locked.employee, impacted, rows)
         for field, value in data.items(): setattr(locked, field, value)
         locked.version += 1; locked.updated_by = user; locked.save()
@@ -270,9 +270,9 @@ def copy_employee_schedule(*, source, target, mode, user, confirm_appointment_im
     return _apply_schedule(employee=target, templates=list(WorkingShift.objects.filter(employee=source, is_active=True)), mode=mode, user=user, confirm_appointment_impact=confirm_appointment_impact, request=request)
 
 
-def mark_overlapping_appointments_needs_reschedule(*, availability_exception, request=None, actor=None):
+def mark_overlapping_appointments_needs_reschedule(*, availability_exception, request=None, actor=None, current_time=None):
     if availability_exception.type != AvailabilityException.Type.UNAVAILABLE or not availability_exception.doctor_id or availability_exception.is_cancelled: return []
-    appointments = Appointment.objects.select_for_update().filter(doctor=availability_exception.doctor, status__in=NEEDS_RESCHEDULE_SOURCE_STATUSES, start_datetime__gte=timezone.now(), start_datetime__lt=availability_exception.end_datetime, end_datetime__gt=availability_exception.start_datetime)
+    appointments = Appointment.objects.select_for_update().filter(doctor=availability_exception.doctor, status__in=NEEDS_RESCHEDULE_SOURCE_STATUSES, start_datetime__gte=current_time or timezone.now(), start_datetime__lt=availability_exception.end_datetime, end_datetime__gt=availability_exception.start_datetime)
     marked = []
     for appointment in appointments:
         previous = appointment.reschedule_previous_status or appointment.status; appointment.status = Appointment.Status.NEEDS_RESCHEDULE; appointment.reschedule_source_exception = availability_exception; appointment.reschedule_source_working_shift = None; appointment.reschedule_previous_status = previous; appointment.updated_by = actor

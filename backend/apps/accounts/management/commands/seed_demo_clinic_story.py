@@ -321,21 +321,36 @@ class Command(BaseCommand):
         for index, minute in ((8, 0), (9, 30), (10, 0)):
             leave_impacted.append(self._appointment(patient=patients[index], doctor=d1, start=self._dt(future, 9, minute), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Leave conflict workflow"))
         leave = AvailabilityException.objects.create(doctor=d1, start_datetime=self._dt(future, 9), end_datetime=self._dt(future, 11), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo approved leave", created_by=accounts["admin"], updated_by=accounts["admin"])
-        marked = mark_overlapping_appointments_needs_reschedule(availability_exception=leave, actor=accounts["admin"])
+        marked = mark_overlapping_appointments_needs_reschedule(
+            availability_exception=leave,
+            actor=accounts["admin"],
+            current_time=self._dt(today, 0),
+        )
         for index, appointment in enumerate(marked):
             app[f"leave_{index}"] = appointment
         rescheduled = marked[0]
         old_slot = {"doctor_id": rescheduled.doctor_id, "start_datetime": rescheduled.start_datetime.isoformat()}
         appointment_serializer = AppointmentDetailSerializer(instance=rescheduled, data={"doctor_id": d2.id, "start_datetime": self._dt(future, 16), "duration_minutes": 30}, partial=True)
         appointment_serializer.is_valid(raise_exception=True)
-        app["rescheduled"] = update_appointment(appointment=rescheduled, serializer=appointment_serializer, user=staff)
+        app["rescheduled"] = update_appointment(
+            appointment=rescheduled,
+            serializer=appointment_serializer,
+            user=staff,
+            current_time=self._dt(today, 0),
+        )
         log_activity(actor=staff, action="appointment_rescheduled", entity_type="appointment", entity_id=rescheduled.id, metadata={"demo_story": DEMO_TAG, "old": old_slot, "new": {"doctor_id": d2.id, "start_datetime": app["rescheduled"].start_datetime.isoformat()}})
         second_leave = AvailabilityException.objects.create(doctor=d3, start_datetime=self._dt(today + timedelta(days=5), 13), end_datetime=self._dt(today + timedelta(days=5), 17), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo training leave", created_by=accounts["admin"], updated_by=accounts["admin"])
         shift = WorkingShift.objects.filter(employee=d2, weekday=(today + timedelta(days=4)).weekday(), name="Morning").first()
         shift_change_day = today + timedelta(days=4)
         shifted = self._appointment(patient=patients[10], doctor=d2, start=self._dt(shift_change_day, 12, 30), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Shift change conflict workflow")
         shift_serializer = type("ShiftUpdate", (), {"validated_data": {"end_time": time(12), "version": shift.version}})()
-        shift, impacted_count = update_working_shift(instance=shift, serializer=shift_serializer, user=accounts["admin"], confirm_appointment_impact=True)
+        shift, impacted_count = update_working_shift(
+            instance=shift,
+            serializer=shift_serializer,
+            user=accounts["admin"],
+            confirm_appointment_impact=True,
+            current_time=self._dt(today, 0),
+        )
         if impacted_count != 1:
             raise CommandError("The deterministic shift-change story did not affect exactly one appointment.")
         shifted.refresh_from_db()
