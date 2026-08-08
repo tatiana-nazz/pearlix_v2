@@ -1,11 +1,13 @@
-from datetime import date
+from datetime import date, datetime
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.clinic.models import ClinicSettings
 from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
-from apps.scheduling.services import build_availability_slots
+from apps.scheduling.services import build_availability_slots, validate_appointment_slot
 
 
 MONDAY = date(2026, 7, 20)
@@ -120,3 +122,82 @@ def test_clinic_timezone_and_availability_validation_errors_are_field_specific(a
     assert "date" in invalid_date.data["details"]
     assert invalid_duration.status_code == 400
     assert "duration_minutes" in invalid_duration.data["details"]
+
+
+@pytest.mark.django_db
+def test_availability_query_characterization_for_representative_day(
+    doctor_user,
+    other_doctor_user,
+    appointment_factory,
+):
+    settings = ClinicSettings.get_solo()
+    settings.capacity_per_slot = 2
+    settings.save()
+    add_shift(doctor_user, start="09:00", end="12:00")
+    appointment_factory(
+        doctor=doctor_user,
+        start_datetime="2026-07-20T09:00:00+03:00",
+        end_datetime="2026-07-20T09:30:00+03:00",
+    )
+    appointment_factory(
+        doctor=other_doctor_user,
+        start_datetime="2026-07-20T10:30:00+03:00",
+        end_datetime="2026-07-20T11:00:00+03:00",
+    )
+    appointment_factory(
+        doctor=other_doctor_user,
+        start_datetime="2026-07-20T10:30:00+03:00",
+        end_datetime="2026-07-20T11:00:00+03:00",
+    )
+    AvailabilityException.objects.create(
+        doctor=doctor_user,
+        start_datetime="2026-07-20T11:15:00+03:00",
+        end_datetime="2026-07-20T11:45:00+03:00",
+        type=AvailabilityException.Type.UNAVAILABLE,
+    )
+
+    with CaptureQueriesContext(connection) as queries:
+        slots = build_availability_slots(doctor=doctor_user, date_value=MONDAY, duration_minutes=30)
+
+    assert [slot["start_datetime"][11:16] for slot in slots] == ["09:30", "09:45", "10:00"]
+    assert all(slot["capacity"] == 2 for slot in slots)
+    assert len(queries) <= 4
+
+
+@pytest.mark.django_db
+def test_appointment_list_query_count_does_not_scale_per_row(
+    staff_client,
+    doctor_user,
+    appointment_factory,
+):
+    ClinicSettings.get_solo()
+    for index in range(5):
+        appointment_factory(
+            doctor=doctor_user,
+            start_datetime=f"2026-07-20T{9 + index:02}:00:00+03:00",
+            end_datetime=f"2026-07-20T{9 + index:02}:30:00+03:00",
+        )
+
+    with CaptureQueriesContext(connection) as queries:
+        response = staff_client.get("/api/appointments/")
+
+    assert response.status_code == 200
+    assert response.data["count"] == 5
+    assert len(queries) <= 3
+
+
+@pytest.mark.django_db
+def test_slot_validation_reuses_supplied_clinic_settings(doctor_user):
+    settings = ClinicSettings.get_solo()
+    add_shift(doctor_user, start="09:00", end="12:00")
+
+    with CaptureQueriesContext(connection) as queries:
+        end_datetime = validate_appointment_slot(
+            doctor_user,
+            datetime.fromisoformat("2026-07-20T09:00:00+03:00"),
+            30,
+            settings=settings,
+        )
+
+    assert end_datetime.isoformat() == "2026-07-20T09:30:00+03:00"
+    assert not any("clinic_clinicsettings" in query["sql"] for query in queries.captured_queries)

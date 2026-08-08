@@ -13,10 +13,35 @@ from rest_framework.response import Response
 
 from apps.audit.services import log_activity
 from apps.common.errors import error_response
+from apps.scheduling.appointment_services import (
+    AppointmentRuleError,
+    cancel_appointment,
+    check_in_appointment,
+    create_appointment,
+    mark_appointment_no_show,
+    update_appointment,
+)
+from apps.scheduling.availability import build_availability_slots
+from apps.scheduling.exception_services import (
+    cancel_availability_exception,
+    save_availability_exception,
+    update_availability_exception,
+)
 from apps.scheduling.models import Appointment, AvailabilityException, ClinicDefaultShift, WorkingShift
 from apps.scheduling.permissions import AppointmentPermission, AvailabilityExceptionPermission, ScheduleAdminPermission, WorkingShiftPermission
 from apps.scheduling.serializers import AppointmentDetailSerializer, AppointmentListSerializer, AvailabilityExceptionSerializer, ClinicDefaultShiftSerializer, DoctorListSerializer, LegacyWorkingHoursReplaceSerializer, WorkingShiftSerializer
-from apps.scheduling.services import AppointmentRuleError, apply_default_schedule, build_availability_slots, cancel_availability_exception, copy_employee_schedule, create_appointment, create_working_shift, get_clinic_settings, save_availability_exception, save_default_shift, set_default_shift_active, set_working_shift_active, update_appointment, update_availability_exception, update_default_shift, update_working_shift
+from apps.scheduling.schedule_services import (
+    apply_default_schedule,
+    copy_employee_schedule,
+    create_working_shift,
+    replace_employee_schedule,
+    save_default_shift,
+    set_default_shift_active,
+    set_working_shift_active,
+    update_default_shift,
+    update_working_shift,
+)
+from apps.scheduling.time_utils import get_clinic_settings
 
 
 User = get_user_model()
@@ -46,10 +71,8 @@ def doctor_working_hours(request, doctor_id):
         return Response({"working_hours": WorkingShiftSerializer(shifts, many=True).data})
     if request.user.role != User.Role.ADMIN: return error_response("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
     serializer = LegacyWorkingHoursReplaceSerializer(data=request.data, context={"doctor": doctor}); serializer.is_valid(raise_exception=True)
-    templates = [type("LegacyShift", (), {"name": row["name"], "weekday": row["weekday"], "start_time": row["start_time"], "end_time": row["end_time"], "is_active": row.get("is_active", True)}) for row in serializer.validated_data["working_hours"]]
     try:
-        from apps.scheduling.services import _apply_schedule
-        _apply_schedule(employee=doctor, templates=templates, mode="REPLACE_ALL", user=request.user, confirm_appointment_impact=serializer.validated_data["confirm_appointment_impact"], request=request)
+        replace_employee_schedule(employee=doctor, schedule_rows=serializer.validated_data["working_hours"], user=request.user, confirm_appointment_impact=serializer.validated_data["confirm_appointment_impact"], request=request)
     except AppointmentRuleError as exc: return _rule_error(exc)
     shifts = WorkingShift.objects.filter(employee=doctor).order_by("weekday", "start_time", "id")
     return Response({"working_hours": WorkingShiftSerializer(shifts, many=True).data})
@@ -219,16 +242,18 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         log_activity(request=request, action="appointment_rescheduled" if old == Appointment.Status.NEEDS_RESCHEDULE else "appointment_updated", entity_type="appointment", entity_id=instance.id, metadata={"appointment_id": instance.id})
         return Response(AppointmentDetailSerializer(instance).data)
     def partial_update(self, request, *args, **kwargs): kwargs["partial"] = True; return self.update(request, *args, **kwargs)
-    def _transition(self, request, *, allowed, target, timestamp_field, audit_action):
-        instance = self.get_object()
-        if instance.status not in allowed: return error_response("INVALID_STATUS_TRANSITION", "Invalid appointment status transition.", status_code=status.HTTP_409_CONFLICT)
-        instance.status = target; setattr(instance, timestamp_field, timezone.now()); instance.updated_by = request.user; instance.save(update_fields=["status", timestamp_field, "updated_by", "updated_at"]); log_activity(request=request, action=audit_action, entity_type="appointment", entity_id=instance.id, metadata={"appointment_id": instance.id}); return Response(AppointmentDetailSerializer(instance).data)
+    def _transition(self, request, command):
+        try:
+            instance = command(appointment=self.get_object(), user=request.user, request=request)
+        except AppointmentRuleError as exc:
+            return _rule_error(exc)
+        return Response(AppointmentDetailSerializer(instance).data)
     @action(detail=True, methods=["post"], url_path="check-in")
-    def check_in(self, request, pk=None): return self._transition(request, allowed=[Appointment.Status.UPCOMING], target=Appointment.Status.CHECKED_IN, timestamp_field="checked_in_at", audit_action="appointment_checked_in")
+    def check_in(self, request, pk=None): return self._transition(request, check_in_appointment)
     @action(detail=True, methods=["post"])
-    def cancel(self, request, pk=None): return self._transition(request, allowed=[Appointment.Status.UPCOMING, Appointment.Status.CHECKED_IN], target=Appointment.Status.CANCELLED, timestamp_field="cancelled_at", audit_action="appointment_cancelled")
+    def cancel(self, request, pk=None): return self._transition(request, cancel_appointment)
     @action(detail=True, methods=["post"], url_path="no-show")
-    def no_show(self, request, pk=None): return self._transition(request, allowed=[Appointment.Status.UPCOMING], target=Appointment.Status.NO_SHOW, timestamp_field="no_show_at", audit_action="appointment_marked_no_show")
+    def no_show(self, request, pk=None): return self._transition(request, mark_appointment_no_show)
     @action(detail=True, methods=["post"], url_path="start-visit")
     def start_visit(self, request, pk=None):
         from apps.visits.serializers import VisitDetailSerializer
