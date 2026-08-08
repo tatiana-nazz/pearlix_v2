@@ -28,9 +28,11 @@ from apps.billing.services import (
 )
 from apps.clinic.models import ClinicSettings
 from apps.patients.models import Patient
+from apps.scheduling.appointment_services import update_appointment
+from apps.scheduling.exception_services import mark_overlapping_appointments_needs_reschedule
 from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
+from apps.scheduling.schedule_services import update_working_shift
 from apps.scheduling.serializers import AppointmentDetailSerializer
-from apps.scheduling.services import mark_overlapping_appointments_needs_reschedule, update_appointment, update_working_shift
 from apps.visits.models import Visit
 from apps.visits.services import start_visit_from_appointment
 from apps.xrays.models import ExternalXrayCase, XrayAttachment

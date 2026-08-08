@@ -6,8 +6,9 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.clinic.models import ClinicSettings
+from apps.scheduling.appointment_services import validate_appointment_slot
+from apps.scheduling.availability import build_availability_slots
 from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
-from apps.scheduling.services import build_availability_slots, validate_appointment_slot
 
 
 MONDAY = date(2026, 7, 20)

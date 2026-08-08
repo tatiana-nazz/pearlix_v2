@@ -7,33 +7,6 @@ from apps.scheduling.models import Appointment, AvailabilityException, WorkingSh
 from apps.scheduling.time_utils import clinic_now, get_clinic_timezone
 
 
-def appointment_count_at(start_datetime, end_datetime):
-    return Appointment.objects.filter(
-        status__in=ACTIVE_COUNTING_STATUSES,
-        start_datetime__lt=end_datetime,
-        end_datetime__gt=start_datetime,
-    ).count()
-
-
-def has_doctor_conflict(doctor, start_datetime, end_datetime):
-    return Appointment.objects.filter(
-        doctor=doctor,
-        status__in=ACTIVE_COUNTING_STATUSES,
-        start_datetime__lt=end_datetime,
-        end_datetime__gt=start_datetime,
-    ).exists()
-
-
-def has_unavailable_exception(doctor, start_datetime, end_datetime):
-    return AvailabilityException.objects.filter(
-        doctor=doctor,
-        type=AvailabilityException.Type.UNAVAILABLE,
-        is_cancelled=False,
-        start_datetime__lt=end_datetime,
-        end_datetime__gt=start_datetime,
-    ).exists()
-
-
 def _overlaps(row, start_datetime, end_datetime):
     return row["start_datetime"] < end_datetime and row["end_datetime"] > start_datetime
 
