@@ -7,8 +7,10 @@ export function formatMoney(amount: string, currency: string): string {
   return Number.isFinite(numeric) ? new Intl.NumberFormat(undefined, { style: "currency", currency, currencyDisplay: "code" }).format(numeric) : `${amount} ${currency}`;
 }
 
-export function canManageHandoff(role: UserRole, handoff: BillingHandoff): boolean {
-  return role === "STAFF" && handoff.status !== "CANCELLED";
+export function canRecordPayment(role: UserRole, handoff: BillingHandoff): boolean {
+  return role === "STAFF"
+    && (handoff.status === "OPEN" || handoff.status === "PARTIALLY_PAID")
+    && Number(handoff.remaining_amount) > 0;
 }
 
 export function displayBillingDate(value: string | null | undefined, fallback = "—"): string {

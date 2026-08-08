@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { billingApi } from "../../../api/endpoints/billing";
-import type { BillingHandoffPayload, BillingHandoffUpdatePayload, InvoiceIssuePayload } from "../../../types/billing";
+import type { InvoiceIssuePayload } from "../../../types/billing";
 import { invalidateBillingQueries } from "./billingCache";
 
 const OPERATIONAL_QUERY_OPTIONS = {
@@ -41,18 +41,6 @@ export function useInvoicePrintData(id: number) {
 export function useBillingMutations() {
   const client = useQueryClient();
   return {
-    createHandoff: useMutation({
-      mutationFn: (payload: BillingHandoffPayload) => billingApi.createHandoff(payload),
-      onSuccess: (handoff) => invalidateBillingQueries(client, { handoffId: handoff.id, patientId: handoff.patient.id }),
-    }),
-    updateHandoff: useMutation({
-      mutationFn: ({ handoffId, payload }: { handoffId: number; payload: BillingHandoffUpdatePayload }) => billingApi.updateHandoff(handoffId, payload),
-      onSuccess: (handoff) => invalidateBillingQueries(client, { handoffId: handoff.id, patientId: handoff.patient.id, visitId: handoff.visit?.id, appointmentId: handoff.visit?.appointment.id }),
-    }),
-    cancelHandoff: useMutation({
-      mutationFn: ({ handoffId, reason }: { handoffId: number; reason?: string }) => billingApi.cancelHandoff(handoffId, reason),
-      onSuccess: (handoff) => invalidateBillingQueries(client, { handoffId: handoff.id, patientId: handoff.patient.id }),
-    }),
     issueInvoice: useMutation({
       mutationFn: ({ handoffId, payload }: { handoffId: number; payload: InvoiceIssuePayload }) => billingApi.issueInvoice(handoffId, payload),
       onSuccess: (result) => invalidateBillingQueries(client, {

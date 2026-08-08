@@ -202,7 +202,7 @@ def test_frontend_controlled_fields_are_rejected_or_overridden(
         {"status": BillingHandoff.Status.PAID, "paid_amount": "100.00", "remaining_amount": "0.00", "patient_id": patient_factory(national_id_or_passport="SPOOF-BILL").id},
         format="json",
     )
-    assert handoff_patch.status_code == 400
+    assert handoff_patch.status_code in {403, 405}
     handoff.refresh_from_db()
     assert handoff.status == BillingHandoff.Status.OPEN
     assert handoff.paid_amount == 0

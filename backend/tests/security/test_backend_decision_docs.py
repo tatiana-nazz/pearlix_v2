@@ -18,7 +18,8 @@ def test_doctor_patient_access_docs_reflect_connected_full_history_rule():
         if path.name == "CURRENT_BACKEND_DECISIONS.md":
             assert "The owning Doctor completes an active visit with required final billing" in text
             assert "no Staff approval or conversion step exists" in text
-            assert "Staff creates manual invoices and manages eligible invoice edits" in text
+            assert "Staff cannot create, edit, or cancel Bills" in text
+            assert "may only issue Invoices from an eligible existing Handoff" in text
         else:
             assert "Doctor can create billing handoff for their own completed visit" in text
             assert "Staff handles invoice creation and payment recording from the handoff." in text

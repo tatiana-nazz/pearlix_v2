@@ -23,8 +23,6 @@ from apps.audit.models import ActivityLog
 from apps.audit.services import log_activity
 from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.services import (
-    cancel_handoff,
-    create_manual_handoff,
     create_visit_completion_handoff,
     issue_invoice,
 )
@@ -455,40 +453,54 @@ class Command(BaseCommand):
         self._set_story_timestamp(paid_first, paid_first.issued_at)
         self._set_story_timestamp(paid_second, paid_second.issued_at)
 
-        manual_open = create_manual_handoff(
-            user=staff,
-            data={"patient": patients[14], "description": "Orthodontic consultation", "total_amount": "300000.00", "currency": "SYP", "note": "Open manual bill"},
+        second_open = create_visit_completion_handoff(
+            visit=visits[9],
+            user=visits[9].doctor,
+            data={"description": "Orthodontic consultation", "total_amount": "300000.00", "currency": "SYP", "note": "Open bill generated when the visit completed"},
         )
-        self._set_story_timestamp(manual_open, self._dt(reference_date, 12, 30))
+        self._set_story_timestamp(second_open, self._dt(reference_date, 12, 30))
 
-        manual_partial = create_manual_handoff(
-            user=staff,
-            data={"patient": patients[15], "description": "Restorative treatment plan", "total_amount": "200000.00", "currency": "SYP", "note": "Partial manual bill"},
+        second_partial = create_visit_completion_handoff(
+            visit=visits[10],
+            user=visits[10].doctor,
+            data={"description": "Restorative treatment plan", "total_amount": "200000.00", "currency": "SYP", "note": "Partially paid bill generated from a completed visit"},
         )
-        self._set_story_timestamp(manual_partial, self._dt(reference_date - timedelta(days=4), 10))
-        manual_first, _ = issue_invoice(
-            handoff=manual_partial,
+        self._set_story_timestamp(second_partial, self._dt(reference_date - timedelta(days=4), 10))
+        second_partial_first, _ = issue_invoice(
+            handoff=second_partial,
             user=staff,
             data={"amount": "50000.00", "issued_at": self._dt(reference_date - timedelta(days=4), 10, 30), "notes": "Deposit"},
         )
-        manual_second, _ = issue_invoice(
-            handoff=manual_partial,
+        second_partial_second, _ = issue_invoice(
+            handoff=second_partial,
             user=staff,
             data={"amount": "25000.00", "issued_at": self._dt(reference_date, 11, 30), "notes": "Follow-up collection"},
         )
-        self._set_story_timestamp(manual_first, manual_first.issued_at)
-        self._set_story_timestamp(manual_second, manual_second.issued_at)
+        self._set_story_timestamp(second_partial_first, second_partial_first.issued_at)
+        self._set_story_timestamp(second_partial_second, second_partial_second.issued_at)
 
-        cancelled = create_manual_handoff(
-            user=staff,
-            data={"patient": patients[17], "description": "Cancelled treatment estimate", "total_amount": "180000.00", "currency": "SYP", "note": "Cancelled before collection"},
-        )
-        cancel_handoff(handoff=cancelled, user=staff, data={"cancelled_reason": "Synthetic cancellation"})
         cancelled_at = self._dt(reference_date - timedelta(days=60), 13)
+        cancelled_visit = visits[11]
+        cancelled = BillingHandoff.objects.create(
+            patient=cancelled_visit.patient,
+            visit=cancelled_visit,
+            doctor=cancelled_visit.doctor,
+            description="Cancelled historical treatment estimate",
+            total_amount="180000.00",
+            currency="SYP",
+            note="Read-only migrated cancellation history",
+            status=BillingHandoff.Status.CANCELLED,
+            origin=BillingHandoff.Origin.LEGACY_MIGRATED,
+            legacy_reference="DEMO14A-HISTORICAL-CANCELLED",
+            cancelled_at=cancelled_at,
+            cancelled_reason="Historical migrated cancellation",
+            created_by=cancelled_visit.doctor,
+            updated_by=cancelled_visit.doctor,
+        )
         self._set_story_timestamp(cancelled, cancelled_at, cancelled_at=cancelled_at)
         return {
-            "handoffs": [visit_open, visit_partial, visit_paid, manual_open, manual_partial, cancelled],
-            "invoices": [partial_first, partial_second, paid_first, paid_second, manual_first, manual_second],
+            "handoffs": [visit_open, visit_partial, visit_paid, second_open, second_partial, cancelled],
+            "invoices": [partial_first, partial_second, paid_first, paid_second, second_partial_first, second_partial_second],
             "open": visit_open,
             "partial": visit_partial,
             "paid": visit_paid,

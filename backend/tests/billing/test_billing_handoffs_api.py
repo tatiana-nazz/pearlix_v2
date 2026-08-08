@@ -14,83 +14,41 @@ def test_handoff_endpoints_require_authentication(api_client, billing_handoff_fa
 
 
 @pytest.mark.django_db
-def test_staff_creates_manual_open_bill_with_no_invoice(staff_client, patient):
-    response = staff_client.post(
-        "/api/billing-handoffs/",
-        {"patient_id": patient.id, "description": "Manual restorative bill", "total_amount": "300.00", "currency": "USD", "note": "Reception"},
-        format="json",
-    )
-    assert response.status_code == 201
-    handoff = BillingHandoff.objects.get(pk=response.data["id"])
-    assert handoff.patient_id == patient.id
-    assert handoff.visit_id is None
-    assert handoff.status == BillingHandoff.Status.OPEN
-    assert handoff.origin == BillingHandoff.Origin.MANUAL
-    assert response.data["paid_amount"] == "0.00"
-    assert response.data["remaining_amount"] == "300.00"
-    assert response.data["invoice_count"] == 0
-    assert Invoice.objects.filter(billing_handoff=handoff).count() == 0
+def test_no_role_can_create_a_handoff_from_the_collection_api(staff_client, admin_client, doctor_client, patient):
+    payload = {"patient_id": patient.id, "description": "Blocked direct bill", "total_amount": "100.00", "currency": "SYP"}
+    for client in (staff_client, admin_client, doctor_client):
+        response = client.post("/api/billing-handoffs/", payload, format="json")
+        assert response.status_code in {403, 405}
+    assert BillingHandoff.objects.count() == 0
 
 
 @pytest.mark.django_db
-def test_only_staff_can_create_manual_bill(admin_client, doctor_client, patient):
-    payload = {"patient_id": patient.id, "description": "Manual bill", "total_amount": "100.00", "currency": "SYP"}
-    assert admin_client.post("/api/billing-handoffs/", payload, format="json").status_code == 403
-    assert doctor_client.post("/api/billing-handoffs/", payload, format="json").status_code == 403
-
-
-@pytest.mark.django_db
-def test_manual_bill_rejects_archived_patient(staff_client, patient_factory):
-    archived = patient_factory(is_archived=True, national_id_or_passport="ARCHIVED-BILL-PATIENT")
-    response = staff_client.post(
-        "/api/billing-handoffs/",
-        {"patient_id": archived.id, "description": "Manual bill", "total_amount": "100.00", "currency": "SYP"},
+def test_handoffs_cannot_be_patched_or_cancelled_by_any_role(
+    staff_client,
+    admin_client,
+    doctor_client,
+    billing_handoff_factory,
+):
+    handoff = billing_handoff_factory(description="Immutable visit bill", total_amount="100.00", currency="USD")
+    for client in (staff_client, admin_client, doctor_client):
+        patched = client.patch(
+            f"/api/billing-handoffs/{handoff.id}/",
+            {"description": "Blocked", "total_amount": "1.00", "currency": "SYP"},
+            format="json",
+        )
+        assert patched.status_code in {403, 405}
+    cancelled = staff_client.post(
+        f"/api/billing-handoffs/{handoff.id}/cancel/",
+        {"cancelled_reason": "Blocked"},
         format="json",
     )
-    assert response.status_code == 400
-
-
-@pytest.mark.django_db
-def test_patient_and_workflow_fields_are_never_mutable(staff_client, billing_handoff_factory, patient_factory):
-    handoff = billing_handoff_factory()
-    other = patient_factory(national_id_or_passport="HANDOFF-OTHER")
-    response = staff_client.patch(
-        f"/api/billing-handoffs/{handoff.id}/",
-        {"patient_id": other.id, "status": "PAID", "origin": "VISIT_COMPLETION"},
-        format="json",
-    )
-    assert response.status_code == 400
+    assert cancelled.status_code in {403, 404, 405}
     handoff.refresh_from_db()
-    assert handoff.patient_id != other.id
-    assert handoff.status == BillingHandoff.Status.OPEN
-
-
-@pytest.mark.django_db
-def test_financial_fields_lock_after_first_invoice_but_description_and_note_remain_editable(staff_client, billing_handoff_factory, invoice_factory):
-    handoff = billing_handoff_factory(total_amount="100.00", currency="USD")
-    invoice_factory(billing_handoff=handoff, amount="25.00")
-    locked = staff_client.patch(f"/api/billing-handoffs/{handoff.id}/", {"total_amount": "120.00", "currency": "SYP"}, format="json")
-    assert locked.status_code == 409
-    updated = staff_client.patch(f"/api/billing-handoffs/{handoff.id}/", {"description": "Corrected treatment", "note": "Audited note"}, format="json")
-    assert updated.status_code == 200
-    handoff.refresh_from_db()
+    assert handoff.description == "Immutable visit bill"
     assert handoff.total_amount == Decimal("100.00")
     assert handoff.currency == "USD"
-    assert handoff.description == "Corrected treatment"
-
-
-@pytest.mark.django_db
-def test_zero_invoice_bill_can_cancel_but_paid_history_cannot(staff_client, billing_handoff_factory, invoice_factory):
-    empty = billing_handoff_factory()
-    cancelled = staff_client.post(f"/api/billing-handoffs/{empty.id}/cancel/", {"cancelled_reason": "Entered twice"}, format="json")
-    assert cancelled.status_code == 200
-    assert cancelled.data["status"] == BillingHandoff.Status.CANCELLED
-    assert cancelled.data["cancelled_reason"] == "Entered twice"
-
-    with_history = billing_handoff_factory(total_amount="100.00")
-    invoice_factory(billing_handoff=with_history, amount="20.00")
-    rejected = staff_client.post(f"/api/billing-handoffs/{with_history.id}/cancel/", format="json")
-    assert rejected.status_code == 409
+    assert handoff.status == BillingHandoff.Status.OPEN
+    assert Invoice.objects.filter(billing_handoff=handoff).count() == 0
 
 
 @pytest.mark.django_db

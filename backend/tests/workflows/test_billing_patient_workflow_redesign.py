@@ -69,11 +69,8 @@ def test_audit_failure_rolls_back_visit_appointment_and_handoff(monkeypatch, doc
 
 
 @pytest.mark.django_db
-def test_manual_charge_is_a_bill_not_an_invoice(staff_client, patient):
+def test_staff_cannot_create_a_manual_bill_or_standalone_invoice(staff_client, patient):
     response = staff_client.post("/api/billing-handoffs/", {"patient_id": patient.id, "description": "Manual consultation", "total_amount": "90.00", "currency": "USD", "note": "Optional"}, format="json")
-    assert response.status_code == 201
-    handoff = BillingHandoff.objects.get(pk=response.data["id"])
-    assert handoff.origin == BillingHandoff.Origin.MANUAL
-    assert handoff.invoice_count == 0
-    assert not Invoice.objects.filter(billing_handoff=handoff).exists()
+    assert response.status_code in {403, 405}
+    assert not BillingHandoff.objects.exists()
     assert staff_client.post("/api/invoices/", {"patient_id": patient.id, "amount": "90.00"}, format="json").status_code in {403, 405}

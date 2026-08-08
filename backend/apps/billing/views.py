@@ -13,10 +13,8 @@ from rest_framework.response import Response
 from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.permissions import BillingHandoffPermission, InvoicePermission
 from apps.billing.serializers import (
-    BillingHandoffCreateSerializer,
     BillingHandoffQuerySerializer,
     BillingHandoffSerializer,
-    BillingHandoffUpdateSerializer,
     HandoffInvoiceResponseSerializer,
     InvoiceIssueSerializer,
     InvoiceQuerySerializer,
@@ -24,11 +22,8 @@ from apps.billing.serializers import (
 )
 from apps.billing.services import (
     BillingRuleError,
-    cancel_handoff,
-    create_manual_handoff,
     invoice_print_data,
     issue_invoice,
-    update_handoff,
 )
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
@@ -81,29 +76,14 @@ def _handoff_queryset():
 
 
 class BillingHandoffViewSet(
-    mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
     serializer_class = BillingHandoffSerializer
     permission_classes = [BillingHandoffPermission]
     pagination_class = BillingPagination
-    http_method_names = ["get", "post", "patch", "head", "options"]
-
-    blocked_create_fields = {
-        "visit",
-        "visit_id",
-        "doctor",
-        "doctor_id",
-        "status",
-        "paid_amount",
-        "remaining_amount",
-        "invoice_count",
-        "origin",
-    }
-    blocked_update_fields = blocked_create_fields | {"patient", "patient_id", "currency_paid"}
+    http_method_names = ["get", "post", "head", "options"]
 
     def _query_params(self):
         serializer = BillingHandoffQuerySerializer(data=self.request.query_params)
@@ -146,67 +126,6 @@ class BillingHandoffViewSet(
         if self.request.user.is_authenticated and self.request.user.role == "DOCTOR":
             queryset = queryset.filter(doctor=self.request.user)
         return self._filter_queryset(queryset, self._query_params())
-
-    @staticmethod
-    def _reject_fields(request, blocked_fields):
-        blocked = sorted(blocked_fields.intersection(request.data))
-        if not blocked:
-            return None
-        return error_response(
-            "VALIDATION_ERROR",
-            "Some fields are invalid.",
-            {field: ["This field cannot be set in this operation."] for field in blocked},
-        )
-
-    def create(self, request, *args, **kwargs):
-        rejected = self._reject_fields(request, self.blocked_create_fields)
-        if rejected is not None:
-            return rejected
-        serializer = BillingHandoffCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            handoff = create_manual_handoff(
-                user=request.user,
-                data=serializer.validated_data,
-                request=request,
-            )
-        except BillingRuleError as exc:
-            return exc.to_response()
-        return Response(BillingHandoffSerializer(_handoff_queryset().get(pk=handoff.pk)).data, status=status.HTTP_201_CREATED)
-
-    def update(self, request, *args, **kwargs):
-        rejected = self._reject_fields(request, self.blocked_update_fields)
-        if rejected is not None:
-            return rejected
-        handoff = self.get_object()
-        serializer = BillingHandoffUpdateSerializer(data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        try:
-            handoff = update_handoff(
-                handoff=handoff,
-                user=request.user,
-                data=serializer.validated_data,
-                request=request,
-            )
-        except BillingRuleError as exc:
-            return exc.to_response()
-        return Response(BillingHandoffSerializer(_handoff_queryset().get(pk=handoff.pk)).data)
-
-    def partial_update(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
-
-    @action(detail=True, methods=["post"])
-    def cancel(self, request, pk=None):
-        try:
-            handoff = cancel_handoff(
-                handoff=self.get_object(),
-                user=request.user,
-                data=request.data,
-                request=request,
-            )
-        except BillingRuleError as exc:
-            return exc.to_response()
-        return Response(BillingHandoffSerializer(_handoff_queryset().get(pk=handoff.pk)).data)
 
     @action(detail=True, methods=["post"], url_path="invoices")
     def issue_invoice(self, request, pk=None):

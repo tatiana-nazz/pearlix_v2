@@ -64,6 +64,16 @@ def test_demo_financial_story_has_canonical_statuses_currencies_and_multiple_rec
     demo_invoices = Invoice.objects.filter(billing_handoff__in=demo_bills)
     assert set(demo_bills.values_list("status", flat=True)) == set(BillingHandoff.Status.values)
     assert set(demo_bills.values_list("currency", flat=True)) == {"SYP", "USD"}
+    assert not demo_bills.filter(origin=BillingHandoff.Origin.MANUAL).exists()
+    current_bills = demo_bills.exclude(origin=BillingHandoff.Origin.LEGACY_MIGRATED)
+    assert current_bills.exists()
+    assert not current_bills.filter(visit__isnull=True).exists()
+    assert not current_bills.filter(doctor__isnull=True).exists()
+    for bill in current_bills.select_related("visit"):
+        assert bill.origin == BillingHandoff.Origin.VISIT_COMPLETION
+        assert bill.visit.status == Visit.Status.COMPLETED
+        assert bill.patient_id == bill.visit.patient_id
+        assert bill.doctor_id == bill.visit.doctor_id
     assert demo_bills.filter(status=BillingHandoff.Status.PARTIALLY_PAID, invoices__isnull=False).distinct().exists()
     assert demo_bills.filter(status=BillingHandoff.Status.PAID, invoices__isnull=False).distinct().exists()
     assert any(bill.invoice_count >= 2 for bill in demo_bills)

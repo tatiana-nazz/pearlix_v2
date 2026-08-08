@@ -4,7 +4,7 @@ const copy = {
   EN: {
     adminWorkspace: "Admin workspace", staffWorkspace: "Staff workspace", billing: "Billing",
     billingDescription: "Bills, collections, and issued payment invoices in one financial workspace.",
-    overview: "Overview", handoffs: "Handoffs", invoices: "Invoices", newBill: "New bill",
+    overview: "Overview", handoffs: "Handoffs", invoices: "Invoices",
     overviewTitle: "Billing overview", overviewDescription: "Current obligations and collected payments without mixing currencies.",
     openBills: "Open bills", partiallyPaidBills: "Partially paid bills", invoicesToday: "Invoices today", collectedToday: "Collected today",
     outstandingByCurrency: "Outstanding by currency", recentBills: "Recent bills", recentInvoices: "Recent invoices", viewAll: "View all",
@@ -21,7 +21,7 @@ const copy = {
   AR: {
     adminWorkspace: "مساحة عمل المدير", staffWorkspace: "مساحة عمل الموظف", billing: "الفوترة",
     billingDescription: "الفواتير المستحقة والتحصيل وإيصالات الدفع في مساحة مالية واحدة.",
-    overview: "نظرة عامة", handoffs: "الفواتير المستحقة", invoices: "إيصالات الدفع", newBill: "فاتورة مستحقة جديدة",
+    overview: "نظرة عامة", handoffs: "الفواتير المستحقة", invoices: "إيصالات الدفع",
     overviewTitle: "نظرة عامة على الفوترة", overviewDescription: "الالتزامات الحالية والمدفوعات المحصلة دون دمج العملات.",
     openBills: "الفواتير المفتوحة", partiallyPaidBills: "المدفوعة جزئياً", invoicesToday: "إيصالات اليوم", collectedToday: "المحصل اليوم",
     outstandingByCurrency: "المتبقي حسب العملة", recentBills: "أحدث الفواتير المستحقة", recentInvoices: "أحدث إيصالات الدفع", viewAll: "عرض الكل",

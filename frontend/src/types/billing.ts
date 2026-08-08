@@ -58,21 +58,6 @@ export interface BillingHandoff extends Timestamped {
   updated_by: UserSummary | null;
 }
 
-export interface BillingHandoffPayload {
-  patient_id: number;
-  description: string;
-  total_amount: string;
-  currency: Currency;
-  note?: string;
-}
-
-export interface BillingHandoffUpdatePayload {
-  description?: string;
-  total_amount?: string;
-  currency?: Currency;
-  note?: string;
-}
-
 export interface InvoiceIssuePayload {
   amount: string;
   issued_at?: string;

@@ -30,7 +30,6 @@ export function PatientBillingSummary({ role, patientId = 0 }: PatientBillingSum
 
   return <section className="patient-billing-workspace">
     <SectionHeader title="Billing" description="Bills first, followed by the immutable payment invoices issued against them." />
-    {role === "STAFF" ? <div className="patient-billing-actions"><Link className="button primary" to={`/staff/billing/handoffs/new?patient_id=${patientId}`}>New bill for patient</Link></div> : null}
     <div className="patient-billing-summary-grid">
       <Card><span>Open bills</span><strong>{summary.data.open_count}</strong></Card>
       <Card><span>Partially paid</span><strong>{summary.data.partially_paid_count}</strong></Card>

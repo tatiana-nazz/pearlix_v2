@@ -21,6 +21,7 @@ describe("RecordPaymentDialog", () => {
     expect(screen.getByText("Maya Patient")).toBeInTheDocument();
     expect(screen.getByText("Restorative treatment")).toBeInTheDocument();
     expect(screen.queryByLabelText(/patient/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /currency/i })).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox", { name: "Payment amount" }), { target: { value: "80.00" } });
     fireEvent.click(screen.getByRole("button", { name: "Record payment & issue invoice" }));
     expect(screen.getByRole("alert")).toHaveTextContent("no greater than the remaining balance");

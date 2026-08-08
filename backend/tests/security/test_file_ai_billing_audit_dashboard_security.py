@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 
 from apps.ai_results.serializers import AI_DISCLAIMER_EN
 from apps.ai_results.services import MOCK_MODEL_VERSION
@@ -110,8 +111,12 @@ def test_billing_security_blocks_privilege_escalation_and_enforces_backend_total
     assert partial.data["handoff"]["status"] == BillingHandoff.Status.PARTIALLY_PAID
     assert overpay.status_code == 400
     assert overpay.data["code"] == "OVERPAYMENT_NOT_ALLOWED"
-    cancelled = billing_handoff_factory(total_amount="30.00")
-    assert staff_client.post(f"/api/billing-handoffs/{cancelled.id}/cancel/").status_code == 200
+    cancelled = billing_handoff_factory(
+        total_amount="30.00",
+        status=BillingHandoff.Status.CANCELLED,
+        cancelled_at=timezone.now(),
+    )
+    assert staff_client.post(f"/api/billing-handoffs/{cancelled.id}/cancel/").status_code in {403, 404, 405}
     locked_payment = staff_client.post(f"/api/billing-handoffs/{cancelled.id}/invoices/", {"amount": "10.00"}, format="json")
     assert locked_payment.status_code == 409
 

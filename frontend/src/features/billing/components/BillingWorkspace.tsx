@@ -47,7 +47,7 @@ export function BillingOverviewPage({ role }: { role: Exclude<UserRole, "DOCTOR"
   const error = queries.find((query) => query.isError);
 
   return <main className="billing-page billing-overview-page"><BillingWorkspaceHeader role={role} />
-    <div className="billing-page-intro"><div><p className="billing-eyebrow">{clinicDate ?? c.overview}</p><h2>{c.overviewTitle}</h2><p>{c.overviewDescription}</p></div>{role === "STAFF" ? <Link className="button primary" to="/staff/billing/handoffs/new">{c.newBill}</Link> : null}</div>
+    <div className="billing-page-intro"><div><p className="billing-eyebrow">{clinicDate ?? c.overview}</p><h2>{c.overviewTitle}</h2><p>{c.overviewDescription}</p></div></div>
     {queries.some((query) => query.isLoading) && !bills.data ? <LoadingState title={c.loading} /> : null}
     {error ? <ErrorState error={error.error} title={c.unavailable} onRetry={() => queries.forEach((query) => void query.refetch())} /> : null}
     {bills.data && todayInvoices.data ? <section className="billing-kpi-grid" aria-label={c.overviewTitle}>

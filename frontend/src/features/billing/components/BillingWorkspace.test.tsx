@@ -28,7 +28,7 @@ describe("billing overview and invoice history", () => {
     setUser("STAFF"); renderBilling(<BillingOverviewPage role="STAFF" />);
     expect(await screen.findByRole("link", { name: /Open bills/ })).toHaveAttribute("href", "/staff/billing/handoffs?status=OPEN");
     expect(screen.getByRole("link", { name: /Partially paid bills/ })).toHaveAttribute("href", "/staff/billing/handoffs?status=PARTIALLY_PAID");
-    expect(screen.getByRole("link", { name: "New bill" })).toHaveAttribute("href", "/staff/billing/handoffs/new");
+    expect(screen.queryByRole("link", { name: /New bill/i })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Handoffs" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Invoices" })).toBeInTheDocument();
     expect(screen.queryByText(/approval/i)).not.toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("billing overview and invoice history", () => {
   it("keeps Admin billing read-only", async () => {
     setUser("ADMIN"); renderBilling(<BillingOverviewPage role="ADMIN" />, "/admin/billing/overview");
     expect(await screen.findByRole("heading", { name: "Billing overview" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "New bill" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /New bill/i })).not.toBeInTheDocument();
   });
 
   it("filters immutable invoice receipts by clinic date, search, and currency", async () => {

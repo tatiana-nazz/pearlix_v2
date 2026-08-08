@@ -2,7 +2,6 @@ from rest_framework import serializers
 
 from apps.accounts.serializers import UserSummarySerializer
 from apps.billing.models import BillingHandoff, Invoice
-from apps.patients.models import Patient
 from apps.patients.serializers import PatientListSerializer
 from apps.visits.models import Visit
 from apps.visits.serializers import VisitAppointmentSummarySerializer
@@ -80,34 +79,6 @@ class BillingHandoffSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = fields
-
-
-class BillingHandoffCreateSerializer(serializers.Serializer):
-    patient_id = serializers.PrimaryKeyRelatedField(
-        source="patient",
-        queryset=Patient.objects.filter(is_archived=False),
-    )
-    description = serializers.CharField(max_length=2000, trim_whitespace=True)
-    total_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
-    currency = serializers.ChoiceField(choices=BillingHandoff.Currency.choices)
-    note = serializers.CharField(required=False, allow_blank=True)
-
-    def validate_total_amount(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Amount must be positive.")
-        return value
-
-
-class BillingHandoffUpdateSerializer(serializers.Serializer):
-    description = serializers.CharField(max_length=2000, trim_whitespace=True, required=False)
-    total_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
-    currency = serializers.ChoiceField(choices=BillingHandoff.Currency.choices, required=False)
-    note = serializers.CharField(required=False, allow_blank=True)
-
-    def validate_total_amount(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Amount must be positive.")
-        return value
 
 
 class InvoiceIssueSerializer(serializers.Serializer):

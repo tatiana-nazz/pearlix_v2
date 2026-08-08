@@ -191,14 +191,6 @@ def test_important_actions_create_safe_audit_logs(
     visit_handoff = completion.data["created_handoff"]
     staff_client.post(f"/api/billing-handoffs/{visit_handoff['id']}/invoices/", {"amount": "90.00"}, format="json")
 
-    direct_handoff = staff_client.post(
-        "/api/billing-handoffs/",
-        {"patient_id": patient_id, "description": "Direct audit bill", "total_amount": "30.00", "currency": "SYP"},
-        format="json",
-    )
-    staff_client.patch(f"/api/billing-handoffs/{direct_handoff.data['id']}/", {"note": "bill note update"}, format="json")
-    staff_client.post(f"/api/billing-handoffs/{direct_handoff.data['id']}/cancel/", {"cancelled_reason": "Audit cancellation"}, format="json")
-
     external = doctor_client.post("/api/external-xrays/", {"file": upload_file("external.png")}, format="multipart")
     doctor_client.post(f"/api/external-xrays/{external.data['id']}/run-ai/")
     doctor_client.post(f"/api/external-xrays/{external.data['id']}/attach-to-patient/", {"patient_id": patient_id}, format="json")
@@ -228,8 +220,6 @@ def test_important_actions_create_safe_audit_logs(
         "external_xray_discarded",
         "external_xray_attached_to_patient",
         "billing_handoff_created",
-        "billing_handoff_updated",
-        "billing_handoff_cancelled",
         "invoice_issued",
     }
     assert expected.issubset(actions)

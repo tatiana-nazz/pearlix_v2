@@ -2,7 +2,7 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class BillingHandoffPermission(BasePermission):
-    mutation_actions = {"create", "update", "partial_update", "cancel", "issue_invoice"}
+    mutation_actions = {"issue_invoice"}
 
     def has_permission(self, request, view) -> bool:
         if not request.user or not request.user.is_authenticated:

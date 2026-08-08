@@ -11,17 +11,17 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current phase: Stage 7 Handoff Bill and Invoice Ledger — delivered
+- Current phase: Stage 7 Handoff Bill and Invoice Ledger with visit-only Bill origin authority — delivered
 - Phase 13 series: complete
 - Next phase: no phase is implicitly authorized; use a new approved scope
 - Next step: preserve Stage 7 financial semantics, the Phase 14F.4 clinical closure, and current runtime/RBAC contracts
-- Final backend full regression: 422 passed
-- Final frontend regression: 155 passed in 50 files
+- Final backend full regression: 420 passed
+- Final frontend regression: 158 passed in 51 files
 - Final browser regression: 17 serial Phase 14D/14F/14F.2/14F.3/14F.4 Chromium scenarios passed, including 3 new role and responsive clinical-workspace scenarios
 - Stage 7 backend/model change: `BillingHandoff` is the Bill with computed paid/remaining/Invoice count and canonical statuses; `Invoice` is one Handoff-linked receipt; legacy `Payment` runtime/model is removed through a preserving migration.
 - Stage 7 visit change: Doctor completion atomically creates one OPEN Handoff and zero Invoices; Staff payment issues an Invoice and recomputes Handoff status.
-- Stage 7 frontend change: Billing uses Overview/Handoffs/Invoices, Handoff Detail is the Bill workspace, Invoice screens are receipt history, Patient Billing is Handoff-first, and standalone New Invoice is redirected to New Bill.
-- Stage 7 verification: migration preservation, seed safety/idempotency, focused suites, full backend/frontend suites, production build, and nine independent focused Chromium scenarios are green.
+- Stage 7 final authority correction: Doctor Active Visit completion is the only current-workflow Bill creation path. Staff Billing and Patient Billing have no New Bill workflow; Handoff Detail is immutable except that eligible Staff may record payment to issue an Invoice. Admin and Doctor Handoff views are read-only, and historical migrated manual/cancelled Bills remain readable.
+- Stage 7 verification: migration preservation, seed safety/idempotency, focused suites, full backend/frontend suites, production build, and eight focused visit-only authority Chromium scenarios are green.
 - Phase 14F.4 production backend behavior changes: none; only the DEBUG-only seed command and tests changed
 - Phase 14F.4 API/model/migration changes: none
 - Phase 14F.4 frontend closure: semantic Month status items, sticky Patient Profile identity rail, static Active Visit patient/visit summary, exact four tabs, and inline selected-X-ray upload/existing AI-run/overlay/result workspace
