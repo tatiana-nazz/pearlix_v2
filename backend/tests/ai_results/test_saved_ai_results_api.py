@@ -3,7 +3,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.ai_results.models import AIResult
 from apps.ai_results.serializers import AI_DISCLAIMER_EN
-from apps.billing.models import BillingHandoff, Invoice, Payment
+from apps.billing.models import BillingHandoff, Invoice
 from apps.clinic.models import ClinicSettings
 from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
@@ -135,7 +135,6 @@ def test_saved_xray_ai_run_requires_mock_adapter_and_does_not_mutate_state(
     assert appointment.status == Appointment.Status.ACTIVE
     assert BillingHandoff.objects.count() == 0
     assert Invoice.objects.count() == 0
-    assert Payment.objects.count() == 0
 
 
 @pytest.mark.django_db

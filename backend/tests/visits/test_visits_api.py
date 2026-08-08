@@ -349,20 +349,19 @@ def test_doctor_can_complete_own_active_visit(doctor_client, doctor_user, appoin
     assert visit.appointment.status == Appointment.Status.COMPLETED
     assert visit.appointment.updated_by == doctor_user
     handoff = BillingHandoff.objects.get(visit=visit)
-    invoice = Invoice.objects.get(visit=visit)
     assert response.data["visit"]["id"] == visit.id
-    assert response.data["billing_provenance"]["id"] == handoff.id
-    assert response.data["created_invoice"]["id"] == invoice.id
+    assert response.data["created_handoff"]["id"] == handoff.id
     assert handoff.patient_id == visit.patient_id
     assert handoff.doctor_id == doctor_user.id
     assert handoff.description == "Restorative dental treatment"
-    assert str(handoff.suggested_amount) == "250.00"
+    assert str(handoff.total_amount) == "250.00"
     assert handoff.currency == "SYP"
     assert handoff.note == "Collect payment at reception after treatment."
-    assert handoff.status == BillingHandoff.Status.CONVERTED_TO_INVOICE
-    assert handoff.converted_invoice_id == invoice.id
-    assert invoice.description == "Restorative dental treatment"
-    assert invoice.status == Invoice.Status.UNPAID
+    assert handoff.status == BillingHandoff.Status.OPEN
+    assert handoff.paid_amount == 0
+    assert handoff.remaining_amount == handoff.total_amount
+    assert handoff.invoice_count == 0
+    assert not Invoice.objects.filter(billing_handoff=handoff).exists()
     assert visit.clinical_notes == "Completed with billing handoff."
 
 
@@ -393,10 +392,10 @@ def test_complete_visit_rejects_invalid_billing_without_state_change(doctor_clie
 def test_complete_visit_rolls_back_when_handoff_creation_fails(monkeypatch, doctor_client, doctor_user, appointment_factory, visit_factory):
     visit = _visit_for(visit_factory, appointment_factory, doctor_user, clinical_notes="Original")
 
-    def fail_invoice(**_kwargs):
+    def fail_handoff(**_kwargs):
         raise BillingRuleError("VALIDATION_ERROR", "Some fields are invalid.", {"note": ["Rejected."]})
 
-    monkeypatch.setattr("apps.billing.services.create_visit_completion_invoice", fail_invoice)
+    monkeypatch.setattr("apps.billing.services.create_visit_completion_handoff", fail_handoff)
     response = doctor_client.post(f"/api/visits/{visit.id}/complete/", _completion_payload(visit), format="json")
 
     assert response.status_code == 400
@@ -423,7 +422,7 @@ def test_complete_visit_conflict_and_existing_handoff_preserve_active_visit(doct
     conflict_visit.completed_at = timezone.now()
     conflict_visit.save(update_fields=["status", "completed_at", "updated_at"])
     second_visit = _visit_for(visit_factory, appointment_factory, doctor_user, start_datetime="2026-07-20T12:00:00+03:00", end_datetime="2026-07-20T12:30:00+03:00")
-    BillingHandoff.objects.create(patient=second_visit.patient, visit=second_visit, doctor=doctor_user, description="Existing", suggested_amount="10.00", currency="SYP", status=BillingHandoff.Status.PENDING)
+    BillingHandoff.objects.create(patient=second_visit.patient, visit=second_visit, doctor=doctor_user, description="Existing", total_amount="10.00", currency="SYP", status=BillingHandoff.Status.OPEN, origin=BillingHandoff.Origin.VISIT_COMPLETION)
     existing_response = doctor_client.post(f"/api/visits/{second_visit.id}/complete/", _completion_payload(second_visit), format="json")
     assert existing_response.status_code == 409
     assert existing_response.data["code"] == "VISIT_BILLING_EXISTS"
@@ -433,7 +432,7 @@ def test_complete_visit_conflict_and_existing_handoff_preserve_active_visit(doct
 
 
 @pytest.mark.django_db
-def test_repeated_complete_request_cannot_create_duplicate_invoice(doctor_client, doctor_user, appointment_factory, visit_factory):
+def test_repeated_complete_request_cannot_create_duplicate_handoff_or_invoice(doctor_client, doctor_user, appointment_factory, visit_factory):
     visit = _visit_for(visit_factory, appointment_factory, doctor_user)
     payload = _completion_payload(visit)
 
@@ -443,7 +442,7 @@ def test_repeated_complete_request_cannot_create_duplicate_invoice(doctor_client
     assert first.status_code == 200
     assert second.status_code == 409
     assert BillingHandoff.objects.filter(visit=visit).count() == 1
-    assert Invoice.objects.filter(visit=visit).count() == 1
+    assert Invoice.objects.filter(billing_handoff__visit=visit).count() == 0
 
 
 @pytest.mark.django_db

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { activeDatePreset, dateRangeForPreset, invoiceQueryFromSearch } from "./billingQuery";
+import { activeDatePreset, dateRangeForPreset, handoffQueryFromSearch, invoiceQueryFromSearch } from "./billingQuery";
 
 describe("billing invoice date query", () => {
   it("builds inclusive clinic-date presets without using the browser clock", () => {
@@ -17,7 +17,8 @@ describe("billing invoice date query", () => {
   });
 
   it("keeps supported URL filters and omits empty values", () => {
-    const query = invoiceQueryFromSearch(new URLSearchParams("search=Maya&currency=USD&page=2&ignored=value"));
+    const query = invoiceQueryFromSearch(new URLSearchParams("search=Maya&currency=USD&page=2&status=OPEN&ignored=value"));
     expect(query).toEqual({ search: "Maya", currency: "USD", page: "2" });
+    expect(handoffQueryFromSearch(new URLSearchParams("search=Maya&status=OPEN&currency=SYP"))).toEqual({ status: "OPEN", currency: "SYP", search: "Maya" });
   });
 });

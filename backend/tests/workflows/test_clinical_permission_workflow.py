@@ -70,9 +70,9 @@ def test_wf_004_clinical_permission_workflow(admin_client, staff_client, doctor_
                 "treatment": "Clinical exam",
                 "follow_up_notes": "Follow up",
             },
-            "billing_handoff": {
+            "billing": {
                 "description": "Clinical exam",
-                "suggested_amount": "1.00",
+                "total_amount": "1.00",
                 "currency": "SYP",
                 "note": "Clinical workflow handoff",
             },

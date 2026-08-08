@@ -104,7 +104,7 @@ def test_representative_role_boundaries_block_privilege_escalation(
     assert admin_client.patch(f"/api/appointments/{appointment.id}/", {"reason": "Blocked"}, format="json").status_code == 403
     assert admin_client.patch(f"/api/visits/{active_visit.id}/clinical-notes/", {"diagnosis": "Blocked"}, format="json").status_code == 403
     assert admin_client.post(f"/api/xrays/{xray.id}/run-ai/").status_code == 403
-    assert admin_client.post("/api/invoices/", {"patient_id": patient.id, "total_amount": "20.00", "currency": "SYP"}, format="json").status_code == 403
+    assert admin_client.post("/api/billing-handoffs/", {"patient_id": patient.id, "description": "Blocked", "total_amount": "20.00", "currency": "SYP"}, format="json").status_code == 403
 
     assert staff_client.post(f"/api/visits/{active_visit.id}/complete/").status_code == 403
     assert staff_client.patch(f"/api/visits/{active_visit.id}/clinical-notes/", {"diagnosis": "Blocked"}, format="json").status_code == 403
@@ -114,6 +114,6 @@ def test_representative_role_boundaries_block_privilege_escalation(
 
     assert doctor_client.patch(f"/api/appointments/{appointment.id}/", {"reason": "Blocked"}, format="json").status_code == 403
     assert doctor_client.get(f"/api/invoices/{invoice.id}/").status_code == 403
-    assert doctor_client.post(f"/api/invoices/{invoice.id}/payments/", {"amount": "5.00", "currency": invoice.currency}, format="json").status_code == 403
+    assert doctor_client.post(f"/api/billing-handoffs/{invoice.billing_handoff_id}/invoices/", {"amount": "5.00"}, format="json").status_code == 403
     assert doctor_client.get("/api/audit-logs/").status_code == 403
     assert XrayAttachment.objects.filter(id=xray.id).exists()

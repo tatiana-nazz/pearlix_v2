@@ -1,11 +1,12 @@
 import pytest
 
-from apps.billing.models import Invoice
+from apps.billing.models import BillingHandoff
 
 
 @pytest.mark.django_db
-def test_wf_010_admin_operational_actions_are_read_only(admin_client, patient, appointment_factory, active_visit, invoice_factory):
-    invoice = invoice_factory(patient=patient, total_amount="40.00", status=Invoice.Status.UNPAID)
+def test_wf_010_admin_operational_actions_are_read_only(admin_client, patient, appointment_factory, active_visit, billing_handoff_factory, invoice_factory):
+    handoff = billing_handoff_factory(patient=patient, total_amount="40.00")
+    invoice = invoice_factory(billing_handoff=handoff, amount="10.00")
 
     denied_responses = [
         admin_client.post("/api/patients/", {"first_name": "Blocked", "last_name": "Patient", "phone_number": "0900000000", "gender": "Female"}, format="json"),
@@ -23,8 +24,8 @@ def test_wf_010_admin_operational_actions_are_read_only(admin_client, patient, a
         admin_client.post(f"/api/appointments/{active_visit.appointment_id}/check-in/"),
         admin_client.post(f"/api/appointments/{active_visit.appointment_id}/start-visit/"),
         admin_client.patch(f"/api/visits/{active_visit.id}/clinical-notes/", {"symptoms": "Blocked"}, format="json"),
-        admin_client.post("/api/invoices/", {"patient_id": patient.id, "total_amount": "50.00", "currency": "SYP"}, format="json"),
-        admin_client.post(f"/api/invoices/{invoice.id}/payments/", {"amount": "10.00", "currency": "SYP"}, format="json"),
+        admin_client.post("/api/billing-handoffs/", {"patient_id": patient.id, "description": "Blocked", "total_amount": "50.00", "currency": "SYP"}, format="json"),
+        admin_client.post(f"/api/billing-handoffs/{handoff.id}/invoices/", {"amount": "10.00"}, format="json"),
     ]
 
     assert all(response.status_code == 403 for response in denied_responses)

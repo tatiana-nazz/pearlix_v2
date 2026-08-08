@@ -7,10 +7,13 @@ from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import status
 
+from apps.audit.services import log_activity
+from apps.billing.models import BillingHandoff, Invoice, InvoiceSequence
 from apps.common.errors import error_response
-from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
-from apps.billing.models import BillingHandoff, Invoice, InvoiceSequence, Payment
+
+
+ZERO = Decimal("0.00")
 
 
 class BillingRuleError(Exception):
@@ -38,41 +41,52 @@ def _validation(details: dict) -> BillingRuleError:
     return BillingRuleError("VALIDATION_ERROR", "Some fields are invalid.", details)
 
 
-def _decimal(value, field: str) -> Decimal:
+def _validate_positive_amount(value, field: str) -> Decimal:
     try:
-        return Decimal(str(value))
+        amount = Decimal(str(value))
     except Exception as exc:
         raise _validation({field: ["Enter a valid amount."]}) from exc
-
-
-def _validate_positive_amount(value, field: str) -> Decimal:
-    amount = _decimal(value, field)
-    if amount <= Decimal("0"):
+    if amount <= ZERO:
         raise _validation({field: ["Amount must be positive."]})
     return amount
 
 
-def _validate_currency(currency: str | None, *, field: str = "currency") -> str:
-    if currency not in Invoice.Currency.values:
+def _validate_currency(value, field: str = "currency") -> str:
+    if value not in BillingHandoff.Currency.values:
         raise _validation({field: ["Currency must be SYP or USD."]})
-    return currency
+    return value
 
 
-def _validate_description(value, field: str = "description") -> str:
+def _validate_description(value) -> str:
     description = str(value or "").strip()
     if not description:
-        raise _validation({field: ["This field is required."]})
+        raise _validation({"description": ["This field is required."]})
     return description
 
 
-def calculate_paid_amount(invoice: Invoice) -> Decimal:
-    total = invoice.payments.aggregate(total=Sum("amount"))["total"]
-    return total or Decimal("0.00")
+def calculate_handoff_paid_amount(handoff: BillingHandoff) -> Decimal:
+    total = handoff.invoices.aggregate(total=Sum("amount"))["total"]
+    return total or ZERO
 
 
-def calculate_remaining_amount(invoice: Invoice) -> Decimal:
-    remaining = invoice.total_amount - calculate_paid_amount(invoice)
-    return remaining if remaining > Decimal("0.00") else Decimal("0.00")
+def calculate_handoff_remaining_amount(handoff: BillingHandoff) -> Decimal:
+    return max(handoff.total_amount - calculate_handoff_paid_amount(handoff), ZERO)
+
+
+def refresh_handoff_status(handoff: BillingHandoff) -> BillingHandoff:
+    if handoff.status == BillingHandoff.Status.CANCELLED:
+        return handoff
+    paid = calculate_handoff_paid_amount(handoff)
+    if paid == ZERO:
+        next_status = BillingHandoff.Status.OPEN
+    elif paid < handoff.total_amount:
+        next_status = BillingHandoff.Status.PARTIALLY_PAID
+    else:
+        next_status = BillingHandoff.Status.PAID
+    if handoff.status != next_status:
+        handoff.status = next_status
+        handoff.save(update_fields=["status", "updated_at"])
+    return handoff
 
 
 def _invoice_scope_and_prefix():
@@ -81,12 +95,12 @@ def _invoice_scope_and_prefix():
 
 
 def _max_existing_invoice_sequence(prefix: str) -> int:
-    max_number = 0
-    for invoice_number in Invoice.objects.filter(invoice_number__startswith=prefix).values_list("invoice_number", flat=True):
-        suffix = invoice_number.removeprefix(prefix)
+    maximum = 0
+    for number in Invoice.objects.filter(invoice_number__startswith=prefix).values_list("invoice_number", flat=True):
+        suffix = number.removeprefix(prefix)
         if suffix.isdigit():
-            max_number = max(max_number, int(suffix))
-    return max_number
+            maximum = max(maximum, int(suffix))
+    return maximum
 
 
 def _locked_invoice_sequence(scope: str, prefix: str) -> InvoiceSequence:
@@ -116,14 +130,7 @@ def _create_invoice_with_sequence(**kwargs) -> Invoice:
         try:
             with transaction.atomic():
                 return Invoice.objects.create(invoice_number=generate_invoice_number(), **kwargs)
-        except IntegrityError as exc:
-            visit = kwargs.get("visit")
-            if visit is not None and Invoice.objects.filter(visit=visit).exists():
-                raise BillingRuleError(
-                    "VISIT_INVOICE_EXISTS",
-                    "An invoice already exists for this visit.",
-                    status_code=status.HTTP_409_CONFLICT,
-                ) from exc
+        except IntegrityError:
             continue
     raise BillingRuleError(
         "INVOICE_NUMBER_GENERATION_FAILED",
@@ -132,66 +139,7 @@ def _create_invoice_with_sequence(**kwargs) -> Invoice:
     )
 
 
-def refresh_invoice_payment_status(invoice: Invoice) -> Invoice:
-    if invoice.status == Invoice.Status.CANCELLED:
-        return invoice
-    paid_amount = calculate_paid_amount(invoice)
-    if paid_amount == Decimal("0.00"):
-        status_value = Invoice.Status.UNPAID
-    elif paid_amount < invoice.total_amount:
-        status_value = Invoice.Status.PARTIALLY_PAID
-    else:
-        status_value = Invoice.Status.PAID
-    if invoice.status != status_value:
-        invoice.status = status_value
-        invoice.save(update_fields=["status", "updated_at"])
-    return invoice
-
-
-def create_billing_handoff(*, visit: Visit, user, data: dict) -> BillingHandoff:
-    if user.role != "DOCTOR":
-        raise BillingRuleError("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
-    if visit.doctor_id != user.id:
-        raise BillingRuleError("NOT_FOUND", "Visit was not found.", status_code=status.HTTP_404_NOT_FOUND)
-    if visit.status != Visit.Status.COMPLETED:
-        raise _invalid_transition("Billing handoff can only be created for completed visits.")
-
-    suggested_amount = data.get("suggested_amount")
-    currency = data.get("currency")
-    if suggested_amount in ("", None):
-        suggested_amount = None
-    else:
-        suggested_amount = _validate_positive_amount(suggested_amount, "suggested_amount")
-        currency = _validate_currency(currency)
-
-    if suggested_amount is None:
-        if currency in ("", None):
-            currency = None
-        else:
-            raise _validation({"currency": ["Currency requires suggested_amount."]})
-
-    with transaction.atomic():
-        if BillingHandoff.objects.select_for_update().filter(visit=visit, status=BillingHandoff.Status.PENDING).exists():
-            raise _invalid_transition("A pending billing handoff already exists for this visit.")
-        try:
-            handoff = BillingHandoff.objects.create(
-                patient=visit.patient,
-                visit=visit,
-                doctor=visit.doctor,
-                note=data.get("note", ""),
-                suggested_amount=suggested_amount,
-                currency=currency,
-                status=BillingHandoff.Status.PENDING,
-                created_by=user,
-                updated_by=user,
-            )
-        except IntegrityError as exc:
-            raise _invalid_transition("A pending billing handoff already exists for this visit.") from exc
-        return handoff
-
-
-def create_visit_completion_invoice(*, visit: Visit, user, data: dict) -> tuple[Invoice, BillingHandoff]:
-    """Create the trusted Doctor-origin invoice and provenance record in one transaction."""
+def create_visit_completion_handoff(*, visit: Visit, user, data: dict) -> BillingHandoff:
     if user.role != "DOCTOR":
         raise BillingRuleError(
             "PERMISSION_DENIED",
@@ -202,298 +150,216 @@ def create_visit_completion_invoice(*, visit: Visit, user, data: dict) -> tuple[
     total_amount = _validate_positive_amount(data.get("total_amount"), "total_amount")
     currency = _validate_currency(data.get("currency"))
 
-    with transaction.atomic():
-        visit = (
-            Visit.objects.select_for_update()
-            .select_related("patient", "doctor", "appointment")
-            .get(pk=visit.pk)
+    visit = Visit.objects.select_for_update().select_related("patient", "doctor").get(pk=visit.pk)
+    if visit.doctor_id != user.id:
+        raise BillingRuleError("NOT_FOUND", "Visit was not found.", status_code=status.HTTP_404_NOT_FOUND)
+    if visit.status != Visit.Status.COMPLETED:
+        raise _invalid_transition("Bill creation requires a completed visit.")
+    if BillingHandoff.objects.select_for_update().filter(visit=visit).exists():
+        raise BillingRuleError(
+            "VISIT_HANDOFF_EXISTS",
+            "A bill already exists for this visit.",
+            status_code=status.HTTP_409_CONFLICT,
         )
-        if visit.doctor_id != user.id:
-            raise BillingRuleError("NOT_FOUND", "Visit was not found.", status_code=status.HTTP_404_NOT_FOUND)
-        if visit.status != Visit.Status.COMPLETED:
-            raise _invalid_transition("Invoice generation requires a completed visit.")
-        if Invoice.objects.select_for_update().filter(visit=visit).exists():
-            raise BillingRuleError(
-                "VISIT_INVOICE_EXISTS",
-                "An invoice already exists for this visit.",
-                status_code=status.HTTP_409_CONFLICT,
-            )
-        if BillingHandoff.objects.select_for_update().filter(visit=visit).exists():
-            raise BillingRuleError(
-                "BILLING_PROVENANCE_EXISTS",
-                "Billing provenance already exists for this visit.",
-                status_code=status.HTTP_409_CONFLICT,
-            )
-
-        handoff = BillingHandoff.objects.create(
+    try:
+        return BillingHandoff.objects.create(
             patient=visit.patient,
             visit=visit,
             doctor=visit.doctor,
             description=description,
-            note=data.get("note", ""),
-            suggested_amount=total_amount,
+            total_amount=total_amount,
             currency=currency,
-            status=BillingHandoff.Status.PENDING,
+            note=data.get("note", ""),
+            status=BillingHandoff.Status.OPEN,
+            origin=BillingHandoff.Origin.VISIT_COMPLETION,
             created_by=user,
             updated_by=user,
         )
-        invoice = _create_invoice_with_sequence(
-            patient=visit.patient,
-            appointment=visit.appointment,
-            visit=visit,
-            billing_handoff=handoff,
-            created_by=user,
-            origin=Invoice.Origin.VISIT_COMPLETION,
-            description=description,
-            currency=currency,
-            total_amount=total_amount,
-            notes=data.get("note", ""),
-            status=Invoice.Status.UNPAID,
+    except IntegrityError as exc:
+        raise BillingRuleError(
+            "VISIT_HANDOFF_EXISTS",
+            "A bill already exists for this visit.",
+            status_code=status.HTTP_409_CONFLICT,
+        ) from exc
+
+
+def create_manual_handoff(*, user, data: dict, request=None) -> BillingHandoff:
+    if user.role != "STAFF":
+        raise BillingRuleError(
+            "PERMISSION_DENIED",
+            "You do not have permission to perform this action.",
+            status_code=status.HTTP_403_FORBIDDEN,
         )
-        handoff.status = BillingHandoff.Status.CONVERTED_TO_INVOICE
-        handoff.converted_invoice = invoice
-        handoff.updated_by = user
-        handoff.save(update_fields=["status", "converted_invoice", "updated_by", "updated_at"])
-        return invoice, handoff
-
-
-def dismiss_handoff(*, handoff: BillingHandoff, user, data: dict | None = None) -> BillingHandoff:
-    if user.role != "STAFF":
-        raise BillingRuleError("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
-    with transaction.atomic():
-        handoff = BillingHandoff.objects.select_for_update().get(pk=handoff.pk)
-        if handoff.status != BillingHandoff.Status.PENDING:
-            raise _invalid_transition("Only pending billing handoffs can be dismissed.")
-        handoff.status = BillingHandoff.Status.DISMISSED
-        handoff.dismissed_reason = (data or {}).get("dismissed_reason", "")
-        handoff.updated_by = user
-        handoff.save(update_fields=["status", "dismissed_reason", "updated_by", "updated_at"])
-        return handoff
-
-
-def convert_handoff_to_invoice(*, handoff: BillingHandoff, user, data: dict) -> Invoice:
-    if user.role != "STAFF":
-        raise BillingRuleError("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
-    with transaction.atomic():
-        handoff = BillingHandoff.objects.select_for_update().select_related("patient", "visit", "visit__appointment").get(pk=handoff.pk)
-        if handoff.status == BillingHandoff.Status.CONVERTED_TO_INVOICE or handoff.converted_invoice_id:
-            raise BillingRuleError(
-                "BILLING_HANDOFF_ALREADY_CONVERTED",
-                "Billing handoff has already been converted to an invoice.",
-                status_code=status.HTTP_409_CONFLICT,
-            )
-        if handoff.status != BillingHandoff.Status.PENDING:
-            raise _invalid_transition("Only pending billing handoffs can be converted.")
-
-        total_amount = data.get("total_amount")
-        if total_amount in ("", None):
-            if handoff.suggested_amount is None:
-                raise _validation({"total_amount": ["This field is required."]})
-            total_amount = handoff.suggested_amount
-        else:
-            total_amount = _validate_positive_amount(total_amount, "total_amount")
-
-        currency = data.get("currency") or handoff.currency
-        currency = _validate_currency(currency)
-        description = _validate_description(data.get("description") or handoff.description or handoff.note)
-
-        invoice = _create_invoice_with_sequence(
-            patient=handoff.patient,
-            appointment=handoff.visit.appointment,
-            visit=handoff.visit,
-            billing_handoff=handoff,
-            created_by=user,
-            origin=Invoice.Origin.LEGACY_HANDOFF,
-            description=description,
-            currency=currency,
-            total_amount=total_amount,
-            notes=data.get("notes", ""),
-            status=Invoice.Status.UNPAID,
-        )
-        handoff.status = BillingHandoff.Status.CONVERTED_TO_INVOICE
-        handoff.converted_invoice = invoice
-        handoff.updated_by = user
-        handoff.save(update_fields=["status", "converted_invoice", "updated_by", "updated_at"])
-        return invoice
-
-
-def _validate_invoice_relationships(*, patient, visit=None, appointment=None):
-    details = {}
-    if visit is not None and visit.patient_id != patient.id:
-        details["visit_id"] = ["Visit must belong to patient."]
-    if appointment is not None and appointment.patient_id != patient.id:
-        details["appointment_id"] = ["Appointment must belong to patient."]
-    if visit is not None and appointment is not None and visit.appointment_id != appointment.id:
-        details["appointment_id"] = ["Appointment must match visit."]
-    if details:
-        raise _validation(details)
-
-
-def _related_id(value) -> int | None:
-    return value.id if value is not None else None
-
-
-def _immutable_invoice_update(field_names: list[str], *, after_payment: bool = False) -> BillingRuleError:
-    if after_payment:
-        message = "Invoice fields cannot be changed after payments exist."
-    else:
-        message = "Invoice fields are locked after billing handoff conversion."
-    return BillingRuleError(
-        "INVALID_STATUS_TRANSITION",
-        message,
-        {field: ["This field is immutable."] for field in field_names},
-        status_code=status.HTTP_409_CONFLICT,
-    )
-
-
-def create_invoice(*, user, data: dict) -> Invoice:
-    if user.role != "STAFF":
-        raise BillingRuleError("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
-
     patient = data.get("patient")
     if patient is None:
         raise _validation({"patient_id": ["This field is required."]})
-    total_amount = _validate_positive_amount(data.get("total_amount"), "total_amount")
-    currency = _validate_currency(data.get("currency"))
-    description = _validate_description(data.get("description"))
-    visit = data.get("visit")
-    appointment = data.get("appointment")
-    _validate_invoice_relationships(patient=patient, visit=visit, appointment=appointment)
-
     with transaction.atomic():
-        invoice = _create_invoice_with_sequence(
+        handoff = BillingHandoff.objects.create(
             patient=patient,
-            appointment=appointment,
-            visit=visit,
+            visit=None,
+            doctor=None,
+            description=_validate_description(data.get("description")),
+            total_amount=_validate_positive_amount(data.get("total_amount"), "total_amount"),
+            currency=_validate_currency(data.get("currency")),
+            note=data.get("note", ""),
+            status=BillingHandoff.Status.OPEN,
+            origin=BillingHandoff.Origin.MANUAL,
             created_by=user,
-            origin=Invoice.Origin.MANUAL,
-            description=description,
-            currency=currency,
-            total_amount=total_amount,
-            notes=data.get("notes", ""),
-            status=Invoice.Status.UNPAID,
+            updated_by=user,
         )
-        return invoice
+        log_activity(
+            request=request,
+            actor=user,
+            action="billing_handoff_created",
+            entity_type="billing_handoff",
+            entity_id=handoff.id,
+            metadata={"handoff_id": handoff.id, "patient_id": handoff.patient_id, "origin": handoff.origin},
+            raise_on_error=True,
+        )
+        return handoff
 
 
-def update_invoice(*, invoice: Invoice, user, data: dict) -> Invoice:
+def update_handoff(*, handoff: BillingHandoff, user, data: dict, request=None) -> BillingHandoff:
     if user.role != "STAFF":
-        raise BillingRuleError("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
+        raise BillingRuleError(
+            "PERMISSION_DENIED",
+            "You do not have permission to perform this action.",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
     with transaction.atomic():
-        invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
-        if invoice.status == Invoice.Status.CANCELLED:
-            raise BillingRuleError("INVOICE_CANCELLED", "Cancelled invoice is locked.", status_code=status.HTTP_409_CONFLICT)
-
-        has_payments = Payment.objects.select_for_update().filter(invoice=invoice).exists()
-        relation_fields = {
-            "patient": "patient_id",
-            "visit": "visit_id",
-            "appointment": "appointment_id",
-        }
-        changed_relation_fields = [
-            request_field
-            for data_field, request_field in relation_fields.items()
-            if data_field in data and _related_id(data[data_field]) != getattr(invoice, f"{data_field}_id")
-        ]
-
-        if invoice.billing_handoff_id and changed_relation_fields:
-            raise _immutable_invoice_update(changed_relation_fields)
-
-        payment_locked_fields = []
-        if has_payments:
-            for data_field, request_field in relation_fields.items():
-                if data_field in data and _related_id(data[data_field]) != getattr(invoice, f"{data_field}_id"):
-                    payment_locked_fields.append(request_field)
-            if "currency" in data and data["currency"] != invoice.currency:
-                payment_locked_fields.append("currency")
-            if "total_amount" in data and _validate_positive_amount(data["total_amount"], "total_amount") != invoice.total_amount:
-                payment_locked_fields.append("total_amount")
-        if payment_locked_fields:
-            raise _immutable_invoice_update(payment_locked_fields, after_payment=True)
-
-        if "patient" in data or "visit" in data or "appointment" in data:
-            patient = data.get("patient", invoice.patient)
-            visit = data.get("visit", invoice.visit)
-            appointment = data.get("appointment", invoice.appointment)
-            _validate_invoice_relationships(patient=patient, visit=visit, appointment=appointment)
-            invoice.patient = patient
-            invoice.visit = visit
-            invoice.appointment = appointment
-
-        if "total_amount" in data:
-            invoice.total_amount = _validate_positive_amount(data["total_amount"], "total_amount")
-        if "currency" in data:
-            invoice.currency = _validate_currency(data["currency"])
-        if "description" in data:
-            invoice.description = _validate_description(data["description"])
-        if "notes" in data:
-            invoice.notes = data["notes"]
-
-        invoice.save()
-        refresh_invoice_payment_status(invoice)
-        return invoice
-
-
-def cancel_invoice(*, invoice: Invoice, user, data: dict | None = None) -> Invoice:
-    if user.role != "STAFF":
-        raise BillingRuleError("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
-    with transaction.atomic():
-        invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
-        if invoice.status == Invoice.Status.CANCELLED:
-            raise _invalid_transition("Invoice is already cancelled.")
-        refresh_invoice_payment_status(invoice)
-        if invoice.status == Invoice.Status.PAID:
-            raise _invalid_transition("Paid invoices cannot be cancelled.")
-        invoice.status = Invoice.Status.CANCELLED
-        invoice.cancelled_at = timezone.now()
-        invoice.cancelled_reason = (data or {}).get("cancelled_reason", "")
-        invoice.save(update_fields=["status", "cancelled_at", "cancelled_reason", "updated_at"])
-        return invoice
-
-
-def record_payment(*, invoice: Invoice, user, data: dict) -> Payment:
-    if user.role != "STAFF":
-        raise BillingRuleError("PERMISSION_DENIED", "You do not have permission to perform this action.", status_code=status.HTTP_403_FORBIDDEN)
-
-    amount = _validate_positive_amount(data.get("amount"), "amount")
-    currency = _validate_currency(data.get("currency"))
-
-    with transaction.atomic():
-        invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
-        if invoice.status == Invoice.Status.CANCELLED:
-            raise BillingRuleError("INVOICE_CANCELLED", "Cancelled invoice cannot receive payments.", status_code=status.HTTP_409_CONFLICT)
-        if currency != invoice.currency:
+        handoff = BillingHandoff.objects.select_for_update().get(pk=handoff.pk)
+        if handoff.status == BillingHandoff.Status.CANCELLED:
+            raise _invalid_transition("Cancelled bills are locked.")
+        has_invoices = Invoice.objects.select_for_update().filter(billing_handoff=handoff).exists()
+        locked = [field for field in ("total_amount", "currency") if field in data]
+        if has_invoices and locked:
             raise BillingRuleError(
-                "PAYMENT_CURRENCY_MISMATCH",
-                "Payment currency must match invoice currency.",
-                {"currency": ["Payment currency must match invoice currency."]},
+                "BILL_FINANCIAL_FIELDS_LOCKED",
+                "Bill total and currency are locked after the first invoice is issued.",
+                {field: ["This field is locked after payment history exists."] for field in locked},
+                status_code=status.HTTP_409_CONFLICT,
             )
-        paid_amount = calculate_paid_amount(invoice)
-        if paid_amount + amount > invoice.total_amount:
+        changed = []
+        if "description" in data:
+            handoff.description = _validate_description(data["description"])
+            changed.append("description")
+        if "note" in data:
+            handoff.note = data["note"]
+            changed.append("note")
+        if "total_amount" in data:
+            handoff.total_amount = _validate_positive_amount(data["total_amount"], "total_amount")
+            changed.append("total_amount")
+        if "currency" in data:
+            handoff.currency = _validate_currency(data["currency"])
+            changed.append("currency")
+        handoff.updated_by = user
+        handoff.save(update_fields=changed + ["updated_by", "updated_at"])
+        log_activity(
+            request=request,
+            actor=user,
+            action="billing_handoff_updated",
+            entity_type="billing_handoff",
+            entity_id=handoff.id,
+            metadata={"handoff_id": handoff.id, "updated_fields": changed},
+            raise_on_error=True,
+        )
+        return handoff
+
+
+def cancel_handoff(*, handoff: BillingHandoff, user, data: dict | None = None, request=None) -> BillingHandoff:
+    if user.role != "STAFF":
+        raise BillingRuleError(
+            "PERMISSION_DENIED",
+            "You do not have permission to perform this action.",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    with transaction.atomic():
+        handoff = BillingHandoff.objects.select_for_update().get(pk=handoff.pk)
+        if handoff.status == BillingHandoff.Status.CANCELLED:
+            raise _invalid_transition("Bill is already cancelled.")
+        if Invoice.objects.select_for_update().filter(billing_handoff=handoff).exists():
+            raise _invalid_transition("Bills with invoice history cannot be cancelled.")
+        handoff.status = BillingHandoff.Status.CANCELLED
+        handoff.cancelled_at = timezone.now()
+        handoff.cancelled_reason = (data or {}).get("cancelled_reason", "")
+        handoff.updated_by = user
+        handoff.save(
+            update_fields=["status", "cancelled_at", "cancelled_reason", "updated_by", "updated_at"]
+        )
+        log_activity(
+            request=request,
+            actor=user,
+            action="billing_handoff_cancelled",
+            entity_type="billing_handoff",
+            entity_id=handoff.id,
+            metadata={"handoff_id": handoff.id, "patient_id": handoff.patient_id},
+            raise_on_error=True,
+        )
+        return handoff
+
+
+def issue_invoice(*, handoff: BillingHandoff, user, data: dict, request=None) -> tuple[Invoice, BillingHandoff]:
+    if user.role != "STAFF":
+        raise BillingRuleError(
+            "PERMISSION_DENIED",
+            "You do not have permission to perform this action.",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    amount = _validate_positive_amount(data.get("amount"), "amount")
+    with transaction.atomic():
+        # Keep the row lock on the bill itself. Joining nullable Visit here makes
+        # PostgreSQL reject FOR UPDATE on the nullable side of the outer join.
+        handoff = BillingHandoff.objects.select_for_update().get(pk=handoff.pk)
+        refresh_handoff_status(handoff)
+        if handoff.status == BillingHandoff.Status.CANCELLED:
+            raise _invalid_transition("Cancelled bills cannot receive payments.")
+        remaining = calculate_handoff_remaining_amount(handoff)
+        if remaining == ZERO:
+            raise _invalid_transition("This bill is already fully paid.")
+        if amount > remaining:
             raise BillingRuleError(
                 "OVERPAYMENT_NOT_ALLOWED",
-                "Payment amount exceeds invoice remaining amount.",
-                {"amount": ["Payment amount exceeds invoice remaining amount."]},
+                "Payment amount exceeds the bill remaining amount.",
+                {"amount": ["Payment amount exceeds the bill remaining amount."]},
             )
-        payment = Payment.objects.create(
-            invoice=invoice,
+        invoice = _create_invoice_with_sequence(
+            billing_handoff=handoff,
             amount=amount,
-            currency=currency,
-            payment_date=data.get("payment_date") or timezone.now(),
+            issued_at=data.get("issued_at") or timezone.now(),
             notes=data.get("notes", ""),
             created_by=user,
         )
-        refresh_invoice_payment_status(invoice)
-        return payment
+        refresh_handoff_status(handoff)
+        log_activity(
+            request=request,
+            actor=user,
+            action="invoice_issued",
+            entity_type="invoice",
+            entity_id=invoice.id,
+            metadata={
+                "invoice_id": invoice.id,
+                "billing_handoff_id": handoff.id,
+                "patient_id": handoff.patient_id,
+                "amount": str(invoice.amount),
+                "currency": handoff.currency,
+            },
+            raise_on_error=True,
+        )
+        return invoice, handoff
 
 
 def invoice_print_data(invoice: Invoice) -> dict:
-    from apps.billing.serializers import PaymentSerializer
     from apps.clinic.models import ClinicSettings
 
+    invoice = Invoice.objects.select_related(
+        "billing_handoff",
+        "billing_handoff__patient",
+        "billing_handoff__visit",
+        "billing_handoff__visit__appointment",
+        "created_by",
+    ).get(pk=invoice.pk)
+    handoff = invoice.billing_handoff
     clinic = ClinicSettings.get_solo()
-    paid_amount = calculate_paid_amount(invoice)
-    remaining_amount = invoice.total_amount - paid_amount
     return {
         "clinic": {
             "clinic_name": clinic.clinic_name,
@@ -505,38 +371,31 @@ def invoice_print_data(invoice: Invoice) -> dict:
         "invoice": {
             "id": invoice.id,
             "invoice_number": invoice.invoice_number,
-            "created_at": invoice.created_at,
-            "origin": invoice.origin,
+            "issued_at": invoice.issued_at,
+            "amount": invoice.amount,
+            "notes": invoice.notes,
+            "issued_by": invoice.created_by.full_name if invoice.created_by_id else None,
         },
         "patient": {
-            "id": invoice.patient_id,
-            "full_name": invoice.patient.full_name,
-            "phone_number": invoice.patient.phone_number,
-            "email": invoice.patient.email,
+            "id": handoff.patient_id,
+            "full_name": handoff.patient.full_name,
+            "phone_number": handoff.patient.phone_number,
+            "email": handoff.patient.email,
         },
-        "visit": {
-            "id": invoice.visit_id,
-            "status": invoice.visit.status,
-            "started_at": invoice.visit.started_at,
-            "completed_at": invoice.visit.completed_at,
-        }
-        if invoice.visit_id
-        else None,
+        "handoff": {
+            "id": handoff.id,
+            "description": handoff.description,
+            "total_amount": handoff.total_amount,
+            "paid_amount": calculate_handoff_paid_amount(handoff),
+            "remaining_amount": calculate_handoff_remaining_amount(handoff),
+            "currency": handoff.currency,
+            "status": handoff.status,
+        },
+        "visit": {"id": handoff.visit_id, "status": handoff.visit.status} if handoff.visit_id else None,
         "appointment": {
-            "id": invoice.appointment_id,
-            "start_datetime": invoice.appointment.start_datetime,
-            "end_datetime": invoice.appointment.end_datetime,
-            "status": invoice.appointment.status,
+            "id": handoff.visit.appointment_id,
+            "status": handoff.visit.appointment.status,
         }
-        if invoice.appointment_id
+        if handoff.visit_id
         else None,
-        "currency": invoice.currency,
-        "total_amount": invoice.total_amount,
-        "paid_amount": paid_amount,
-        "remaining_amount": remaining_amount if remaining_amount > Decimal("0.00") else Decimal("0.00"),
-        "status": invoice.status,
-        "payments": PaymentSerializer(invoice.payments.all(), many=True).data,
-        "description": invoice.description,
-        "notes": invoice.notes,
-        "created_at": invoice.created_at,
     }

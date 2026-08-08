@@ -3,6 +3,8 @@
 **Authority marker:** `CURRENT_SUPPORTING_INTEGRATION_AUDIT`
 Read [`../../CODEX_START_HERE.md`](../../CODEX_START_HERE.md) first. This is contract evidence and must not redefine current product behavior. Current UI authority is [`../../frontend/CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](../../frontend/CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md); current status is [`PROJECT_STATUS.md`](PROJECT_STATUS.md). The implementation baseline is `e54a85842f1c683b27f12e0da93987ae128c861d`; the rejected `preview-pre-v2-ui` / `bdd5f6f` must never be restored. Team and Users & Access are distinct, and active Doctors have all active/non-archived patient authorization rather than narrow object-level scope.
 
+**Stage 7 financial supersession:** historical Billing sections below describe earlier Handoff approval, debt-Invoice, and child-Payment contracts. They are retained only as audit evidence and are not current authority. Current runtime is `Visit → Handoff/Bill → zero or many Invoice payment receipts`; see `CURRENT_BACKEND_DECISIONS.md` and the current UI source of truth.
+
 ## Phase 14D browser-acceptance update
 
 Phase 14D integrated browser acceptance is complete. The local Admin, Staff, and Doctor runs exercised the role shell, dashboards, Team/Users, appointments, patients, Arabic RTL, themes, and responsive breakpoints. The browser gate repaired shell-only horizontal overflow and static navigation localization; no backend endpoint, serializer, permission, API contract, or migration changed. See `frontend/QA_14D_BROWSER_ACCEPTANCE.md` and `frontend/design_v2/PHASE_14D_BROWSER_ACCEPTANCE_RECORD.md`.

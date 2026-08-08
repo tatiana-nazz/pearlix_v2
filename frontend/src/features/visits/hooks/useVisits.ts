@@ -57,8 +57,7 @@ export function useCompleteVisit(visitId: number) {
       await Promise.all([
         invalidateVisitContext(queryClient, result.visit, false),
         invalidateBillingQueries(queryClient, {
-          invoiceId: result.created_invoice.id,
-          handoffId: result.billing_provenance.id,
+          handoffId: result.created_handoff.id,
           patientId: result.visit.patient.id,
           visitId: result.visit.id,
           appointmentId: result.visit.appointment.id,

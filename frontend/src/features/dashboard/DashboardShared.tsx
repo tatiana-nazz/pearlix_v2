@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button, KpiCard, Skeleton, StatePanel, StatusBadge, SurfaceCard, type KpiTone } from "../../components/v2";
 import type { AppointmentStatus } from "../../types/appointments";
 import type { LanguagePreference } from "../../types/auth";
-import type { DashboardAppointmentStatusCounts, DashboardAppointmentSummary, DashboardBillingActivityDay, DashboardInvoiceSummary } from "../../types/dashboard";
+import type { DashboardAppointmentStatusCounts, DashboardAppointmentSummary, DashboardBillingActivityDay, DashboardHandoffSummary } from "../../types/dashboard";
 import { AppointmentStatusBadge } from "../appointments/components/AppointmentStatusBadge";
 import { appointmentDetailPath } from "../appointments/utils/appointmentPermissions";
 import { appointmentStatusTone } from "../appointments/utils/appointmentStatusPresentation";
@@ -51,11 +51,11 @@ export function DashboardAppointmentList({ language, clinicTimezone, items, empt
   return <ul className="dashboard-v2-list dashboard-v2-appointment-list">{visibleItems.map((item) => <li key={item.id} data-status={item.status}><Link aria-label={`${c.openAppointment} ${item.id}: ${item.patient.full_name}`} to={appointmentDetailPath(role, item.id)}><span className="dashboard-v2-time" dir="ltr">{dashboardTime(item.start_datetime, language, clinicTimezone)}</span><span className="dashboard-v2-person"><strong>{item.patient.full_name}</strong><small>{showDoctor ? item.doctor.full_name : item.reason || c.noReason}</small></span><AppointmentStatusBadge status={item.status} /></Link></li>)}</ul>;
 }
 
-export function DashboardInvoiceList({ language, items, role, empty, showTotal = false }: { language: LanguagePreference; items: DashboardInvoiceSummary[]; role: "ADMIN" | "STAFF"; empty: string; showTotal?: boolean }) {
+export function DashboardHandoffList({ language, items, role, empty, showTotal = false }: { language: LanguagePreference; items: DashboardHandoffSummary[]; role: "ADMIN" | "STAFF"; empty: string; showTotal?: boolean }) {
   const c = dashboardCopy(language);
   if (!items.length) return <p className="dashboard-v2-empty">{empty}</p>;
   const rolePath = role.toLowerCase();
-  return <ul className={`dashboard-v2-list dashboard-v2-invoice-list${showTotal ? "" : " compact"}`}>{items.map((item) => <li key={item.id}><Link aria-label={`${c.invoice} ${item.invoice_number}: ${item.patient.full_name}`} to={`/${rolePath}/billing/invoices/${item.id}`}><span className="dashboard-v2-invoice-id bidi-ltr"><strong>{item.invoice_number}</strong><small>{item.patient.full_name}</small></span>{showTotal ? <span className="dashboard-v2-money"><small>{c.total}</small><strong className="bidi-ltr">{formatMoney(String(item.total_amount), item.currency)}</strong></span> : null}<span className="dashboard-v2-money"><small>{c.balance}</small><strong className="bidi-ltr">{formatMoney(String(item.remaining_amount), item.currency)}</strong></span><StatusBadge status={item.status} label={dashboardStatus(language, item.status)} /></Link></li>)}</ul>;
+  return <ul className={`dashboard-v2-list dashboard-v2-invoice-list${showTotal ? "" : " compact"}`}>{items.map((item) => <li key={item.id}><Link aria-label={`${c.bill} ${item.id}: ${item.patient.full_name}`} to={`/${rolePath}/billing/handoffs/${item.id}`}><span className="dashboard-v2-invoice-id bidi-ltr"><strong>Bill #{item.id}</strong><small>{item.patient.full_name}</small></span>{showTotal ? <span className="dashboard-v2-money"><small>{c.total}</small><strong className="bidi-ltr">{formatMoney(String(item.total_amount), item.currency)}</strong></span> : null}<span className="dashboard-v2-money"><small>{c.balance}</small><strong className="bidi-ltr">{formatMoney(String(item.remaining_amount), item.currency)}</strong></span><StatusBadge status={item.status} label={dashboardStatus(language, item.status)} /></Link></li>)}</ul>;
 }
 
 export function AttentionList({ items, empty }: { items: Array<{ label: string; count: number; to: string; tone: "warning" | "danger" | "info" }>; empty: string }) {
@@ -72,12 +72,12 @@ export function SimpleStatusBarChart({ language, counts }: { language: LanguageP
 export function SimpleBillingActivityChart({ language, days }: { language: LanguagePreference; days: DashboardBillingActivityDay[] }) {
   const c = dashboardCopy(language);
   return <div className="dashboard-v2-billing-chart">{CURRENCIES.map((currency) => {
-    const values = days.flatMap((day) => [Number(day[currency].invoiced), Number(day[currency].collected)]);
+    const values = days.flatMap((day) => [Number(day[currency].billed), Number(day[currency].collected)]);
     const max = Math.max(1, ...values);
-    const invoiced = days.reduce((total, day) => total + Number(day[currency].invoiced), 0);
+    const billed = days.reduce((total, day) => total + Number(day[currency].billed), 0);
     const collected = days.reduce((total, day) => total + Number(day[currency].collected), 0);
-    return <section className="dashboard-v2-currency-chart" aria-label={`${currency}: ${c.invoiced} ${invoiced.toFixed(2)}, ${c.collected} ${collected.toFixed(2)}`} key={currency}><header><strong className="bidi-ltr">{currency}</strong><span><i className="invoiced" />{c.invoiced}: <b className="bidi-ltr">{formatMoney(invoiced.toFixed(2), currency)}</b></span><span><i className="collected" />{c.collected}: <b className="bidi-ltr">{formatMoney(collected.toFixed(2), currency)}</b></span></header><div className="dashboard-v2-daily-bars" aria-hidden="true">{days.map((day, index) => {
-      const invoicedValue = Number(day[currency].invoiced);
+    return <section className="dashboard-v2-currency-chart" aria-label={`${currency}: ${c.billed} ${billed.toFixed(2)}, ${c.collected} ${collected.toFixed(2)}`} key={currency}><header><strong className="bidi-ltr">{currency}</strong><span><i className="invoiced" />{c.billed}: <b className="bidi-ltr">{formatMoney(billed.toFixed(2), currency)}</b></span><span><i className="collected" />{c.collected}: <b className="bidi-ltr">{formatMoney(collected.toFixed(2), currency)}</b></span></header><div className="dashboard-v2-daily-bars" aria-hidden="true">{days.map((day, index) => {
+      const invoicedValue = Number(day[currency].billed);
       const collectedValue = Number(day[currency].collected);
       const invoicedSize = invoicedValue > 0 ? Math.max(2, (invoicedValue / max) * 100) : 0;
       const collectedSize = collectedValue > 0 ? Math.max(2, (collectedValue / max) * 100) : 0;

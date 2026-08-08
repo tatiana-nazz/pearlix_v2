@@ -3,315 +3,134 @@ from decimal import Decimal
 import pytest
 
 from apps.billing.models import BillingHandoff, Invoice
-from apps.scheduling.models import Appointment
-from apps.visits.models import Visit
-
-
-def _completed_visit_for(visit_factory, appointment_factory, doctor, **overrides):
-    patient = overrides.pop("patient", None)
-    appointment_kwargs = {
-        "doctor": doctor,
-        "status": Appointment.Status.COMPLETED,
-        "start_datetime": overrides.pop("start_datetime", "2026-07-21T09:00:00+03:00"),
-        "end_datetime": overrides.pop("end_datetime", "2026-07-21T09:30:00+03:00"),
-    }
-    if patient is not None:
-        appointment_kwargs["patient"] = patient
-    appointment = overrides.pop("appointment", None) or appointment_factory(**appointment_kwargs)
-    return visit_factory(appointment=appointment, status=Visit.Status.COMPLETED, **overrides)
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(
-    ("method", "path"),
-    [
-        ("post", "/api/visits/{visit_id}/billing-handoff/"),
-        ("get", "/api/billing-handoffs/"),
-        ("get", "/api/billing-handoffs/{handoff_id}/"),
-        ("post", "/api/billing-handoffs/{handoff_id}/dismiss/"),
-        ("post", "/api/billing-handoffs/{handoff_id}/convert-to-invoice/"),
-    ],
-)
-def test_unauthenticated_user_cannot_access_billing_handoffs(
-    api_client,
-    completed_visit,
-    billing_handoff_factory,
-    method,
-    path,
-):
+def test_handoff_endpoints_require_authentication(api_client, billing_handoff_factory):
     handoff = billing_handoff_factory()
-
-    response = getattr(api_client, method)(
-        path.format(visit_id=completed_visit.id, handoff_id=handoff.id),
-        {"total_amount": "100.00", "currency": "SYP"},
-        format="json",
-    )
-
-    assert response.status_code == 401
-    assert response.data["code"] == "AUTH_REQUIRED"
+    assert api_client.get("/api/billing-handoffs/").status_code == 401
+    assert api_client.get(f"/api/billing-handoffs/{handoff.id}/").status_code == 401
+    assert api_client.post(f"/api/billing-handoffs/{handoff.id}/invoices/", {"amount": "1.00"}, format="json").status_code == 401
 
 
 @pytest.mark.django_db
-def test_admin_and_staff_cannot_create_billing_handoff(admin_client, staff_client, completed_visit):
-    for client in (admin_client, staff_client):
-        response = client.post(
-            f"/api/visits/{completed_visit.id}/billing-handoff/",
-            {"suggested_amount": "100.00", "currency": "SYP"},
-            format="json",
-        )
-
-        assert response.status_code == 403
-        assert response.data["code"] == "PERMISSION_DENIED"
-    assert BillingHandoff.objects.count() == 0
-
-
-@pytest.mark.django_db
-def test_doctor_can_create_handoff_for_own_completed_visit_and_duplicate_is_rejected(doctor_client, completed_visit, doctor_user):
-    response = doctor_client.post(
-        f"/api/visits/{completed_visit.id}/billing-handoff/",
-        {"note": "Please invoice", "suggested_amount": "125.50", "currency": "USD"},
+def test_staff_creates_manual_open_bill_with_no_invoice(staff_client, patient):
+    response = staff_client.post(
+        "/api/billing-handoffs/",
+        {"patient_id": patient.id, "description": "Manual restorative bill", "total_amount": "300.00", "currency": "USD", "note": "Reception"},
         format="json",
     )
-
     assert response.status_code == 201
-    handoff = BillingHandoff.objects.get(id=response.data["id"])
-    assert handoff.patient_id == completed_visit.patient_id
-    assert handoff.visit_id == completed_visit.id
-    assert handoff.doctor_id == doctor_user.id
-    assert handoff.status == BillingHandoff.Status.PENDING
-    assert handoff.suggested_amount == Decimal("125.50")
-    assert response.data["currency"] == "USD"
-
-    duplicate_response = doctor_client.post(
-        f"/api/visits/{completed_visit.id}/billing-handoff/",
-        {"suggested_amount": "90.00", "currency": "SYP"},
-        format="json",
-    )
-
-    assert duplicate_response.status_code == 409
-    assert duplicate_response.data["code"] == "INVALID_STATUS_TRANSITION"
-    assert BillingHandoff.objects.count() == 1
+    handoff = BillingHandoff.objects.get(pk=response.data["id"])
+    assert handoff.patient_id == patient.id
+    assert handoff.visit_id is None
+    assert handoff.status == BillingHandoff.Status.OPEN
+    assert handoff.origin == BillingHandoff.Origin.MANUAL
+    assert response.data["paid_amount"] == "0.00"
+    assert response.data["remaining_amount"] == "300.00"
+    assert response.data["invoice_count"] == 0
+    assert Invoice.objects.filter(billing_handoff=handoff).count() == 0
 
 
 @pytest.mark.django_db
-def test_handoff_creation_requires_completed_own_visit(
-    doctor_client,
-    other_doctor_client,
-    doctor_user,
-    other_doctor_user,
-    appointment_factory,
-    visit_factory,
-):
-    active_appointment = appointment_factory(doctor=doctor_user, status=Appointment.Status.ACTIVE)
-    active_visit = visit_factory(appointment=active_appointment, status=Visit.Status.ACTIVE)
-    other_visit = _completed_visit_for(
-        visit_factory,
-        appointment_factory,
-        other_doctor_user,
-        start_datetime="2026-07-21T10:00:00+03:00",
-        end_datetime="2026-07-21T10:30:00+03:00",
-    )
-
-    active_response = doctor_client.post(
-        f"/api/visits/{active_visit.id}/billing-handoff/",
-        {"suggested_amount": "100.00", "currency": "SYP"},
-        format="json",
-    )
-    other_response = doctor_client.post(
-        f"/api/visits/{other_visit.id}/billing-handoff/",
-        {"suggested_amount": "100.00", "currency": "SYP"},
-        format="json",
-    )
-    other_doctor_response = other_doctor_client.post(
-        f"/api/visits/{active_visit.id}/billing-handoff/",
-        {"suggested_amount": "100.00", "currency": "SYP"},
-        format="json",
-    )
-
-    assert active_response.status_code == 409
-    assert active_response.data["code"] == "INVALID_STATUS_TRANSITION"
-    assert other_response.status_code == 404
-    assert other_doctor_response.status_code == 404
-    assert BillingHandoff.objects.count() == 0
+def test_only_staff_can_create_manual_bill(admin_client, doctor_client, patient):
+    payload = {"patient_id": patient.id, "description": "Manual bill", "total_amount": "100.00", "currency": "SYP"}
+    assert admin_client.post("/api/billing-handoffs/", payload, format="json").status_code == 403
+    assert doctor_client.post("/api/billing-handoffs/", payload, format="json").status_code == 403
 
 
 @pytest.mark.django_db
-def test_handoff_creation_validates_amount_and_currency(doctor_client, completed_visit):
-    missing_currency = doctor_client.post(
-        f"/api/visits/{completed_visit.id}/billing-handoff/",
-        {"suggested_amount": "100.00"},
+def test_manual_bill_rejects_archived_patient(staff_client, patient_factory):
+    archived = patient_factory(is_archived=True, national_id_or_passport="ARCHIVED-BILL-PATIENT")
+    response = staff_client.post(
+        "/api/billing-handoffs/",
+        {"patient_id": archived.id, "description": "Manual bill", "total_amount": "100.00", "currency": "SYP"},
         format="json",
     )
-    invalid_currency = doctor_client.post(
-        f"/api/visits/{completed_visit.id}/billing-handoff/",
-        {"suggested_amount": "100.00", "currency": "EUR"},
-        format="json",
-    )
-    invalid_amount = doctor_client.post(
-        f"/api/visits/{completed_visit.id}/billing-handoff/",
-        {"suggested_amount": "0", "currency": "SYP"},
-        format="json",
-    )
-
-    assert missing_currency.status_code == 400
-    assert missing_currency.data["code"] == "VALIDATION_ERROR"
-    assert invalid_currency.status_code == 400
-    assert invalid_currency.data["code"] == "VALIDATION_ERROR"
-    assert invalid_amount.status_code == 400
-    assert invalid_amount.data["code"] == "VALIDATION_ERROR"
+    assert response.status_code == 400
 
 
 @pytest.mark.django_db
-def test_handoff_list_read_scope_and_filters(
-    admin_client,
-    staff_client,
-    doctor_client,
-    doctor_user,
-    other_doctor_user,
-    patient_factory,
-    appointment_factory,
-    visit_factory,
-    billing_handoff_factory,
-):
-    own = billing_handoff_factory()
-    other_patient = patient_factory(full_name="Other Billing Patient", phone="0988111111")
-    other_visit = _completed_visit_for(
-        visit_factory,
-        appointment_factory,
-        other_doctor_user,
-        patient=other_patient,
-        start_datetime="2026-07-21T11:00:00+03:00",
-        end_datetime="2026-07-21T11:30:00+03:00",
-    )
-    other = billing_handoff_factory(
-        visit=other_visit,
-        patient=other_visit.patient,
-        doctor=other_doctor_user,
-        created_by=other_doctor_user,
-        updated_by=other_doctor_user,
-        suggested_amount="70.00",
-    )
-
-    for client in (admin_client, staff_client):
-        assert client.get("/api/billing-handoffs/").data["count"] == 2
-        assert client.get(f"/api/billing-handoffs/{other.id}/").status_code == 200
-        assert client.get(f"/api/billing-handoffs/?doctor_id={doctor_user.id}").data["count"] == 1
-        assert client.get(f"/api/billing-handoffs/?patient_id={own.patient_id}").data["count"] == 1
-        assert client.get(f"/api/billing-handoffs/?visit_id={own.visit_id}").data["results"][0]["id"] == own.id
-        assert client.get(f"/api/billing-handoffs/?status={BillingHandoff.Status.PENDING}").data["count"] == 2
-
-    doctor_list = doctor_client.get("/api/billing-handoffs/")
-    assert doctor_list.status_code == 200
-    assert doctor_list.data["count"] == 1
-    assert doctor_list.data["results"][0]["id"] == own.id
-    assert doctor_client.get(f"/api/billing-handoffs/{own.id}/").status_code == 200
-    assert doctor_client.get(f"/api/billing-handoffs/{other.id}/").status_code == 404
-    assert doctor_client.get(f"/api/billing-handoffs/?doctor_id={other_doctor_user.id}").data["count"] == 0
-
-
-@pytest.mark.django_db
-def test_staff_can_dismiss_pending_handoff_and_other_roles_are_denied(
-    admin_client,
-    staff_client,
-    doctor_client,
-    billing_handoff_factory,
-    appointment_factory,
-    visit_factory,
-    doctor_user,
-):
-    pending = billing_handoff_factory()
-    second_visit = _completed_visit_for(
-        visit_factory,
-        appointment_factory,
-        doctor_user,
-        start_datetime="2026-07-21T12:00:00+03:00",
-        end_datetime="2026-07-21T12:30:00+03:00",
-    )
-    denied_target = billing_handoff_factory(visit=second_visit, patient=second_visit.patient)
-
-    for client in (admin_client, doctor_client):
-        response = client.post(f"/api/billing-handoffs/{denied_target.id}/dismiss/")
-        assert response.status_code == 403
-        assert response.data["code"] == "PERMISSION_DENIED"
-
-    dismiss_response = staff_client.post(f"/api/billing-handoffs/{pending.id}/dismiss/", {"dismissed_reason": "No charge"}, format="json")
-    second_dismiss_response = staff_client.post(f"/api/billing-handoffs/{pending.id}/dismiss/")
-
-    assert dismiss_response.status_code == 200
-    pending.refresh_from_db()
-    assert pending.status == BillingHandoff.Status.DISMISSED
-    assert pending.dismissed_reason == "No charge"
-    assert second_dismiss_response.status_code == 409
-    assert second_dismiss_response.data["code"] == "INVALID_STATUS_TRANSITION"
-
-
-@pytest.mark.django_db
-def test_staff_can_convert_handoff_to_invoice_and_invalid_conversions_are_rejected(
-    admin_client,
-    staff_client,
-    doctor_client,
-    billing_handoff_factory,
-    appointment_factory,
-    visit_factory,
-    doctor_user,
-):
-    handoff = billing_handoff_factory(suggested_amount="180.00", currency=BillingHandoff.Currency.USD)
-
-    for client in (admin_client, doctor_client):
-        denied = client.post(
-            f"/api/billing-handoffs/{handoff.id}/convert-to-invoice/",
-            {"total_amount": "180.00", "currency": "USD"},
-            format="json",
-        )
-        assert denied.status_code == 403
-        assert denied.data["code"] == "PERMISSION_DENIED"
-
-    invalid_currency = staff_client.post(
-        f"/api/billing-handoffs/{handoff.id}/convert-to-invoice/",
-        {"total_amount": "180.00", "currency": "EUR"},
+def test_patient_and_workflow_fields_are_never_mutable(staff_client, billing_handoff_factory, patient_factory):
+    handoff = billing_handoff_factory()
+    other = patient_factory(national_id_or_passport="HANDOFF-OTHER")
+    response = staff_client.patch(
+        f"/api/billing-handoffs/{handoff.id}/",
+        {"patient_id": other.id, "status": "PAID", "origin": "VISIT_COMPLETION"},
         format="json",
     )
-    invalid_amount = staff_client.post(
-        f"/api/billing-handoffs/{handoff.id}/convert-to-invoice/",
-        {"total_amount": "0", "currency": "USD"},
-        format="json",
-    )
-    convert_response = staff_client.post(f"/api/billing-handoffs/{handoff.id}/convert-to-invoice/", {}, format="json")
-    duplicate_response = staff_client.post(f"/api/billing-handoffs/{handoff.id}/convert-to-invoice/", {}, format="json")
-
-    assert invalid_currency.status_code == 400
-    assert invalid_amount.status_code == 400
-    assert convert_response.status_code == 201
+    assert response.status_code == 400
     handoff.refresh_from_db()
-    invoice = Invoice.objects.get(id=convert_response.data["id"])
-    assert invoice.patient_id == handoff.patient_id
-    assert invoice.visit_id == handoff.visit_id
-    assert invoice.appointment_id == handoff.visit.appointment_id
-    assert invoice.billing_handoff_id == handoff.id
-    assert invoice.total_amount == handoff.suggested_amount
-    assert invoice.currency == "USD"
-    assert invoice.status == Invoice.Status.UNPAID
-    assert handoff.status == BillingHandoff.Status.CONVERTED_TO_INVOICE
-    assert handoff.converted_invoice_id == invoice.id
-    assert duplicate_response.status_code == 409
-    assert duplicate_response.data["code"] == "BILLING_HANDOFF_ALREADY_CONVERTED"
+    assert handoff.patient_id != other.id
+    assert handoff.status == BillingHandoff.Status.OPEN
 
-    dismissed_visit = _completed_visit_for(
-        visit_factory,
-        appointment_factory,
-        doctor_user,
-        start_datetime="2026-07-21T13:00:00+03:00",
-        end_datetime="2026-07-21T13:30:00+03:00",
-    )
-    dismissed = billing_handoff_factory(
-        visit=dismissed_visit,
-        patient=dismissed_visit.patient,
-        status=BillingHandoff.Status.DISMISSED,
-    )
-    dismissed_response = staff_client.post(
-        f"/api/billing-handoffs/{dismissed.id}/convert-to-invoice/",
-        {"total_amount": "40.00", "currency": "SYP"},
-        format="json",
-    )
-    assert dismissed_response.status_code == 409
-    assert dismissed_response.data["code"] == "INVALID_STATUS_TRANSITION"
+
+@pytest.mark.django_db
+def test_financial_fields_lock_after_first_invoice_but_description_and_note_remain_editable(staff_client, billing_handoff_factory, invoice_factory):
+    handoff = billing_handoff_factory(total_amount="100.00", currency="USD")
+    invoice_factory(billing_handoff=handoff, amount="25.00")
+    locked = staff_client.patch(f"/api/billing-handoffs/{handoff.id}/", {"total_amount": "120.00", "currency": "SYP"}, format="json")
+    assert locked.status_code == 409
+    updated = staff_client.patch(f"/api/billing-handoffs/{handoff.id}/", {"description": "Corrected treatment", "note": "Audited note"}, format="json")
+    assert updated.status_code == 200
+    handoff.refresh_from_db()
+    assert handoff.total_amount == Decimal("100.00")
+    assert handoff.currency == "USD"
+    assert handoff.description == "Corrected treatment"
+
+
+@pytest.mark.django_db
+def test_zero_invoice_bill_can_cancel_but_paid_history_cannot(staff_client, billing_handoff_factory, invoice_factory):
+    empty = billing_handoff_factory()
+    cancelled = staff_client.post(f"/api/billing-handoffs/{empty.id}/cancel/", {"cancelled_reason": "Entered twice"}, format="json")
+    assert cancelled.status_code == 200
+    assert cancelled.data["status"] == BillingHandoff.Status.CANCELLED
+    assert cancelled.data["cancelled_reason"] == "Entered twice"
+
+    with_history = billing_handoff_factory(total_amount="100.00")
+    invoice_factory(billing_handoff=with_history, amount="20.00")
+    rejected = staff_client.post(f"/api/billing-handoffs/{with_history.id}/cancel/", format="json")
+    assert rejected.status_code == 409
+
+
+@pytest.mark.django_db
+def test_handoff_history_filters_include_all_canonical_statuses(staff_client, billing_handoff_factory):
+    for status in BillingHandoff.Status.values:
+        billing_handoff_factory(status=status, cancelled_at="2026-08-08T09:00:00Z" if status == "CANCELLED" else None)
+    all_rows = staff_client.get("/api/billing-handoffs/")
+    assert all_rows.status_code == 200
+    assert set(item["status"] for item in all_rows.data["results"]) == set(BillingHandoff.Status.values)
+    for status in BillingHandoff.Status.values:
+        filtered = staff_client.get(f"/api/billing-handoffs/?status={status}")
+        assert filtered.data["count"] == 1
+
+
+@pytest.mark.django_db
+def test_handoff_summary_uses_complete_filtered_queryset(staff_client, billing_handoff_factory, invoice_factory):
+    open_bill = billing_handoff_factory(total_amount="300.00", currency="SYP")
+    partial = billing_handoff_factory(total_amount="100.00", currency="USD", status=BillingHandoff.Status.PARTIALLY_PAID)
+    invoice_factory(billing_handoff=partial, amount="25.00")
+    response = staff_client.get("/api/billing-handoffs/summary/")
+    assert response.status_code == 200
+    assert response.data["open_count"] >= 1
+    assert response.data["partially_paid_count"] >= 1
+    assert Decimal(response.data["currency_totals"]["SYP"]["outstanding"]) >= Decimal(open_bill.total_amount)
+    assert response.data["currency_totals"]["USD"]["paid"] == Decimal("25.00")
+
+
+@pytest.mark.django_db
+def test_doctor_handoff_summary_is_scoped_to_own_bills(
+    doctor_client,
+    doctor_user,
+    other_doctor_user,
+    billing_handoff_factory,
+):
+    billing_handoff_factory(doctor=doctor_user, total_amount="125.00", currency="USD")
+    billing_handoff_factory(doctor=other_doctor_user, total_amount="900.00", currency="SYP")
+
+    response = doctor_client.get("/api/billing-handoffs/summary/")
+
+    assert response.status_code == 200
+    assert response.data["open_count"] == 1
+    assert response.data["currency_totals"]["USD"]["bill_total"] == Decimal("125.00")
+    assert response.data["currency_totals"]["SYP"]["bill_total"] == Decimal("0.00")

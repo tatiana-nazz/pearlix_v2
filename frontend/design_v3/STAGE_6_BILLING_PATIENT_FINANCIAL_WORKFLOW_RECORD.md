@@ -1,5 +1,7 @@
 # Stage 6 — Billing and Patient Financial Workflow
 
+> Historical and superseded by [Stage 7 — Handoff Bill and Invoice Ledger](STAGE_7_HANDOFF_BILL_INVOICE_LEDGER_RECORD.md). The debt-Invoice and child-Payment hierarchy below is not current product authority.
+
 Stage 6 makes the invoice the current operational billing record. The owning Doctor completes an active visit with a required description, total amount, currency, and optional note. One backend transaction completes the visit and appointment, creates exactly one unpaid visit invoice, and commits any retained billing provenance directly as converted. Staff approval is not part of the current workflow; legacy pending handoff routes remain compatibility history only.
 
 The Billing workspace now has exactly Overview and Invoices tabs. Overview presents invoice-derived today, open, collected, outstanding, and recent activity without a pending-handoff queue. Invoice rows open detail; patient links and patient-cell double click open the exact patient Billing tab. Invoice detail separates patient/source context, required description, totals, Staff controls, payment history, and cancellation. Admin sees the same financial record read-only. New Invoice is Staff-only and supports patient-prefilled entry. Patient Billing presents patient-scoped totals and invoice history. The patient identity rail explicitly labels Gender and Age, while patient edit uses a viewport-contained overlay with internal scrolling and a sticky action footer.

@@ -177,7 +177,7 @@ Phase 13G adds real visit and clinical note routes:
 - A Doctor starts a checked-in appointment from the existing appointment action, then enters the visit workspace.
 - The owning Doctor can save `symptoms`, `diagnosis`, `treatment`, `clinical_notes`, and `follow_up_notes` while active or after completion when the backend permits it.
 - Completing an active visit uses an explicit confirmation. When notes are dirty, the frontend saves notes first and completes only after that save succeeds.
-- Phase 13G originally deferred X-ray/AI integration. Phase 13H added saved X-rays, authenticated protected media, AI results and overlays, and external X-ray workflows. Phase 13I historically introduced Doctor completed-visit handoffs; Stage 6 supersedes that completion path with immediate invoice creation.
+- Phase 13G originally deferred X-ray/AI integration. Phase 13H added saved X-rays, authenticated protected media, AI results and overlays, and external X-ray workflows. Phase 13I and Stage 6 financial behavior are historical; Stage 7 makes Doctor Visit completion create one OPEN Handoff/Bill with zero Invoices.
 
 ## Runtime Functional Implementation Through Phase 13K; Phase 14A–14C Foundations
 
@@ -203,7 +203,7 @@ Phase 13G adds real visit and clinical note routes:
 - Phase 13G QA contract: `frontend/QA_13G.md`.
 - Saved X-ray list/detail routes, Doctor patient/own-visit upload, authenticated Blob media rendering, AI result/overlay presentation, and the Admin/Doctor external X-ray workspace.
 - Phase 13H QA contract: `frontend/QA_13H.md`.
-- Historical Phase 13I Doctor own-visit handoffs; Staff billing operations; Admin read-only billing; backend-controlled invoices, payments, balances, and print data. Stage 6 supersedes the handoff completion path.
+- Historical Phase 13I Doctor own-visit handoffs and Stage 6 debt-Invoices are superseded by Stage 7. Current Billing uses backend-controlled Handoff/Bills, payment-receipt Invoices, balances, and receipt print data; Staff owns collection and Admin is read-only.
 - Phase 13I QA contract: `frontend/QA_13I.md`.
 - Admin user creation/update/temporary-password reset/deactivation, Admin full clinic settings, and Admin-only read-only audit logs.
 - Phase 13J QA contract: `frontend/QA_13J.md`.
@@ -236,10 +236,10 @@ Phase 14F.4 gives Month items shared semantic appointment-status tones, makes th
 
 `backend/project_docs/PROJECT_STATUS.md` is the canonical tracker. Phase 14E.1A closes collection-level record actions: collection records expose no mutation or overflow controls before detail is opened; whole rows/cards open detail; record-specific actions remain inside the detail surface. Pages retain one dominant primary operation, quieter secondary controls, and visually separated confirmed destructive actions. Remaining work requires its own approved scope. See `frontend/design_v2/PHASE_14E1A_COLLECTION_ACTION_CLOSURE_RECORD.md`.
 
-Historical Phase 14E.2 aligned the opened Active Visit with the clinical visual system and the then-existing Doctor-only billing handoff. Stage 6 retains the workspace and role boundaries while superseding that handoff with immediate invoice creation. See `design_v2/PHASE_14E2_ACTIVE_VISIT_CLINICAL_WORKSPACE_IMPLEMENTATION_RECORD.md`.
+Historical Phase 14E.2 aligned the opened Active Visit with the clinical visual system. Stage 7 retains that workspace and role boundary while making completion create one OPEN Handoff/Bill with zero Invoices. See `design_v2/PHASE_14E2_ACTIVE_VISIT_CLINICAL_WORKSPACE_IMPLEMENTATION_RECORD.md`.
 
 Phase 14E.2A closes the deterministic live browser workflow: Staff checks in an appointment in its opened detail, the owning Doctor starts the visit from its opened checked-in detail, and the existing Active Visit workflow is exercised against real local API data. See `design_v2/PHASE_14E2A_ACTIVE_VISIT_BROWSER_ACCEPTANCE_RECORD.md`.
 
-Historical Phase 14E.3 aligned the former handoff, invoice, payment, and print workspaces without changing the financial contracts of that phase. Stage 6 supersedes its handoff workflow; Staff mutations remain detail-only, Admin billing remains read-only, and Doctors still have no global Billing navigation or direct invoice/payment authority. See `design_v2/PHASE_14E3_BILLING_INVOICE_PAYMENT_WORKSPACE_IMPLEMENTATION_RECORD.md`.
+Historical Phase 14E.3 aligned the former handoff, invoice, payment, and print workspaces without changing that phase's financial contracts. Stage 7 supersedes both Phase 14E.3 and Stage 6 financial hierarchies; Staff mutations remain detail-only, Admin Billing remains read-only, and Doctors still have no global Billing navigation or Invoice authority. See `design_v2/PHASE_14E3_BILLING_INVOICE_PAYMENT_WORKSPACE_IMPLEMENTATION_RECORD.md`.
 
-Stage 6 supersedes the primary handoff queue with an invoice-centric patient financial workflow. Doctor visit completion atomically creates the immediate unpaid invoice, Staff manages manual invoices and payments, Admin stays read-only, patient Billing is live and patient-scoped, and print uses the current A4 invoice document. See `design_v3/STAGE_6_BILLING_PATIENT_FINANCIAL_WORKFLOW_RECORD.md`.
+Stage 7 is the current financial model: Handoff is the Bill/amount owed, one Handoff has zero or many Invoices, and each Invoice is one completed payment receipt. Doctor Visit completion atomically creates an OPEN Handoff with zero Invoices; Staff creates manual Bills and issues Invoices from Handoff detail; Admin stays read-only; Patient Billing is Handoff-first; and print is an A4 payment-Invoice document with current Bill totals. Standalone Invoice creation and the user-facing Payment entity are removed. See `design_v3/STAGE_7_HANDOFF_BILL_INVOICE_LEDGER_RECORD.md`. Stage 6 is explicitly superseded.

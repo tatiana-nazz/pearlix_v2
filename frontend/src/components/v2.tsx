@@ -64,9 +64,9 @@ export type KpiTone = "blue" | "violet" | "teal" | "green" | "amber" | "orange" 
 export function KpiCard({ icon, label, value, support, tone = "blue" }: { icon:ReactNode; label:string; value:string|number; support?:string; tone?:KpiTone }) { return <SurfaceCard className={`v2-kpi ${tone}`}><div className="kpi-icon">{icon}</div><p>{label}</p><strong>{value}</strong><span className="v2-kpi-support" aria-hidden={support ? undefined : "true"}>{support ?? ""}</span></SurfaceCard>; }
 
 const statusMeta: Record<string, { tone:string; icon:typeof Circle }> = {
-  ACTIVE:{ tone:"success", icon:CheckCircle2 }, AVAILABLE:{ tone:"success", icon:CheckCircle2 }, COMPLETED:{ tone:"success", icon:CheckCircle2 }, PAID:{ tone:"success", icon:CheckCircle2 }, CONVERTED_TO_INVOICE:{ tone:"success", icon:CheckCircle2 },
+  ACTIVE:{ tone:"success", icon:CheckCircle2 }, AVAILABLE:{ tone:"success", icon:CheckCircle2 }, COMPLETED:{ tone:"success", icon:CheckCircle2 }, PAID:{ tone:"success", icon:CheckCircle2 },
   UPCOMING:{ tone:"info", icon:Info }, CHECKED_IN:{ tone:"info", icon:Info },
-  ON_LEAVE:{ tone:"warning", icon:AlertCircle }, AVAILABLE_OVERRIDE:{ tone:"warning", icon:AlertCircle }, NEEDS_RESCHEDULE:{ tone:"warning", icon:AlertCircle }, UNPAID:{ tone:"warning", icon:AlertCircle }, PARTIALLY_PAID:{ tone:"warning", icon:AlertCircle }, PENDING:{ tone:"warning", icon:AlertCircle },
+  ON_LEAVE:{ tone:"warning", icon:AlertCircle }, AVAILABLE_OVERRIDE:{ tone:"warning", icon:AlertCircle }, NEEDS_RESCHEDULE:{ tone:"warning", icon:AlertCircle }, PARTIALLY_PAID:{ tone:"warning", icon:AlertCircle }, PENDING:{ tone:"warning", icon:AlertCircle },
   CANCELLED:{ tone:"danger", icon:X }, NO_SHOW:{ tone:"danger", icon:X }, FAILED:{ tone:"danger", icon:AlertCircle }, DISMISSED:{ tone:"danger", icon:AlertCircle },
   INACTIVE:{ tone:"neutral", icon:Circle }, UNAVAILABLE:{ tone:"neutral", icon:Circle }, ARCHIVED:{ tone:"neutral", icon:Circle }, NOT_RUN:{ tone:"neutral", icon:Circle }, AI_COMPLETED:{ tone:"ai", icon:Info },
 };

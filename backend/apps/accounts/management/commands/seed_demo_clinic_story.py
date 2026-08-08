@@ -21,15 +21,12 @@ from apps.ai_results.models import AIResult
 from apps.ai_results.services import run_ai_for_xray
 from apps.audit.models import ActivityLog
 from apps.audit.services import log_activity
-from apps.billing.models import BillingHandoff, Invoice, Payment
+from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.services import (
-    cancel_invoice,
-    convert_handoff_to_invoice,
-    create_billing_handoff,
-    create_invoice,
-    create_visit_completion_invoice,
-    dismiss_handoff,
-    record_payment,
+    cancel_handoff,
+    create_manual_handoff,
+    create_visit_completion_handoff,
+    issue_invoice,
 )
 from apps.clinic.models import ClinicSettings
 from apps.patients.models import Patient
@@ -182,8 +179,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Seeded {DEMO_TAG}: {len(patients)} patients, "
             f"{Appointment.objects.filter(patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX).count()} appointments, "
-            f"{Invoice.objects.filter(patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX).count()} invoices, "
-            f"{Payment.objects.filter(invoice__patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX).count()} payments."
+            f"{BillingHandoff.objects.filter(patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX).count()} bills, "
+            f"{Invoice.objects.filter(billing_handoff__patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX).count()} invoices."
         ))
         self.stdout.write("QA accounts (local development only):")
         for key in ("admin", "staff.one", "staff.two", "doctor.one", "doctor.two", "doctor.three", "doctor.four", "doctor.mustchange"):
@@ -403,101 +400,98 @@ class Command(BaseCommand):
         visits = story["completed_visits"]
         reference_date = timezone.localtime(story["appointments"]["today_confirmed"].start_datetime).date()
 
-        generated_today_invoice, generated_today_handoff = create_visit_completion_invoice(
+        visit_open = create_visit_completion_handoff(
             visit=visits[6],
             user=visits[6].doctor,
             data={
                 "description": "Comprehensive restorative treatment",
                 "total_amount": "250000.00",
                 "currency": "SYP",
-                "note": "Invoice generated with visit completion",
+                "note": "Open bill generated when the visit completed",
             },
         )
-        today_invoice_at = self._dt(reference_date, 11, 15)
-        self._set_story_timestamp(generated_today_handoff, today_invoice_at)
-        self._set_story_timestamp(generated_today_invoice, today_invoice_at)
+        self._set_story_timestamp(visit_open, self._dt(reference_date, 11, 15))
 
-        generated_historical_invoice, generated_historical_handoff = create_visit_completion_invoice(
+        visit_partial = create_visit_completion_handoff(
             visit=visits[7],
             user=visits[7].doctor,
             data={
-                "description": "Historical automatic root-canal treatment",
-                "total_amount": "140.00",
+                "description": "Multi-stage root-canal treatment",
+                "total_amount": "300.00",
                 "currency": "USD",
-                "note": "Historical invoice generated automatically when the visit completed",
+                "note": "Visit bill with two collection receipts",
             },
         )
-        historical_invoice_at = self._dt(reference_date - timedelta(days=21), 15, 30)
-        self._set_story_timestamp(generated_historical_handoff, historical_invoice_at)
-        self._set_story_timestamp(generated_historical_invoice, historical_invoice_at)
-
-        converted = create_billing_handoff(visit=visits[8], user=visits[8].doctor, data={"description": "Legacy completed treatment", "note": "Historical converted handoff", "suggested_amount": "100.00", "currency": "USD"})
-        converted_invoice = convert_handoff_to_invoice(handoff=converted, user=staff, data={"description": "Legacy completed treatment", "total_amount": "100.00", "currency": "USD", "notes": "Historical converted invoice"})
-        legacy_invoice_at = self._dt(reference_date - timedelta(days=8), 16)
-        self._set_story_timestamp(converted, legacy_invoice_at)
-        self._set_story_timestamp(converted_invoice, legacy_invoice_at)
-
-        dismissed = create_billing_handoff(visit=visits[9], user=visits[9].doctor, data={"description": "Historical duplicate record", "note": "Historical dismissed handoff", "suggested_amount": "125000.00", "currency": "SYP"})
-        dismiss_handoff(handoff=dismissed, user=staff, data={"dismissed_reason": "Synthetic duplicate billing route"})
-        self._set_story_timestamp(dismissed, self._dt(reference_date - timedelta(days=45), 12))
-
-        unpaid = create_invoice(user=staff, data={"patient": visits[6].patient, "description": "Orthodontic consultation", "currency": "SYP", "total_amount": "300000.00", "notes": "Unpaid demo invoice"})
-        self._set_story_timestamp(unpaid, self._dt(reference_date, 12, 30))
-
-        partial = create_invoice(user=staff, data={"patient": visits[7].patient, "description": "Restorative treatment plan", "currency": "SYP", "total_amount": "200000.00", "notes": "Partial demo invoice"})
-        self._set_story_timestamp(partial, self._dt(reference_date - timedelta(days=4), 10))
-        partial_payment = record_payment(
-            invoice=partial,
+        self._set_story_timestamp(visit_partial, self._dt(reference_date - timedelta(days=21), 15, 30))
+        partial_first, _ = issue_invoice(
+            handoff=visit_partial,
             user=staff,
-            data={
-                "amount": "75000.00",
-                "currency": "SYP",
-                "payment_date": self._dt(reference_date, 10, 15),
-                "notes": "Deposit collected today",
-            },
+            data={"amount": "100.00", "issued_at": self._dt(reference_date - timedelta(days=8), 16), "notes": "First instalment"},
         )
-        self._set_story_timestamp(partial_payment, self._dt(reference_date, 10, 15))
-
-        paid = create_invoice(user=staff, data={"patient": patients[16], "description": "Dental cleaning", "currency": "USD", "total_amount": "120.00", "notes": "Paid demo invoice"})
-        self._set_story_timestamp(paid, self._dt(reference_date - timedelta(days=18), 9))
-        paid_deposit = record_payment(
-            invoice=paid,
+        partial_second, _ = issue_invoice(
+            handoff=visit_partial,
             user=staff,
-            data={
-                "amount": "50.00",
-                "currency": "USD",
-                "payment_date": self._dt(reference_date - timedelta(days=18), 9, 30),
-                "notes": "Initial payment",
-            },
+            data={"amount": "75.00", "issued_at": self._dt(reference_date, 10, 15), "notes": "Second instalment collected today"},
         )
-        self._set_story_timestamp(paid_deposit, self._dt(reference_date - timedelta(days=18), 9, 30))
-        paid_balance = record_payment(
-            invoice=paid,
-            user=staff,
-            data={
-                "amount": "70.00",
-                "currency": "USD",
-                "payment_date": self._dt(reference_date - timedelta(days=17), 11),
-                "notes": "Remaining balance",
-            },
-        )
-        self._set_story_timestamp(paid_balance, self._dt(reference_date - timedelta(days=17), 11))
+        self._set_story_timestamp(partial_first, partial_first.issued_at)
+        self._set_story_timestamp(partial_second, partial_second.issued_at)
 
-        cancelled = create_invoice(user=staff, data={"patient": patients[17], "description": "Cancelled treatment estimate", "currency": "SYP", "total_amount": "180000.00", "notes": "Cancelled demo invoice"})
-        cancel_invoice(invoice=cancelled, user=staff, data={"cancelled_reason": "Synthetic cancellation"})
+        visit_paid = create_visit_completion_handoff(
+            visit=visits[8],
+            user=visits[8].doctor,
+            data={"description": "Dental cleaning and polish", "total_amount": "120.00", "currency": "USD", "note": "Fully paid in two receipts"},
+        )
+        self._set_story_timestamp(visit_paid, self._dt(reference_date - timedelta(days=18), 9))
+        paid_first, _ = issue_invoice(
+            handoff=visit_paid,
+            user=staff,
+            data={"amount": "50.00", "issued_at": self._dt(reference_date - timedelta(days=18), 9, 30), "notes": "Initial payment"},
+        )
+        paid_second, _ = issue_invoice(
+            handoff=visit_paid,
+            user=staff,
+            data={"amount": "70.00", "issued_at": self._dt(reference_date - timedelta(days=17), 11), "notes": "Remaining balance"},
+        )
+        self._set_story_timestamp(paid_first, paid_first.issued_at)
+        self._set_story_timestamp(paid_second, paid_second.issued_at)
+
+        manual_open = create_manual_handoff(
+            user=staff,
+            data={"patient": patients[14], "description": "Orthodontic consultation", "total_amount": "300000.00", "currency": "SYP", "note": "Open manual bill"},
+        )
+        self._set_story_timestamp(manual_open, self._dt(reference_date, 12, 30))
+
+        manual_partial = create_manual_handoff(
+            user=staff,
+            data={"patient": patients[15], "description": "Restorative treatment plan", "total_amount": "200000.00", "currency": "SYP", "note": "Partial manual bill"},
+        )
+        self._set_story_timestamp(manual_partial, self._dt(reference_date - timedelta(days=4), 10))
+        manual_first, _ = issue_invoice(
+            handoff=manual_partial,
+            user=staff,
+            data={"amount": "50000.00", "issued_at": self._dt(reference_date - timedelta(days=4), 10, 30), "notes": "Deposit"},
+        )
+        manual_second, _ = issue_invoice(
+            handoff=manual_partial,
+            user=staff,
+            data={"amount": "25000.00", "issued_at": self._dt(reference_date, 11, 30), "notes": "Follow-up collection"},
+        )
+        self._set_story_timestamp(manual_first, manual_first.issued_at)
+        self._set_story_timestamp(manual_second, manual_second.issued_at)
+
+        cancelled = create_manual_handoff(
+            user=staff,
+            data={"patient": patients[17], "description": "Cancelled treatment estimate", "total_amount": "180000.00", "currency": "SYP", "note": "Cancelled before collection"},
+        )
+        cancel_handoff(handoff=cancelled, user=staff, data={"cancelled_reason": "Synthetic cancellation"})
         cancelled_at = self._dt(reference_date - timedelta(days=60), 13)
         self._set_story_timestamp(cancelled, cancelled_at, cancelled_at=cancelled_at)
         return {
-            "generated_today_handoff": generated_today_handoff,
-            "generated_today_invoice": generated_today_invoice,
-            "generated_historical_handoff": generated_historical_handoff,
-            "generated_historical_invoice": generated_historical_invoice,
-            "converted": converted,
-            "converted_invoice": converted_invoice,
-            "dismissed": dismissed,
-            "unpaid": unpaid,
-            "partial": partial,
-            "paid": paid,
+            "handoffs": [visit_open, visit_partial, visit_paid, manual_open, manual_partial, cancelled],
+            "invoices": [partial_first, partial_second, paid_first, paid_second, manual_first, manual_second],
+            "open": visit_open,
+            "partial": visit_partial,
+            "paid": visit_paid,
             "cancelled": cancelled,
         }
 
@@ -518,15 +512,10 @@ class Command(BaseCommand):
         for action, item in (("ai_run", story["imaging"]["xray"]),):
             if item:
                 log_activity(actor=item.uploaded_by, action=action, entity_type="xray", entity_id=item.id, metadata={"demo_story": DEMO_TAG, "xray_id": item.id})
-        for action, entity_type, entity_id, actor in (
-            ("invoice_created", "invoice", story["billing"]["generated_today_invoice"].id, story["billing"]["generated_today_handoff"].doctor),
-            ("invoice_created", "invoice", story["billing"]["generated_historical_invoice"].id, story["billing"]["generated_historical_handoff"].doctor),
-            ("billing_handoff_converted", "billing_handoff", story["billing"]["converted"].id, accounts["staff.one"]),
-            ("billing_handoff_dismissed", "billing_handoff", story["billing"]["dismissed"].id, accounts["staff.one"]),
-            ("invoice_created", "invoice", story["billing"]["converted_invoice"].id, accounts["staff.one"]),
-            ("payment_recorded", "invoice", story["billing"]["paid"].id, accounts["staff.one"]),
-        ):
-            log_activity(actor=actor, action=action, entity_type=entity_type, entity_id=entity_id, metadata={"demo_story": DEMO_TAG, "record_id": entity_id})
+        for handoff in story["billing"]["handoffs"]:
+            log_activity(actor=handoff.created_by, action="billing_handoff_created", entity_type="billing_handoff", entity_id=handoff.id, metadata={"demo_story": DEMO_TAG, "record_id": handoff.id})
+        for invoice in story["billing"]["invoices"]:
+            log_activity(actor=invoice.created_by, action="invoice_issued", entity_type="invoice", entity_id=invoice.id, metadata={"demo_story": DEMO_TAG, "record_id": invoice.id})
 
     def _reset_demo(self):
         patient_ids = list(Patient.objects.filter(national_id_or_passport__startswith=PATIENT_ID_PREFIX).values_list("id", flat=True))
@@ -540,8 +529,7 @@ class Command(BaseCommand):
             ActivityLog.objects.filter(
                 Q(metadata_json__demo_story=DEMO_TAG) | Q(actor_id__in=user_ids)
             ).delete()
-            Payment.objects.filter(invoice__patient_id__in=patient_ids).delete()
-            Invoice.objects.filter(patient_id__in=patient_ids).delete()
+            Invoice.objects.filter(billing_handoff__patient_id__in=patient_ids).delete()
             BillingHandoff.objects.filter(patient_id__in=patient_ids).delete()
             AIResult.objects.filter(xray_attachment__patient_id__in=patient_ids).delete()
             ExternalXrayCase.objects.filter(uploaded_by_id__in=user_ids).delete()

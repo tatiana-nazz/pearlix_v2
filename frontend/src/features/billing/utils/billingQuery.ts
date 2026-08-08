@@ -1,12 +1,21 @@
 export type InvoiceDatePreset = "TODAY" | "LAST_7_DAYS" | "LAST_30_DAYS" | "ALL_TIME" | "CUSTOM";
 
-const invoiceQueryKeys = ["status", "currency", "search", "date_from", "date_to", "patient_id", "page"] as const;
+const invoiceQueryKeys = ["currency", "search", "date_from", "date_to", "patient_id", "handoff_id", "visit_id", "appointment_id", "page"] as const;
+const handoffQueryKeys = ["status", "currency", "search", "date_from", "date_to", "patient_id", "doctor_id", "visit_id", "page"] as const;
 
 export function invoiceQueryFromSearch(searchParams: URLSearchParams) {
   return Object.fromEntries(
     invoiceQueryKeys
       .map((key) => [key, searchParams.get(key) || undefined] as const)
       .filter((entry): entry is readonly [typeof invoiceQueryKeys[number], string] => Boolean(entry[1])),
+  );
+}
+
+export function handoffQueryFromSearch(searchParams: URLSearchParams) {
+  return Object.fromEntries(
+    handoffQueryKeys
+      .map((key) => [key, searchParams.get(key) || undefined] as const)
+      .filter((entry): entry is readonly [typeof handoffQueryKeys[number], string] => Boolean(entry[1])),
   );
 }
 

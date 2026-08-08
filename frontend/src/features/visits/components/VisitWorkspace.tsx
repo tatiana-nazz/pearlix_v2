@@ -118,7 +118,7 @@ export function VisitWorkspace({ role, visit, onReloadVisit }: VisitWorkspacePro
   const [saveNotice, setSaveNotice] = useState(false);
   const [billingDraft, setBillingDraft] = useState<VisitBillingDraft>(emptyBillingDraft);
   const [billingErrors, setBillingErrors] = useState<VisitBillingErrors>({});
-  const [completionResult, setCompletionResult] = useState<{ amount: string; currency: Currency; invoiceNumber: string; invoiceStatus: string } | null>(null);
+  const [completionResult, setCompletionResult] = useState<{ amount: string; currency: Currency; handoffId: number; handoffStatus: string } | null>(null);
   const updateNotes = useUpdateClinicalNotes(visit.id);
   const completeVisit = useCompleteVisit(visit.id);
 
@@ -177,8 +177,8 @@ export function VisitWorkspace({ role, visit, onReloadVisit }: VisitWorkspacePro
     setCompletionResult({
       amount: billingDraft.amount.trim(),
       currency,
-      invoiceNumber: result.created_invoice.invoice_number,
-      invoiceStatus: result.created_invoice.status,
+      handoffId: result.created_handoff.id,
+      handoffStatus: result.created_handoff.status,
     });
     setConfirmOpen(false);
   }
@@ -187,7 +187,7 @@ export function VisitWorkspace({ role, visit, onReloadVisit }: VisitWorkspacePro
   const isConflict = (updateNotes.error as { code?: string } | null)?.code === "VERSION_CONFLICT" || (completeVisit.error as { code?: string } | null)?.code === "VERSION_CONFLICT";
   const saveStatus = isDirty ? c.notesUnsaved : saveNotice ? c.notesSaved : c.notesUpToDate;
 
-  if (completionResult) return <Card className="active-visit-completion-success"><StatePanel state="empty" title={c.visitCompleted} description={c.visitBillingSuccess} /><dl className="active-visit-billing-details"><div><dt>{c.invoiceReference}</dt><dd dir="ltr">{completionResult.invoiceNumber}</dd></div><div><dt>{c.invoiceStatus}</dt><dd>{completionResult.invoiceStatus}</dd></div><div><dt>{c.totalTreatmentCharge}</dt><dd dir="ltr">{new Intl.NumberFormat("en-US", { style: "currency", currency: completionResult.currency }).format(Number(completionResult.amount))}</dd></div></dl><div className="form-actions"><Link className="button secondary" to={`/${role.toLowerCase()}/appointments`}>{c.backAppointments}</Link><Link className="button primary" to={`/${role.toLowerCase()}/patients/${visit.patient.id}`}>{c.openPatient.replace("{patient}", visit.patient.full_name)}</Link></div></Card>;
+  if (completionResult) return <Card className="active-visit-completion-success"><StatePanel state="empty" title={c.visitCompleted} description={c.visitBillingSuccess} /><dl className="active-visit-billing-details"><div><dt>{c.handoffStatus}</dt><dd>{completionResult.handoffStatus}</dd></div><div><dt>Bill reference</dt><dd dir="ltr">#{completionResult.handoffId}</dd></div><div><dt>{c.totalTreatmentCharge}</dt><dd dir="ltr">{new Intl.NumberFormat("en-US", { style: "currency", currency: completionResult.currency }).format(Number(completionResult.amount))}</dd></div><div><dt>Invoices</dt><dd>0</dd></div></dl><div className="form-actions"><Link className="button secondary" to={`/${role.toLowerCase()}/appointments`}>{c.backAppointments}</Link><Link className="button primary" to={`/${role.toLowerCase()}/patients/${visit.patient.id}`}>{c.openPatient.replace("{patient}", visit.patient.full_name)}</Link></div></Card>;
 
   return <div className="visit-workspace">
     <div className="active-visit-context-stack">

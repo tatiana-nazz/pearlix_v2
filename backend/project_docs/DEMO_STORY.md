@@ -29,13 +29,13 @@ Phase 14C.0 gives the Doctors distinct stored specialties, phones, and biographi
 
 ## Anchor story
 
-The 24 synthetic patients include today's confirmed and checked-in appointments, one Doctor One active visit with no invoice, completed clinical history with all five note fields, a returning patient with multiple visits, saved X-rays with and without mock AI, temporary/attached/discarded external X-rays, cancelled/no-show/future appointments, archived history, historical converted/dismissed billing provenance, and manual or completed-visit unpaid/partial/paid/cancelled invoices. The current demo has no pending handoff queue. Doctors have schedules, Doctor Four and Staff Two demonstrate split shifts, and Staff leave is visible in the consolidated profile.
+The 24 synthetic patients include today's confirmed and checked-in appointments, Lina Mansour's Doctor One ACTIVE Visit and ACTIVE Appointment with no Handoff or Invoice, completed clinical history with all five note fields, a returning patient with multiple visits, saved X-rays with and without mock AI, temporary/attached/discarded external X-rays, cancelled/no-show/future appointments, and archived history. The Stage 7 financial story contains six Handoff/Bills: two OPEN, two PARTIALLY_PAID, one PAID, and one CANCELLED; six payment-receipt Invoices include both today's and historical SYP/USD collections, with multiple receipts beneath partial and fully paid Bills. The canonical demo has no normal Staff-approval pending handoff and no Payment rows. Doctors have schedules, Doctor Four and Staff Two demonstrate split shifts, and Staff leave is visible in the consolidated profile.
 
 The reschedule story uses real domain transitions: three future appointments are created before Doctor leave, the leave service marks them, one is then rescheduled to a valid doctor/time and logged with old/new slots, and two remain in the queue. A later Doctor shift reduction marks one additional appointment through the confirmed shift-impact service. A second Doctor leave and parallel same-time appointments across different Doctors make Admin and Staff views meaningfully populated.
 
 Generated demo images are deterministic 320×180 synthetic grayscale illustrations rather than one-pixel placeholders. They are explicitly non-clinical and remain unsuitable for diagnosis.
 
-The seeded Admin, Staff, and Doctor dashboards are non-empty and their related route screens are populated. Stage 6 focused browser coverage verifies the current invoice-centric workflow; use `frontend/QA_14A.md` for the broader historical live checklist.
+The seeded Admin, Staff, and Doctor dashboards are non-empty and their related route screens are populated. Stage 7 focused browser coverage verifies the Handoff Bill → Invoice receipt ledger; use `frontend/QA_14A.md` for the broader historical live checklist.
 
 ## Automated verification
 

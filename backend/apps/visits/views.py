@@ -78,7 +78,7 @@ class VisitViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = VisitCompletionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            visit, invoice, handoff = complete_visit(
+            visit, handoff = complete_visit(
                 visit=visit,
                 user=request.user,
                 expected_updated_at=serializer.validated_data["version"],
@@ -88,13 +88,12 @@ class VisitViewSet(viewsets.ReadOnlyModelViewSet):
             )
         except VisitRuleError as exc:
             return exc.to_response()
-        from apps.billing.serializers import BillingHandoffSerializer, InvoiceSerializer
+        from apps.billing.serializers import BillingHandoffSerializer
 
         return Response(
             {
                 "visit": VisitDetailSerializer(visit).data,
-                "created_invoice": InvoiceSerializer(invoice).data,
-                "billing_provenance": BillingHandoffSerializer(handoff).data,
+                "created_handoff": BillingHandoffSerializer(handoff).data,
             }
         )
 
@@ -147,24 +146,3 @@ class VisitViewSet(viewsets.ReadOnlyModelViewSet):
             metadata={"xray_id": xray.id, "patient_id": xray.patient_id, "visit_id": xray.visit_id, "source": xray.source},
         )
         return Response(XrayAttachmentSerializer(xray).data, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=["post"], url_path="billing-handoff")
-    def billing_handoff(self, request, pk=None):
-        from apps.billing.serializers import BillingHandoffCreateSerializer, BillingHandoffSerializer
-        from apps.billing.services import BillingRuleError, create_billing_handoff
-
-        visit = self.get_object()
-        serializer = BillingHandoffCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            handoff = create_billing_handoff(visit=visit, user=request.user, data=serializer.validated_data)
-        except BillingRuleError as exc:
-            return exc.to_response()
-        log_activity(
-            request=request,
-            action="billing_handoff_created",
-            entity_type="billing_handoff",
-            entity_id=handoff.id,
-            metadata={"handoff_id": handoff.id, "visit_id": handoff.visit_id, "patient_id": handoff.patient_id},
-        )
-        return Response(BillingHandoffSerializer(handoff).data, status=status.HTTP_201_CREATED)

@@ -24,8 +24,8 @@ Run backend commands from `backend` with the virtualenv active.
 ## Roles
 
 - Admin: account management, password resets, clinic settings update, working hours and availability exception management, read-only operational records.
-- Staff: patient creation/update/archive, appointment scheduling and rescheduling, billing handoff conversion, invoice and payment operations.
-- Doctor: clinic-wide active patient profile/history access, own appointment/visit workflow, own clinical notes, X-ray upload/AI run, billing handoff creation for own completed visits.
+- Staff: patient creation/update/archive, appointment scheduling and rescheduling, manual Handoff/Bill creation, safe Bill maintenance, and payment-Invoice issuance.
+- Doctor: clinic-wide active patient profile/history access, own appointment/visit workflow, own clinical notes, X-ray upload/AI run, and one OPEN Handoff/Bill created only by completing an own Visit.
 
 ## Capabilities
 
@@ -36,8 +36,8 @@ Run backend commands from `backend` with the virtualenv active.
 - Visits and clinical records: Doctors start/complete own visits and edit own clinical notes; completed own notes remain editable where supported by the current service. The Phase 13G frontend provides Doctor active/detail routes and Admin/Staff read-only visit detail routes without changing backend behavior.
 - X-rays and AI: Phase 13H integrates authenticated Blob requests with temporary object URLs, saved X-ray list/detail/upload, returned result disclaimers and overlays, and Admin/Doctor external workspace routes. Staff has no external-workspace access; only an owning Doctor may attach a temporary external case to a patient. The MVP remains `MOCK_ADAPTER` only; disabled real-service modes return `AI_SERVICE_NOT_CONFIGURED`. Browser QA remains pending.
 - Clinic settings: Admin sees and updates full settings; Staff/Doctor see safe settings only.
-- Billing: Doctors create handoffs for own completed visits; Staff converts handoffs to invoices and records payments; invoices/payments are hidden from Doctors; status and totals are backend-controlled; invoice numbers use a DB-backed date sequence with row locking.
-- Audit: key account, patient, scheduling, visit, X-ray, AI, billing, payment, clinic settings, and dashboard-adjacent actions are logged with sensitive metadata stripped.
+- Billing: Handoff is the total Bill and Invoice is one completed payment receipt. One Visit has at most one Handoff, one Handoff has zero or many Invoices, Staff issues Invoices from Handoff detail, and all paid/remaining/status values are backend-controlled. Invoice numbers use a DB-backed date sequence with row locking.
+- Audit: key account, patient, scheduling, visit, X-ray, AI, Handoff/Invoice, clinic settings, and dashboard-adjacent actions are logged with sensitive metadata stripped.
 
 ## Security Decisions
 

@@ -8,7 +8,7 @@ from rest_framework.test import APIClient
 
 from apps.ai_results.models import AIResult
 from apps.accounts.models import User
-from apps.billing.models import BillingHandoff, Invoice, Payment
+from apps.billing.models import BillingHandoff, Invoice
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment, AvailabilityException, Weekday, WorkingShift
 from apps.visits.models import Visit
@@ -302,19 +302,20 @@ def ai_result_factory(db, xray_attachment_factory):
 
 
 @pytest.fixture
-def billing_handoff_factory(db, completed_visit, doctor_user):
+def billing_handoff_factory(db, patient, staff_user):
     def create_billing_handoff(**overrides):
         defaults = {
-            "patient": completed_visit.patient,
-            "visit": completed_visit,
-            "doctor": completed_visit.doctor,
+            "patient": patient,
+            "visit": None,
+            "doctor": None,
             "description": "Completed treatment",
-            "note": "Please invoice patient.",
-            "suggested_amount": "100.00",
+            "note": "Bill note.",
+            "total_amount": "100.00",
             "currency": BillingHandoff.Currency.SYP,
-            "status": BillingHandoff.Status.PENDING,
-            "created_by": completed_visit.doctor,
-            "updated_by": completed_visit.doctor,
+            "status": BillingHandoff.Status.OPEN,
+            "origin": BillingHandoff.Origin.MANUAL,
+            "created_by": staff_user,
+            "updated_by": staff_user,
         }
         defaults.update(overrides)
         return BillingHandoff.objects.create(**defaults)
@@ -323,37 +324,18 @@ def billing_handoff_factory(db, completed_visit, doctor_user):
 
 
 @pytest.fixture
-def invoice_factory(db, patient, staff_user):
+def invoice_factory(db, billing_handoff_factory, staff_user):
     def create_invoice(**overrides):
+        handoff = overrides.pop("billing_handoff", None) or billing_handoff_factory()
         defaults = {
             "invoice_number": f"INV-FACTORY-{Invoice.objects.count() + 1:06d}",
-            "patient": patient,
-            "description": "Dental services",
-            "currency": Invoice.Currency.SYP,
-            "total_amount": "100.00",
+            "billing_handoff": handoff,
+            "amount": "50.00",
+            "issued_at": timezone.now(),
             "notes": "",
-            "status": Invoice.Status.UNPAID,
             "created_by": staff_user,
         }
         defaults.update(overrides)
         return Invoice.objects.create(**defaults)
 
     return create_invoice
-
-
-@pytest.fixture
-def payment_factory(db, invoice_factory, staff_user):
-    def create_payment(**overrides):
-        invoice = overrides.pop("invoice", None) or invoice_factory()
-        defaults = {
-            "invoice": invoice,
-            "amount": "50.00",
-            "currency": invoice.currency,
-            "payment_date": timezone.now(),
-            "notes": "",
-            "created_by": staff_user,
-        }
-        defaults.update(overrides)
-        return Payment.objects.create(**defaults)
-
-    return create_payment

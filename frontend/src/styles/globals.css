@@ -1319,7 +1319,7 @@ p {
   }
 }
 
-/* Stage 6: invoice-first billing and patient financial workspace */
+/* Stage 7: Handoff bill and Invoice receipt ledger */
 .billing-today-activity,
 .patient-billing-summary-grid,
 .invoice-record-grid,
@@ -1397,6 +1397,14 @@ p {
 .patient-context-banner { margin: 0 0 20px; border-inline-start: 4px solid var(--color-primary); padding: 12px 14px; background: var(--color-primary-soft); color: var(--color-text); }
 .new-invoice-form label > span { color: var(--color-muted); font-size: 12px; font-weight: 600; }
 .pay-remaining-button { justify-self: start; }
+.payment-context-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.payment-context-grid > div { display: grid; gap: 5px; border: 1px solid var(--color-border); border-radius: 12px; padding: 12px; background: var(--color-surface-muted); }
+.payment-context-grid dt { color: var(--color-muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.payment-context-grid dd { margin: 0; color: var(--color-text); font-weight: 800; overflow-wrap: anywhere; }
+.receipt-payment-total { border: 1px solid color-mix(in srgb, var(--color-success) 35%, var(--color-border)); border-radius: 16px; padding: 18px; background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface)); }
+.receipt-payment-total strong { color: var(--color-text); font-size: clamp(1.8rem, 4vw, 2.75rem); }
+.billing-handoff-context { display: grid; gap: 18px; }
+.billing-overview-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 18px; }
 
 .patient-billing-workspace { display: grid; min-width: 0; gap: 18px; }
 .patient-billing-actions { display: flex; justify-content: flex-end; }
@@ -1452,6 +1460,7 @@ p {
   .invoice-record-grid { grid-template-columns: 1fr; }
   .patient-billing-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .v2-overlay .patient-form-grid { grid-template-columns: 1fr; }
+  .billing-overview-split { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 767px) {
@@ -1459,6 +1468,7 @@ p {
   .invoice-form-grid,
   .new-invoice-form,
   .patient-billing-summary-grid { grid-template-columns: 1fr; }
+  .payment-context-grid { grid-template-columns: 1fr; }
   .invoice-form-wide { grid-column: 1; }
   .invoice-header-actions .button { flex: 1; }
   .invoice-document { min-height: auto; padding: 24px 18px; }

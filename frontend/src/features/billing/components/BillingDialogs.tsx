@@ -2,31 +2,56 @@ import { useState } from "react";
 
 import { ErrorState } from "../../../components/ErrorState";
 import { Modal } from "../../../components/v2";
-import { useAuthStore } from "../../../auth/authStore";
-import type { BillingHandoffCreatePayload, HandoffConversionPayload, PaymentPayload } from "../../../types/billing";
+import type { BillingHandoff, InvoiceIssuePayload } from "../../../types/billing";
+import { formatMoney } from "../utils/billing";
 
-function paymentCopy(language: "EN" | "AR") {
-  return language === "AR"
-    ? { title: "تسجيل دفعة", invoice: "الفاتورة", balance: "الرصيد الحالي", amount: "المبلغ", currency: "العملة", date: "تاريخ الدفع (اختياري)", notes: "ملاحظات (اختياري)", payRemaining: "دفع الرصيد المتبقي", cancel: "إلغاء", submit: "تسجيل الدفعة", invalid: "أدخل مبلغاً موجباً صالحاً.", unavailable: "لم يتم تسجيل الدفعة" }
-    : { title: "Record payment", invoice: "Invoice", balance: "Current balance", amount: "Amount", currency: "Currency", date: "Payment date (optional)", notes: "Notes (optional)", payRemaining: "Pay remaining balance", cancel: "Cancel", submit: "Record payment", invalid: "Enter a valid positive amount.", unavailable: "Payment was not recorded" };
+function validAmount(value: string) {
+  return /^\d+(?:\.\d{1,2})?$/.test(value) && Number(value) > 0;
 }
 
-function validAmount(amount: string) {
-  return /^\d+(\.\d{1,2})?$/.test(amount) && Number(amount) > 0;
-}
+export function RecordPaymentDialog({
+  handoff,
+  error,
+  pending,
+  onCancel,
+  onSubmit,
+}: {
+  handoff: BillingHandoff;
+  error?: unknown;
+  pending: boolean;
+  onCancel: () => void;
+  onSubmit: (payload: InvoiceIssuePayload) => void;
+}) {
+  const [amount, setAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [validation, setValidation] = useState("");
 
-export function CreateHandoffDialog({ error, pending, onCancel, onSubmit }: { error?: unknown; pending: boolean; onCancel: () => void; onSubmit: (payload: BillingHandoffCreatePayload) => void }) {
-  const [note, setNote] = useState(""); const [amount, setAmount] = useState(""); const [currency, setCurrency] = useState("USD"); const [validation, setValidation] = useState("");
-  return <Modal open title="Create billing handoff" onClose={onCancel} pending={pending}><form className="clinical-notes-form" onSubmit={(event) => { event.preventDefault(); if (amount && !validAmount(amount)) return setValidation("Suggested amount must be positive."); setValidation(""); onSubmit({ note, suggested_amount: amount || null, currency: amount ? currency as "USD" | "SYP" : null }); }}><label>Note<textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} /></label><label>Suggested amount<input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></label><label>Currency<select value={currency} disabled={!amount} onChange={(e) => setCurrency(e.target.value)}><option value="USD">USD</option><option value="SYP">SYP</option></select></label>{validation ? <p className="field-error" role="alert">{validation}</p> : null}{error ? <ErrorState error={error} title="Unable to create handoff" /> : null}<div className="form-actions"><button className="button secondary" type="button" disabled={pending} onClick={onCancel}>Cancel</button><button className="button primary" disabled={pending}>Create handoff</button></div></form></Modal>;
-}
-
-export function ConvertHandoffDialog({ error, pending, onCancel, onSubmit }: { error?: unknown; pending: boolean; onCancel: () => void; onSubmit: (payload: HandoffConversionPayload) => void }) {
-  const [amount, setAmount] = useState(""); const [currency, setCurrency] = useState("USD"); const [notes, setNotes] = useState(""); const [validation, setValidation] = useState("");
-  return <Modal open title="Convert handoff to invoice" onClose={onCancel} pending={pending}><form className="clinical-notes-form" onSubmit={(e) => { e.preventDefault(); if (amount && !validAmount(amount)) return setValidation("Enter a valid positive total amount."); setValidation(""); onSubmit({ total_amount: amount || undefined, currency: amount ? currency as "USD" | "SYP" : undefined, notes }); }}><p className="form-note">Leave the amount blank only when the backend can use the handoff suggestion.</p><label>Total amount<input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></label><label>Currency<select value={currency} onChange={(e) => setCurrency(e.target.value)}><option value="USD">USD</option><option value="SYP">SYP</option></select></label><label>Notes<textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>{validation ? <p className="field-error" role="alert">{validation}</p> : null}{error ? <ErrorState error={error} title="Unable to convert handoff" /> : null}<div className="form-actions"><button className="button secondary" type="button" disabled={pending} onClick={onCancel}>Cancel</button><button className="button primary" disabled={pending}>Convert to invoice</button></div></form></Modal>;
-}
-
-export function PaymentDialog({ invoiceNumber, currency, error, pending, remainingAmount, onCancel, onSubmit }: { invoiceNumber: string; currency: "USD" | "SYP"; error?: unknown; pending: boolean; remainingAmount: string; onCancel: () => void; onSubmit: (payload: PaymentPayload) => void }) {
-  const [amount, setAmount] = useState(""); const [paymentDate, setPaymentDate] = useState(""); const [notes, setNotes] = useState(""); const [validation, setValidation] = useState("");
-  const c = paymentCopy(useAuthStore((state) => state.user?.language_preference ?? "EN"));
-  return <Modal open title={c.title} onClose={onCancel} pending={pending}><form className="clinical-notes-form payment-form" onSubmit={(e) => { e.preventDefault(); if (!validAmount(amount)) return setValidation(c.invalid); setValidation(""); onSubmit({ amount, currency, payment_date: paymentDate ? new Date(paymentDate).toISOString() : undefined, notes }); }}><div className="payment-context"><span>{c.invoice}<strong dir="ltr">{invoiceNumber}</strong></span><span>{c.balance}<strong dir="ltr">{remainingAmount} {currency}</strong></span></div><button className="button secondary pay-remaining-button" type="button" disabled={pending} onClick={() => { setAmount(remainingAmount); setValidation(""); }}>{c.payRemaining}</button><label>{c.amount}<input required inputMode="decimal" aria-invalid={Boolean(validation)} aria-describedby={validation ? "payment-amount-error" : undefined} value={amount} onChange={(e) => { setAmount(e.target.value); setValidation(""); }} /></label><label>{c.currency}<input value={currency} readOnly dir="ltr" /></label><label>{c.date}<input type="datetime-local" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label><label>{c.notes}<textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>{validation ? <p id="payment-amount-error" className="field-error" role="alert">{validation}</p> : null}{error ? <ErrorState error={error} title={c.unavailable} /> : null}<div className="form-actions"><button className="button secondary" type="button" disabled={pending} onClick={onCancel}>{c.cancel}</button><button className="button primary" disabled={pending}>{pending ? "…" : c.submit}</button></div></form></Modal>;
+  return <Modal open title="Record payment & issue invoice" description="The invoice is the immutable receipt for this payment." onClose={onCancel} pending={pending}>
+    <form className="clinical-notes-form payment-form" onSubmit={(event) => {
+      event.preventDefault();
+      if (!validAmount(amount) || Number(amount) > Number(handoff.remaining_amount)) {
+        setValidation("Enter a positive amount no greater than the remaining balance.");
+        return;
+      }
+      setValidation("");
+      onSubmit({ amount, issued_at: paymentDate ? new Date(paymentDate).toISOString() : undefined, notes });
+    }}>
+      <dl className="payment-context payment-context-grid">
+        <div><dt>Patient</dt><dd>{handoff.patient.full_name}</dd></div>
+        <div><dt>Treatment</dt><dd>{handoff.description}</dd></div>
+        <div><dt>Bill total</dt><dd dir="ltr">{formatMoney(handoff.total_amount, handoff.currency)}</dd></div>
+        <div><dt>Paid</dt><dd dir="ltr">{formatMoney(handoff.paid_amount, handoff.currency)}</dd></div>
+        <div><dt>Remaining</dt><dd dir="ltr">{formatMoney(handoff.remaining_amount, handoff.currency)}</dd></div>
+        <div><dt>Currency</dt><dd dir="ltr">{handoff.currency}</dd></div>
+      </dl>
+      <button className="button secondary pay-remaining-button" type="button" disabled={pending} onClick={() => { setAmount(handoff.remaining_amount); setValidation(""); }}>Pay remaining balance</button>
+      <label>Payment amount<input required inputMode="decimal" aria-invalid={Boolean(validation)} value={amount} onChange={(event) => { setAmount(event.target.value); setValidation(""); }} /></label>
+      <label>Payment date <span>(optional)</span><input type="datetime-local" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label>
+      <label>Notes <span>(optional)</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
+      {validation ? <p className="field-error" role="alert">{validation}</p> : null}
+      {error ? <ErrorState error={error} title="Payment was not recorded" /> : null}
+      <div className="form-actions"><button className="button secondary" type="button" disabled={pending} onClick={onCancel}>Cancel</button><button className="button primary" disabled={pending}>{pending ? "Issuing…" : "Record payment & issue invoice"}</button></div>
+    </form>
+  </Modal>;
 }

@@ -65,8 +65,8 @@ def start_visit_from_appointment(*, appointment: Appointment, user):
 
 
 def complete_visit(*, visit: Visit, user, expected_updated_at, notes: dict, billing: dict, request=None):
-    from apps.billing.models import BillingHandoff, Invoice
-    from apps.billing.services import BillingRuleError, create_visit_completion_invoice
+    from apps.billing.models import BillingHandoff
+    from apps.billing.services import BillingRuleError, create_visit_completion_handoff
 
     with transaction.atomic():
         visit = Visit.objects.select_for_update().select_related("appointment").get(pk=visit.pk)
@@ -84,7 +84,7 @@ def complete_visit(*, visit: Visit, user, expected_updated_at, notes: dict, bill
                 "This visit was updated elsewhere. Refresh before completing it.",
                 status_code=status.HTTP_409_CONFLICT,
             )
-        if BillingHandoff.objects.select_for_update().filter(visit=visit).exists() or Invoice.objects.select_for_update().filter(visit=visit).exists():
+        if BillingHandoff.objects.select_for_update().filter(visit=visit).exists():
             raise VisitRuleError(
                 "VISIT_BILLING_EXISTS",
                 "Billing already exists for this visit.",
@@ -104,7 +104,7 @@ def complete_visit(*, visit: Visit, user, expected_updated_at, notes: dict, bill
         appointment.updated_by = user
         appointment.save(update_fields=["status", "updated_by", "updated_at"])
         try:
-            invoice, handoff = create_visit_completion_invoice(visit=visit, user=user, data=billing)
+            handoff = create_visit_completion_handoff(visit=visit, user=user, data=billing)
         except BillingRuleError as exc:
             raise VisitRuleError(exc.code, exc.message, exc.details, exc.status_code) from exc
         audit_metadata = {
@@ -112,7 +112,7 @@ def complete_visit(*, visit: Visit, user, expected_updated_at, notes: dict, bill
             "appointment_id": visit.appointment_id,
             "patient_id": visit.patient_id,
             "doctor_id": visit.doctor_id,
-            "invoice_id": invoice.id,
+            "billing_handoff_id": handoff.id,
         }
         log_activity(
             request=request,
@@ -126,17 +126,17 @@ def complete_visit(*, visit: Visit, user, expected_updated_at, notes: dict, bill
         log_activity(
             request=request,
             actor=user,
-            action="invoice_created",
-            entity_type="invoice",
-            entity_id=invoice.id,
+            action="billing_handoff_created",
+            entity_type="billing_handoff",
+            entity_id=handoff.id,
             metadata={
                 **audit_metadata,
-                "billing_handoff_id": handoff.id,
-                "origin": invoice.origin,
+                "status": handoff.status,
+                "origin": handoff.origin,
             },
             raise_on_error=True,
         )
-        return visit, invoice, handoff
+        return visit, handoff
 
 
 def update_clinical_notes(*, visit: Visit, data: dict, user):

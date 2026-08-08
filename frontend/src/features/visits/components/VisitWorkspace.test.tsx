@@ -19,7 +19,7 @@ vi.mock("../../patients/hooks/usePatient", () => ({
 vi.mock("../../xrays/components/ActiveVisitXrayWorkspace", () => ({ ActiveVisitXrayWorkspace: () => <p>Attachment panel</p> }));
 vi.mock("../../billing/components/VisitBillingSection", () => ({
   VisitBillingSection: ({ draft, errors, onDraftChange }: { draft: Record<string, string>; errors: Record<string, string>; onDraftChange: (key: string, value: string) => void }) => <div>
-    <label htmlFor="billing-description">Treatment / invoice description</label><input id="billing-description" value={draft.description} aria-invalid={Boolean(errors.description)} onChange={(event) => onDraftChange("description", event.target.value)} />{errors.description ? <span role="alert">{errors.description}</span> : null}
+    <label htmlFor="billing-description">Treatment / bill description</label><input id="billing-description" value={draft.description} aria-invalid={Boolean(errors.description)} onChange={(event) => onDraftChange("description", event.target.value)} />{errors.description ? <span role="alert">{errors.description}</span> : null}
     <label htmlFor="billing-amount">Total treatment charge</label><input id="billing-amount" value={draft.amount} aria-invalid={Boolean(errors.amount)} onChange={(event) => onDraftChange("amount", event.target.value)} />{errors.amount ? <span role="alert">{errors.amount}</span> : null}
     <label htmlFor="billing-currency">Currency</label><select id="billing-currency" value={draft.currency} aria-invalid={Boolean(errors.currency)} onChange={(event) => onDraftChange("currency", event.target.value)}><option value="">Select currency</option><option value="SYP">SYP</option><option value="USD">USD</option></select>{errors.currency ? <span role="alert">{errors.currency}</span> : null}
     <label htmlFor="billing-note">Billing note</label><textarea id="billing-note" value={draft.note} onChange={(event) => onDraftChange("note", event.target.value)} />
@@ -43,7 +43,7 @@ function setUser(role: "DOCTOR" | "STAFF" | "ADMIN", language_preference: "EN" |
 }
 function openBilling() { fireEvent.click(screen.getByRole("tab", { name: "Billing" })); }
 function fillBilling(amount = "250.00") {
-  fireEvent.change(screen.getByLabelText("Treatment / invoice description"), { target: { value: "Restorative dental treatment" } });
+  fireEvent.change(screen.getByLabelText("Treatment / bill description"), { target: { value: "Restorative dental treatment" } });
   fireEvent.change(screen.getByLabelText("Total treatment charge"), { target: { value: amount } });
   fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "SYP" } });
   fireEvent.change(screen.getByLabelText("Billing note"), { target: { value: "Collect at reception" } });
@@ -56,7 +56,7 @@ describe("VisitWorkspace", () => {
     mutationState.update.mockReset();
     mutationState.update.mockResolvedValue(visit);
     mutationState.complete.mockReset();
-    mutationState.complete.mockResolvedValue({ visit: { ...visit, status: "COMPLETED", completed_at: "2026-07-26T10:00:00Z" }, created_invoice: { id: 8, invoice_number: "INV-20260726-000008", status: "UNPAID", description: "Restorative dental treatment", origin: "VISIT_COMPLETION", total_amount: "250.00", paid_amount: "0.00", remaining_amount: "250.00", currency: "SYP" }, billing_provenance: { id: 5, status: "CONVERTED_TO_INVOICE" } });
+    mutationState.complete.mockResolvedValue({ visit: { ...visit, status: "COMPLETED", completed_at: "2026-07-26T10:00:00Z" }, created_handoff: { id: 5, status: "OPEN", description: "Restorative dental treatment", total_amount: "250.00", paid_amount: "0.00", remaining_amount: "250.00", invoice_count: 0, currency: "SYP" } });
   });
 
   it("uses one accessible three-tab workspace with the action bar after the active panel", () => {
@@ -82,7 +82,7 @@ describe("VisitWorkspace", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Visit Notes" }));
     expect(screen.getByLabelText("Objective Notes")).toHaveValue("Unsaved tab-safe note");
     openBilling();
-    expect(screen.getByLabelText("Treatment / invoice description")).toHaveValue("Restorative dental treatment");
+    expect(screen.getByLabelText("Treatment / bill description")).toHaveValue("Restorative dental treatment");
     expect(screen.getByLabelText("Total treatment charge")).toHaveValue("250.00");
     expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
   });
@@ -91,7 +91,7 @@ describe("VisitWorkspace", () => {
     renderWorkspace();
     fireEvent.click(screen.getByRole("button", { name: "Complete Visit" }));
     expect(screen.getByRole("tab", { name: "Billing" })).toHaveAttribute("aria-selected", "true");
-    await waitFor(() => expect(screen.getByLabelText("Treatment / invoice description")).toHaveFocus());
+    await waitFor(() => expect(screen.getByLabelText("Treatment / bill description")).toHaveFocus());
     expect(screen.getByText("Complete the billing details before completing the visit.")).toBeInTheDocument();
     expect(mutationState.complete).not.toHaveBeenCalled();
     fillBilling("0");
@@ -100,23 +100,24 @@ describe("VisitWorkspace", () => {
     expect(mutationState.complete).not.toHaveBeenCalled();
   });
 
-  it("summarizes billing and creates the final invoice through one coordinated mutation", async () => {
+  it("summarizes billing and creates one OPEN Handoff with zero invoices", async () => {
     renderWorkspace();
     fireEvent.change(screen.getByLabelText("Objective Notes"), { target: { value: "Atomic note" } });
     openBilling();
     fillBilling();
     fireEvent.click(screen.getByRole("button", { name: "Complete Visit" }));
     expect(screen.getByRole("dialog", { name: "Complete this visit?" })).toBeInTheDocument();
-    expect(screen.getByText("The visit and appointment will be completed, and an unpaid invoice will be created immediately.")).toBeInTheDocument();
+    expect(screen.getByText("The visit and appointment will be completed, and one OPEN Handoff bill with zero invoices will be created.")).toBeInTheDocument();
     expect(screen.getByText("Restorative dental treatment")).toBeInTheDocument();
     expect(screen.getByText("250.00")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Complete Visit and Create Invoice" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete Visit and Create Bill" }));
     await waitFor(() => expect(mutationState.complete).toHaveBeenCalledTimes(1));
     expect(mutationState.complete).toHaveBeenCalledWith({ version: visit.updated_at, notes: expect.objectContaining({ clinical_notes: "Atomic note" }), billing: { description: "Restorative dental treatment", total_amount: "250.00", currency: "SYP", note: "Collect at reception" } });
     expect(mutationState.update).not.toHaveBeenCalled();
-    expect(await screen.findByText("Visit completed and the invoice was created immediately.")).toBeInTheDocument();
-    expect(screen.getByText("INV-20260726-000008")).toBeInTheDocument();
-    expect(screen.getByText("UNPAID")).toBeInTheDocument();
+    expect(await screen.findByText("Visit completed and the OPEN Handoff bill was created with zero invoices.")).toBeInTheDocument();
+    expect(screen.getByText("#5")).toBeInTheDocument();
+    expect(screen.getByText("OPEN")).toBeInTheDocument();
+    expect(screen.getByText("Invoices").parentElement).toHaveTextContent("0");
     expect(screen.queryByRole("button", { name: /payment/i })).not.toBeInTheDocument();
   });
 

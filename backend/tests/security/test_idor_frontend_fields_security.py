@@ -50,7 +50,11 @@ def test_cross_doctor_direct_object_ids_are_hidden(
         patient=other_patient,
         visit=completed_visit,
         doctor=other_doctor_user,
-        status=BillingHandoff.Status.PENDING,
+        description="Secure treatment",
+        total_amount="100.00",
+        currency="SYP",
+        status=BillingHandoff.Status.OPEN,
+        origin=BillingHandoff.Origin.VISIT_COMPLETION,
         created_by=other_doctor_user,
         updated_by=other_doctor_user,
     )
@@ -93,7 +97,7 @@ def test_frontend_controlled_fields_are_rejected_or_overridden(
     patient_factory,
     appointment_factory,
     active_visit,
-    invoice_factory,
+    billing_handoff_factory,
 ):
     spoofed_patient = staff_client.post(
         "/api/patients/",
@@ -192,13 +196,13 @@ def test_frontend_controlled_fields_are_rejected_or_overridden(
     assert external.attached_patient_id is None
     assert doctor_client.patch(f"/api/external-xrays/{external.id}/", {"status": ExternalXrayCase.Status.DISCARDED}, format="json").status_code == 405
 
-    invoice = invoice_factory()
-    invoice_patch = staff_client.patch(
-        f"/api/invoices/{invoice.id}/",
-        {"status": Invoice.Status.PAID, "paid_amount": "100.00", "remaining_amount": "0.00"},
+    handoff = billing_handoff_factory()
+    handoff_patch = staff_client.patch(
+        f"/api/billing-handoffs/{handoff.id}/",
+        {"status": BillingHandoff.Status.PAID, "paid_amount": "100.00", "remaining_amount": "0.00", "patient_id": patient_factory(national_id_or_passport="SPOOF-BILL").id},
         format="json",
     )
-    assert invoice_patch.status_code == 400
-    invoice.refresh_from_db()
-    assert invoice.status == Invoice.Status.UNPAID
-    assert invoice.paid_amount == 0
+    assert handoff_patch.status_code == 400
+    handoff.refresh_from_db()
+    assert handoff.status == BillingHandoff.Status.OPEN
+    assert handoff.paid_amount == 0

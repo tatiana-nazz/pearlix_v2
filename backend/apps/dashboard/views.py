@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from apps.billing.models import Invoice, Payment
+from apps.billing.models import BillingHandoff, Invoice
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
 from apps.scheduling.models import Appointment
@@ -68,28 +68,29 @@ def _billing_activity(clinic_date, clinic_timezone):
     first_day, start, end = _clinic_window(clinic_date, clinic_timezone, 30)
     activity = {
         (first_day + timedelta(days=offset)).isoformat(): {
-            currency: {"invoiced": "0.00", "collected": "0.00"}
-            for currency, _ in Invoice.Currency.choices
+            currency: {"billed": "0.00", "collected": "0.00"}
+            for currency, _ in BillingHandoff.Currency.choices
         }
         for offset in range(30)
     }
-    invoice_rows = (
-        Invoice.objects.filter(created_at__gte=start, created_at__lt=end)
-        .exclude(status=Invoice.Status.CANCELLED)
+    handoff_rows = (
+        BillingHandoff.objects.filter(created_at__gte=start, created_at__lt=end)
+        .exclude(status=BillingHandoff.Status.CANCELLED)
         .annotate(day=TruncDate("created_at", tzinfo=clinic_timezone))
         .values("day", "currency")
         .annotate(total=Sum("total_amount"))
     )
-    payment_rows = (
-        Payment.objects.filter(payment_date__gte=start, payment_date__lt=end)
-        .annotate(day=TruncDate("payment_date", tzinfo=clinic_timezone))
-        .values("day", "currency")
+    invoice_rows = (
+        Invoice.objects.filter(issued_at__gte=start, issued_at__lt=end)
+        .annotate(day=TruncDate("issued_at", tzinfo=clinic_timezone))
+        .values("day", "billing_handoff__currency")
         .annotate(total=Sum("amount"))
     )
+    for row in handoff_rows:
+        activity[row["day"].isoformat()][row["currency"]]["billed"] = _decimal_string(row["total"])
     for row in invoice_rows:
-        activity[row["day"].isoformat()][row["currency"]]["invoiced"] = _decimal_string(row["total"])
-    for row in payment_rows:
-        activity[row["day"].isoformat()][row["currency"]]["collected"] = _decimal_string(row["total"])
+        currency = row["billing_handoff__currency"]
+        activity[row["day"].isoformat()][currency]["collected"] = _decimal_string(row["total"])
     return [{"date": day, **values} for day, values in activity.items()]
 
 
@@ -127,20 +128,32 @@ def _visit_summary(visit):
     }
 
 
-def _invoice_summary(invoice):
-    paid_amount = getattr(invoice, "dashboard_paid_amount", None) or Decimal("0.00")
-    remaining_amount = max(invoice.total_amount - paid_amount, Decimal("0.00"))
+def _handoff_summary(handoff):
+    paid_amount = getattr(handoff, "dashboard_paid_amount", None) or Decimal("0.00")
+    remaining_amount = max(handoff.total_amount - paid_amount, Decimal("0.00"))
     return {
-        "id": invoice.id,
-        "invoice_number": invoice.invoice_number,
-        "patient": _patient_summary(invoice.patient),
-        "currency": invoice.currency,
-        "total_amount": invoice.total_amount,
+        "id": handoff.id,
+        "patient": _patient_summary(handoff.patient),
+        "description": handoff.description,
+        "currency": handoff.currency,
+        "total_amount": handoff.total_amount,
         "paid_amount": paid_amount,
         "remaining_amount": remaining_amount,
-        "status": invoice.status,
-        "created_at": invoice.created_at,
+        "status": handoff.status,
+        "created_at": handoff.created_at,
     }
+
+
+def _collected_by_currency(start, end):
+    totals = {choice: Decimal("0.00") for choice, _ in BillingHandoff.Currency.choices}
+    rows = (
+        Invoice.objects.filter(issued_at__gte=start, issued_at__lt=end)
+        .values("billing_handoff__currency")
+        .annotate(total=Sum("amount"))
+    )
+    for row in rows:
+        totals[row["billing_handoff__currency"]] = row["total"] or Decimal("0.00")
+    return totals
 
 
 @api_view(["GET"])
@@ -158,9 +171,9 @@ def admin_dashboard(request):
         .filter(start_datetime__gte=today_start, start_datetime__lt=tomorrow_start)
         .order_by("start_datetime", "id")
     )
-    recent_invoices = (
-        Invoice.objects.select_related("patient")
-        .annotate(dashboard_paid_amount=Sum("payments__amount"))
+    recent_handoffs = (
+        BillingHandoff.objects.select_related("patient")
+        .annotate(dashboard_paid_amount=Sum("invoices__amount"))
         .order_by("-created_at", "-id")[:6]
     )
     return Response(
@@ -171,17 +184,17 @@ def admin_dashboard(request):
             "checked_in_appointments_count": today_appointments.filter(status=Appointment.Status.CHECKED_IN).count(),
             "needs_reschedule_appointments_count": Appointment.objects.filter(status=Appointment.Status.NEEDS_RESCHEDULE).count(),
             "active_visits_count": Visit.objects.filter(status=Visit.Status.ACTIVE).count(),
-            "open_invoices_count": Invoice.objects.filter(
-                status__in=[Invoice.Status.UNPAID, Invoice.Status.PARTIALLY_PAID]
-            ).count(),
+            "open_bills_count": BillingHandoff.objects.filter(status=BillingHandoff.Status.OPEN).count(),
+            "partially_paid_bills_count": BillingHandoff.objects.filter(status=BillingHandoff.Status.PARTIALLY_PAID).count(),
             "today_invoices_count": Invoice.objects.filter(
-                created_at__gte=today_start,
-                created_at__lt=tomorrow_start,
+                issued_at__gte=today_start,
+                issued_at__lt=tomorrow_start,
             ).count(),
+            "collected_today": _collected_by_currency(today_start, tomorrow_start),
             "today_appointments": [_appointment_summary(item) for item in today_appointments[:7]],
             "appointment_status_last_7_days": _appointment_status_activity(today, clinic_timezone),
             "billing_activity_last_30_days": _billing_activity(today, clinic_timezone),
-            "recent_invoices": [_invoice_summary(item) for item in recent_invoices],
+            "recent_handoffs": [_handoff_summary(item) for item in recent_handoffs],
         }
     )
 
@@ -202,10 +215,10 @@ def staff_dashboard(request):
         .order_by("start_datetime", "id")
     )
     needs_reschedule_count = Appointment.objects.filter(status=Appointment.Status.NEEDS_RESCHEDULE).count()
-    due_invoices = (
-        Invoice.objects.select_related("patient")
-        .filter(status__in=[Invoice.Status.UNPAID, Invoice.Status.PARTIALLY_PAID])
-        .annotate(dashboard_paid_amount=Sum("payments__amount"))
+    due_handoffs = (
+        BillingHandoff.objects.select_related("patient")
+        .filter(status__in=[BillingHandoff.Status.OPEN, BillingHandoff.Status.PARTIALLY_PAID])
+        .annotate(dashboard_paid_amount=Sum("invoices__amount"))
         .order_by("-created_at", "-id")[:6]
     )
     return Response(
@@ -215,11 +228,15 @@ def staff_dashboard(request):
             "today_appointments_count": today_appointments.count(),
             "patients_ready_count": today_appointments.filter(status=Appointment.Status.CHECKED_IN).count(),
             "needs_reschedule_count": needs_reschedule_count,
-            "open_invoices_count": Invoice.objects.filter(
-                status__in=[Invoice.Status.UNPAID, Invoice.Status.PARTIALLY_PAID]
+            "open_bills_count": BillingHandoff.objects.filter(status=BillingHandoff.Status.OPEN).count(),
+            "partially_paid_bills_count": BillingHandoff.objects.filter(status=BillingHandoff.Status.PARTIALLY_PAID).count(),
+            "today_invoices_count": Invoice.objects.filter(
+                issued_at__gte=today_start,
+                issued_at__lt=tomorrow_start,
             ).count(),
+            "collected_today": _collected_by_currency(today_start, tomorrow_start),
             "today_appointments": [_appointment_summary(item) for item in today_appointments[:12]],
-            "open_invoices": [_invoice_summary(item) for item in due_invoices],
+            "open_handoffs": [_handoff_summary(item) for item in due_handoffs],
         }
     )
 

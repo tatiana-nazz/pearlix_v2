@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import { dashboardApi } from "../../api/endpoints/dashboard";
 import { useAuthStore } from "../../auth/authStore";
-import { AttentionList, DashboardAppointmentList, DashboardEmpty, DashboardError, DashboardHeader, DashboardInvoiceList, DashboardLoading, DashboardMetric, DashboardMetrics, DashboardSection } from "./DashboardShared";
+import { AttentionList, DashboardAppointmentList, DashboardEmpty, DashboardError, DashboardHandoffList, DashboardHeader, DashboardLoading, DashboardMetric, DashboardMetrics, DashboardSection } from "./DashboardShared";
 import { dashboardCopy } from "./i18n";
 
 export function StaffDashboard() {
@@ -18,20 +18,22 @@ export function StaffDashboard() {
   const dayPath = `/staff/appointments/day?date=${data.clinic_date}`;
   return <main className="dashboard-v2 dashboard-v2-staff" data-role="STAFF">
     <DashboardHeader language={language} clinicDate={data.clinic_date} clinicTimezone={data.clinic_timezone} title={c.staffTitle} description={c.staffDescription} actions={<><Link className="v2-button" to="/staff/appointments/day">{c.newAppointment}</Link><Link className="v2-button secondary" to="/staff/patients/new">{c.newPatient}</Link></>} />
-    <DashboardMetrics>
+    <DashboardMetrics count={5}>
       <DashboardMetric tone="blue" icon={<CalendarDays size={21} />} label={c.todaysAppointments} value={data.today_appointments_count} to={dayPath} />
       <DashboardMetric tone="teal" icon={<CalendarCheck2 size={21} />} label={c.patientsReady} value={data.patients_ready_count} to={`${dayPath}&status=CHECKED_IN`} />
       <DashboardMetric tone="orange" icon={<CircleAlert size={21} />} label={c.needsReschedule} value={data.needs_reschedule_count} to="/staff/appointments/needs-reschedule" />
-      <DashboardMetric tone="amber" icon={<ReceiptText size={21} />} label={c.openInvoices} value={data.open_invoices_count} to="/staff/billing/invoices" />
+      <DashboardMetric tone="amber" icon={<ReceiptText size={21} />} label={c.openBills} value={data.open_bills_count} to="/staff/billing/handoffs?status=OPEN" />
+      <DashboardMetric tone="violet" icon={<ReceiptText size={21} />} label={c.todaysInvoices} value={data.today_invoices_count} to={`/staff/billing/invoices?date_from=${data.clinic_date}&date_to=${data.clinic_date}`} />
     </DashboardMetrics>
     <div className="dashboard-v2-operational-grid">
       <DashboardSection title={c.todaysQueue} action={<Link to={dayPath}>{c.viewDay}</Link>} className="dashboard-v2-queue"><DashboardAppointmentList language={language} clinicTimezone={data.clinic_timezone} items={data.today_appointments} empty={c.noAppointmentsToday} role="STAFF" showDoctor /></DashboardSection>
       <DashboardSection title={c.attentionRequired}><AttentionList empty={c.noUrgentIssues} items={[
         { label: c.patientsReady, count: data.patients_ready_count, to: `${dayPath}&status=CHECKED_IN`, tone: "info" },
         { label: c.needsReschedule, count: data.needs_reschedule_count, to: "/staff/appointments/needs-reschedule", tone: "warning" },
-        { label: c.openInvoices, count: data.open_invoices_count, to: "/staff/billing/invoices", tone: "info" },
+        { label: c.openBills, count: data.open_bills_count, to: "/staff/billing/handoffs?status=OPEN", tone: "info" },
+        { label: c.partiallyPaidBills, count: data.partially_paid_bills_count, to: "/staff/billing/handoffs?status=PARTIALLY_PAID", tone: "info" },
       ]} /></DashboardSection>
     </div>
-    <DashboardSection title={c.openInvoicesFollowUp} action={<Link to="/staff/billing/overview">{c.viewBilling}</Link>}><DashboardInvoiceList language={language} items={data.open_invoices} role="STAFF" empty={c.noOpenInvoices} /></DashboardSection>
+    <DashboardSection title={c.billsFollowUp} action={<Link to="/staff/billing/overview">{c.viewBilling}</Link>}><DashboardHandoffList language={language} items={data.open_handoffs} role="STAFF" empty={c.noOpenBills} /></DashboardSection>
   </main>;
 }

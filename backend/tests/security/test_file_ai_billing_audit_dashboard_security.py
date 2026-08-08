@@ -4,7 +4,7 @@ from apps.ai_results.serializers import AI_DISCLAIMER_EN
 from apps.ai_results.services import MOCK_MODEL_VERSION
 from apps.audit.models import ActivityLog
 from apps.audit.services import log_activity
-from apps.billing.models import BillingHandoff, Invoice, Payment
+from apps.billing.models import BillingHandoff, Invoice
 from apps.visits.models import Visit
 
 
@@ -88,7 +88,6 @@ def test_ai_runs_are_stubbed_disclaimed_and_do_not_mutate_clinical_or_billing_st
     assert appointment.status == "ACTIVE"
     assert BillingHandoff.objects.count() == 0
     assert Invoice.objects.count() == 0
-    assert Payment.objects.count() == 0
 
 
 @pytest.mark.django_db
@@ -96,40 +95,25 @@ def test_billing_security_blocks_privilege_escalation_and_enforces_backend_total
     admin_client,
     staff_client,
     doctor_client,
-    invoice_factory,
+    billing_handoff_factory,
 ):
-    invoice = invoice_factory(total_amount="100.00", currency=Invoice.Currency.SYP)
-
-    assert doctor_client.get(f"/api/invoices/{invoice.id}/").status_code == 403
-    assert doctor_client.post(f"/api/invoices/{invoice.id}/payments/", {"amount": "10.00", "currency": "SYP"}, format="json").status_code == 403
-    assert admin_client.patch(f"/api/invoices/{invoice.id}/", {"notes": "Blocked"}, format="json").status_code == 403
-    assert admin_client.post(f"/api/invoices/{invoice.id}/cancel/").status_code == 403
-    assert admin_client.post(f"/api/invoices/{invoice.id}/payments/", {"amount": "10.00", "currency": "SYP"}, format="json").status_code == 403
-
-    spoofed_totals = staff_client.patch(
-        f"/api/invoices/{invoice.id}/",
-        {"paid_amount": "100.00", "remaining_amount": "0.00", "status": Invoice.Status.PAID},
-        format="json",
-    )
-    mismatch = staff_client.post(f"/api/invoices/{invoice.id}/payments/", {"amount": "10.00", "currency": "USD"}, format="json")
-    partial = staff_client.post(f"/api/invoices/{invoice.id}/payments/", {"amount": "40.00", "currency": "SYP"}, format="json")
-    overpay = staff_client.post(f"/api/invoices/{invoice.id}/payments/", {"amount": "70.00", "currency": "SYP"}, format="json")
-
-    assert spoofed_totals.status_code == 400
-    assert mismatch.status_code == 400
-    assert mismatch.data["code"] == "PAYMENT_CURRENCY_MISMATCH"
+    handoff = billing_handoff_factory(total_amount="100.00", currency="SYP")
+    assert doctor_client.post(f"/api/billing-handoffs/{handoff.id}/invoices/", {"amount": "10.00"}, format="json").status_code == 403
+    assert admin_client.post(f"/api/billing-handoffs/{handoff.id}/invoices/", {"amount": "10.00"}, format="json").status_code == 403
+    spoofed_context = staff_client.post(f"/api/billing-handoffs/{handoff.id}/invoices/", {"amount": "10.00", "patient_id": handoff.patient_id, "currency": "USD"}, format="json")
+    assert spoofed_context.status_code == 400
+    partial = staff_client.post(f"/api/billing-handoffs/{handoff.id}/invoices/", {"amount": "40.00"}, format="json")
+    overpay = staff_client.post(f"/api/billing-handoffs/{handoff.id}/invoices/", {"amount": "70.00"}, format="json")
     assert partial.status_code == 201
-    assert partial.data["invoice"]["paid_amount"] == "40.00"
-    assert partial.data["invoice"]["remaining_amount"] == "60.00"
-    assert partial.data["invoice"]["status"] == Invoice.Status.PARTIALLY_PAID
+    assert partial.data["handoff"]["paid_amount"] == "40.00"
+    assert partial.data["handoff"]["remaining_amount"] == "60.00"
+    assert partial.data["handoff"]["status"] == BillingHandoff.Status.PARTIALLY_PAID
     assert overpay.status_code == 400
     assert overpay.data["code"] == "OVERPAYMENT_NOT_ALLOWED"
-
-    cancelled = invoice_factory(invoice_number="INV-SEC-CANCELLED-000001", total_amount="30.00")
-    assert staff_client.post(f"/api/invoices/{cancelled.id}/cancel/").status_code == 200
-    locked_payment = staff_client.post(f"/api/invoices/{cancelled.id}/payments/", {"amount": "10.00", "currency": "SYP"}, format="json")
+    cancelled = billing_handoff_factory(total_amount="30.00")
+    assert staff_client.post(f"/api/billing-handoffs/{cancelled.id}/cancel/").status_code == 200
+    locked_payment = staff_client.post(f"/api/billing-handoffs/{cancelled.id}/invoices/", {"amount": "10.00"}, format="json")
     assert locked_payment.status_code == 409
-    assert locked_payment.data["code"] == "INVOICE_CANCELLED"
 
 
 @pytest.mark.django_db
@@ -168,6 +152,7 @@ def test_doctor_dashboard_does_not_leak_global_billing_notes_or_file_paths(
     patient_factory,
     appointment_factory,
     visit_factory,
+    billing_handoff_factory,
     invoice_factory,
 ):
     patient = patient_factory(full_name="Dashboard Security Patient", phone="0901000005")
@@ -178,7 +163,8 @@ def test_doctor_dashboard_does_not_leak_global_billing_notes_or_file_paths(
         clinical_notes="Sensitive dashboard clinical note",
         diagnosis="Sensitive dashboard diagnosis",
     )
-    invoice_factory(patient=patient, invoice_number="INV-DASH-SEC-000001")
+    bill = billing_handoff_factory(patient=patient)
+    invoice_factory(billing_handoff=bill, invoice_number="INV-DASH-SEC-000001")
 
     response = doctor_client.get("/api/dashboard/doctor/")
 

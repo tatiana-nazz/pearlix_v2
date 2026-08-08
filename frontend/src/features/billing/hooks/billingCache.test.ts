@@ -20,8 +20,8 @@ describe("invalidateBillingQueries", () => {
     });
 
     expect(calls).toEqual(expect.arrayContaining([
-      ["billing-handoffs"], ["invoices"], ["invoice-summary"], ["dashboard"],
-      ["invoice", 9], ["invoice-payments", 9], ["invoice-print-data", 9],
+      ["billing-handoffs"], ["handoff-summary"], ["invoices"], ["invoice-summary"], ["dashboard"],
+      ["invoice", 9], ["invoice-print-data", 9],
       ["billing-handoff", 10], ["patient", 11], ["patient", 11, "billing"],
       ["visit", 12], ["appointments", 13], ["active-visit"], ["appointments"],
     ]));

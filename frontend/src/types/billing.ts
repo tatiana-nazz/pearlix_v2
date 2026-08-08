@@ -5,9 +5,8 @@ import type { AppointmentStatus } from "./appointments";
 import type { PatientList } from "./patients";
 import type { VisitStatus } from "./visits";
 
-export type BillingHandoffStatus = "PENDING" | "CONVERTED_TO_INVOICE" | "DISMISSED";
-export type InvoiceStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
-export type InvoiceOrigin = "MANUAL" | "VISIT_COMPLETION" | "LEGACY_HANDOFF";
+export type BillingHandoffStatus = "OPEN" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
+export type BillingHandoffOrigin = "VISIT_COMPLETION" | "MANUAL" | "LEGACY_MIGRATED";
 
 export interface BillingVisitSummary {
   id: number;
@@ -24,121 +23,87 @@ export interface BillingVisitSummary {
   };
 }
 
-export interface InvoiceSummary {
+export interface Invoice extends Timestamped {
   id: number;
   invoice_number: string;
+  billing_handoff_id: number;
+  patient: PatientList;
   description: string;
-  origin: InvoiceOrigin;
+  amount: string;
   currency: Currency;
-  total_amount: string;
-  paid_amount: string;
-  remaining_amount: string;
-  status: InvoiceStatus;
+  issued_at: string;
+  notes: string;
+  created_by: UserSummary | null;
 }
 
 export interface BillingHandoff extends Timestamped {
   id: number;
   patient: PatientList;
-  visit: BillingVisitSummary;
-  doctor: UserSummary;
+  visit: BillingVisitSummary | null;
+  doctor: UserSummary | null;
   description: string;
+  total_amount: string;
+  paid_amount: string;
+  remaining_amount: string;
+  invoice_count: number;
+  currency: Currency;
   note: string;
-  suggested_amount: string | null;
-  currency: Currency | null;
   status: BillingHandoffStatus;
-  converted_invoice: InvoiceSummary | null;
-  dismissed_reason: string;
+  origin: BillingHandoffOrigin;
+  legacy_reference: string;
+  cancelled_at: string | null;
+  cancelled_reason: string;
+  invoices: Invoice[];
   created_by: UserSummary | null;
   updated_by: UserSummary | null;
 }
 
-export interface BillingHandoffCreatePayload {
-  description?: string;
-  note?: string;
-  suggested_amount?: string | null;
-  currency?: Currency | null;
-}
-
-export interface HandoffConversionPayload {
-  description?: string;
-  total_amount?: string;
-  currency?: Currency;
-  notes?: string;
-}
-
-export interface Invoice extends Timestamped {
-  id: number;
-  invoice_number: string;
-  patient: PatientList;
-  appointment: {
-    id: number;
-    start_datetime: string;
-    end_datetime: string;
-    duration_minutes: number;
-    status: AppointmentStatus;
-    reason: string;
-  } | null;
-  visit: BillingVisitSummary | null;
-  billing_handoff: number | null;
-  created_by: UserSummary | null;
-  origin: InvoiceOrigin;
+export interface BillingHandoffPayload {
+  patient_id: number;
   description: string;
-  currency: Currency;
   total_amount: string;
-  paid_amount: string;
-  remaining_amount: string;
-  payment_count: number;
-  notes: string;
-  status: InvoiceStatus;
-  cancelled_at: string | null;
-  cancelled_reason: string;
-  payments: Payment[];
+  currency: Currency;
+  note?: string;
 }
 
-export interface InvoicePayload {
-  patient_id?: number;
-  visit_id?: number | null;
-  appointment_id?: number | null;
+export interface BillingHandoffUpdatePayload {
   description?: string;
   total_amount?: string;
   currency?: Currency;
+  note?: string;
+}
+
+export interface InvoiceIssuePayload {
+  amount: string;
+  issued_at?: string;
   notes?: string;
 }
 
-export interface Payment extends Timestamped {
-  id: number;
-  invoice: number;
-  amount: string;
-  currency: Currency;
-  payment_date: string;
-  notes: string;
-  created_by: UserSummary | null;
+export interface HandoffInvoiceResponse {
+  invoice: Invoice;
+  handoff: BillingHandoff;
 }
 
-export interface PaymentPayload {
-  amount: string;
-  currency: Currency;
-  payment_date?: string;
-  notes?: string;
-}
-
-export interface PaymentResponse {
-  payment: Payment;
-  invoice: InvoiceSummary;
-}
-
-export interface InvoiceCurrencyTotals {
-  invoiced: string;
+export interface HandoffCurrencyTotals {
+  bill_total: string;
   paid: string;
   outstanding: string;
+}
+
+export interface HandoffFinancialSummary {
+  clinic_date: string;
+  clinic_timezone: string;
+  status_counts: Record<BillingHandoffStatus, number>;
+  open_count: number;
+  partially_paid_count: number;
+  paid_count: number;
+  cancelled_count: number;
+  currency_totals: Record<Currency, HandoffCurrencyTotals>;
 }
 
 export interface InvoiceFinancialSummary {
   clinic_date: string;
   clinic_timezone: string;
   invoice_count: number;
-  status_counts: Record<InvoiceStatus, number>;
-  open_invoice_count: number;
-  currency_totals: Record<Currency, InvoiceCurrencyTotals>;
-  payments_collected_in_period: Record<Currency, string>;
+  collected_by_currency: Record<Currency, string>;
 }

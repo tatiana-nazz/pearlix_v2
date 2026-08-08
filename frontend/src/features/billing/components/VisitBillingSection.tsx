@@ -8,7 +8,6 @@ import { LoadingState } from "../../../components/LoadingState";
 import { SectionHeader } from "../../../components/SectionHeader";
 import { StatusPill } from "../../../components/StatusPill";
 import type { UserRole } from "../../../types/auth";
-import type { BillingHandoff } from "../../../types/billing";
 import type { Currency } from "../../../types/clinic";
 import type { VisitDetail } from "../../../types/visits";
 import { visitCopy } from "../../visits/i18n";
@@ -41,7 +40,6 @@ export function VisitBillingSection({
   const c = visitCopy(user?.language_preference);
   const handoffs = useHandoffs({ visit_id: visit.id });
   const existing = handoffs.data?.results[0];
-  const invoice = existing?.converted_invoice;
   const canEditDraft = role === "DOCTOR" && user?.id === visit.doctor.id && visit.status === "ACTIVE" && !existing;
 
   useEffect(() => {
@@ -60,22 +58,17 @@ export function VisitBillingSection({
 
     {!handoffs.isLoading && !handoffs.error && existing ? <div className="active-visit-billing-summary">
       <dl className="active-visit-billing-details">
-        <div><dt>{invoice ? c.invoiceStatus : c.handoffStatus}</dt><dd><StatusPill status={invoice?.status ?? existing.status} /></dd></div>
-        <div><dt>{c.treatmentDescription}</dt><dd>{displayBillingText((existing as BillingHandoff & { description?: string }).description)}</dd></div>
-        <div><dt>{c.totalTreatmentCharge}</dt><dd dir="ltr">{existing.suggested_amount && existing.currency ? formatMoney(existing.suggested_amount, existing.currency) : c.notRecorded}</dd></div>
-        <div><dt>{c.currency}</dt><dd dir="ltr">{existing.currency ?? c.notRecorded}</dd></div>
+        <div><dt>{c.handoffStatus}</dt><dd><StatusPill status={existing.status} /></dd></div>
+        <div><dt>{c.treatmentDescription}</dt><dd>{displayBillingText(existing.description)}</dd></div>
+        <div><dt>{c.totalTreatmentCharge}</dt><dd dir="ltr">{formatMoney(existing.total_amount, existing.currency)}</dd></div>
+        <div><dt>{c.paid}</dt><dd dir="ltr">{formatMoney(existing.paid_amount, existing.currency)}</dd></div>
+        <div><dt>{c.balance}</dt><dd dir="ltr">{formatMoney(existing.remaining_amount, existing.currency)}</dd></div>
+        <div><dt>Invoices</dt><dd>{existing.invoice_count}</dd></div>
+        <div><dt>{c.currency}</dt><dd dir="ltr">{existing.currency}</dd></div>
         <div className="detail-wide"><dt>{c.billingNote}</dt><dd>{displayBillingText(existing.note)}</dd></div>
         <div><dt>{c.created}</dt><dd dir="ltr">{displayBillingDateTime(existing.created_at)}</dd></div>
         <div><dt>{c.updated}</dt><dd dir="ltr">{displayBillingDateTime(existing.updated_at)}</dd></div>
       </dl>
-      {invoice ? <div className="active-visit-invoice-summary"><h4>{c.invoiceSummary}</h4><dl className="active-visit-billing-details">
-        <div><dt>{c.invoiceStatus}</dt><dd><StatusPill status={invoice.status} /></dd></div>
-        <div><dt>{c.invoiceReference}</dt><dd dir="ltr">{invoice.invoice_number}</dd></div>
-        <div><dt>{c.total}</dt><dd dir="ltr">{formatMoney(invoice.total_amount, invoice.currency)}</dd></div>
-        <div><dt>{c.paid}</dt><dd dir="ltr">{formatMoney(invoice.paid_amount, invoice.currency)}</dd></div>
-        <div><dt>{c.balance}</dt><dd dir="ltr">{formatMoney(invoice.remaining_amount, invoice.currency)}</dd></div>
-        <div><dt>{c.currency}</dt><dd dir="ltr">{invoice.currency}</dd></div>
-      </dl></div> : null}
     </div> : null}
 
     {!handoffs.isLoading && !handoffs.error && !existing ? <form className="active-visit-billing-form" onSubmit={(event) => event.preventDefault()}>

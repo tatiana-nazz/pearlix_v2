@@ -118,8 +118,8 @@ Badges are required for operational statuses. Use short text and a quiet tint:
 
 - Appointment: `UPCOMING`, `CHECKED_IN`, `ACTIVE`, `COMPLETED`, `CANCELLED`, `NO_SHOW`, `NEEDS_RESCHEDULE`
 - Visit: `ACTIVE`, `COMPLETED`
-- Invoice: `UNPAID`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`
-- Handoff: `PENDING`, `CONVERTED_TO_INVOICE`, `DISMISSED`
+- Invoice: issued payment receipt; display receipt language rather than debt status
+- Handoff/Bill: `OPEN`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`
 - AI: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`
 
 `NEEDS_RESCHEDULE`, conflicts, and validation warnings should use warning styling, not danger styling unless data is lost or action failed.

@@ -2,82 +2,59 @@ from decimal import Decimal
 
 import pytest
 
-from apps.billing.models import Invoice
+from apps.billing.models import BillingHandoff
 
 
 @pytest.mark.django_db
-def test_patient_filter_and_summary_are_scoped_to_exact_patient(
-    staff_client,
-    patient,
-    patient_factory,
-    invoice_factory,
+def test_patient_filters_scope_handoffs_and_receipt_invoices_to_exact_patient(
+    staff_client, patient, patient_factory, billing_handoff_factory, invoice_factory
 ):
-    other_patient = patient_factory(first_name="Other", last_name="Patient")
-    first = invoice_factory(patient=patient, description="Patient one treatment", total_amount="125.00")
-    invoice_factory(patient=other_patient, invoice_number="INV-OTHER-000001", description="Other treatment", total_amount="900.00")
+    other = patient_factory(first_name="Other", last_name="Patient", national_id_or_passport="BILL-OTHER")
+    target_bill = billing_handoff_factory(patient=patient, total_amount="125.00", currency="USD", description="Patient one treatment")
+    target_invoice = invoice_factory(billing_handoff=target_bill, amount="25.00")
+    other_bill = billing_handoff_factory(patient=other, total_amount="900.00")
+    invoice_factory(billing_handoff=other_bill, invoice_number="INV-OTHER-000001")
 
-    list_response = staff_client.get(f"/api/invoices/?patient_id={patient.id}")
-    summary_response = staff_client.get(f"/api/invoices/summary/?patient_id={patient.id}")
+    bills = staff_client.get(f"/api/billing-handoffs/?patient_id={patient.id}")
+    bill_summary = staff_client.get(f"/api/billing-handoffs/summary/?patient_id={patient.id}")
+    invoices = staff_client.get(f"/api/invoices/?patient_id={patient.id}")
+    invoice_summary = staff_client.get(f"/api/invoices/summary/?patient_id={patient.id}")
 
-    assert list_response.status_code == 200
-    assert [item["id"] for item in list_response.data["results"]] == [first.id]
-    assert list_response.data["results"][0]["description"] == "Patient one treatment"
-    assert summary_response.status_code == 200
-    assert summary_response.data["invoice_count"] == 1
-    assert summary_response.data["open_invoice_count"] == 1
-    assert summary_response.data["currency_totals"]["SYP"]["outstanding"] == Decimal("125.00")
-
-
-@pytest.mark.django_db
-def test_payment_transitions_and_non_financial_edit_policy(staff_client, invoice_factory):
-    invoice = invoice_factory(description="Original service", total_amount="100.00", currency=Invoice.Currency.USD)
-    partial = staff_client.post(
-        f"/api/invoices/{invoice.id}/payments/",
-        {"amount": "40.00", "currency": "USD", "notes": "Deposit"},
-        format="json",
-    )
-    assert partial.status_code == 201
-    assert partial.data["invoice"]["status"] == Invoice.Status.PARTIALLY_PAID
-
-    financial_edit = staff_client.patch(f"/api/invoices/{invoice.id}/", {"total_amount": "110.00"}, format="json")
-    description_edit = staff_client.patch(
-        f"/api/invoices/{invoice.id}/",
-        {"description": "Updated service description", "notes": "Updated note"},
-        format="json",
-    )
-    assert financial_edit.status_code == 409
-    assert description_edit.status_code == 200
-    assert description_edit.data["description"] == "Updated service description"
-
-    final = staff_client.post(
-        f"/api/invoices/{invoice.id}/payments/",
-        {"amount": "60.00", "currency": "USD"},
-        format="json",
-    )
-    assert final.status_code == 201
-    assert final.data["invoice"]["status"] == Invoice.Status.PAID
-    assert final.data["invoice"]["remaining_amount"] == "0.00"
+    assert [item["id"] for item in bills.data["results"]] == [target_bill.id]
+    assert bill_summary.data["currency_totals"]["USD"]["outstanding"] == Decimal("100.00")
+    assert [item["id"] for item in invoices.data["results"]] == [target_invoice.id]
+    assert invoice_summary.data["invoice_count"] == 1
+    assert invoice_summary.data["collected_by_currency"]["USD"] == Decimal("25.00")
 
 
 @pytest.mark.django_db
-def test_print_data_has_description_patient_source_and_financial_record(
-    staff_client,
-    invoice_factory,
-    completed_visit,
-):
-    invoice = invoice_factory(
+def test_cross_patient_invoice_association_is_impossible_by_derivation(billing_handoff_factory, invoice_factory, patient_factory):
+    bill = billing_handoff_factory()
+    receipt = invoice_factory(billing_handoff=bill)
+    other = patient_factory(first_name="Cross", last_name="Patient", national_id_or_passport="CROSS-PATIENT")
+    assert receipt.patient_id == bill.patient_id
+    assert receipt.patient_id != other.id
+    assert not hasattr(receipt, "patient_id") or receipt.patient_id == receipt.billing_handoff.patient_id
+    assert BillingHandoff.objects.filter(pk=bill.pk, patient=bill.patient).exists()
+
+
+@pytest.mark.django_db
+def test_print_data_contains_one_payment_and_current_bill_context(staff_client, billing_handoff_factory, invoice_factory, completed_visit):
+    bill = billing_handoff_factory(
         patient=completed_visit.patient,
         visit=completed_visit,
-        appointment=completed_visit.appointment,
+        doctor=completed_visit.doctor,
         description="Completed visit treatment",
         total_amount="75.00",
+        origin=BillingHandoff.Origin.VISIT_COMPLETION,
     )
-    response = staff_client.get(f"/api/invoices/{invoice.id}/print-data/")
+    receipt = invoice_factory(billing_handoff=bill, amount="25.00")
+    response = staff_client.get(f"/api/invoices/{receipt.id}/print-data/")
     assert response.status_code == 200
-    assert response.data["description"] == "Completed visit treatment"
+    assert response.data["invoice"]["amount"] == Decimal("25.00")
     assert response.data["patient"]["id"] == completed_visit.patient_id
     assert response.data["visit"]["id"] == completed_visit.id
     assert response.data["appointment"]["id"] == completed_visit.appointment_id
-    assert response.data["total_amount"] == Decimal("75.00")
-    assert response.data["paid_amount"] == Decimal("0.00")
-    assert response.data["remaining_amount"] == Decimal("75.00")
+    assert response.data["handoff"]["total_amount"] == Decimal("75.00")
+    assert response.data["handoff"]["paid_amount"] == Decimal("25.00")
+    assert response.data["handoff"]["remaining_amount"] == Decimal("50.00")

@@ -1,5 +1,4 @@
 import type { Page, QueryParams } from "../../types/api";
-import type { BillingHandoff, BillingHandoffCreatePayload } from "../../types/billing";
 import type { ClinicalNotesPayload, VisitCompletionPayload, VisitCompletionResponse, VisitDetail } from "../../types/visits";
 import type { XrayAttachment } from "../../types/xrays";
 import { api } from "../http";
@@ -13,6 +12,4 @@ export const visitsApi = {
   updateClinicalNotes: (id: number, payload: ClinicalNotesPayload) =>
     api.patch<VisitDetail, ClinicalNotesPayload>(`/visits/${id}/clinical-notes/`, payload),
   uploadXray: (id: number, formData: FormData) => api.postFormData<XrayAttachment>(`/visits/${id}/xrays/`, formData),
-  createBillingHandoff: (id: number, payload: BillingHandoffCreatePayload) =>
-    api.post<BillingHandoff, BillingHandoffCreatePayload>(`/visits/${id}/billing-handoff/`, payload),
 };

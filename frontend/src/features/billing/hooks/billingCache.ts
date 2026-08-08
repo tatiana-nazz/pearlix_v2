@@ -12,6 +12,7 @@ export interface BillingInvalidationContext {
 export async function invalidateBillingQueries(queryClient: QueryClient, context: BillingInvalidationContext = {}) {
   const invalidations = [
     queryClient.invalidateQueries({ queryKey: ["billing-handoffs"] }),
+    queryClient.invalidateQueries({ queryKey: ["handoff-summary"] }),
     queryClient.invalidateQueries({ queryKey: ["invoices"] }),
     queryClient.invalidateQueries({ queryKey: ["invoice-summary"] }),
     queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
@@ -20,7 +21,6 @@ export async function invalidateBillingQueries(queryClient: QueryClient, context
   if (context.invoiceId) {
     invalidations.push(
       queryClient.invalidateQueries({ queryKey: ["invoice", context.invoiceId] }),
-      queryClient.invalidateQueries({ queryKey: ["invoice-payments", context.invoiceId] }),
       queryClient.invalidateQueries({ queryKey: ["invoice-print-data", context.invoiceId] }),
     );
   }

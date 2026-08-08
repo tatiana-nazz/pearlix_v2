@@ -188,32 +188,16 @@ def test_important_actions_create_safe_audit_logs(
         },
         format="json",
     )
-    invoice = completion.data["created_invoice"]
-    staff_client.post(f"/api/invoices/{invoice['id']}/payments/", {"amount": "90.00", "currency": "SYP"}, format="json")
+    visit_handoff = completion.data["created_handoff"]
+    staff_client.post(f"/api/billing-handoffs/{visit_handoff['id']}/invoices/", {"amount": "90.00"}, format="json")
 
-    patient = Patient.objects.get(id=patient_id)
-    second_appointment = appointment_factory(
-        patient=patient,
-        doctor=doctor_user,
-        status=Appointment.Status.COMPLETED,
-        start_datetime=future_at(13),
-        end_datetime=future_at(13) + timedelta(minutes=30),
-    )
-    second_visit = visit_factory(appointment=second_appointment, status=Visit.Status.COMPLETED)
-    dismissed_handoff = doctor_client.post(
-        f"/api/visits/{second_visit.id}/billing-handoff/",
-        {"suggested_amount": "20.00", "currency": "SYP"},
+    direct_handoff = staff_client.post(
+        "/api/billing-handoffs/",
+        {"patient_id": patient_id, "description": "Direct audit bill", "total_amount": "30.00", "currency": "SYP"},
         format="json",
     )
-    staff_client.post(f"/api/billing-handoffs/{dismissed_handoff.data['id']}/dismiss/")
-
-    direct_invoice = staff_client.post(
-        "/api/invoices/",
-        {"patient_id": patient_id, "description": "Direct audit invoice", "total_amount": "30.00", "currency": "SYP"},
-        format="json",
-    )
-    staff_client.patch(f"/api/invoices/{direct_invoice.data['id']}/", {"notes": "invoice note update"}, format="json")
-    staff_client.post(f"/api/invoices/{direct_invoice.data['id']}/cancel/")
+    staff_client.patch(f"/api/billing-handoffs/{direct_handoff.data['id']}/", {"note": "bill note update"}, format="json")
+    staff_client.post(f"/api/billing-handoffs/{direct_handoff.data['id']}/cancel/", {"cancelled_reason": "Audit cancellation"}, format="json")
 
     external = doctor_client.post("/api/external-xrays/", {"file": upload_file("external.png")}, format="multipart")
     doctor_client.post(f"/api/external-xrays/{external.data['id']}/run-ai/")
@@ -244,11 +228,9 @@ def test_important_actions_create_safe_audit_logs(
         "external_xray_discarded",
         "external_xray_attached_to_patient",
         "billing_handoff_created",
-        "billing_handoff_dismissed",
-        "invoice_created",
-        "invoice_updated",
-        "invoice_cancelled",
-        "payment_recorded",
+        "billing_handoff_updated",
+        "billing_handoff_cancelled",
+        "invoice_issued",
     }
     assert expected.issubset(actions)
 

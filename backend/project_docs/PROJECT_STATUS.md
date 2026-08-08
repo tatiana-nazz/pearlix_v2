@@ -3,7 +3,7 @@
 **Authority marker:** `CURRENT_CANONICAL_PROJECT_STATUS`
 Read [`../../CODEX_START_HERE.md`](../../CODEX_START_HERE.md) before using this tracker. Authority reconciliation is documentation governance only; it changes no runtime behavior. The reconciled v2 runtime lineage continues from `e54a858`. Phase 14F was implemented but rejected at direct user acceptance; Phase 14F.1 corrects it from starting commit `2f7070fca7fbf84d3c2578285416b5ae5f52453b` while preserving current runtime authority. The rejected pre-v2 preview (`preview-pre-v2-ui`, `bdd5f6f`) is not an implementation source. Team and Users & Access remain separate; active Doctors have all-active/non-archived patient access as summarized in `CURRENT_BACKEND_DECISIONS.md`.
 
-This is the canonical current-phase tracker. Other project documents describe capabilities and defer current/next-phase status to this file. Phase 14F.2 closes Staff Team read-only access, Staff/Admin Billing information architecture, profile schedule/leave semantics, appointment toolbar and period summaries, Team/patient/account directory presentation, shared status semantics, and responsive overflow without migrations.
+This is the canonical current-phase tracker. Other project documents describe capabilities and defer current/next-phase status to this file. Stage 7 is the current financial authority and supersedes the Stage 6 debt-Invoice hierarchy: Handoff is the Bill, Invoice is one completed payment receipt, and one Handoff has zero or many Invoices.
 
 Project: Dental Clinic Management System Website
 
@@ -11,13 +11,17 @@ Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace c
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current phase: 14F.4 Active Visit, Patient Rail, Month Status, and Inline X-ray Workspace — delivered
+- Current phase: Stage 7 Handoff Bill and Invoice Ledger — delivered
 - Phase 13 series: complete
 - Next phase: no phase is implicitly authorized; use a new approved scope
-- Next step: preserve the Phase 14F.4 closure and current runtime/RBAC contracts
-- Final backend full regression: 425 passed
+- Next step: preserve Stage 7 financial semantics, the Phase 14F.4 clinical closure, and current runtime/RBAC contracts
+- Final backend full regression: 422 passed
 - Final frontend regression: 155 passed in 50 files
 - Final browser regression: 17 serial Phase 14D/14F/14F.2/14F.3/14F.4 Chromium scenarios passed, including 3 new role and responsive clinical-workspace scenarios
+- Stage 7 backend/model change: `BillingHandoff` is the Bill with computed paid/remaining/Invoice count and canonical statuses; `Invoice` is one Handoff-linked receipt; legacy `Payment` runtime/model is removed through a preserving migration.
+- Stage 7 visit change: Doctor completion atomically creates one OPEN Handoff and zero Invoices; Staff payment issues an Invoice and recomputes Handoff status.
+- Stage 7 frontend change: Billing uses Overview/Handoffs/Invoices, Handoff Detail is the Bill workspace, Invoice screens are receipt history, Patient Billing is Handoff-first, and standalone New Invoice is redirected to New Bill.
+- Stage 7 verification: migration preservation, seed safety/idempotency, focused suites, full backend/frontend suites, production build, and nine independent focused Chromium scenarios are green.
 - Phase 14F.4 production backend behavior changes: none; only the DEBUG-only seed command and tests changed
 - Phase 14F.4 API/model/migration changes: none
 - Phase 14F.4 frontend closure: semantic Month status items, sticky Patient Profile identity rail, static Active Visit patient/visit summary, exact four tabs, and inline selected-X-ray upload/existing AI-run/overlay/result workspace

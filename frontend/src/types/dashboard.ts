@@ -38,15 +38,15 @@ export interface DashboardVisitSummary {
   completed_at: string | null;
 }
 
-export interface DashboardInvoiceSummary {
+export interface DashboardHandoffSummary {
   id: number;
-  invoice_number: string;
   patient: DashboardPatientSummary;
+  description: string;
   currency: Currency;
   total_amount: string | number;
   paid_amount: string | number;
   remaining_amount: string | number;
-  status: "UNPAID" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
+  status: "OPEN" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
   created_at: string;
 }
 
@@ -54,8 +54,8 @@ export type DashboardAppointmentStatusCounts = Record<AppointmentStatus, number>
 
 export interface DashboardBillingActivityDay {
   date: string;
-  SYP: { invoiced: string; collected: string };
-  USD: { invoiced: string; collected: string };
+  SYP: { billed: string; collected: string };
+  USD: { billed: string; collected: string };
 }
 
 export interface AdminDashboardResponse {
@@ -65,12 +65,14 @@ export interface AdminDashboardResponse {
   checked_in_appointments_count: number;
   needs_reschedule_appointments_count: number;
   active_visits_count: number;
-  open_invoices_count: number;
+  open_bills_count: number;
+  partially_paid_bills_count: number;
   today_invoices_count: number;
+  collected_today: Record<Currency, string>;
   today_appointments: DashboardAppointmentSummary[];
   appointment_status_last_7_days: DashboardAppointmentStatusCounts;
   billing_activity_last_30_days: DashboardBillingActivityDay[];
-  recent_invoices: DashboardInvoiceSummary[];
+  recent_handoffs: DashboardHandoffSummary[];
 }
 
 export interface StaffDashboardResponse {
@@ -79,9 +81,12 @@ export interface StaffDashboardResponse {
   today_appointments_count: number;
   patients_ready_count: number;
   needs_reschedule_count: number;
-  open_invoices_count: number;
+  open_bills_count: number;
+  partially_paid_bills_count: number;
+  today_invoices_count: number;
+  collected_today: Record<Currency, string>;
   today_appointments: DashboardAppointmentSummary[];
-  open_invoices: DashboardInvoiceSummary[];
+  open_handoffs: DashboardHandoffSummary[];
 }
 
 export interface DoctorDashboardResponse {
