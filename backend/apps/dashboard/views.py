@@ -1,4 +1,8 @@
-from django.db.models import Q
+from datetime import datetime, time, timedelta
+from decimal import Decimal
+
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 from zoneinfo import ZoneInfo
 from rest_framework.decorators import api_view, permission_classes
@@ -6,11 +10,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from apps.billing.models import BillingHandoff, Invoice
+from apps.billing.models import BillingHandoff, Invoice, Payment
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
-from apps.patients.models import Patient
-from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
+from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
 
 
@@ -26,8 +29,68 @@ def _role_required(request, role):
 
 def _clinic_context():
     settings = ClinicSettings.get_solo()
-    now = timezone.localtime(timezone.now(), ZoneInfo(settings.timezone))
-    return settings, now
+    clinic_timezone = ZoneInfo(settings.timezone)
+    now = timezone.localtime(timezone.now(), clinic_timezone)
+    return settings, clinic_timezone, now
+
+
+def _local_day_bounds(day, clinic_timezone):
+    start = timezone.make_aware(datetime.combine(day, time.min), clinic_timezone)
+    end = timezone.make_aware(datetime.combine(day + timedelta(days=1), time.min), clinic_timezone)
+    return start, end
+
+
+def _clinic_window(clinic_date, clinic_timezone, days):
+    first_day = clinic_date - timedelta(days=days - 1)
+    start, _ = _local_day_bounds(first_day, clinic_timezone)
+    _, end = _local_day_bounds(clinic_date, clinic_timezone)
+    return first_day, start, end
+
+
+def _decimal_string(value):
+    return format(value or Decimal("0.00"), ".2f")
+
+
+def _appointment_status_activity(clinic_date, clinic_timezone):
+    _, start, end = _clinic_window(clinic_date, clinic_timezone, 7)
+    totals = {status: 0 for status, _ in Appointment.Status.choices}
+    rows = (
+        Appointment.objects.filter(start_datetime__gte=start, start_datetime__lt=end)
+        .values("status")
+        .annotate(total=Count("id"))
+    )
+    for row in rows:
+        totals[row["status"]] = row["total"]
+    return totals
+
+
+def _billing_activity(clinic_date, clinic_timezone):
+    first_day, start, end = _clinic_window(clinic_date, clinic_timezone, 30)
+    activity = {
+        (first_day + timedelta(days=offset)).isoformat(): {
+            currency: {"invoiced": "0.00", "collected": "0.00"}
+            for currency, _ in Invoice.Currency.choices
+        }
+        for offset in range(30)
+    }
+    invoice_rows = (
+        Invoice.objects.filter(created_at__gte=start, created_at__lt=end)
+        .exclude(status=Invoice.Status.CANCELLED)
+        .annotate(day=TruncDate("created_at", tzinfo=clinic_timezone))
+        .values("day", "currency")
+        .annotate(total=Sum("total_amount"))
+    )
+    payment_rows = (
+        Payment.objects.filter(payment_date__gte=start, payment_date__lt=end)
+        .annotate(day=TruncDate("payment_date", tzinfo=clinic_timezone))
+        .values("day", "currency")
+        .annotate(total=Sum("amount"))
+    )
+    for row in invoice_rows:
+        activity[row["day"].isoformat()][row["currency"]]["invoiced"] = _decimal_string(row["total"])
+    for row in payment_rows:
+        activity[row["day"].isoformat()][row["currency"]]["collected"] = _decimal_string(row["total"])
+    return [{"date": day, **values} for day, values in activity.items()]
 
 
 def _patient_summary(patient):
@@ -51,63 +114,30 @@ def _appointment_summary(appointment):
     }
 
 
-def _working_hour_summary(working_hour):
-    return {
-        "id": working_hour.id,
-        "weekday": working_hour.weekday,
-        "start_time": working_hour.start_time,
-        "end_time": working_hour.end_time,
-        "is_active": working_hour.is_active,
-    }
-
-
-def _availability_exception_summary(exception):
-    return {
-        "id": exception.id,
-        "doctor": _user_summary(exception.doctor) if exception.doctor_id else None,
-        "staff": _user_summary(exception.staff) if exception.staff_id else None,
-        "start_datetime": exception.start_datetime,
-        "end_datetime": exception.end_datetime,
-        "type": exception.type,
-        "reason": exception.reason,
-        "is_cancelled": exception.is_cancelled,
-        "cancelled_at": exception.cancelled_at,
-    }
-
-
 def _visit_summary(visit):
     return {
         "id": visit.id,
         "patient": _patient_summary(visit.patient),
         "appointment_id": visit.appointment_id,
+        "appointment_reason": visit.appointment.reason,
+        "appointment_start_datetime": visit.appointment.start_datetime,
         "status": visit.status,
         "started_at": visit.started_at,
         "completed_at": visit.completed_at,
     }
 
 
-def _handoff_summary(handoff):
-    return {
-        "id": handoff.id,
-        "patient": _patient_summary(handoff.patient),
-        "visit_id": handoff.visit_id,
-        "doctor": _user_summary(handoff.doctor),
-        "suggested_amount": handoff.suggested_amount,
-        "currency": handoff.currency,
-        "status": handoff.status,
-        "created_at": handoff.created_at,
-    }
-
-
 def _invoice_summary(invoice):
+    paid_amount = getattr(invoice, "dashboard_paid_amount", None) or Decimal("0.00")
+    remaining_amount = max(invoice.total_amount - paid_amount, Decimal("0.00"))
     return {
         "id": invoice.id,
         "invoice_number": invoice.invoice_number,
         "patient": _patient_summary(invoice.patient),
         "currency": invoice.currency,
         "total_amount": invoice.total_amount,
-        "paid_amount": invoice.paid_amount,
-        "remaining_amount": invoice.remaining_amount,
+        "paid_amount": paid_amount,
+        "remaining_amount": remaining_amount,
         "status": invoice.status,
         "created_at": invoice.created_at,
     }
@@ -120,22 +150,31 @@ def admin_dashboard(request):
     if denied:
         return denied
 
-    settings, now = _clinic_context()
+    settings, clinic_timezone, now = _clinic_context()
     today = now.date()
-    recent_appointments = Appointment.objects.select_related("patient", "doctor").order_by("-start_datetime", "-id")[:5]
-    recent_invoices = Invoice.objects.select_related("patient").order_by("-created_at", "-id")[:5]
+    today_start, tomorrow_start = _local_day_bounds(today, clinic_timezone)
+    today_appointments = (
+        Appointment.objects.select_related("patient", "doctor")
+        .filter(start_datetime__gte=today_start, start_datetime__lt=tomorrow_start)
+        .order_by("start_datetime", "id")
+    )
+    recent_invoices = (
+        Invoice.objects.select_related("patient")
+        .annotate(dashboard_paid_amount=Sum("payments__amount"))
+        .order_by("-created_at", "-id")[:6]
+    )
     return Response(
         {
             "clinic_date": today.isoformat(),
             "clinic_timezone": settings.timezone,
-            "total_active_patients": Patient.objects.filter(is_archived=False).count(),
-            "today_appointments_count": Appointment.objects.filter(start_datetime__date=today).count(),
-            "checked_in_appointments_count": Appointment.objects.filter(status=Appointment.Status.CHECKED_IN).count(),
+            "today_appointments_count": today_appointments.count(),
+            "checked_in_appointments_count": today_appointments.filter(status=Appointment.Status.CHECKED_IN).count(),
             "needs_reschedule_appointments_count": Appointment.objects.filter(status=Appointment.Status.NEEDS_RESCHEDULE).count(),
             "active_visits_count": Visit.objects.filter(status=Visit.Status.ACTIVE).count(),
             "pending_billing_handoffs_count": BillingHandoff.objects.filter(status=BillingHandoff.Status.PENDING).count(),
-            "unpaid_invoices_count": Invoice.objects.filter(status=Invoice.Status.UNPAID).count(),
-            "recent_appointments": [_appointment_summary(item) for item in recent_appointments],
+            "today_appointments": [_appointment_summary(item) for item in today_appointments[:7]],
+            "appointment_status_last_7_days": _appointment_status_activity(today, clinic_timezone),
+            "billing_activity_last_30_days": _billing_activity(today, clinic_timezone),
             "recent_invoices": [_invoice_summary(item) for item in recent_invoices],
         }
     )
@@ -148,39 +187,32 @@ def staff_dashboard(request):
     if denied:
         return denied
 
-    settings, now = _clinic_context()
+    settings, clinic_timezone, now = _clinic_context()
     today = now.date()
-    upcoming_today = Appointment.objects.select_related("patient", "doctor").filter(
-        start_datetime__date=today,
-        status=Appointment.Status.UPCOMING,
-    )[:10]
-    checked_in = Appointment.objects.select_related("patient", "doctor").filter(status=Appointment.Status.CHECKED_IN)[:10]
-    needs_reschedule = Appointment.objects.select_related("patient", "doctor").filter(status=Appointment.Status.NEEDS_RESCHEDULE)[:10]
-    pending_handoffs = BillingHandoff.objects.select_related("patient", "doctor", "visit").filter(status=BillingHandoff.Status.PENDING)[:10]
-    due_invoices = Invoice.objects.select_related("patient").filter(
-        status__in=[Invoice.Status.UNPAID, Invoice.Status.PARTIALLY_PAID]
-    )[:10]
-    recent_patients = Patient.objects.filter(is_archived=False).order_by("-created_at", "-id")[:10]
-    own_leave = AvailabilityException.objects.select_related("staff").filter(staff=request.user).order_by("-start_datetime", "-id")[:10]
-    doctor_unavailable = (
-        AvailabilityException.objects.select_related("doctor")
-        .filter(doctor__isnull=False, type=AvailabilityException.Type.UNAVAILABLE, is_cancelled=False)
-        .order_by("start_datetime", "id")[:25]
+    today_start, tomorrow_start = _local_day_bounds(today, clinic_timezone)
+    today_appointments = (
+        Appointment.objects.select_related("patient", "doctor")
+        .filter(start_datetime__gte=today_start, start_datetime__lt=tomorrow_start)
+        .order_by("start_datetime", "id")
+    )
+    needs_reschedule_count = Appointment.objects.filter(status=Appointment.Status.NEEDS_RESCHEDULE).count()
+    pending_billing_count = BillingHandoff.objects.filter(status=BillingHandoff.Status.PENDING).count()
+    due_invoices = (
+        Invoice.objects.select_related("patient")
+        .filter(status__in=[Invoice.Status.UNPAID, Invoice.Status.PARTIALLY_PAID])
+        .annotate(dashboard_paid_amount=Sum("payments__amount"))
+        .order_by("-created_at", "-id")[:6]
     )
     return Response(
         {
             "clinic_date": today.isoformat(),
             "clinic_timezone": settings.timezone,
-            "today_appointments_count": Appointment.objects.filter(start_datetime__date=today).count(),
-            "upcoming_today_appointments": [_appointment_summary(item) for item in upcoming_today],
-            "checked_in_appointments": [_appointment_summary(item) for item in checked_in],
-            "needs_reschedule_appointments": [_appointment_summary(item) for item in needs_reschedule],
-            "pending_billing_handoffs": [_handoff_summary(item) for item in pending_handoffs],
-            "unpaid_or_partially_paid_invoices": [_invoice_summary(item) for item in due_invoices],
-            "recent_patients": [_patient_summary(item) for item in recent_patients],
-            "own_working_schedule": [_working_hour_summary(item) for item in WorkingShift.objects.filter(employee=request.user).order_by("weekday", "start_time", "id")],
-            "own_availability_exceptions": [_availability_exception_summary(item) for item in own_leave],
-            "doctor_unavailable_exceptions": [_availability_exception_summary(item) for item in doctor_unavailable],
+            "today_appointments_count": today_appointments.count(),
+            "patients_ready_count": today_appointments.filter(status=Appointment.Status.CHECKED_IN).count(),
+            "needs_reschedule_count": needs_reschedule_count,
+            "pending_billing_count": pending_billing_count,
+            "today_appointments": [_appointment_summary(item) for item in today_appointments[:12]],
+            "open_invoices": [_invoice_summary(item) for item in due_invoices],
         }
     )
 
@@ -192,40 +224,34 @@ def doctor_dashboard(request):
     if denied:
         return denied
 
-    settings, now = _clinic_context()
+    settings, clinic_timezone, now = _clinic_context()
     today = now.date()
+    today_start, tomorrow_start = _local_day_bounds(today, clinic_timezone)
     own_appointments = Appointment.objects.select_related("patient", "doctor").filter(doctor=request.user)
+    today_appointments = own_appointments.filter(
+        start_datetime__gte=today_start,
+        start_datetime__lt=tomorrow_start,
+    ).order_by("start_datetime", "id")
     active_visit = (
         Visit.objects.select_related("patient", "appointment")
         .filter(doctor=request.user, status=Visit.Status.ACTIVE)
         .order_by("-started_at", "-id")
         .first()
     )
-    recent_visits = Visit.objects.select_related("patient", "appointment").filter(doctor=request.user).order_by("-started_at", "-id")[:10]
-    pending_handoffs = BillingHandoff.objects.select_related("patient", "doctor", "visit").filter(
-        doctor=request.user,
-        status=BillingHandoff.Status.PENDING,
-    )[:10]
-    own_working_schedule = WorkingShift.objects.filter(employee=request.user).order_by("weekday", "start_time", "id")
-    own_leave = AvailabilityException.objects.select_related("doctor").filter(doctor=request.user).order_by("-start_datetime", "-id")[:10]
     return Response(
         {
             "clinic_date": today.isoformat(),
             "clinic_timezone": settings.timezone,
-            "today_own_appointments": [_appointment_summary(item) for item in own_appointments.filter(start_datetime__date=today)[:10]],
-            "own_checked_in_appointments": [_appointment_summary(item) for item in own_appointments.filter(status=Appointment.Status.CHECKED_IN)[:10]],
-            "own_needs_reschedule_appointments": [
-                _appointment_summary(item) for item in own_appointments.filter(status=Appointment.Status.NEEDS_RESCHEDULE)[:10]
-            ],
+            "today_appointments_count": today_appointments.count(),
+            "patients_ready_count": today_appointments.filter(status=Appointment.Status.CHECKED_IN).count(),
+            "needs_reschedule_count": own_appointments.filter(status=Appointment.Status.NEEDS_RESCHEDULE).count(),
+            "today_appointments": [_appointment_summary(item) for item in today_appointments],
             "own_active_visit": _visit_summary(active_visit) if active_visit else None,
-            "own_completed_visits_today_count": Visit.objects.filter(
-                Q(completed_at__date=today),
+            "completed_today_count": Visit.objects.filter(
+                completed_at__gte=today_start,
+                completed_at__lt=tomorrow_start,
                 doctor=request.user,
                 status=Visit.Status.COMPLETED,
             ).count(),
-            "own_recent_visits": [_visit_summary(item) for item in recent_visits],
-            "own_pending_billing_handoffs": [_handoff_summary(item) for item in pending_handoffs],
-            "own_working_schedule": [_working_hour_summary(item) for item in own_working_schedule],
-            "own_availability_exceptions": [_availability_exception_summary(item) for item in own_leave],
         }
     )
