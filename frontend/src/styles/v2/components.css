@@ -560,12 +560,30 @@
 .appointment-month-cell.selected-day { outline: 3px solid color-mix(in srgb, var(--v2-primary) 18%, transparent); }
 .appointment-month-cell h3 .appointment-month-date { display: inline-grid; inline-size: 30px; block-size: 30px; place-items: center; border: 0; border-radius: 999px; padding: 0; background: transparent; color: var(--v2-text); font: inherit; font-weight: 800; }
 .appointment-month-cell.today h3 .appointment-month-date { background: var(--v2-primary); color: #fff; }
-.appointment-month-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 7px; inline-size: 100%; min-inline-size: 0; min-block-size: 52px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--appointment-status) 48%, var(--v2-border)); border-inline-start: 4px solid var(--appointment-status); border-radius: 10px; padding: 6px 7px; background: color-mix(in srgb, var(--appointment-status) 11%, var(--v2-surface)); color: var(--appointment-status); text-align: start; cursor: pointer; }
+.appointment-month-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; inline-size: 100%; min-inline-size: 0; min-block-size: 58px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--appointment-status) 48%, var(--v2-border)); border-inline-start: 4px solid var(--appointment-status); border-radius: 10px; padding: 6px 7px; background: color-mix(in srgb, var(--appointment-status) 11%, var(--v2-surface)); color: var(--appointment-status); text-align: start; cursor: pointer; }
 .appointment-month-item:hover,.appointment-month-item:focus-visible { border-color: var(--appointment-status); background: color-mix(in srgb, var(--appointment-status) 17%, var(--v2-surface)); outline: 2px solid color-mix(in srgb, var(--appointment-status) 30%, transparent); outline-offset: 1px; }
 .appointment-month-time { font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .appointment-month-patient { min-width: 0; overflow: hidden; color: var(--v2-text); font-size: 12px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
-.appointment-month-status { grid-column: 1 / -1; overflow: hidden; font-size: 10px; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.appointment-month-status { overflow: hidden; font-size: 10px; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .appointment-month-cell .appointment-month-more { inline-size: 100%; border: 0; padding: 5px 7px; background: transparent; color: var(--v2-primary); font-size: 11px; font-weight: 800; text-align: start; cursor: pointer; }
+
+/* Stage 2 appointment detail and calendar drilldown. */
+.appointment-detail-page { display: grid; width: 100%; max-width: 1100px; min-width: 0; gap: 16px; margin-inline: auto; }
+.appointment-detail-page > * { min-width: 0; }
+.appointment-detail-page > .page-header { margin-block-end: 0; }
+.appointment-detail-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+.appointment-detail-card,.appointment-detail-context { padding: 20px; }
+.appointment-detail-facts { gap: 12px; }
+.appointment-detail-facts div { min-width: 0; padding: 12px 14px; }
+.appointment-detail-facts dd { min-width: 0; overflow-wrap: anywhere; }
+.appointment-detail-facts dd small { display: block; margin-block-start: 4px; color: var(--v2-muted); font-size: 11px; }
+.appointment-detail-context { display: grid; gap: 12px; }
+.appointment-detail-context h2 { margin: 0; font-size: 17px; }
+.appointment-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 16px; }
+@media (max-width:767px) {
+  .appointment-detail-header-actions { justify-content: flex-start; }
+  .appointment-detail-actions > .v2-button { flex: 1 1 150px; }
+}
 
 /* Phase 14F.4B stationary desktop patient rail. */
 .patient-detail-surface { align-items: start; overflow: visible; }

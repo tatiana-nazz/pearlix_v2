@@ -4,9 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button, Modal, SurfaceCard } from "../../components/v2";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
-import { AppointmentConfirmDialog } from "../../features/appointments/components/AppointmentConfirmDialog";
 import { AppointmentDayView } from "../../features/appointments/components/AppointmentDayView";
-import { AppointmentDetailsDialog } from "../../features/appointments/components/AppointmentDetailsDialog";
 import { AppointmentFilters, type AppointmentStatusFilter } from "../../features/appointments/components/AppointmentFilters";
 import { AppointmentForm } from "../../features/appointments/components/AppointmentForm";
 import { AppointmentMonthView } from "../../features/appointments/components/AppointmentMonthView";
@@ -15,36 +13,24 @@ import { AppointmentTable } from "../../features/appointments/components/Appoint
 import { AppointmentViewTabs, AppointmentWorkspaceTabs } from "../../features/appointments/components/AppointmentViewTabs";
 import { AppointmentWeekView } from "../../features/appointments/components/AppointmentWeekView";
 import { NeedsRescheduleView } from "../../features/appointments/components/NeedsRescheduleView";
-import {
-  useCancelAppointment,
-  useCheckInAppointment,
-  useCreateAppointment,
-  useNoShowAppointment,
-  useStartAppointmentVisit,
-  useUpdateAppointment,
-} from "../../features/appointments/hooks/useAppointmentMutations";
+import { useCreateAppointment } from "../../features/appointments/hooks/useAppointmentMutations";
 import { useAppointments } from "../../features/appointments/hooks/useAppointments";
 import { useDoctors } from "../../features/appointments/hooks/useDoctors";
 import { addDays, addMonths, clinicToday, formatAppointmentDate, getWeekRange, isValidDateInput } from "../../features/appointments/utils/appointmentDates";
 import { buildAppointmentFilters } from "../../features/appointments/utils/appointmentFilters";
 import { getAppointmentPermissions } from "../../features/appointments/utils/appointmentPermissions";
-import { appointmentReschedulePath, appointmentViewPath } from "../../features/appointments/utils/appointmentPermissions";
+import { appointmentDetailPath, appointmentViewPath } from "../../features/appointments/utils/appointmentPermissions";
 import { appointmentCopy } from "../../features/appointments/i18n";
 import { useAuthStore } from "../../auth/authStore";
 import type { AppointmentListItem, AppointmentViewMode, CreateAppointmentPayload, UpdateAppointmentPayload } from "../../types/appointments";
 import type { UserRole } from "../../types/auth";
 
 interface AppointmentsPageProps { role: UserRole; view: AppointmentViewMode; }
-type StatusAction = "check-in" | "cancel" | "no-show" | "start-visit";
 const calendarViews: AppointmentViewMode[] = ["day", "week", "month", "list"];
 
 export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [formAppointment, setFormAppointment] = useState<AppointmentListItem | null>(null);
   const [isCreateOpen, setCreateOpen] = useState(false);
-  const [detailsAppointment, setDetailsAppointment] = useState<AppointmentListItem | null>(null);
-  const [actionAppointment, setActionAppointment] = useState<AppointmentListItem | null>(null);
-  const [action, setAction] = useState<StatusAction | null>(null);
   const navigate = useNavigate();
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = appointmentCopy(language);
@@ -68,11 +54,6 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   const appointments = useAppointments(filters);
   const doctors = useDoctors();
   const createAppointment = useCreateAppointment();
-  const updateAppointment = useUpdateAppointment(formAppointment?.id ?? 0);
-  const checkIn = useCheckInAppointment();
-  const cancel = useCancelAppointment();
-  const noShow = useNoShowAppointment();
-  const startVisit = useStartAppointmentVisit();
   const permissions = getAppointmentPermissions(role);
 
   function setParam(key: string, value: string) {
@@ -83,10 +64,18 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   }
 
   function openDay(day: string) {
-    const next = new URLSearchParams(searchParams);
+    const next = new URLSearchParams();
+    for (const key of ["doctor", "status", "search"] as const) {
+      const value = searchParams.get(key);
+      if (value) next.set(key, value);
+    }
     next.set("date", day);
     next.set("page", "1");
     navigate(`${appointmentViewPath(role, "day")}?${next.toString()}`);
+  }
+
+  function openAppointment(appointment: AppointmentListItem) {
+    navigate(appointmentDetailPath(role, appointment.id));
   }
 
   function shiftDate(direction: -1 | 1) {
@@ -99,33 +88,9 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
     setCreateOpen(false);
   }
 
-  async function submitUpdate(payload: CreateAppointmentPayload | UpdateAppointmentPayload) {
-    if (!formAppointment) return;
-    await updateAppointment.mutateAsync(payload as UpdateAppointmentPayload);
-    setFormAppointment(null);
-  }
-
-  function openStatusAction(appointment: AppointmentListItem, nextAction: StatusAction) {
-    setActionAppointment(appointment);
-    setAction(nextAction);
-    checkIn.reset(); cancel.reset(); noShow.reset(); startVisit.reset();
-  }
-
-  async function confirmStatusAction() {
-    if (!actionAppointment || !action) return;
-    if (action === "check-in") await checkIn.mutateAsync(actionAppointment.id);
-    if (action === "cancel") await cancel.mutateAsync(actionAppointment.id);
-    if (action === "no-show") await noShow.mutateAsync(actionAppointment.id);
-    if (action === "start-visit") { await startVisit.mutateAsync(actionAppointment.id); navigate("/doctor/visits/active"); }
-    setActionAppointment(null);
-    setAction(null);
-  }
-
   const rows = appointments.data?.results ?? [];
   const clinicTimezone = appointments.data?.clinic_timezone ?? timezone;
   const clinicDate = appointments.data?.clinic_date ?? clinicToday(clinicTimezone);
-  const currentMutationError = checkIn.error ?? cancel.error ?? noShow.error ?? startVisit.error;
-  const isActionSubmitting = checkIn.isPending || cancel.isPending || noShow.isPending || startVisit.isPending;
   const navigationLabel = view === "week"
     ? (() => { const range = getWeekRange(date); return `${formatAppointmentDate(range.start, language, clinicTimezone, { month: "short", day: "numeric" })} – ${formatAppointmentDate(range.end, language, clinicTimezone, { month: "short", day: "numeric", year: "numeric" })}`; })()
     : formatAppointmentDate(date, language, clinicTimezone, view === "month" ? { month: "long", year: "numeric" } : { dateStyle: "full" });
@@ -150,11 +115,11 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
           {appointments.isError ? <ErrorState error={appointments.error} onRetry={() => void appointments.refetch()} title={c.unavailable} /> : null}
           {appointments.data ? <>
             {appointments.isFetching ? <p className="panel-note" aria-live="polite">{c.refreshing}</p> : null}
-            {view === "day" ? <AppointmentDayView appointments={rows} timezone={clinicTimezone} onDetails={setDetailsAppointment} /> : null}
-            {view === "week" ? <AppointmentWeekView role={role} date={date} timezone={clinicTimezone} appointments={rows} onDetails={setDetailsAppointment} onDaySelect={openDay} /> : null}
-            {view === "month" ? <AppointmentMonthView date={date} timezone={clinicTimezone} appointments={rows} onDetails={setDetailsAppointment} onDaySelect={openDay} /> : null}
-            {view === "list" ? <AppointmentTable appointments={rows} timezone={clinicTimezone} onDetails={setDetailsAppointment} /> : null}
-            {view === "needs-reschedule" ? <NeedsRescheduleView appointments={rows} timezone={clinicTimezone} onDetails={setDetailsAppointment} /> : null}
+            {view === "day" ? <AppointmentDayView appointments={rows} timezone={clinicTimezone} onDetails={openAppointment} /> : null}
+            {view === "week" ? <AppointmentWeekView role={role} date={date} timezone={clinicTimezone} appointments={rows} onDetails={openAppointment} onDaySelect={openDay} /> : null}
+            {view === "month" ? <AppointmentMonthView date={date} timezone={clinicTimezone} appointments={rows} onDetails={openAppointment} onDaySelect={openDay} /> : null}
+            {view === "list" ? <AppointmentTable appointments={rows} timezone={clinicTimezone} onDetails={openAppointment} /> : null}
+            {view === "needs-reschedule" ? <NeedsRescheduleView appointments={rows} timezone={clinicTimezone} onDetails={openAppointment} /> : null}
             <div className="pagination-bar"><span>{appointments.data.count} {c.records}</span><div><button className="button secondary" type="button" disabled={!appointments.data.previous || page <= 1} onClick={() => setParam("page", String(page - 1))}>{c.previousPage}</button><span>{c.page} {page}</span><button className="button secondary" type="button" disabled={!appointments.data.next} onClick={() => setParam("page", String(page + 1))}>{c.nextPage}</button></div></div>
           </> : null}
         </SurfaceCard>
@@ -162,9 +127,6 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
       </div>
 
       {isCreateOpen ? <Modal open title={c.newAppointment} onClose={() => setCreateOpen(false)} wide><AppointmentForm mode="create" doctors={doctors.data ?? []} initialDate={date} initialDoctorId={Number(doctorId) || undefined} isSubmitting={createAppointment.isPending} error={createAppointment.error} onCancel={() => setCreateOpen(false)} onSubmit={submitCreate} /></Modal> : null}
-      {formAppointment ? <Modal open title={c.edit} onClose={() => setFormAppointment(null)} wide><AppointmentForm mode={formAppointment.status === "NEEDS_RESCHEDULE" ? "reschedule" : "edit"} doctors={doctors.data ?? []} appointment={formAppointment} isSubmitting={updateAppointment.isPending} error={updateAppointment.error} onCancel={() => setFormAppointment(null)} onSubmit={submitUpdate} /></Modal> : null}
-      <AppointmentDetailsDialog appointment={detailsAppointment} role={role} timezone={clinicTimezone} onClose={() => setDetailsAppointment(null)} onEdit={(appointment) => { setDetailsAppointment(null); setFormAppointment(appointment); }} onReschedule={(appointment) => navigate(appointmentReschedulePath(appointment.id))} onStatusAction={(appointment, nextAction) => { setDetailsAppointment(null); openStatusAction(appointment, nextAction); }} onStartVisit={(appointment) => { setDetailsAppointment(null); openStatusAction(appointment, "start-visit"); }} />
-      <AppointmentConfirmDialog appointment={actionAppointment} action={action} error={currentMutationError} isSubmitting={isActionSubmitting} onCancel={() => setActionAppointment(null)} onConfirm={() => void confirmStatusAction()} />
     </main>
   );
 }

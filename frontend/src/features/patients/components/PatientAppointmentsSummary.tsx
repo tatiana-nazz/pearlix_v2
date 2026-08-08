@@ -11,6 +11,9 @@ import type { AppointmentList } from "../../../types/appointments";
 import type { UserRole } from "../../../types/auth";
 import { formatDateRange } from "../../../utils/dates";
 import { displayText } from "../../../utils/formatters";
+import { useAuthStore } from "../../../auth/authStore";
+import { appointmentCopy } from "../../appointments/i18n";
+import { appointmentDetailPath } from "../../appointments/utils/appointmentPermissions";
 
 interface PatientAppointmentsSummaryProps {
   role: UserRole;
@@ -23,6 +26,8 @@ interface PatientAppointmentsSummaryProps {
 }
 
 export function PatientAppointmentsSummary({ role, appointments, isLoading, error, onRetry, title = "Appointments", description = "Read-only patient appointment summary. Scheduling actions remain in Phase 13F." }: PatientAppointmentsSummaryProps) {
+  const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
+  const c = appointmentCopy(language);
   if (isLoading) return <LoadingState title="Loading appointments..." />;
   if (error) return <ErrorState error={error} onRetry={onRetry} title="Unable to load appointments" />;
   const rows = appointments?.results ?? [];
@@ -41,8 +46,8 @@ export function PatientAppointmentsSummary({ role, appointments, isLoading, erro
               </div>
               <div className="row-actions">
                 <StatusPill status={appointment.status} />
-                <Link className="button secondary compact-button" to={`/${role.toLowerCase()}/appointments`}>
-                  Appointments
+                <Link className="button secondary compact-button" to={appointmentDetailPath(role, appointment.id)}>
+                  {c.openAppointment}
                 </Link>
               </div>
             </li>

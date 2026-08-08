@@ -28,7 +28,7 @@ export function AppointmentTable({ appointments, timezone, onDetails }: Appointm
         </thead>
         <tbody>
           {appointments.map((appointment) => (
-              <tr key={appointment.id} className={appointmentStatusClass("v2-clickable-row", appointment.status)} data-status={appointment.status} tabIndex={onDetails ? 0 : undefined} onClick={() => onDetails?.(appointment)} onKeyDown={(event) => { if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) { event.preventDefault(); onDetails?.(appointment); } }}>
+              <tr key={appointment.id} className={appointmentStatusClass("v2-clickable-row", appointment.status)} data-status={appointment.status} aria-label={onDetails ? `${c.openAppointment} ${appointment.id}` : undefined} tabIndex={onDetails ? 0 : undefined} onClick={() => onDetails?.(appointment)} onKeyDown={(event) => { if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) { event.preventDefault(); onDetails?.(appointment); } }}>
                 <td>
                   <strong>{formatAppointmentDateTime(appointment.start_datetime, language, timezone)}</strong>
                   <span className="table-secondary-text">{appointment.duration_minutes} {c.minutes}</span>

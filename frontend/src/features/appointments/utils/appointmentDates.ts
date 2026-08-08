@@ -40,6 +40,10 @@ export function formatAppointmentDateTime(value: string, language: "EN" | "AR", 
   return new Intl.DateTimeFormat(language === "AR" ? "ar" : "en-US", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(value));
 }
 
+export function formatAppointmentTime(value: string, language: "EN" | "AR", timezone?: string): string {
+  return new Intl.DateTimeFormat(language === "AR" ? "ar" : "en-US", { hour: "numeric", minute: "2-digit", timeZone: timezone }).format(new Date(value));
+}
+
 export function addDays(value: string, days: number): string {
   const date = localDate(new Date(`${value}T00:00:00`));
   date.setDate(date.getDate() + days);

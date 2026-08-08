@@ -9,6 +9,10 @@ export function appointmentViewPath(role: UserRole, view: string): string {
   return `${appointmentBasePath(role)}/${view}`;
 }
 
+export function appointmentDetailPath(role: UserRole, appointmentId: number): string {
+  return `${appointmentBasePath(role)}/${appointmentId}`;
+}
+
 export function appointmentReschedulePath(appointmentId: number): string {
   return `/staff/appointments/${appointmentId}/reschedule`;
 }

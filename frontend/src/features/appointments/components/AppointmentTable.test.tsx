@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AppointmentListItem } from "../../../types/appointments";
-import { AppointmentDetailsDialog } from "./AppointmentDetailsDialog";
 import { AppointmentTable } from "./AppointmentTable";
 
 const base = {
@@ -75,30 +74,4 @@ describe("AppointmentTable", () => {
     expect(screen.queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
   });
 
-  it("keeps Staff appointment actions inside the opened detail surface", () => {
-    const onEdit = vi.fn();
-    const onReschedule = vi.fn();
-    const onStatusAction = vi.fn();
-    render(<AppointmentDetailsDialog appointment={base} role="STAFF" onClose={vi.fn()} onEdit={onEdit} onReschedule={onReschedule} onStatusAction={onStatusAction} onStartVisit={vi.fn()} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-    fireEvent.click(screen.getByRole("button", { name: "Reschedule" }));
-    fireEvent.click(screen.getByRole("button", { name: "Check in" }));
-    fireEvent.click(screen.getByRole("button", { name: "Mark no-show" }));
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(onEdit).toHaveBeenCalledWith(base);
-    expect(onReschedule).toHaveBeenCalledWith(base);
-    expect(onStatusAction).toHaveBeenNthCalledWith(1, base, "check-in");
-    expect(onStatusAction).toHaveBeenNthCalledWith(2, base, "no-show");
-    expect(onStatusAction).toHaveBeenNthCalledWith(3, base, "cancel");
-  });
-
-  it("shows Start visit only for a Doctor's opened checked-in appointment", () => {
-    const onStartVisit = vi.fn();
-    render(<AppointmentDetailsDialog appointment={{ ...base, status: "CHECKED_IN" }} role="DOCTOR" onClose={vi.fn()} onEdit={vi.fn()} onReschedule={vi.fn()} onStatusAction={vi.fn()} onStartVisit={onStartVisit} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Start visit" }));
-    expect(onStartVisit).toHaveBeenCalledWith(expect.objectContaining({ id: base.id, status: "CHECKED_IN" }));
-  });
 });

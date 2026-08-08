@@ -39,8 +39,31 @@ describe("appointment calendar views", () => {
     render(<AppointmentWeekView role="STAFF" date="2026-07-13" timezone="Asia/Damascus" appointments={[appointment]} onDetails={vi.fn()} onDaySelect={onDaySelect} />);
 
     expect(screen.getByText("Maya Patient")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Open day Jul 13, 2026" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open day 2026-07-13" }));
     expect(onDaySelect).toHaveBeenCalledWith("2026-07-13");
+  });
+
+  it("opens empty Week and Month day surfaces while appointment double-clicks stay on the appointment", async () => {
+    const weekDay = vi.fn();
+    const weekDetails = vi.fn();
+    const { container, rerender } = render(<AppointmentWeekView role="STAFF" date="2026-07-13" timezone="UTC" appointments={[{ ...appointment, start_datetime: "2026-07-13T08:00:00Z" }]} onDetails={weekDetails} onDaySelect={weekDay} />);
+
+    await userEvent.dblClick(container.querySelector<HTMLElement>('.appointment-calendar-column[data-date="2026-07-14"]')!);
+    expect(weekDay).toHaveBeenCalledWith("2026-07-14");
+    weekDay.mockClear();
+    await userEvent.dblClick(container.querySelector<HTMLButtonElement>(".appointment-calendar-item")!);
+    expect(weekDetails).toHaveBeenCalled();
+    expect(weekDay).not.toHaveBeenCalled();
+
+    const monthDay = vi.fn();
+    const monthDetails = vi.fn();
+    rerender(<AppointmentMonthView date="2026-07-01" timezone="UTC" appointments={[{ ...appointment, start_datetime: "2026-07-13T08:00:00Z" }]} onDetails={monthDetails} onDaySelect={monthDay} />);
+    await userEvent.dblClick(container.querySelector<HTMLElement>('.appointment-month-cell[data-date="2026-07-14"]')!);
+    expect(monthDay).toHaveBeenCalledWith("2026-07-14");
+    monthDay.mockClear();
+    await userEvent.dblClick(container.querySelector<HTMLButtonElement>(".appointment-month-item")!);
+    expect(monthDetails).toHaveBeenCalled();
+    expect(monthDay).not.toHaveBeenCalled();
   });
 
   it("lets a user activate a Month day to move to Day view", async () => {
@@ -70,6 +93,9 @@ describe("appointment calendar views", () => {
       expect(item).toHaveClass(expectedTone[index]);
       expect(item).toHaveAttribute("aria-label", expect.stringContaining(`Long Patient Name ${index}`));
       expect(item).toHaveAttribute("aria-label", expect.stringContaining(status === "NO_SHOW" ? "No-show" : status === "CHECKED_IN" ? "Checked in" : status === "NEEDS_RESCHEDULE" ? "Needs reschedule" : status.charAt(0) + status.slice(1).toLowerCase()));
+      expect(within(item!).getByText(`Long Patient Name ${index}`)).toHaveClass("appointment-month-patient");
+      expect(item!.querySelector(".appointment-month-time")).toBeInTheDocument();
+      expect(item!.querySelector(".appointment-month-status")).toBeInTheDocument();
     });
     expect(within(container).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
     await userEvent.click(container.querySelector<HTMLButtonElement>('[data-status="UPCOMING"]')!);

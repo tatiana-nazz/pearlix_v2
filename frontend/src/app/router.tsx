@@ -15,6 +15,7 @@ import { TeamDetailPage, TeamListPage, TeamNewPage } from "../pages/admin/team/T
 import { ScheduleManagementPage } from "../pages/admin/ScheduleManagementPage";
 import { LeaveManagementPage } from "../pages/admin/LeaveManagementPage";
 import { AppointmentsPage } from "../pages/appointments/AppointmentsPage";
+import { AppointmentDetailPage } from "../pages/appointments/AppointmentDetailPage";
 import { RescheduleAppointmentPage } from "../pages/appointments/RescheduleAppointmentPage";
 import { DoctorDashboardPage } from "../pages/doctor/DoctorDashboardPage";
 import { NewPatientPage } from "../pages/patients/NewPatientPage";
@@ -92,6 +93,7 @@ export const router = createBrowserRouter([
               { path: "appointments/month", element: <AppointmentsPage role="ADMIN" view="month" /> },
               { path: "appointments/list", element: <AppointmentsPage role="ADMIN" view="list" /> },
               { path: "appointments/needs-reschedule", element: <AppointmentsPage role="ADMIN" view="needs-reschedule" /> },
+              { path: "appointments/:appointmentId", element: <AppointmentDetailPage role="ADMIN" /> },
               { path: "patients", element: <PatientsPage role="ADMIN" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="ADMIN" /> },
               { path: "visits/:visitId", element: <VisitDetailPage role="ADMIN" /> },
@@ -136,6 +138,7 @@ export const router = createBrowserRouter([
               { path: "appointments/list", element: <AppointmentsPage role="STAFF" view="list" /> },
               { path: "appointments/needs-reschedule", element: <AppointmentsPage role="STAFF" view="needs-reschedule" /> },
               { path: "appointments/:appointmentId/reschedule", element: <RescheduleAppointmentPage /> },
+              { path: "appointments/:appointmentId", element: <AppointmentDetailPage role="STAFF" /> },
               { path: "patients", element: <PatientsPage role="STAFF" /> },
               { path: "team", element: <TeamListPage /> },
               { path: "team/:teamMemberId", element: <TeamDetailPage /> },
@@ -173,6 +176,7 @@ export const router = createBrowserRouter([
               { path: "appointments/month", element: <AppointmentsPage role="DOCTOR" view="month" /> },
               { path: "appointments/list", element: <AppointmentsPage role="DOCTOR" view="list" /> },
               { path: "appointments/needs-reschedule", element: <AppointmentsPage role="DOCTOR" view="needs-reschedule" /> },
+              { path: "appointments/:appointmentId", element: <AppointmentDetailPage role="DOCTOR" /> },
               { path: "patients", element: <PatientsPage role="DOCTOR" /> },
               { path: "patients/:patientId", element: <PatientProfilePage role="DOCTOR" /> },
               { path: "patients/:patientId/clinical-history", element: <PatientProfilePage role="DOCTOR" defaultTab="visits" /> },

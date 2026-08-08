@@ -6,6 +6,7 @@ import type { DashboardAppointmentSummary } from "../../types/dashboard";
 import type { LanguagePreference } from "../../types/auth";
 import { dashboardTime } from "./format";
 import { dashboardCopy, dashboardStatus } from "./i18n";
+import { appointmentDetailPath } from "../appointments/utils/appointmentPermissions";
 
 export function DashboardHeader({ language, clinicDate, clinicTimezone, title, description, actions }: { language: LanguagePreference; clinicDate: string; clinicTimezone: string; title: string; description: string; actions?: ReactNode }) {
   const c = dashboardCopy(language);
@@ -37,7 +38,7 @@ export function DashboardSection({ title, action, children, className = "" }: { 
 export function DashboardList({ language, clinicTimezone, items, empty, role, showDoctor = false }: { language: LanguagePreference; clinicTimezone: string; items: DashboardAppointmentSummary[]; empty: string; role: "ADMIN" | "STAFF" | "DOCTOR"; showDoctor?: boolean }) {
   const c = dashboardCopy(language);
   if (!items.length) return <p className="dashboard-v2-empty">{empty}</p>;
-  return <ul className="dashboard-v2-list">{items.slice(0, 5).map((item) => <li key={item.id}><Link to={`/${role.toLowerCase()}/patients/${item.patient.id}`}><span className="dashboard-v2-time">{dashboardTime(item.start_datetime, language, clinicTimezone)}</span><span className="dashboard-v2-person"><strong>{item.patient.full_name}</strong><small>{showDoctor ? item.doctor.full_name : item.reason || c.noReason}</small></span><StatusBadge status={item.status} label={dashboardStatus(language, item.status)} /></Link></li>)}</ul>;
+  return <ul className="dashboard-v2-list">{items.slice(0, 5).map((item) => <li key={item.id}><Link to={appointmentDetailPath(role, item.id)}><span className="dashboard-v2-time">{dashboardTime(item.start_datetime, language, clinicTimezone)}</span><span className="dashboard-v2-person"><strong>{item.patient.full_name}</strong><small>{showDoctor ? item.doctor.full_name : item.reason || c.noReason}</small></span><StatusBadge status={item.status} label={dashboardStatus(language, item.status)} /></Link></li>)}</ul>;
 }
 
 export function DashboardLinks({ items }: { items: { label: string; to: string }[] }) { return <nav className="dashboard-v2-actions" aria-label="Dashboard shortcuts">{items.map((item) => <Link key={item.to} to={item.to}>{item.label}</Link>)}</nav>; }
