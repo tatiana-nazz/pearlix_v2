@@ -8,7 +8,6 @@ import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
 import { PageHeader } from "../../components/PageHeader";
-import { StatusPill } from "../../components/StatusPill";
 import type { AiMode, ClinicSettings, Currency, Language } from "../../types/clinic";
 
 const durationOptions = [15, 30, 45, 60, 90];
@@ -82,6 +81,103 @@ export function AdminClinicSettingsPage() {
   );
 }
 
-function safeMetadata(value: unknown): string { if (!value || typeof value !== "object") return "No metadata"; return JSON.stringify(value, (key, current) => /password|token|secret|authorization|refresh|access/i.test(key) ? "[redacted]" : current, 2); }
-export function AdminAuditLogListPage() { const [page, setPage] = useState(1); const navigate = useNavigate(); const audit = useQuery({ queryKey: ["audit-logs", page], queryFn: () => auditApi.list({ page }) }); return <div className="admin-page"><PageHeader eyebrow="admin workspace" title="Audit Logs" description="Read-only, backend-sanitized operational history." />{audit.isLoading ? <LoadingState title="Loading audit logs..." /> : null}{audit.isError ? <ErrorState error={audit.error} title="Audit logs unavailable" onRetry={() => void audit.refetch()} /> : null}{audit.data ? <><Card><div className="table-scroll"><table className="billing-table"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th></tr></thead><tbody>{audit.data.results.map((log) => <tr key={log.id} className="clickable-row" tabIndex={0} onClick={() => navigate(`/admin/audit-logs/${log.id}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); navigate(`/admin/audit-logs/${log.id}`); } }}><td>{log.created_at}</td><td>{log.actor?.full_name ?? "System"}</td><td>{log.action}</td><td>{log.entity_type} #{log.entity_id}</td></tr>)}</tbody></table></div></Card><div className="pagination-bar"><button className="button secondary" disabled={!audit.data.previous} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page}</span><button className="button secondary" disabled={!audit.data.next} onClick={() => setPage(page + 1)}>Next</button></div></> : null}</div>; }
-export function AdminAuditLogDetailPage() { const log = useQuery({ queryKey: ["audit-log", Number(useParams().auditLogId)], queryFn: () => auditApi.detail(Number(useParams().auditLogId)) }); if (log.isLoading) return <LoadingState title="Loading audit record..." />; if (log.isError || !log.data) return <ErrorState error={log.error} title="Audit record unavailable" />; return <div className="admin-page"><PageHeader eyebrow="admin workspace" title="Audit Record" description="Read-only sanitized metadata." /><Card><dl className="detail-grid"><div><dt>Time</dt><dd>{log.data.created_at}</dd></div><div><dt>Actor</dt><dd>{log.data.actor?.full_name ?? "System"}</dd></div><div><dt>Action</dt><dd>{log.data.action}</dd></div><div><dt>Entity</dt><dd>{log.data.entity_type} #{log.data.entity_id}</dd></div><div className="detail-wide"><dt>Metadata</dt><dd><pre className="print-data">{safeMetadata(log.data.metadata_json)}</pre></dd></div></dl></Card></div>; }
+function safeMetadata(value: unknown): string {
+  if (!value || typeof value !== "object") return "No metadata recorded.";
+  return JSON.stringify(
+    value,
+    (key, current) => (/password|token|secret|authorization|refresh|access/i.test(key) ? "[redacted]" : current),
+    2,
+  );
+}
+
+function AuditTime({ value }: { value: string }) {
+  return <time dateTime={value}>{new Date(value).toLocaleString()}</time>;
+}
+
+export function AdminAuditLogListPage() {
+  const [page, setPage] = useState(1);
+  const navigate = useNavigate();
+  const audit = useQuery({ queryKey: ["audit-logs", page], queryFn: () => auditApi.list({ page }) });
+
+  return (
+    <div className="admin-page audit-list-page">
+      <PageHeader eyebrow="admin workspace" title="Audit Logs" description="Read-only, backend-sanitized operational history." />
+      {audit.isLoading ? <LoadingState title="Loading audit logs..." /> : null}
+      {audit.isError ? <ErrorState error={audit.error} title="Audit logs unavailable" onRetry={() => void audit.refetch()} /> : null}
+      {audit.data ? (
+        audit.data.results.length ? (
+          <Card className="audit-list-card">
+            <div className="table-scroll">
+              <table className="billing-table audit-table">
+                <caption className="v2-sr-only">Audit records</caption>
+                <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th></tr></thead>
+                <tbody>{audit.data.results.map((record) => {
+                  const openRecord = () => navigate(`/admin/audit-logs/${record.id}`);
+                  return (
+                    <tr
+                      key={record.id}
+                      className="clickable-row"
+                      tabIndex={0}
+                      aria-label={`Open audit record ${record.id}`}
+                      onClick={openRecord}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openRecord();
+                        }
+                      }}
+                    >
+                      <td><AuditTime value={record.created_at} /></td>
+                      <td>{record.actor?.full_name ?? "System"}</td>
+                      <td>{record.action}</td>
+                      <td><span className="bidi-ltr">{record.entity_type} #{record.entity_id}</span></td>
+                    </tr>
+                  );
+                })}</tbody>
+              </table>
+            </div>
+            <div className="pagination-bar audit-pagination" aria-label="Audit log pagination">
+              <span>Page {page}</span>
+              <div>
+                <button className="button secondary compact-button" type="button" disabled={!audit.data.previous} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</button>
+                <button className="button secondary compact-button" type="button" disabled={!audit.data.next} onClick={() => setPage((current) => current + 1)}>Next</button>
+              </div>
+            </div>
+          </Card>
+        ) : <EmptyState title="No audit records were returned." />
+      ) : null}
+    </div>
+  );
+}
+
+export function AdminAuditLogDetailPage() {
+  const { auditLogId: auditLogIdParam } = useParams<{ auditLogId: string }>();
+  const auditLogId = Number(auditLogIdParam);
+  const log = useQuery({
+    queryKey: ["audit-log", auditLogId],
+    queryFn: () => auditApi.detail(auditLogId),
+    enabled: auditLogId > 0,
+  });
+
+  if (!(auditLogId > 0)) return <ErrorState error={null} title="Audit record unavailable" />;
+  if (log.isLoading) return <LoadingState title="Loading audit record..." />;
+  if (log.isError || !log.data) return <ErrorState error={log.error} title="Audit record unavailable" />;
+
+  return (
+    <div className="admin-page audit-detail-page">
+      <PageHeader eyebrow="admin workspace" title="Audit Record" description="Read-only sanitized operational metadata." />
+      <Card className="audit-record-card">
+        <dl className="detail-grid audit-facts">
+          <div><dt>Action</dt><dd>{log.data.action}</dd></div>
+          <div><dt>Actor</dt><dd>{log.data.actor?.full_name ?? "System"}</dd></div>
+          <div><dt>Time</dt><dd><AuditTime value={log.data.created_at} /></dd></div>
+          <div><dt>Entity</dt><dd><span className="bidi-ltr">{log.data.entity_type} #{log.data.entity_id}</span></dd></div>
+        </dl>
+      </Card>
+      <Card className="audit-metadata-card">
+        <h2>Metadata</h2>
+        <pre className="audit-metadata" aria-label="Audit metadata">{safeMetadata(log.data.metadata_json)}</pre>
+      </Card>
+    </div>
+  );
+}

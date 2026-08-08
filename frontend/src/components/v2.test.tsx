@@ -3,6 +3,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ActionMenu, ActionMenuItem, ActionMenuSeparator, Button, ClickableRow, Combobox, DataTableShell, Field, Modal, PreviewList, SelectField, StatePanel, StatusBadge, Tabs } from "./v2";
+import { StatusPill } from "./StatusPill";
 
 describe("Phase 14C shared primitives", () => {
   it("keeps buttons identifiable while loading and disables duplicate submission", () => {
@@ -11,8 +12,22 @@ describe("Phase 14C shared primitives", () => {
     expect(screen.getByRole("button")).toHaveAttribute("aria-busy", "true");
   });
 
+  it("exposes consistent primary, secondary, danger, compact, and disabled button contracts", () => {
+    render(<>
+      <Button>Primary</Button>
+      <Button variant="secondary">Secondary</Button>
+      <Button variant="danger">Danger</Button>
+      <Button compact disabled>Compact</Button>
+    </>);
+    expect(screen.getByRole("button", { name: "Primary" })).toHaveClass("v2-button");
+    expect(screen.getByRole("button", { name: "Secondary" })).toHaveClass("secondary");
+    expect(screen.getByRole("button", { name: "Danger" })).toHaveClass("danger");
+    expect(screen.getByRole("button", { name: "Compact" })).toHaveClass("compact");
+    expect(screen.getByRole("button", { name: "Compact" })).toBeDisabled();
+  });
+
   it("renders semantic status text, an icon, and a safe unknown fallback", () => {
-    const { rerender } = render(<StatusBadge status="PAID" />);
+    const { rerender } = render(<StatusPill status="PAID" />);
     expect(screen.getByLabelText("Status: PAID")).toHaveTextContent("PAID");
     expect(screen.getByLabelText("Status: PAID").querySelector("svg")).toBeTruthy();
     rerender(<StatusBadge status="FUTURE_STATUS" />);
@@ -66,11 +81,14 @@ describe("Phase 14C shared primitives", () => {
   });
 
   it("exposes populated and stateful table, form, combobox, and state contracts", () => {
-    function Example() { const [value, setValue] = useState(""); return <><DataTableShell title="Patients" count={1}><table><tbody><tr><td>One</td></tr></tbody></table></DataTableShell><DataTableShell title="Empty" state={<StatePanel state="empty" title="No patients" />}><span /></DataTableShell><Field label="Name" error="Required" /><SelectField label="Role" value="STAFF" onChange={() => undefined} error="Choose"><option value="STAFF">Staff</option></SelectField><Combobox label="Doctor" value={value} onChange={setValue} options={[{ value:"1", label:"Dr Noor" }, { value:"2", label:"Dr Sam" }]} /></>; }
+    function Example() { const [value, setValue] = useState(""); return <><DataTableShell title="Patients" count={1}><table><tbody><tr><td>One</td></tr></tbody></table></DataTableShell><DataTableShell title="Empty" state={<StatePanel state="empty" title="No patients" />}><span /></DataTableShell><Field label="Name" type="email" placeholder="name@example.com" error="Required" /><Field label="Start" type="datetime-local" disabled /><SelectField label="Role" value="STAFF" onChange={() => undefined} error="Choose"><option value="STAFF">Staff</option></SelectField><Combobox label="Doctor" value={value} onChange={setValue} options={[{ value:"1", label:"Dr Noor" }, { value:"2", label:"Dr Sam" }]} /></>; }
     render(<Example />);
     expect(screen.getByText("Patients (1)")).toBeInTheDocument();
     expect(screen.getByText("No patients")).toBeInTheDocument();
     expect(screen.getByLabelText("Name")).toHaveAttribute("aria-describedby");
+    expect(screen.getByLabelText("Name")).toHaveAttribute("type", "email");
+    expect(screen.getByLabelText("Start")).toHaveAttribute("type", "datetime-local");
+    expect(screen.getByLabelText("Start")).toBeDisabled();
     expect(screen.getByLabelText("Role")).toHaveValue("STAFF");
     const combo = screen.getByRole("combobox", { name:"Doctor" });
     fireEvent.focus(combo); fireEvent.keyDown(combo, { key:"ArrowDown" }); fireEvent.keyDown(combo, { key:"Enter" });
