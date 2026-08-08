@@ -32,7 +32,7 @@ import { XrayDetailPage } from "../pages/xrays/XrayDetailPage";
 import { XrayListPage } from "../pages/xrays/XrayListPage";
 import { AdminAuditLogDetailPage, AdminAuditLogListPage, AdminClinicSettingsPage } from "../pages/admin/AdminManagementPages";
 import { AdminNewUserPage, AdminUserDetailPage, AdminUserListPage } from "../pages/admin/users/UserPages";
-import { BillingHandoffDetailPage, BillingHandoffListPage, InvoiceDetailPage, InvoiceListPage, InvoicePrintPage, NewInvoicePage } from "../pages/billing/BillingPages";
+import { BillingHandoffDetailPage, BillingHandoffListPage, BillingOverviewPage, InvoiceDetailPage, InvoiceListPage, InvoicePrintPage, NewInvoicePage } from "../pages/billing/BillingPages";
 import type { UserRole } from "../types/auth";
 import { dashboardPathForRole } from "../utils/roles";
 
@@ -110,7 +110,8 @@ export const router = createBrowserRouter([
               { path: "clinic-settings", element: <AdminClinicSettingsPage /> },
               { path: "audit-logs", element: <AdminAuditLogListPage /> },
               { path: "audit-logs/:auditLogId", element: <AdminAuditLogDetailPage /> },
-              { path: "billing", element: <Navigate to="/admin/billing/handoffs" replace /> },
+              { path: "billing", element: <Navigate to="/admin/billing/overview" replace /> },
+              { path: "billing/overview", element: <BillingOverviewPage role="ADMIN" /> },
               { path: "billing/handoffs", element: <BillingHandoffListPage role="ADMIN" /> },
               { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="ADMIN" /> },
               { path: "billing/invoices", element: <InvoiceListPage role="ADMIN" /> },
@@ -147,7 +148,8 @@ export const router = createBrowserRouter([
               { path: "visits/:visitId", element: <VisitDetailPage role="STAFF" /> },
               { path: "xrays", element: <XrayListPage role="STAFF" /> },
               { path: "xrays/:xrayId", element: <XrayDetailPage role="STAFF" /> },
-              { path: "billing", element: <Navigate to="/staff/billing/handoffs" replace /> },
+              { path: "billing", element: <Navigate to="/staff/billing/overview" replace /> },
+              { path: "billing/overview", element: <BillingOverviewPage role="STAFF" /> },
               { path: "billing/handoffs", element: <BillingHandoffListPage role="STAFF" /> },
               { path: "billing/handoffs/:handoffId", element: <BillingHandoffDetailPage role="STAFF" /> },
               { path: "billing/invoices", element: <InvoiceListPage role="STAFF" /> },

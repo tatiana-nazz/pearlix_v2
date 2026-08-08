@@ -117,3 +117,19 @@ export interface PaymentResponse {
   payment: Payment;
   invoice: InvoiceSummary;
 }
+
+export interface InvoiceCurrencyTotals {
+  invoiced: string;
+  paid: string;
+  outstanding: string;
+}
+
+export interface InvoiceFinancialSummary {
+  clinic_date: string;
+  clinic_timezone: string;
+  invoice_count: number;
+  status_counts: Record<InvoiceStatus, number>;
+  open_invoice_count: number;
+  currency_totals: Record<Currency, InvoiceCurrencyTotals>;
+  payments_collected_in_period: Record<Currency, string>;
+}

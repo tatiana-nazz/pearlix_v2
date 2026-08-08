@@ -3,6 +3,7 @@ import type {
   BillingHandoff,
   HandoffConversionPayload,
   Invoice,
+  InvoiceFinancialSummary,
   InvoicePayload,
   Payment,
   PaymentPayload,
@@ -18,6 +19,7 @@ export const billingApi = {
   convertHandoff: (id: number, payload: HandoffConversionPayload) =>
     api.post<Invoice, HandoffConversionPayload>(`/billing-handoffs/${id}/convert-to-invoice/`, payload),
   invoices: (query?: QueryParams) => api.get<Page<Invoice>>("/invoices/", query),
+  invoiceSummary: (query?: QueryParams) => api.get<InvoiceFinancialSummary>("/invoices/summary/", query),
   createInvoice: (payload: InvoicePayload) => api.post<Invoice, InvoicePayload>("/invoices/", payload),
   invoiceDetail: (id: number) => api.get<Invoice>(`/invoices/${id}/`),
   updateInvoice: (id: number, payload: InvoicePayload) => api.patch<Invoice, InvoicePayload>(`/invoices/${id}/`, payload),

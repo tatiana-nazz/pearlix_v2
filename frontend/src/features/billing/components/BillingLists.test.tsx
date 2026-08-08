@@ -34,7 +34,7 @@ describe("Billing collections", () => {
     render(<MemoryRouter><InvoiceList role={role} invoices={[invoice]} /></MemoryRouter>);
     expect(screen.queryByText("Actions")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    const row = screen.getByRole("row", { name: /open invoice inv-20260726-000001/i });
+    const row = screen.getByRole("row", { name: /invoice inv-20260726-000001/i });
     fireEvent.keyDown(row, { key: " " });
     expect(navigate).toHaveBeenCalledWith(`/${role.toLowerCase()}/billing/invoices/2`);
   });

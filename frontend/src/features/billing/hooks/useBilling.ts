@@ -6,13 +6,15 @@ import { visitsApi } from "../../../api/endpoints/visits";
 
 export function useHandoffs(query?: Record<string, string | number | undefined>) { return useQuery({ queryKey: ["billing-handoffs", query], queryFn: () => billingApi.handoffs(query) }); }
 export function useHandoff(id: number) { return useQuery({ queryKey: ["billing-handoff", id], queryFn: () => billingApi.handoffDetail(id), enabled: id > 0 }); }
-export function useInvoices(query?: Record<string, string | number | undefined>) { return useQuery({ queryKey: ["invoices", query], queryFn: () => billingApi.invoices(query) }); }
+export function useInvoices(query?: Record<string, string | number | undefined>, enabled = true) { return useQuery({ queryKey: ["invoices", query], queryFn: () => billingApi.invoices(query), enabled }); }
+export function useInvoiceSummary(query?: Record<string, string | number | undefined>, enabled = true) { return useQuery({ queryKey: ["invoice-summary", query], queryFn: () => billingApi.invoiceSummary(query), enabled }); }
 export function useInvoice(id: number) { return useQuery({ queryKey: ["invoice", id], queryFn: () => billingApi.invoiceDetail(id), enabled: id > 0 }); }
 export function useInvoicePayments(id: number) { return useQuery({ queryKey: ["invoice-payments", id], queryFn: () => billingApi.payments(id), enabled: id > 0 }); }
 export function useInvoicePrintData(id: number) { return useQuery({ queryKey: ["invoice-print-data", id], queryFn: () => billingApi.printData(id), enabled: id > 0 }); }
 
 function invalidate(queryClient: ReturnType<typeof useQueryClient>, invoiceId?: number, handoffId?: number) {
   void queryClient.invalidateQueries({ queryKey: ["billing-handoffs"] }); void queryClient.invalidateQueries({ queryKey: ["invoices"] });
+  void queryClient.invalidateQueries({ queryKey: ["invoice-summary"] });
   void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   if (invoiceId) { void queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] }); void queryClient.invalidateQueries({ queryKey: ["invoice-payments", invoiceId] }); void queryClient.invalidateQueries({ queryKey: ["invoice-print-data", invoiceId] }); }
   if (handoffId) void queryClient.invalidateQueries({ queryKey: ["billing-handoff", handoffId] });

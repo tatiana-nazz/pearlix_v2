@@ -179,3 +179,28 @@ class InvoiceCreateUpdateSerializer(serializers.Serializer):
 class InvoicePaymentResponseSerializer(serializers.Serializer):
     payment = PaymentSerializer()
     invoice = InvoiceSummarySerializer()
+
+
+class InvoiceQuerySerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=Invoice.Status.choices, required=False)
+    currency = serializers.ChoiceField(choices=Invoice.Currency.choices, required=False)
+    patient_id = serializers.IntegerField(min_value=1, required=False)
+    visit_id = serializers.IntegerField(min_value=1, required=False)
+    appointment_id = serializers.IntegerField(min_value=1, required=False)
+    search = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
+    date_from = serializers.DateField(required=False)
+    date_to = serializers.DateField(required=False)
+    created_from = serializers.DateTimeField(required=False)
+    created_to = serializers.DateTimeField(required=False)
+
+    def validate(self, attrs):
+        date_from = attrs.get("date_from")
+        date_to = attrs.get("date_to")
+        if date_from and date_to and date_from > date_to:
+            raise serializers.ValidationError({"date_to": ["Must be on or after date_from."]})
+
+        created_from = attrs.get("created_from")
+        created_to = attrs.get("created_to")
+        if created_from and created_to and created_from > created_to:
+            raise serializers.ValidationError({"created_to": ["Must be on or after created_from."]})
+        return attrs

@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { Card } from "../../components/Card";
 import { EmptyState } from "../../components/EmptyState";
@@ -10,21 +10,17 @@ import { StatusPill } from "../../components/StatusPill";
 import { Modal, Pagination } from "../../components/v2";
 import { PatientPicker } from "../../features/appointments/components/PatientPicker";
 import { ConvertHandoffDialog, PaymentDialog } from "../../features/billing/components/BillingDialogs";
-import { HandoffList, InvoiceList } from "../../features/billing/components/BillingLists";
-import { useBillingMutations, useHandoff, useHandoffs, useInvoice, useInvoicePayments, useInvoicePrintData, useInvoices } from "../../features/billing/hooks/useBilling";
+import { HandoffList } from "../../features/billing/components/BillingLists";
+import { BillingOverviewPage as BillingOverview, BillingWorkspaceHeader, InvoiceHistoryPage } from "../../features/billing/components/BillingWorkspace";
+import { useBillingMutations, useHandoff, useHandoffs, useInvoice, useInvoicePayments, useInvoicePrintData } from "../../features/billing/hooks/useBilling";
 import { canManageHandoff, canManageInvoice, displayBillingDate, displayBillingDateTime, displayBillingText, formatMoney } from "../../features/billing/utils/billing";
 import type { UserRole } from "../../types/auth";
-import type { Invoice } from "../../types/billing";
 import type { PatientListItem } from "../../types/patients";
 
-const invoiceStatuses = ["", "UNPAID", "PARTIALLY_PAID", "PAID", "CANCELLED"];
 const handoffStatuses = ["", "PENDING", "CONVERTED_TO_INVOICE", "DISMISSED"];
 
-function BillingWorkspaceHeader({ role }: { role: Exclude<UserRole, "DOCTOR"> }) {
-  const location = useLocation();
-  const search = location.search;
-  const base = `/${role.toLowerCase()}/billing`;
-  return <header className="billing-workspace-header"><div><p>{role.toLowerCase()} workspace</p><h1>Billing</h1><span>Handoffs and invoices in one financial workspace.</span></div><nav className="billing-workspace-tabs" aria-label="Billing sections"><NavLink to={`${base}/handoffs${search}`}>Handoffs</NavLink><NavLink to={`${base}/invoices${search}`}>Invoices</NavLink></nav></header>;
+export function BillingOverviewPage({ role }: { role: Exclude<UserRole, "DOCTOR"> }) {
+  return <BillingOverview role={role} />;
 }
 
 function queryFromSearch(searchParams: URLSearchParams) {
@@ -39,21 +35,6 @@ function updateSearch(setSearchParams: ReturnType<typeof useSearchParams>[1], se
   if (value) next.set(key, value); else next.delete(key);
   if (resetPage) next.delete("page");
   setSearchParams(next);
-}
-
-function SummaryCards({ invoices }: { invoices: Invoice[] }) {
-  const summary = useMemo(() => {
-    const byStatus = Object.fromEntries(["UNPAID", "PARTIALLY_PAID", "PAID", "CANCELLED"].map((status) => [status, invoices.filter((invoice) => invoice.status === status).length]));
-    const outstanding = new Map<string, number>();
-    invoices.filter((invoice) => invoice.status !== "CANCELLED").forEach((invoice) => outstanding.set(invoice.currency, (outstanding.get(invoice.currency) ?? 0) + Number(invoice.remaining_amount)));
-    return { byStatus, outstanding: [...outstanding.entries()] };
-  }, [invoices]);
-  return <section className="billing-summary-grid" aria-label="Invoice summary">
-    <Card className="billing-summary-card"><span>Unpaid</span><strong>{summary.byStatus.UNPAID}</strong><small>Visible invoices</small></Card>
-    <Card className="billing-summary-card"><span>Partially paid</span><strong>{summary.byStatus.PARTIALLY_PAID}</strong><small>Visible invoices</small></Card>
-    <Card className="billing-summary-card"><span>Paid</span><strong>{summary.byStatus.PAID}</strong><small>Visible invoices</small></Card>
-    <Card className="billing-summary-card"><span>Visible balance</span><strong dir="ltr">{summary.outstanding.length === 0 ? "—" : summary.outstanding.length === 1 ? formatMoney(String(summary.outstanding[0][1]), summary.outstanding[0][0]) : "Multiple currencies"}</strong><small>{summary.outstanding.length === 0 ? "No open balance on this loaded page" : summary.outstanding.length > 1 ? summary.outstanding.map(([currency, amount]) => `${currency}: ${formatMoney(String(amount), currency)}`).join(" · ") : "Loaded invoice page"}</small></Card>
-  </section>;
 }
 
 function HandoffSummaryCards({ pending, count }: { pending: number; count: number }) {
@@ -87,12 +68,7 @@ export function BillingHandoffDetailPage({ role }: { role: UserRole }) {
 }
 
 export function InvoiceListPage({ role }: { role: UserRole }) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const invoices = useInvoices(queryFromSearch(searchParams)); const results = invoices.data?.results ?? [];
-  return <div className="billing-page"><BillingWorkspaceHeader role={role as Exclude<UserRole, "DOCTOR">} />{role === "STAFF" ? <div className="billing-page-action"><Link className="button primary" to="/staff/billing/invoices/new">New invoice</Link></div> : null}
-    {invoices.data ? <SummaryCards invoices={results} /> : null}
-    <Card className="billing-filter-card"><div className="billing-filter-grid"><label>Status<select aria-label="Invoice status" value={searchParams.get("status") || ""} onChange={(event) => updateSearch(setSearchParams, searchParams, "status", event.target.value)}>{invoiceStatuses.map((status) => <option key={status} value={status}>{status ? status.split("_").join(" ") : "All statuses"}</option>)}</select></label><div className="billing-filter-actions"><span>{invoices.data ? `${invoices.data.count} invoice${invoices.data.count === 1 ? "" : "s"}` : ""}</span>{searchParams.size ? <button className="button secondary" type="button" onClick={() => setSearchParams({})}>Clear filters</button> : null}</div></div></Card>
-    {invoices.isLoading ? <LoadingState title="Loading invoices..." /> : null}{invoices.isError ? <ErrorState error={invoices.error} title="Unable to load invoices" onRetry={() => void invoices.refetch()} /> : null}{invoices.data ? <><InvoiceList role={role} invoices={results} /><PaginationControls count={invoices.data.count} next={invoices.data.next} previous={invoices.data.previous} /></> : null}</div>;
+  return <InvoiceHistoryPage role={role as Exclude<UserRole, "DOCTOR">} />;
 }
 
 export function InvoiceDetailPage({ role }: { role: UserRole }) {
