@@ -104,7 +104,7 @@ class BillingHandoff(TimeStampedModel):
 
     @property
     def paid_amount(self) -> Decimal:
-        annotated = getattr(self, "_paid_amount", None)
+        annotated = getattr(self, "financial_paid_amount", None)
         if annotated is not None:
             return annotated
         total = self.invoices.aggregate(total=Sum("amount"))["total"]
@@ -117,7 +117,7 @@ class BillingHandoff(TimeStampedModel):
 
     @property
     def invoice_count(self) -> int:
-        annotated = getattr(self, "_invoice_count", None)
+        annotated = getattr(self, "financial_invoice_count", None)
         if annotated is not None:
             return annotated
         return self.invoices.count()

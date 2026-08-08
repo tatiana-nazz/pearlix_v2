@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from apps.billing.models import BillingHandoff, Invoice
+from apps.billing.selectors import annotate_handoff_financials
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
 from apps.scheduling.models import Appointment
@@ -129,16 +130,14 @@ def _visit_summary(visit):
 
 
 def _handoff_summary(handoff):
-    paid_amount = getattr(handoff, "dashboard_paid_amount", None) or Decimal("0.00")
-    remaining_amount = max(handoff.total_amount - paid_amount, Decimal("0.00"))
     return {
         "id": handoff.id,
         "patient": _patient_summary(handoff.patient),
         "description": handoff.description,
         "currency": handoff.currency,
         "total_amount": handoff.total_amount,
-        "paid_amount": paid_amount,
-        "remaining_amount": remaining_amount,
+        "paid_amount": handoff.paid_amount,
+        "remaining_amount": handoff.remaining_amount,
         "status": handoff.status,
         "created_at": handoff.created_at,
     }
@@ -171,11 +170,9 @@ def admin_dashboard(request):
         .filter(start_datetime__gte=today_start, start_datetime__lt=tomorrow_start)
         .order_by("start_datetime", "id")
     )
-    recent_handoffs = (
+    recent_handoffs = annotate_handoff_financials(
         BillingHandoff.objects.select_related("patient")
-        .annotate(dashboard_paid_amount=Sum("invoices__amount"))
-        .order_by("-created_at", "-id")[:6]
-    )
+    ).order_by("-created_at", "-id")[:6]
     return Response(
         {
             "clinic_date": today.isoformat(),
@@ -215,12 +212,11 @@ def staff_dashboard(request):
         .order_by("start_datetime", "id")
     )
     needs_reschedule_count = Appointment.objects.filter(status=Appointment.Status.NEEDS_RESCHEDULE).count()
-    due_handoffs = (
-        BillingHandoff.objects.select_related("patient")
-        .filter(status__in=[BillingHandoff.Status.OPEN, BillingHandoff.Status.PARTIALLY_PAID])
-        .annotate(dashboard_paid_amount=Sum("invoices__amount"))
-        .order_by("-created_at", "-id")[:6]
-    )
+    due_handoffs = annotate_handoff_financials(
+        BillingHandoff.objects.select_related("patient").filter(
+            status__in=[BillingHandoff.Status.OPEN, BillingHandoff.Status.PARTIALLY_PAID]
+        )
+    ).order_by("-created_at", "-id")[:6]
     return Response(
         {
             "clinic_date": today.isoformat(),

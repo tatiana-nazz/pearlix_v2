@@ -9,6 +9,7 @@ from rest_framework import status
 
 from apps.audit.services import log_activity
 from apps.billing.models import BillingHandoff, Invoice, InvoiceSequence
+from apps.billing.selectors import annotate_handoff_financials
 from apps.common.errors import error_response
 from apps.visits.models import Visit
 
@@ -236,14 +237,9 @@ def issue_invoice(*, handoff: BillingHandoff, user, data: dict, request=None) ->
 def invoice_print_data(invoice: Invoice) -> dict:
     from apps.clinic.models import ClinicSettings
 
-    invoice = Invoice.objects.select_related(
-        "billing_handoff",
-        "billing_handoff__patient",
-        "billing_handoff__visit",
-        "billing_handoff__visit__appointment",
-        "created_by",
-    ).get(pk=invoice.pk)
-    handoff = invoice.billing_handoff
+    handoff = annotate_handoff_financials(
+        BillingHandoff.objects.select_related("patient", "visit", "visit__appointment")
+    ).get(pk=invoice.billing_handoff_id)
     clinic = ClinicSettings.get_solo()
     return {
         "clinic": {
@@ -271,8 +267,8 @@ def invoice_print_data(invoice: Invoice) -> dict:
             "id": handoff.id,
             "description": handoff.description,
             "total_amount": handoff.total_amount,
-            "paid_amount": calculate_handoff_paid_amount(handoff),
-            "remaining_amount": calculate_handoff_remaining_amount(handoff),
+            "paid_amount": handoff.paid_amount,
+            "remaining_amount": handoff.remaining_amount,
             "currency": handoff.currency,
             "status": handoff.status,
         },

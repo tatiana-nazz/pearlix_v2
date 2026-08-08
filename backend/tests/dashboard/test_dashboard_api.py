@@ -61,3 +61,47 @@ def test_billing_activity_uses_handoffs_as_billed_and_invoices_as_collected(admi
     assert Decimal(current["USD"]["billed"]) >= Decimal("200.00")
     assert Decimal(current["USD"]["collected"]) >= Decimal("75.00")
     assert "invoiced" not in current["USD"]
+
+
+@pytest.mark.django_db
+def test_dashboard_bill_rows_characterize_shared_financial_values_and_role_context(
+    admin_client,
+    staff_client,
+    doctor_client,
+    billing_handoff_factory,
+    invoice_factory,
+):
+    bill = billing_handoff_factory(
+        total_amount="300000.00",
+        currency=BillingHandoff.Currency.USD,
+        status=BillingHandoff.Status.PARTIALLY_PAID,
+    )
+    invoice_factory(billing_handoff=bill, amount="100000.00")
+    invoice_factory(billing_handoff=bill, amount="50000.00")
+
+    admin_response = admin_client.get("/api/dashboard/admin/")
+    staff_response = staff_client.get("/api/dashboard/staff/")
+    doctor_response = doctor_client.get("/api/dashboard/doctor/")
+
+    admin_row = next(row for row in admin_response.data["recent_handoffs"] if row["id"] == bill.id)
+    staff_row = next(row for row in staff_response.data["open_handoffs"] if row["id"] == bill.id)
+    expected = {
+        "id": bill.id,
+        "patient": {
+            "id": bill.patient.id,
+            "full_name": bill.patient.full_name,
+            "phone_number": bill.patient.phone_number,
+        },
+        "description": bill.description,
+        "currency": BillingHandoff.Currency.USD,
+        "total_amount": Decimal("300000.00"),
+        "paid_amount": Decimal("150000.00"),
+        "remaining_amount": Decimal("150000.00"),
+        "status": BillingHandoff.Status.PARTIALLY_PAID,
+        "created_at": bill.created_at,
+    }
+    assert admin_row == expected
+    assert staff_row == expected
+    assert "recent_handoffs" not in doctor_response.data
+    assert "open_handoffs" not in doctor_response.data
+    assert "collected_today" not in doctor_response.data

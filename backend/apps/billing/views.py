@@ -2,8 +2,7 @@ from datetime import datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
-from django.db.models import Count, DecimalField, Q, Sum
-from django.db.models.functions import Coalesce
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -12,6 +11,7 @@ from rest_framework.response import Response
 
 from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.permissions import BillingHandoffPermission, InvoicePermission
+from apps.billing.selectors import annotate_handoff_financials, handoffs_for_billing_api
 from apps.billing.serializers import (
     BillingHandoffQuerySerializer,
     BillingHandoffSerializer,
@@ -30,7 +30,6 @@ from apps.common.errors import error_response
 
 
 ZERO = Decimal("0.00")
-DECIMAL_FIELD = DecimalField(max_digits=14, decimal_places=2)
 
 
 class BillingPagination(PageNumberPagination):
@@ -54,25 +53,6 @@ def _date_bounds(params, clinic_timezone):
         else None
     )
     return start, end
-
-
-def _handoff_queryset():
-    return (
-        BillingHandoff.objects.select_related(
-            "patient",
-            "visit",
-            "visit__appointment",
-            "doctor",
-            "created_by",
-            "updated_by",
-        )
-        .prefetch_related("invoices", "invoices__created_by")
-        .annotate(
-            _paid_amount=Coalesce(Sum("invoices__amount"), ZERO, output_field=DECIMAL_FIELD),
-            _invoice_count=Count("invoices", distinct=True),
-        )
-        .order_by("-created_at", "-id")
-    )
 
 
 class BillingHandoffViewSet(
@@ -122,7 +102,7 @@ class BillingHandoffViewSet(
         return queryset
 
     def get_queryset(self):
-        queryset = _handoff_queryset()
+        queryset = handoffs_for_billing_api()
         if self.request.user.is_authenticated and self.request.user.role == "DOCTOR":
             queryset = queryset.filter(doctor=self.request.user)
         return self._filter_queryset(queryset, self._query_params())
@@ -148,7 +128,7 @@ class BillingHandoffViewSet(
         except BillingRuleError as exc:
             return exc.to_response()
         data = HandoffInvoiceResponseSerializer(
-            {"invoice": invoice, "handoff": _handoff_queryset().get(pk=handoff.pk)}
+            {"invoice": invoice, "handoff": handoffs_for_billing_api().get(pk=handoff.pk)}
         ).data
         return Response(data, status=status.HTTP_201_CREATED)
 
@@ -167,15 +147,12 @@ class BillingHandoffViewSet(
             choice: {"bill_total": ZERO, "paid": ZERO, "outstanding": ZERO}
             for choice, _ in BillingHandoff.Currency.choices
         }
-        rows = queryset.values("id", "currency", "status", "total_amount").annotate(
-            paid=Coalesce(Sum("invoices__amount"), ZERO, output_field=DECIMAL_FIELD)
-        )
-        for row in rows:
-            bucket = totals[row["currency"]]
-            bucket["bill_total"] += row["total_amount"]
-            bucket["paid"] += row["paid"]
-            if row["status"] != BillingHandoff.Status.CANCELLED:
-                bucket["outstanding"] += max(row["total_amount"] - row["paid"], ZERO)
+        for handoff in annotate_handoff_financials(queryset):
+            bucket = totals[handoff.currency]
+            bucket["bill_total"] += handoff.total_amount
+            bucket["paid"] += handoff.paid_amount
+            if handoff.status != BillingHandoff.Status.CANCELLED:
+                bucket["outstanding"] += handoff.remaining_amount
         return Response(
             {
                 "clinic_date": clinic_date.isoformat(),
