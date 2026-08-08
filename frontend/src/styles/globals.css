@@ -1862,6 +1862,69 @@ body {
 .users-identity-table { min-width: 860px; }
 .users-filter-toolbar { flex-wrap: wrap; }.users-filter-toolbar small { flex-basis: 100%; color: var(--color-muted); }
 
+/* Stage 4 — compact Users & Access and Team management workspaces. */
+.user-management-page { display: grid; gap: 18px; }
+.user-management-header,.team-profile-header { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 20px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-surface); padding: 20px 24px; box-shadow: var(--shadow-card); }
+.user-management-header h2,.user-management-header p,.team-profile-header h2,.team-profile-header p { margin: 0; }
+.user-management-header h2,.team-profile-header h2 { font-size: clamp(1.45rem,2vw,1.9rem); }
+.user-management-header p,.team-profile-header p { margin-block-start: 3px; color: var(--color-muted); }
+.user-header-status,.team-profile-header-actions,.team-profile-header-actions > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 9px; }
+.role-chip { display: inline-flex; min-height: 28px; align-items: center; border: 1px solid color-mix(in srgb,var(--color-primary) 22%,var(--color-border)); border-radius: 999px; background: var(--color-primary-soft); padding: 3px 10px; color: var(--color-primary); font-size: 12px; font-weight: 900; }
+.user-management-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; gap: 18px; }
+.user-management-grid > .v2-card,.role-transition-card,.account-metadata-card,.team-detail-upper-grid > .v2-card,.team-schedule-grid > .v2-card { min-width: 0; }
+.user-management-page .v2-card h3,.team-detail-page .v2-card h3 { margin-block-start: 0; }
+.section-header.compact { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-block-end: 15px; }
+.section-header.compact h3,.section-header.compact p { margin: 0; }
+.section-header.compact p,.section-support { color: var(--color-muted); font-size: 13px; }
+.section-support { grid-column: 1 / -1; margin: -4px 0 2px; }
+.user-identity-card .v2-form-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.user-identity-card .v2-sticky-actions { margin-block-start: 12px; }
+.inline-success { margin: 12px 0 0; color: var(--color-success); font-size: 13px; font-weight: 800; }
+.effective-access-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 16px; margin: 0; }
+.effective-access-list > div { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 10px; border-block-start: 1px solid var(--color-divider); padding-block: 8px; }
+.effective-access-list dt { min-width: 0; color: var(--color-muted); font-size: 12px; font-weight: 700; }
+.effective-access-list dd { flex: 0 0 auto; margin: 0; }
+.access-level { border-radius: 999px; background: var(--color-surface-muted); padding: 3px 8px; color: var(--color-muted); font-size: 11px; font-weight: 900; }
+.access-level.manage { background: var(--color-primary-soft); color: var(--color-primary); }
+.access-level.read_only,.access-level.own_records,.access-level.operational { background: color-mix(in srgb,var(--color-primary) 10%,var(--color-surface)); color: var(--color-primary); }
+.access-level.no_access { opacity: .72; }
+.security-login-summary,.detail-list { display: grid; gap: 0; margin: 0 0 16px; }
+.security-login-summary > div,.detail-list > div { display: grid; grid-template-columns: minmax(110px,.45fr) minmax(0,1fr); gap: 12px; border-block-start: 1px solid var(--color-divider); padding-block: 10px; }
+.security-login-summary dt,.detail-list dt { color: var(--color-muted); font-size: 12px; font-weight: 800; }
+.security-login-summary dd,.detail-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-weight: 700; }
+.security-actions,.dialog-actions,.role-review-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.security-actions { justify-content: space-between; border-block-start: 1px solid var(--color-divider); padding-block-start: 15px; }
+.linked-team-identity { display: flex; align-items: center; gap: 12px; margin-block-end: 12px; }
+.linked-team-identity > span { display: grid; inline-size: 46px; block-size: 46px; flex: 0 0 auto; place-items: center; border-radius: 14px; background: var(--color-primary-soft); color: var(--color-primary); font-weight: 900; }
+.linked-team-identity strong,.linked-team-identity p { margin: 0; }.linked-team-identity p { color: var(--color-muted); font-size: 13px; }
+.linked-team-status { display: flex; flex-wrap: wrap; gap: 7px; margin-block-end: 15px; }
+.role-transition-card { padding: 20px 24px; }
+.role-transition-controls { display: grid; grid-template-columns: minmax(130px,.7fr) auto minmax(180px,1fr) auto; align-items: end; gap: 14px; }
+.current-role-summary { display: grid; min-height: 46px; align-content: center; gap: 2px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface-muted); padding: 7px 12px; }
+.current-role-summary span { color: var(--color-muted); font-size: 11px; font-weight: 800; }.current-role-summary strong { font-size: 14px; }
+.role-transition-arrow { align-self: center; color: var(--color-muted); font-size: 20px; }
+[dir="rtl"] .role-transition-arrow { transform: rotate(180deg); }
+.role-review { display: grid; gap: 16px; }.role-review section { border-block-start: 1px solid var(--color-divider); padding-block-start: 14px; }.role-review section h3 { margin: 0 0 8px; font-size: 14px; }.role-review ul { margin-block: 0; padding-inline-start: 22px; }
+.role-review-route { display: flex; align-items: center; justify-content: center; gap: 16px; border-radius: 14px; background: var(--color-surface-muted); padding: 13px; font-size: 17px; }
+.operational-history { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 0; }
+.operational-history > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--color-border); border-radius: 10px; padding: 8px 10px; }.operational-history dt { color: var(--color-muted); font-size: 11px; font-weight: 700; }.operational-history dd { margin: 0; font-weight: 900; }
+.role-blockers { border: 1px solid color-mix(in srgb,var(--color-danger) 28%,var(--color-border)); border-radius: 12px; background: color-mix(in srgb,var(--color-danger) 7%,var(--color-surface)); padding-block: 10px; color: var(--color-danger); }
+.role-profile-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }.role-profile-fields .v2-field:last-child:nth-child(3) { grid-column: 1 / -1; }
+.role-review-actions { justify-content: flex-end; }
+.account-metadata-card { display: flex; align-items: center; gap: 22px; padding-block: 14px; }
+.account-metadata-card h3 { flex: 0 0 auto; margin: 0; font-size: 14px; }
+.account-metadata-card dl { display: grid; flex: 1; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }.account-metadata-card dl > div { display: flex; align-items: baseline; gap: 8px; }.account-metadata-card dt { color: var(--color-muted); font-size: 11px; font-weight: 800; }.account-metadata-card dd { margin: 0; font-size: 12px; font-weight: 700; }
+
+.team-profile-header-actions { max-width: 62%; }.team-profile-header-actions > div { margin-inline-end: 3px; }
+.profile-save-success { margin: -6px 0 0; }
+.team-detail-upper-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; gap: 18px; }
+.professional-edit-card { grid-row: span 2; }.professional-edit-card .v2-form-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }.professional-edit-card textarea { min-height: 96px; }
+.professional-read-card { grid-row: span 1; }
+.workload-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin: 0; }.workload-grid > div { display: grid; gap: 4px; border: 1px solid var(--color-divider); border-radius: 12px; background: var(--color-surface-muted); padding: 11px; }.workload-grid dt { color: var(--color-muted); font-size: 11px; font-weight: 800; }.workload-grid dd { margin: 0; font-size: 20px; font-weight: 900; }.workload-grid .v2-status { width: fit-content; font-size: 11px; }
+.professional-status-card > p { color: var(--color-muted); font-size: 13px; }
+.team-schedule-grid { display: grid; grid-template-columns: minmax(0,1.6fr) minmax(320px,1fr); align-items: start; gap: 18px; }
+.team-schedule-card,.team-leave-card { overflow: hidden; }.team-schedule-card > :last-child,.team-leave-card > :last-child { min-width: 0; }
+
 .billing-workspace-header { display: flex; align-items: end; justify-content: space-between; gap: 20px; border-block-end: 1px solid var(--color-divider); padding-block-end: 14px; }
 .billing-workspace-header p,.billing-workspace-header h1,.billing-workspace-header span { margin: 0; }.billing-workspace-header p,.billing-workspace-header span { color: var(--color-muted); }.billing-workspace-header h1 { font-size: clamp(1.7rem,2vw,2.25rem); }
 .billing-workspace-tabs { display: flex; gap: 4px; border: 1px solid var(--color-border); border-radius: 14px; padding: 4px; background: var(--color-surface); }
@@ -1872,17 +1935,33 @@ body {
 @media (max-width:1279px) {
   .team-directory-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .team-filter-toolbar .v2-form-grid,.users-filter-toolbar .v2-form-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .team-schedule-grid { grid-template-columns: 1fr; }
+}
+@media (max-width:1100px) {
+  .user-management-grid,.team-detail-upper-grid { grid-template-columns: 1fr; }
+  .professional-edit-card { grid-row: auto; }
 }
 @media (max-width:1023px) {
   .profile-page-v3-grid { grid-template-columns: 1fr; }
   .team-filter-toolbar,.users-filter-toolbar { align-items: stretch; flex-direction: column; }
   .team-filter-toolbar .v2-form-grid,.users-filter-toolbar .v2-form-grid { grid-template-columns: 1fr; width: 100%; }
   .billing-workspace-header { align-items: stretch; flex-direction: column; }
+  .user-management-grid,.team-detail-upper-grid { grid-template-columns: 1fr; }
+  .role-transition-controls { grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); }.role-transition-controls > .v2-button { grid-column: 1 / -1; justify-self: end; }
+  .account-metadata-card { align-items: flex-start; flex-direction: column; gap: 10px; }.account-metadata-card dl { width: 100%; }
+  .professional-edit-card { grid-row: auto; }
 }
 @media (max-width:767px) {
   .team-summary-strip,.team-directory-grid { grid-template-columns: 1fr; }
   .team-directory-card,.billing-summary-card,.clinic-settings-card { height: auto; }
   .billing-workspace-tabs { overflow-x: auto; }.billing-workspace-tabs a { flex: 1; justify-content: center; }
+  .user-management-header,.team-profile-header { align-items: flex-start; flex-direction: column; padding: 18px; }
+  .user-header-status,.team-profile-header-actions { max-width: none; justify-content: flex-start; }
+  .user-identity-card .v2-form-grid,.effective-access-list,.role-profile-fields,.professional-edit-card .v2-form-grid,.operational-history { grid-template-columns: 1fr; }
+  .role-transition-controls { grid-template-columns: 1fr; }.role-transition-arrow { display: none; }.role-transition-controls > .v2-button { grid-column: auto; width: 100%; justify-content: center; }
+  .security-actions,.dialog-actions { align-items: stretch; flex-direction: column; }.security-actions .v2-button,.dialog-actions .v2-button { width: 100%; justify-content: center; }
+  .account-metadata-card dl { grid-template-columns: 1fr; }.account-metadata-card dl > div { justify-content: space-between; }
+  .workload-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 
 .button {
