@@ -103,6 +103,17 @@ CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", [])
 FRONTEND_URL = env("FRONTEND_URL", "http://localhost:5173")
 AI_SERVICE_URL = env("AI_SERVICE_URL", "")
 AI_SERVICE_TOKEN = env("AI_SERVICE_TOKEN", "")
+# Real adapters resolve artifacts from this trusted root. Paths remain configurable,
+# while hashes and inference policy stay locked in application code.
+PEARLIX_AI_MODEL_ROOT = env("PEARLIX_AI_MODEL_ROOT", "")
+PEARLIX_AI_DETECTOR_PATH = env("PEARLIX_AI_DETECTOR_PATH", "")
+PEARLIX_AI_CLASSIFIER_PATH = env("PEARLIX_AI_CLASSIFIER_PATH", "")
+PEARLIX_AI_FDI_MAP_PATH = env("PEARLIX_AI_FDI_MAP_PATH", "")
+PEARLIX_AI_DEVICE = env("PEARLIX_AI_DEVICE", "cpu")
+# A bounded lease allows a later request to recover work abandoned by a dead worker.
+PEARLIX_AI_PROCESSING_STALE_SECONDS = int(
+    env("PEARLIX_AI_PROCESSING_STALE_SECONDS", "900") or "900"
+)
 FILE_UPLOAD_MAX_MEMORY_SIZE = int(env("FILE_UPLOAD_MAX_MEMORY_SIZE", str(10 * 1024 * 1024)) or str(10 * 1024 * 1024))
 
 REST_FRAMEWORK = {

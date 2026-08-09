@@ -1,68 +1,256 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from uuid import uuid4
+
+from django.conf import settings
+from django.core.files.base import ContentFile
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import status
 
+from apps.ai_results.adapters import InferenceAdapter, MOCK_MODEL_VERSION, MockInferenceAdapter
 from apps.ai_results.models import AIResult
+from apps.ai_results.model_contract import FINDINGS_SCHEMA_VERSION, MAX_IMAGE_INPUT_BYTES
+from apps.ai_results.result_types import ImageInput, PipelineResult
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
+from apps.xrays.models import ExternalXrayCase, XrayAttachment
 
 
-MOCK_MODEL_VERSION = "pearlix-mock-xray-v1"
+DEFAULT_PROCESSING_STALE_SECONDS = 15 * 60
+_MOCK_ADAPTER = MockInferenceAdapter()
 
 
-class AIServiceNotConfigured(Exception):
+class AIServiceError(Exception):
+    code = "AI_ANALYSIS_FAILED"
+    public_message = "AI analysis failed."
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    def __init__(self, *, result_id: int | None = None, model_version: str = ""):
+        super().__init__(self.public_message)
+        self.result_id = result_id
+        self.model_version = model_version
+
     def to_response(self):
-        return error_response(
-            "AI_SERVICE_NOT_CONFIGURED",
-            "AI service is not configured for the selected AI mode.",
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        details = {"result_id": self.result_id} if self.result_id is not None else {}
+        return error_response(self.code, self.public_message, details, status_code=self.status_code)
+
+
+class AIServiceNotConfigured(AIServiceError):
+    code = "AI_SERVICE_NOT_CONFIGURED"
+    public_message = "AI service is not configured for the selected AI mode."
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+
+class AIAnalysisInProgress(AIServiceError):
+    code = "AI_ANALYSIS_IN_PROGRESS"
+    public_message = "AI analysis is already in progress."
+    status_code = status.HTTP_409_CONFLICT
+
+
+class AIImageUnavailable(AIServiceError):
+    code = "AI_IMAGE_UNAVAILABLE"
+    public_message = "X-ray image is unavailable for analysis."
+    status_code = status.HTTP_404_NOT_FOUND
+
+
+class AIAnalysisFailed(AIServiceError):
+    code = "AI_ANALYSIS_FAILED"
+    public_message = "AI analysis failed."
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+class AISourceStateInvalid(AIServiceError):
+    code = "INVALID_STATUS_TRANSITION"
+    public_message = "AI can only run on temporary external X-ray cases."
+    status_code = status.HTTP_409_CONFLICT
+
+
+@dataclass(frozen=True)
+class _ProcessingClaim:
+    result_id: int
+    claimed_at: datetime
+
+
+def select_inference_adapter(ai_mode: str) -> InferenceAdapter:
+    if ai_mode == ClinicSettings.AiMode.MOCK_ADAPTER:
+        return _MOCK_ADAPTER
+    # AI-R2B will provide the DJANGO_INTERNAL implementation. The separate
+    # service mode remains intentionally unavailable.
+    raise AIServiceNotConfigured
+
+
+def load_image_input(file_field, *, content_type: str) -> ImageInput:
+    try:
+        handle = file_field.open("rb")
+        try:
+            content = handle.read(MAX_IMAGE_INPUT_BYTES + 1)
+        finally:
+            handle.close()
+    except (FileNotFoundError, OSError, ValueError) as exc:
+        raise AIImageUnavailable from exc
+    if not content or len(content) > MAX_IMAGE_INPUT_BYTES:
+        raise AIImageUnavailable
+    try:
+        return ImageInput(content=bytes(content), content_type=content_type)
+    except ValueError as exc:
+        raise AIImageUnavailable from exc
+
+
+def _processing_stale_seconds() -> int:
+    configured = int(getattr(settings, "PEARLIX_AI_PROCESSING_STALE_SECONDS", DEFAULT_PROCESSING_STALE_SECONDS))
+    return configured if configured > 0 else DEFAULT_PROCESSING_STALE_SECONDS
+
+
+def _is_active_processing(result: AIResult) -> bool:
+    if result.status != AIResult.Status.PROCESSING:
+        return False
+    cutoff = timezone.now() - timedelta(seconds=_processing_stale_seconds())
+    return result.updated_at > cutoff
+
+
+def _safe_delete_storage_file(storage, name: str) -> None:
+    try:
+        storage.delete(name)
+    except Exception:
+        # Storage cleanup is best effort and must not change the persisted AI
+        # lifecycle or disclose storage details to an API caller.
+        return
+
+
+def _validate_locked_source(source) -> None:
+    if isinstance(source, ExternalXrayCase) and source.status != ExternalXrayCase.Status.TEMPORARY:
+        raise AISourceStateInvalid
+
+
+def _claim_processing(*, source_model, source_id: int, source_field: str) -> tuple[_ProcessingClaim, object]:
+    with transaction.atomic():
+        source = source_model.objects.select_for_update().get(pk=source_id)
+        _validate_locked_source(source)
+        result = (
+            AIResult.objects.select_for_update()
+            .filter(**{f"{source_field}_id": source.id})
+            .first()
         )
+        if result is not None and _is_active_processing(result):
+            raise AIAnalysisInProgress(result_id=result.id)
+
+        old_overlay = None
+        if result is None:
+            result = AIResult(**{source_field: source})
+        elif result.overlay_file:
+            old_overlay = (result.overlay_file.storage, result.overlay_file.name)
+
+        result.status = AIResult.Status.PROCESSING
+        result.result_summary = ""
+        result.overall_confidence = None
+        result.findings_json = {
+            "schema_version": FINDINGS_SCHEMA_VERSION,
+            "pipeline": {},
+            "teeth": [],
+            "display_findings": [],
+        }
+        result.overlay_file = None
+        result.model_version = ""
+        result.error_message = ""
+        result.full_clean()
+        result.save()
+
+        if old_overlay:
+            storage, name = old_overlay
+            transaction.on_commit(lambda storage=storage, name=name: _safe_delete_storage_file(storage, name))
+        return _ProcessingClaim(result_id=result.id, claimed_at=result.updated_at), source
 
 
-def _ensure_mock_adapter_enabled():
-    settings = ClinicSettings.get_solo()
-    if settings.ai_mode != ClinicSettings.AiMode.MOCK_ADAPTER:
+def _claim_is_current(result: AIResult, claim: _ProcessingClaim) -> bool:
+    return result.status == AIResult.Status.PROCESSING and result.updated_at == claim.claimed_at
+
+
+def _mark_failed(claim: _ProcessingClaim, *, error_message: str) -> AIResult | None:
+    with transaction.atomic():
+        result = AIResult.objects.select_for_update().filter(pk=claim.result_id).first()
+        if result is None or not _claim_is_current(result, claim):
+            return None
+        result.status = AIResult.Status.FAILED
+        result.error_message = error_message
+        result.full_clean()
+        result.save(update_fields=["status", "error_message", "updated_at"])
+        return result
+
+
+def _complete_result(claim: _ProcessingClaim, pipeline_result: PipelineResult) -> AIResult:
+    created_overlay = None
+    try:
+        with transaction.atomic():
+            result = AIResult.objects.select_for_update().get(pk=claim.result_id)
+            if not _claim_is_current(result, claim):
+                raise AIAnalysisInProgress(result_id=result.id, model_version=pipeline_result.model_version)
+
+            payload = pipeline_result.to_persistence_payload()
+            result.status = AIResult.Status.COMPLETED
+            result.result_summary = payload["result_summary"]
+            result.overall_confidence = payload["overall_confidence"]
+            result.findings_json = payload["findings_json"]
+            result.model_version = payload["model_version"]
+            result.error_message = payload["error_message"]
+            if pipeline_result.overlay_png is not None:
+                result.overlay_file.save(f"{uuid4().hex}.png", ContentFile(pipeline_result.overlay_png), save=False)
+                created_overlay = (result.overlay_file.storage, result.overlay_file.name)
+            result.full_clean()
+            result.save()
+            return result
+    except Exception:
+        if created_overlay:
+            _safe_delete_storage_file(*created_overlay)
+        raise
+
+
+def _execute_analysis(*, source_model, source_id: int, source_field: str, content_type: str) -> AIResult:
+    clinic_settings = ClinicSettings.get_solo()
+    adapter = select_inference_adapter(clinic_settings.ai_mode)
+    if not isinstance(adapter, InferenceAdapter):
         raise AIServiceNotConfigured
 
-
-def run_mock_xray_analysis(xray_attachment):
-    return {
-        "status": AIResult.Status.COMPLETED,
-        "result_summary": "Research-only AI analysis completed.",
-        "overall_confidence": 0.74,
-        "findings_json": [
-            {
-                "fdi_tooth_id": "36",
-                "disease_label": "Caries",
-                "confidence_score": 0.82,
-                "confidence_percent": 82,
-            }
-        ],
-        "model_version": MOCK_MODEL_VERSION,
-        "error_message": "",
-    }
+    claim, locked_source = _claim_processing(
+        source_model=source_model,
+        source_id=source_id,
+        source_field=source_field,
+    )
+    try:
+        image = load_image_input(locked_source.original_file, content_type=content_type)
+        pipeline_result = adapter.analyze(image)
+        if not isinstance(pipeline_result, PipelineResult):
+            raise TypeError("Inference adapter returned an unsupported result type.")
+        if pipeline_result.model_version != adapter.model_version:
+            raise ValueError("Inference adapter returned an unexpected model version.")
+        return _complete_result(claim, pipeline_result)
+    except AIAnalysisInProgress:
+        raise
+    except AIServiceError as exc:
+        _mark_failed(claim, error_message=exc.public_message)
+        exc.result_id = claim.result_id
+        exc.model_version = adapter.model_version
+        raise
+    except Exception as exc:
+        _mark_failed(claim, error_message=AIAnalysisFailed.public_message)
+        raise AIAnalysisFailed(result_id=claim.result_id, model_version=adapter.model_version) from exc
 
 
 def run_ai_for_xray(*, xray_attachment, user):
-    _ensure_mock_adapter_enabled()
-    data = run_mock_xray_analysis(xray_attachment)
-    with transaction.atomic():
-        result, _ = AIResult.objects.update_or_create(
-            xray_attachment=xray_attachment,
-            defaults=data,
-        )
-        result.full_clean()
-        result.save()
-        return result
+    return _execute_analysis(
+        source_model=XrayAttachment,
+        source_id=xray_attachment.id,
+        source_field="xray_attachment",
+        content_type=xray_attachment.content_type,
+    )
 
 
 def run_ai_for_external_case(*, external_xray_case, user):
-    _ensure_mock_adapter_enabled()
-    data = run_mock_xray_analysis(external_xray_case)
-    with transaction.atomic():
-        result, _ = AIResult.objects.update_or_create(
-            external_xray_case=external_xray_case,
-            defaults=data,
-        )
-        result.full_clean()
-        result.save()
-        return result
+    return _execute_analysis(
+        source_model=ExternalXrayCase,
+        source_id=external_xray_case.id,
+        source_field="external_xray_case",
+        content_type=external_xray_case.content_type,
+    )

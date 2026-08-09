@@ -5,7 +5,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from apps.ai_results.serializers import AIResultSerializer
-from apps.ai_results.services import AIServiceNotConfigured, run_ai_for_external_case, run_ai_for_xray
+from apps.ai_results.services import AIServiceError, run_ai_for_external_case, run_ai_for_xray
 from apps.audit.services import log_activity
 from apps.common.errors import error_response
 from apps.common.protected_media import protected_file_response
@@ -64,10 +64,47 @@ class XrayViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"], url_path="run-ai")
     def run_ai(self, request, pk=None):
         xray = self.get_object()
+        log_activity(
+            request=request,
+            action="xray_ai_requested",
+            entity_type="xray_attachment",
+            entity_id=xray.id,
+            metadata={"xray_id": xray.id, "patient_id": xray.patient_id},
+        )
         try:
             result = run_ai_for_xray(xray_attachment=xray, user=request.user)
-        except AIServiceNotConfigured as exc:
+        except AIServiceError as exc:
+            metadata = {
+                "xray_id": xray.id,
+                "patient_id": xray.patient_id,
+                "status": "FAILED",
+                "failure_code": exc.code,
+            }
+            if exc.result_id is not None:
+                metadata["result_id"] = exc.result_id
+            if exc.model_version:
+                metadata["model_version"] = exc.model_version
+            log_activity(
+                request=request,
+                action="xray_ai_failed",
+                entity_type="ai_result",
+                entity_id=exc.result_id,
+                metadata=metadata,
+            )
             return exc.to_response()
+        log_activity(
+            request=request,
+            action="xray_ai_completed",
+            entity_type="ai_result",
+            entity_id=result.id,
+            metadata={
+                "result_id": result.id,
+                "xray_id": xray.id,
+                "patient_id": xray.patient_id,
+                "model_version": result.model_version,
+                "status": result.status,
+            },
+        )
         log_activity(
             request=request,
             action="xray_ai_run",
@@ -175,10 +212,45 @@ class ExternalXrayViewSet(viewsets.ModelViewSet):
             validate_external_temporary(external, "AI can only run on temporary external X-ray cases.")
         except ExternalXrayRuleError as exc:
             return exc.to_response()
+        log_activity(
+            request=request,
+            action="external_xray_ai_requested",
+            entity_type="external_xray_case",
+            entity_id=external.id,
+            metadata={"external_xray_case_id": external.id},
+        )
         try:
             result = run_ai_for_external_case(external_xray_case=external, user=request.user)
-        except AIServiceNotConfigured as exc:
+        except AIServiceError as exc:
+            metadata = {
+                "external_xray_case_id": external.id,
+                "status": "FAILED",
+                "failure_code": exc.code,
+            }
+            if exc.result_id is not None:
+                metadata["result_id"] = exc.result_id
+            if exc.model_version:
+                metadata["model_version"] = exc.model_version
+            log_activity(
+                request=request,
+                action="external_xray_ai_failed",
+                entity_type="ai_result",
+                entity_id=exc.result_id,
+                metadata=metadata,
+            )
             return exc.to_response()
+        log_activity(
+            request=request,
+            action="external_xray_ai_completed",
+            entity_type="ai_result",
+            entity_id=result.id,
+            metadata={
+                "result_id": result.id,
+                "external_xray_case_id": external.id,
+                "model_version": result.model_version,
+                "status": result.status,
+            },
+        )
         log_activity(
             request=request,
             action="external_xray_ai_run",

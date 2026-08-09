@@ -1,3 +1,4 @@
+from copy import deepcopy
 from pathlib import Path
 from uuid import uuid4
 
@@ -150,17 +151,37 @@ def validate_external_temporary(external_case, message="External X-ray case is n
         )
 
 
+def validate_external_not_processing(external_case):
+    ai_result = getattr(external_case, "ai_result", None)
+    if ai_result is not None and ai_result.status == AIResult.Status.PROCESSING:
+        raise ExternalXrayRuleError(
+            "AI_ANALYSIS_IN_PROGRESS",
+            "AI analysis is already in progress.",
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
 def discard_external_case(*, external_case, user):
     with transaction.atomic():
-        external_case = ExternalXrayCase.objects.select_for_update().get(pk=external_case.pk)
+        external_case = ExternalXrayCase.objects.select_for_update().select_related("ai_result").get(pk=external_case.pk)
         validate_external_temporary(external_case, "Only temporary external X-ray cases can be discarded.")
+        validate_external_not_processing(external_case)
         external_case.status = ExternalXrayCase.Status.DISCARDED
         external_case.discarded_at = timezone.now()
         external_case.save(update_fields=["status", "discarded_at", "updated_at"])
         return external_case
 
 
-def _copy_external_file_to_saved_xray(*, external_case, patient, visit, uploaded_by, title, notes):
+def _copy_external_file_to_saved_xray(
+    *,
+    external_case,
+    patient,
+    visit,
+    uploaded_by,
+    title,
+    notes,
+    created_storage_files,
+):
     extension = Path(external_case.stored_file_name).suffix.lower()
     source_stem = Path(external_case.stored_file_name).stem
     stored_file_name = (
@@ -188,11 +209,17 @@ def _copy_external_file_to_saved_xray(*, external_case, patient, visit, uploaded
         notes=(notes or external_case.notes or "").strip(),
     )
     xray.full_clean()
-    xray.save()
+    try:
+        xray.save()
+    except Exception:
+        if xray.original_file and getattr(xray.original_file, "_committed", False):
+            xray.original_file.storage.delete(xray.original_file.name)
+        raise
+    created_storage_files.append((xray.original_file.storage, xray.original_file.name))
     return xray
 
 
-def _copy_external_ai_result(*, external_case, xray_attachment):
+def _copy_external_ai_result(*, external_case, xray_attachment, created_storage_files):
     external_result = getattr(external_case, "ai_result", None)
     if not external_result:
         return None
@@ -201,59 +228,81 @@ def _copy_external_ai_result(*, external_case, xray_attachment):
         status=external_result.status,
         result_summary=external_result.result_summary,
         overall_confidence=external_result.overall_confidence,
-        findings_json=external_result.findings_json,
-        overlay_file=external_result.overlay_file,
+        findings_json=deepcopy(external_result.findings_json),
         model_version=external_result.model_version,
         error_message=external_result.error_message,
     )
+    if external_result.overlay_file:
+        source_handle = external_result.overlay_file.open("rb")
+        try:
+            overlay_content = source_handle.read()
+        finally:
+            source_handle.close()
+        result.overlay_file.save(f"{uuid4().hex}.png", ContentFile(overlay_content), save=False)
+        created_storage_files.append((result.overlay_file.storage, result.overlay_file.name))
     result.full_clean()
     result.save()
     return result
 
 
 def attach_external_case_to_patient(*, external_case, patient, visit, user, title="", notes=""):
-    with transaction.atomic():
-        external_case = (
-            ExternalXrayCase.objects.select_for_update(of=("self",))
-            .select_related("uploaded_by", "ai_result")
-            .get(pk=external_case.pk)
-        )
-        validate_external_temporary(external_case, "Only temporary external X-ray cases can be attached.")
-        if not user_can_read_patient_clinical_history(user, patient):
-            raise ExternalXrayRuleError("NOT_FOUND", "Patient was not found.", status_code=status.HTTP_404_NOT_FOUND)
-        if visit is not None:
-            if visit.patient_id != patient.id:
-                raise ExternalXrayRuleError(
-                    "VALIDATION_ERROR",
-                    "Some fields are invalid.",
-                    {"visit_id": ["Visit must belong to the selected patient."]},
-                )
-            if visit.doctor_id != user.id:
-                raise ExternalXrayRuleError("NOT_FOUND", "Visit was not found.", status_code=status.HTTP_404_NOT_FOUND)
+    created_storage_files = []
+    try:
+        with transaction.atomic():
+            external_case = (
+                ExternalXrayCase.objects.select_for_update(of=("self",))
+                .select_related("uploaded_by", "ai_result")
+                .get(pk=external_case.pk)
+            )
+            validate_external_temporary(external_case, "Only temporary external X-ray cases can be attached.")
+            validate_external_not_processing(external_case)
+            if not user_can_read_patient_clinical_history(user, patient):
+                raise ExternalXrayRuleError("NOT_FOUND", "Patient was not found.", status_code=status.HTTP_404_NOT_FOUND)
+            if visit is not None:
+                if visit.patient_id != patient.id:
+                    raise ExternalXrayRuleError(
+                        "VALIDATION_ERROR",
+                        "Some fields are invalid.",
+                        {"visit_id": ["Visit must belong to the selected patient."]},
+                    )
+                if visit.doctor_id != user.id:
+                    raise ExternalXrayRuleError("NOT_FOUND", "Visit was not found.", status_code=status.HTTP_404_NOT_FOUND)
 
-        xray = _copy_external_file_to_saved_xray(
-            external_case=external_case,
-            patient=patient,
-            visit=visit,
-            uploaded_by=user,
-            title=title,
-            notes=notes,
-        )
-        _copy_external_ai_result(external_case=external_case, xray_attachment=xray)
+            xray = _copy_external_file_to_saved_xray(
+                external_case=external_case,
+                patient=patient,
+                visit=visit,
+                uploaded_by=user,
+                title=title,
+                notes=notes,
+                created_storage_files=created_storage_files,
+            )
+            _copy_external_ai_result(
+                external_case=external_case,
+                xray_attachment=xray,
+                created_storage_files=created_storage_files,
+            )
 
-        external_case.status = ExternalXrayCase.Status.ATTACHED_TO_PATIENT
-        external_case.attached_patient = patient
-        external_case.attached_visit = visit
-        external_case.attached_xray = xray
-        external_case.attached_at = timezone.now()
-        external_case.save(
-            update_fields=[
-                "status",
-                "attached_patient",
-                "attached_visit",
-                "attached_xray",
-                "attached_at",
-                "updated_at",
-            ]
-        )
-        return external_case
+            external_case.status = ExternalXrayCase.Status.ATTACHED_TO_PATIENT
+            external_case.attached_patient = patient
+            external_case.attached_visit = visit
+            external_case.attached_xray = xray
+            external_case.attached_at = timezone.now()
+            external_case.save(
+                update_fields=[
+                    "status",
+                    "attached_patient",
+                    "attached_visit",
+                    "attached_xray",
+                    "attached_at",
+                    "updated_at",
+                ]
+            )
+            return external_case
+    except Exception:
+        for storage, name in reversed(created_storage_files):
+            try:
+                storage.delete(name)
+            except Exception:
+                continue
+        raise

@@ -63,7 +63,13 @@ class AIResultSerializer(serializers.ModelSerializer):
         }
 
     def get_findings(self, obj):
-        return obj.findings_json or []
+        findings = obj.findings_json or []
+        if isinstance(findings, list):
+            return findings
+        if isinstance(findings, dict):
+            display_findings = findings.get("display_findings", [])
+            return display_findings if isinstance(display_findings, list) else []
+        return []
 
     def get_overall_confidence_percent(self, obj):
         if obj.overall_confidence is None:
