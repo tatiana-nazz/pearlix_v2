@@ -1,6 +1,6 @@
 import type { LanguagePreference } from "../../types/auth";
 
-type XrayCopy = {
+export type XrayCopy = {
   savedXrays: string;
   externalWorkspace: string;
   uploadXray: string;
@@ -30,9 +30,18 @@ type XrayCopy = {
   metadata: string;
   findings: string;
   confidence: string;
+  decision: string;
+  modelScore: string;
+  operatingThreshold: string;
+  review: string;
+  flagged: string;
+  notFlagged: string;
   model: string;
   version: string;
   processing: string;
+  pending: string;
+  analyzing: string;
+  completed: string;
   failed: string;
   status: string;
   uploaded: string;
@@ -40,8 +49,11 @@ type XrayCopy = {
   noXrays: string;
   selectedXray: string;
   runAi: string;
+  retryAi: string;
   runningAi: string;
+  analysisAlreadyRunning: string;
   aiServiceUnavailable: string;
+  aiImageInvalid: string;
   aiRequestFailed: string;
   loadingAiResult: string;
   aiResultUnavailable: string;
@@ -56,6 +68,7 @@ type XrayCopy = {
   researchOnly: string;
   requiresInterpretation: string;
   notDiagnosis: string;
+  modelScoresUncalibrated: string;
   overlayAvailability: string;
   available: string;
   notAvailable: string;
@@ -99,9 +112,18 @@ const en: XrayCopy = {
   metadata: "Metadata",
   findings: "Findings",
   confidence: "Confidence",
+  decision: "Decision",
+  modelScore: "Model score",
+  operatingThreshold: "Operating threshold",
+  review: "Review",
+  flagged: "Flagged",
+  notFlagged: "Not flagged",
   model: "Model",
   version: "Version",
   processing: "Processing",
+  pending: "Pending",
+  analyzing: "Analyzing…",
+  completed: "Completed",
   failed: "Failed",
   status: "Status",
   uploaded: "Uploaded",
@@ -109,8 +131,11 @@ const en: XrayCopy = {
   noXrays: "No X-rays have been saved yet.",
   selectedXray: "Selected X-ray",
   runAi: "Run AI Analysis",
+  retryAi: "Retry AI",
   runningAi: "Running AI Analysis…",
-  aiServiceUnavailable: "AI analysis is not configured for this environment. The saved X-ray remains available for review.",
+  analysisAlreadyRunning: "AI analysis is already running.",
+  aiServiceUnavailable: "AI service is currently unavailable.",
+  aiImageInvalid: "This X-ray image could not be analyzed.",
   aiRequestFailed: "Unable to run AI analysis. Review the message and try again.",
   loadingAiResult: "Loading AI result…",
   aiResultUnavailable: "AI result unavailable",
@@ -125,6 +150,7 @@ const en: XrayCopy = {
   researchOnly: "Research-only AI analysis",
   requiresInterpretation: "Requires professional interpretation",
   notDiagnosis: "Not a clinical diagnosis",
+  modelScoresUncalibrated: "Scores are uncalibrated model scores",
   overlayAvailability: "Overlay availability",
   available: "Available",
   notAvailable: "Unavailable",
@@ -168,9 +194,18 @@ const ar: XrayCopy = {
   metadata: "البيانات الوصفية",
   findings: "النتائج",
   confidence: "مستوى الثقة",
+  decision: "القرار",
+  modelScore: "درجة النموذج",
+  operatingThreshold: "حد التشغيل",
+  review: "مراجعة",
+  flagged: "مُعلَّم",
+  notFlagged: "غير مُعلَّم",
   model: "النموذج",
   version: "الإصدار",
   processing: "قيد المعالجة",
+  pending: "قيد الانتظار",
+  analyzing: "جارٍ التحليل…",
+  completed: "مكتمل",
   failed: "فشل",
   status: "الحالة",
   uploaded: "تاريخ الرفع",
@@ -178,8 +213,11 @@ const ar: XrayCopy = {
   noXrays: "لا توجد أشعة محفوظة بعد.",
   selectedXray: "الأشعة المحددة",
   runAi: "تشغيل تحليل الذكاء الاصطناعي",
+  retryAi: "إعادة تشغيل التحليل",
   runningAi: "جارٍ تشغيل تحليل الذكاء الاصطناعي…",
-  aiServiceUnavailable: "تحليل الذكاء الاصطناعي غير مهيأ لهذه البيئة. تبقى الأشعة المحفوظة متاحة للمراجعة.",
+  analysisAlreadyRunning: "تحليل الذكاء الاصطناعي قيد التشغيل بالفعل.",
+  aiServiceUnavailable: "خدمة الذكاء الاصطناعي غير متاحة حالياً.",
+  aiImageInvalid: "تعذر تحليل صورة الأشعة هذه.",
   aiRequestFailed: "تعذر تشغيل تحليل الذكاء الاصطناعي. راجع الرسالة وحاول مجدداً.",
   loadingAiResult: "جارٍ تحميل نتيجة الذكاء الاصطناعي…",
   aiResultUnavailable: "نتيجة الذكاء الاصطناعي غير متاحة",
@@ -194,6 +232,7 @@ const ar: XrayCopy = {
   researchOnly: "تحليل ذكاء اصطناعي للبحث فقط",
   requiresInterpretation: "يتطلب تفسيراً مهنياً",
   notDiagnosis: "ليس تشخيصاً سريرياً",
+  modelScoresUncalibrated: "الدرجات هي درجات نموذج غير مُعايرة",
   overlayAvailability: "توفر الطبقة",
   available: "متاحة",
   notAvailable: "غير متاحة",

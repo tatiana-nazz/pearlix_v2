@@ -1,10 +1,20 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { toApiClientError } from "../../../api/errors";
 import { patientsApi } from "../../../api/endpoints/patients";
 import { visitsApi } from "../../../api/endpoints/visits";
 import { xraysApi } from "../../../api/endpoints/xrays";
+import type { AIResult } from "../../../types/ai";
 import type { ExternalAttachPayload, XrayUploadPayload } from "../../../types/xrays";
 import { xrayUploadFormData } from "../utils/xrayValidation";
+
+export const AI_RESULT_POLL_INTERVAL_MS = 2_000;
+
+export function aiResultRefetchInterval(result?: Pick<AIResult, "status">): number | false {
+  return result?.status === "PENDING" || result?.status === "PROCESSING"
+    ? AI_RESULT_POLL_INTERVAL_MS
+    : false;
+}
 
 export function useXrays(query?: Record<string, string | number | undefined>) {
   return useQuery({ queryKey: ["xrays", query], queryFn: () => xraysApi.list(query) });
@@ -15,11 +25,24 @@ export function useXray(xrayId: number) {
 }
 
 export function useXrayAiResult(xrayId: number, enabled: boolean) {
-  return useQuery({ queryKey: ["xray-ai-result", xrayId], queryFn: () => xraysApi.aiResult(xrayId), enabled });
+  return useQuery({
+    queryKey: ["xray-ai-result", xrayId],
+    queryFn: () => xraysApi.aiResult(xrayId),
+    enabled,
+    refetchInterval: (query) => aiResultRefetchInterval(query.state.data),
+  });
 }
 
-export function useXrayAiResults(xrayIds: number[]) {
-  return useQueries({ queries: xrayIds.map((xrayId) => ({ queryKey: ["xray-ai-result", xrayId], queryFn: () => xraysApi.aiResult(xrayId) })) });
+export function useXrayAiResults(xrayIds: number[], pollingExcludedId?: number) {
+  return useQueries({
+    queries: xrayIds.map((xrayId) => ({
+      queryKey: ["xray-ai-result", xrayId],
+      queryFn: () => xraysApi.aiResult(xrayId),
+      refetchInterval: (query: { state: { data?: AIResult } }) => (
+        xrayId === pollingExcludedId ? false : aiResultRefetchInterval(query.state.data)
+      ),
+    })),
+  });
 }
 
 function invalidateSavedXrayContext(queryClient: ReturnType<typeof useQueryClient>, patientId?: number, visitId?: number | null) {
@@ -57,6 +80,14 @@ export function useRunSavedXrayAi(xrayId: number) {
       if (result.xray_attachment?.patient_id) void queryClient.invalidateQueries({ queryKey: ["patient", result.xray_attachment.patient_id, "ai-results"] });
       void queryClient.invalidateQueries({ queryKey: ["xrays"] });
     },
+    onError: (error) => {
+      if (toApiClientError(error).code !== "AI_ANALYSIS_IN_PROGRESS") return;
+      void queryClient.fetchQuery({
+        queryKey: ["xray-ai-result", xrayId],
+        queryFn: () => xraysApi.aiResult(xrayId),
+      }).catch(() => undefined);
+      void queryClient.invalidateQueries({ queryKey: ["xray", xrayId] });
+    },
   });
 }
 
@@ -69,7 +100,12 @@ export function useExternalXray(caseId: number) {
 }
 
 export function useExternalAiResult(caseId: number, enabled: boolean) {
-  return useQuery({ queryKey: ["external-xray-ai-result", caseId], queryFn: () => xraysApi.externalAiResult(caseId), enabled });
+  return useQuery({
+    queryKey: ["external-xray-ai-result", caseId],
+    queryFn: () => xraysApi.externalAiResult(caseId),
+    enabled,
+    refetchInterval: (query) => aiResultRefetchInterval(query.state.data),
+  });
 }
 
 export function useExternalXrayMutations() {
@@ -80,7 +116,21 @@ export function useExternalXrayMutations() {
   };
   return {
     upload: useMutation({ mutationFn: (payload: XrayUploadPayload) => xraysApi.createExternal(xrayUploadFormData(payload)), onSuccess: () => invalidate() }),
-    runAi: useMutation({ mutationFn: (caseId: number) => xraysApi.runExternalAi(caseId), onSuccess: (_, caseId) => { invalidate(caseId); void queryClient.invalidateQueries({ queryKey: ["external-xray-ai-result", caseId] }); } }),
+    runAi: useMutation({
+      mutationFn: (caseId: number) => xraysApi.runExternalAi(caseId),
+      onSuccess: (result, caseId) => {
+        queryClient.setQueryData(["external-xray-ai-result", caseId], result);
+        invalidate(caseId);
+      },
+      onError: (error, caseId) => {
+        if (toApiClientError(error).code !== "AI_ANALYSIS_IN_PROGRESS") return;
+        void queryClient.fetchQuery({
+          queryKey: ["external-xray-ai-result", caseId],
+          queryFn: () => xraysApi.externalAiResult(caseId),
+        }).catch(() => undefined);
+        invalidate(caseId);
+      },
+    }),
     discard: useMutation({ mutationFn: (caseId: number) => xraysApi.discardExternal(caseId), onSuccess: (_, caseId) => invalidate(caseId) }),
     attach: useMutation({
       mutationFn: ({ caseId, payload }: { caseId: number; payload: ExternalAttachPayload }) => xraysApi.attachExternalToPatient(caseId, payload),

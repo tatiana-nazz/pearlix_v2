@@ -17,6 +17,10 @@ export function canManageExternalXray(role: UserRole, currentUserId: number | un
   return external.status === "TEMPORARY" && (role === "ADMIN" || (role === "DOCTOR" && external.uploaded_by.id === currentUserId));
 }
 
+export function canRunExternalXrayAi(role: UserRole, currentUserId: number | undefined, external: ExternalXrayCase): boolean {
+  return canManageExternalXray(role, currentUserId, external);
+}
+
 export function canAttachExternalXray(role: UserRole, currentUserId: number | undefined, external: ExternalXrayCase): boolean {
   return role === "DOCTOR" && external.status === "TEMPORARY" && external.uploaded_by.id === currentUserId;
 }

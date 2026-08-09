@@ -6,7 +6,6 @@ import { EmptyState } from "../../../components/EmptyState";
 import { ErrorState } from "../../../components/ErrorState";
 import { LoadingState } from "../../../components/LoadingState";
 import { Button } from "../../../components/v2";
-import { normalizeApiError } from "../../../api/errors";
 import type { UserRole } from "../../../types/auth";
 import type { VisitDetail } from "../../../types/visits";
 import type { XrayAttachment, XrayUploadPayload } from "../../../types/xrays";
@@ -14,6 +13,7 @@ import { formatDateTime } from "../../../utils/dates";
 import { useProtectedMedia } from "../hooks/useProtectedMedia";
 import { useRunSavedXrayAi, useVisitXrayUpload, useXray, useXrayAiResult, useXrayAiResults, useXrays } from "../hooks/useXrays";
 import { xrayCopy } from "../i18n";
+import { aiErrorCode, aiRunErrorMessage, isAiAnalysisActive } from "../utils/aiLifecycle";
 import { canRunSavedXrayAi, canUploadVisitXray } from "../utils/xrayPermissions";
 import { xrayText } from "../utils/xrayPresentation";
 import { AiAnalysisDetails, AiResultPanel } from "./AiResultPanel";
@@ -34,21 +34,28 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
   const user = useAuthStore((state) => state.user);
   const c = xrayCopy(user?.language_preference);
   const xrays = useXrays({ visit_id: visit.id });
+  const [selectedXrayId, setSelectedXrayId] = useState<number | null>(null);
   const aiCandidateIds = useMemo(() => xrays.data?.results.filter((xray) => xray.has_ai_result).map((xray) => xray.id) ?? [], [xrays.data?.results]);
-  const aiCandidates = useXrayAiResults(aiCandidateIds);
+  const aiCandidates = useXrayAiResults(aiCandidateIds, selectedXrayId ?? undefined);
   const aiCandidatesLoading = aiCandidates.some((candidate) => candidate.isLoading);
   const overlayCandidateIndex = aiCandidates.findIndex((candidate) => candidate.data?.overlay_available);
   const overlayCandidateId = aiCandidateIds[overlayCandidateIndex];
-  const [selectedXrayId, setSelectedXrayId] = useState<number | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
   const selectedXray = useXray(selectedXrayId ?? 0);
-  const aiResult = useXrayAiResult(selectedXrayId ?? 0, Boolean(selectedXrayId && selectedXray.data?.has_ai_result));
   const runAi = useRunSavedXrayAi(selectedXrayId ?? 0);
   const upload = useVisitXrayUpload(visit.id);
   const [uploadOpen, setUploadOpen] = useState(false);
   const canUpload = canUploadVisitXray(role, user?.id, visit.doctor.id);
   const selected = selectedXray.data ?? xrays.data?.results.find((xray) => xray.id === selectedXrayId);
-  const canRunAi = canRunSavedXrayAi(role, selected) && !selected?.has_ai_result && !aiResult.data;
+  const runErrorCode = aiErrorCode(runAi.error);
+  const aiResult = useXrayAiResult(
+    selectedXrayId ?? 0,
+    Boolean(selectedXrayId && (selected?.has_ai_result || runErrorCode === "AI_ANALYSIS_IN_PROGRESS")),
+  );
+  const analysisActive = isAiAnalysisActive(aiResult.data?.status) || runAi.isPending;
+  const authorizedToRunAi = canRunSavedXrayAi(role, selected);
+  const canStartAi = authorizedToRunAi && !analysisActive && (!aiResult.data || aiResult.data.status === "FAILED");
+  const showRunAi = authorizedToRunAi && (canStartAi || analysisActive);
 
   useEffect(() => {
     const records = xrays.data?.results;
@@ -66,6 +73,10 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
     setOverlayVisible(false);
   }, [selectedXrayId]);
 
+  useEffect(() => {
+    setOverlayVisible(false);
+  }, [aiResult.data?.updated_at]);
+
   function finishUpload(payload: XrayUploadPayload) {
     void upload.mutateAsync(payload).then((created) => {
       setSelectedXrayId(created.id);
@@ -73,8 +84,7 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
     });
   }
 
-  const aiError = runAi.error ? normalizeApiError(runAi.error) : null;
-  const aiErrorMessage = aiError?.code === "AI_SERVICE_NOT_CONFIGURED" ? c.aiServiceUnavailable : c.aiRequestFailed;
+  const aiErrorMessage = aiRunErrorMessage(runAi.error, c);
   const overlayAvailable = Boolean(selected && aiResult.data?.overlay_available && selected.ai_overlay_endpoint);
 
   return <section className="active-xray-workspace" aria-labelledby="active-xray-title">
@@ -84,7 +94,7 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
       </div>
       <div className="active-xray-selected-copy"><p className="eyebrow">{c.researchOnly}</p><h3 id="active-xray-title">{c.selectedXray}</h3><p>{selected ? xrayText(selected.title || selected.original_file_name) : c.noXrays}</p></div>
       <div className="active-xray-primary-actions">
-        {canRunAi ? <Button variant="secondary" type="button" loading={runAi.isPending} aria-live="polite" onClick={() => runAi.mutate()}><Sparkles size={18} aria-hidden="true" />{runAi.isPending ? c.runningAi : c.runAi}</Button> : null}
+        {showRunAi ? <Button variant="secondary" type="button" loading={runAi.isPending} disabled={analysisActive} aria-live="polite" onClick={() => runAi.mutate()}><Sparkles size={18} aria-hidden="true" />{analysisActive ? c.analyzing : aiResult.data?.status === "FAILED" ? c.retryAi : c.runAi}</Button> : null}
         <button className="active-xray-overlay-switch" type="button" role="switch" aria-checked={overlayVisible} aria-label={`${c.aiOverlay}: ${overlayVisible ? c.overlayOn : c.overlayOff}`} disabled={!overlayAvailable} title={!overlayAvailable ? c.noOverlayAvailable : undefined} onClick={() => setOverlayVisible((visible) => !visible)}>
           <span className="active-xray-overlay-label">{c.aiOverlay}</span>
           <span className="active-xray-overlay-value">{overlayVisible ? c.overlayOn : c.overlayOff}</span>
@@ -93,7 +103,7 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
       </div>
     </header>
 
-    {aiError ? <p className="active-xray-ai-error" role="alert">{aiErrorMessage}</p> : null}
+    {aiErrorMessage ? <p className="active-xray-ai-error" role="alert">{aiErrorMessage}</p> : null}
     {xrays.isLoading ? <LoadingState title={c.savedXrays} /> : null}
     {xrays.isError ? <ErrorState error={xrays.error} title={c.savedXrays} onRetry={() => void xrays.refetch()} /> : null}
     {xrays.data && !xrays.data.results.length ? <div className="active-xray-empty"><EmptyState title={c.noXrays} /></div> : null}
@@ -106,7 +116,7 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
           {selected ? <ProtectedXrayViewer originalEndpoint={selected.file_endpoint} overlayEndpoint={selected.ai_overlay_endpoint} overlayAvailable={overlayAvailable} overlayVisible={overlayVisible} onOverlayVisibilityChange={setOverlayVisible} showOverlayControl={false} originalLabel={`${c.selectedXray}: ${xrayText(selected.title || selected.original_file_name)}`} originalAlt={`${xrayText(selected.title || selected.original_file_name)} — ${visit.patient.full_name}`} /> : null}
         </div>
         <aside className="active-xray-ai-result">
-          <AiResultPanel result={aiResult.data} isLoading={Boolean(selected?.has_ai_result && aiResult.isLoading)} error={aiResult.error} onRetry={() => void aiResult.refetch()} />
+          <AiResultPanel result={aiResult.data} isLoading={Boolean((selected?.has_ai_result || runErrorCode === "AI_ANALYSIS_IN_PROGRESS") && aiResult.isLoading)} error={aiResult.error} onRetry={() => void aiResult.refetch()} showDisclaimer={false} />
         </aside>
       </div>
       <section className="active-xray-history-panel">

@@ -1,8 +1,15 @@
 export type AIResultStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+export type AIFindingDecision = "not_flagged" | "review" | "flagged";
 
 export interface AIFinding {
   fdi_tooth_id?: string;
   disease_label?: string;
+  model_score?: number;
+  threshold?: number | null;
+  decision?: AIFindingDecision;
+  is_positive?: boolean;
+  detector_confidence?: number | null;
+  hierarchy_forced?: boolean;
   confidence_score?: number;
   confidence_percent?: number;
   [key: string]: unknown;

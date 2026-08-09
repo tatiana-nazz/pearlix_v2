@@ -1,20 +1,37 @@
+import { Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { useAuthStore } from "../../../auth/authStore";
 import { Card } from "../../../components/Card";
 import { StatusPill } from "../../../components/StatusPill";
+import { Button } from "../../../components/v2";
 import type { UserRole } from "../../../types/auth";
 import type { XrayAttachment } from "../../../types/xrays";
 import { formatDateTime } from "../../../utils/dates";
-import { useXrayAiResult } from "../hooks/useXrays";
+import { useRunSavedXrayAi, useXrayAiResult } from "../hooks/useXrays";
+import { xrayCopy } from "../i18n";
+import { aiErrorCode, aiRunErrorMessage, isAiAnalysisActive } from "../utils/aiLifecycle";
+import { canRunSavedXrayAi } from "../utils/xrayPermissions";
 import { formatFileSize } from "../utils/xrayValidation";
 import { aiStatusLabel, xraySourceLabel, xrayText } from "../utils/xrayPresentation";
-import { AiResultPanel } from "./AiResultPanel";
+import { AiAnalysisDetails, AiResultPanel } from "./AiResultPanel";
 import { ProtectedXrayViewer } from "./ProtectedXrayViewer";
 
 interface XrayDetailProps { role: UserRole; xray: XrayAttachment; }
 
 export function XrayDetail({ role, xray }: XrayDetailProps) {
-  const aiResult = useXrayAiResult(xray.id, xray.has_ai_result);
+  const c = xrayCopy(useAuthStore((state) => state.user?.language_preference));
+  const runAi = useRunSavedXrayAi(xray.id);
+  const runErrorCode = aiErrorCode(runAi.error);
+  const aiResult = useXrayAiResult(
+    xray.id,
+    xray.has_ai_result || runErrorCode === "AI_ANALYSIS_IN_PROGRESS",
+  );
+  const analysisActive = isAiAnalysisActive(aiResult.data?.status) || runAi.isPending;
+  const authorizedToRunAi = canRunSavedXrayAi(role, xray);
+  const canStartAi = authorizedToRunAi && !analysisActive && (!aiResult.data || aiResult.data.status === "FAILED");
+  const showRunAi = authorizedToRunAi && (canStartAi || analysisActive);
+  const aiErrorMessage = aiRunErrorMessage(runAi.error, c);
   return <div className="xray-detail-grid">
     <Card><header className="xray-detail-header"><div><p className="eyebrow">Saved X-ray</p><h3>{xrayText(xray.title || xray.original_file_name)}</h3><p>{xray.patient.full_name} · {xray.visit ? formatDateTime(xray.visit.started_at) : xraySourceLabel(xray.source)}</p></div><StatusPill status={xray.has_ai_result ? "AVAILABLE" : "NOT_RUN"} /></header>
       <ProtectedXrayViewer originalEndpoint={xray.file_endpoint} overlayEndpoint={xray.ai_overlay_endpoint} overlayAvailable={Boolean(aiResult.data?.overlay_available)} originalLabel="Protected original image" originalAlt="Protected dental X-ray for clinical review" />
@@ -31,7 +48,9 @@ export function XrayDetail({ role, xray }: XrayDetailProps) {
         <div><dt>AI result</dt><dd>{aiStatusLabel(xray.has_ai_result)}</dd></div>
         <div className="detail-wide"><dt>Description</dt><dd>{xrayText(xray.notes)}</dd></div>
       </dl></section>
+      {aiErrorMessage ? <p className="active-xray-ai-error" role="alert">{aiErrorMessage}</p> : null}
+      {showRunAi ? <div className="xray-detail-actions"><Button type="button" loading={runAi.isPending} disabled={analysisActive} onClick={() => runAi.mutate()}><Sparkles size={18} aria-hidden="true" />{analysisActive ? c.analyzing : aiResult.data?.status === "FAILED" ? c.retryAi : c.runAi}</Button></div> : null}
     </Card>
-    <AiResultPanel result={aiResult.data} isLoading={aiResult.isLoading} error={aiResult.error} onRetry={() => void aiResult.refetch()} />
+    <div className="xray-ai-detail-column"><AiResultPanel result={aiResult.data} isLoading={aiResult.isLoading} error={aiResult.error} onRetry={() => void aiResult.refetch()} showDisclaimer={false} /><AiAnalysisDetails result={aiResult.data} /></div>
   </div>;
 }

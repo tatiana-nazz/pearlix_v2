@@ -12,6 +12,9 @@ const hookState = vi.hoisted(() => ({
   upload: vi.fn(),
   uploadReset: vi.fn(),
   runReset: vi.fn(),
+  runPending: false,
+  runError: null as unknown,
+  aiResult: undefined as AIResult | undefined,
 }));
 
 const baseXray = {
@@ -40,9 +43,9 @@ const result = { id: 4, status: "COMPLETED", result_summary: "Stored research re
 vi.mock("../hooks/useXrays", () => ({
   useXrays: () => ({ data: { count: 2, results: [baseXray, storedXray], next: null, previous: null }, isLoading: false, isError: false, refetch: vi.fn() }),
   useXray: (id: number) => ({ data: [baseXray, storedXray, uploadedXray].find((xray) => xray.id === id), isLoading: false, isError: false, refetch: vi.fn() }),
-  useXrayAiResult: (id: number, enabled: boolean) => ({ data: id === 2 && enabled ? result : undefined, isLoading: false, error: null, refetch: vi.fn() }),
-  useXrayAiResults: (ids: number[]) => ids.map((id) => ({ data: id === 2 ? result : undefined, isLoading: false, error: null })),
-  useRunSavedXrayAi: () => ({ mutate: hookState.run, reset: hookState.runReset, isPending: false, error: null }),
+  useXrayAiResult: (id: number, enabled: boolean) => ({ data: id === 2 && enabled ? hookState.aiResult : undefined, isLoading: false, error: null, refetch: vi.fn() }),
+  useXrayAiResults: (ids: number[]) => ids.map((id) => ({ data: id === 2 ? hookState.aiResult : undefined, isLoading: false, error: null })),
+  useRunSavedXrayAi: () => ({ mutate: hookState.run, reset: hookState.runReset, isPending: hookState.runPending, error: hookState.runError }),
   useVisitXrayUpload: () => ({ mutateAsync: hookState.upload, reset: hookState.uploadReset, isPending: false, error: null }),
 }));
 vi.mock("../hooks/useProtectedMedia", () => ({ useProtectedMedia: (endpoint?: string | null) => ({ url: endpoint ? `blob:${endpoint}` : null, isLoading: false, error: null, retry: vi.fn() }) }));
@@ -65,6 +68,9 @@ describe("ActiveVisitXrayWorkspace", () => {
     hookState.run.mockReset();
     hookState.upload.mockReset();
     hookState.upload.mockResolvedValue(uploadedXray);
+    hookState.runPending = false;
+    hookState.runError = null;
+    hookState.aiResult = result;
     setUser("DOCTOR");
   });
 
@@ -105,6 +111,27 @@ describe("ActiveVisitXrayWorkspace", () => {
     const run = await screen.findByRole("button", { name: "Run AI Analysis" });
     fireEvent.click(run);
     expect(hookState.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers Retry AI for a failed saved result", async () => {
+    hookState.aiResult = { ...result, status: "FAILED", error_message: "AI analysis failed." };
+    render(<ActiveVisitXrayWorkspace role="DOCTOR" visit={visit} />);
+
+    const retry = await screen.findByRole("button", { name: "Retry AI" });
+    fireEvent.click(retry);
+    expect(hookState.run).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("alert")).toHaveTextContent("AI analysis failed.");
+  });
+
+  it("renders processing and prevents a duplicate saved-X-ray run", async () => {
+    hookState.aiResult = { ...result, status: "PROCESSING", findings: [], overlay_available: false };
+    render(<ActiveVisitXrayWorkspace role="DOCTOR" visit={visit} />);
+
+    const analyzing = await screen.findByRole("button", { name: "Analyzing…" });
+    expect(analyzing).toBeDisabled();
+    fireEvent.click(analyzing);
+    expect(hookState.run).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Analyzing…");
   });
 
   it("selects a newly uploaded visit X-ray without navigating away", async () => {

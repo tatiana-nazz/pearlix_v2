@@ -631,6 +631,7 @@ p {
 .protected-xray-loading { display:grid; min-height:220px; place-items:center; margin:var(--space-5) 0; border:1px dashed var(--v2-border); border-radius:var(--v2-radius-card); color:var(--v2-muted); }
 .xray-upload-form { display:grid; gap:var(--v2-space-5); }.xray-upload-form textarea { min-height:96px; resize:vertical; }.xray-selected-file { margin:0; overflow-wrap:anywhere; color:var(--v2-text); }.xray-dialog-actions,.xray-detail-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:var(--v2-space-3); padding-block-start:var(--v2-space-4); border-block-start:1px solid var(--v2-border); }
 .xray-detail-actions { margin-block-start:var(--v2-space-5); justify-content:flex-start; }.xray-detail-actions .danger { margin-inline-start:auto; }
+.xray-ai-detail-column { display:grid; align-content:start; gap:var(--v2-space-4); min-width:0; }
 .xray-ai-header { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
 .xray-ai-header span { color:var(--v2-muted); font-size:var(--font-size-sm); }.xray-ai-empty { display:grid; gap:var(--v2-space-3); }.xray-ai-empty h3,.xray-ai-empty p { margin:0; }.xray-ai-empty p { color:var(--v2-muted); }
 .xray-summary { margin: 0 0 var(--space-4); }
