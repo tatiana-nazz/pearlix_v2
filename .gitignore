@@ -15,6 +15,7 @@ htmlcov/
 .venv/
 venv/
 env/
+.local/ai_integration/
 
 # Django/local runtime
 db.sqlite3
