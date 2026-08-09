@@ -106,10 +106,15 @@ AI_SERVICE_TOKEN = env("AI_SERVICE_TOKEN", "")
 # Real adapters resolve artifacts from this trusted root. Paths remain configurable,
 # while hashes and inference policy stay locked in application code.
 PEARLIX_AI_MODEL_ROOT = env("PEARLIX_AI_MODEL_ROOT", "")
-PEARLIX_AI_DETECTOR_PATH = env("PEARLIX_AI_DETECTOR_PATH", "")
-PEARLIX_AI_CLASSIFIER_PATH = env("PEARLIX_AI_CLASSIFIER_PATH", "")
-PEARLIX_AI_FDI_MAP_PATH = env("PEARLIX_AI_FDI_MAP_PATH", "")
+PEARLIX_AI_DETECTOR_PATH = env(
+    "PEARLIX_AI_DETECTOR_PATH", "weights/detector_yolo_fdi_seg_v1-3_best.pt"
+)
+PEARLIX_AI_CLASSIFIER_PATH = env("PEARLIX_AI_CLASSIFIER_PATH", "weights/classifier_exp1_epoch12.pt")
+PEARLIX_AI_FDI_MAP_PATH = env("PEARLIX_AI_FDI_MAP_PATH", "contract/fdi_class_map.json")
 PEARLIX_AI_DEVICE = env("PEARLIX_AI_DEVICE", "cpu")
+PEARLIX_AI_MAX_CONCURRENT_INFERENCES = int(
+    env("PEARLIX_AI_MAX_CONCURRENT_INFERENCES", "1") or "1"
+)
 # A bounded lease allows a later request to recover work abandoned by a dead worker.
 PEARLIX_AI_PROCESSING_STALE_SECONDS = int(
     env("PEARLIX_AI_PROCESSING_STALE_SECONDS", "900") or "900"

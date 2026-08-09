@@ -77,16 +77,18 @@ class XrayViewSet(viewsets.ReadOnlyModelViewSet):
             metadata = {
                 "xray_id": xray.id,
                 "patient_id": xray.patient_id,
-                "status": "FAILED",
                 "failure_code": exc.code,
+                "request_outcome": exc.audit_outcome.upper(),
             }
+            if exc.audit_outcome == "failed":
+                metadata["status"] = "FAILED"
             if exc.result_id is not None:
                 metadata["result_id"] = exc.result_id
             if exc.model_version:
                 metadata["model_version"] = exc.model_version
             log_activity(
                 request=request,
-                action="xray_ai_failed",
+                action=f"xray_ai_{exc.audit_outcome}",
                 entity_type="ai_result",
                 entity_id=exc.result_id,
                 metadata=metadata,
@@ -224,16 +226,18 @@ class ExternalXrayViewSet(viewsets.ModelViewSet):
         except AIServiceError as exc:
             metadata = {
                 "external_xray_case_id": external.id,
-                "status": "FAILED",
                 "failure_code": exc.code,
+                "request_outcome": exc.audit_outcome.upper(),
             }
+            if exc.audit_outcome == "failed":
+                metadata["status"] = "FAILED"
             if exc.result_id is not None:
                 metadata["result_id"] = exc.result_id
             if exc.model_version:
                 metadata["model_version"] = exc.model_version
             log_activity(
                 request=request,
-                action="external_xray_ai_failed",
+                action=f"external_xray_ai_{exc.audit_outcome}",
                 entity_type="ai_result",
                 entity_id=exc.result_id,
                 metadata=metadata,

@@ -11,6 +11,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from apps.ai_results.adapters import InferenceAdapter, MOCK_MODEL_VERSION, MockInferenceAdapter
+from apps.ai_results.adapters.base import InferenceConfigurationError, InferenceImageInvalidError
 from apps.ai_results.models import AIResult
 from apps.ai_results.model_contract import FINDINGS_SCHEMA_VERSION, MAX_IMAGE_INPUT_BYTES
 from apps.ai_results.result_types import ImageInput, PipelineResult
@@ -27,6 +28,7 @@ class AIServiceError(Exception):
     code = "AI_ANALYSIS_FAILED"
     public_message = "AI analysis failed."
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    audit_outcome = "failed"
 
     def __init__(self, *, result_id: int | None = None, model_version: str = ""):
         super().__init__(self.public_message)
@@ -42,18 +44,26 @@ class AIServiceNotConfigured(AIServiceError):
     code = "AI_SERVICE_NOT_CONFIGURED"
     public_message = "AI service is not configured for the selected AI mode."
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    audit_outcome = "rejected"
 
 
 class AIAnalysisInProgress(AIServiceError):
     code = "AI_ANALYSIS_IN_PROGRESS"
     public_message = "AI analysis is already in progress."
     status_code = status.HTTP_409_CONFLICT
+    audit_outcome = "rejected"
 
 
 class AIImageUnavailable(AIServiceError):
     code = "AI_IMAGE_UNAVAILABLE"
     public_message = "X-ray image is unavailable for analysis."
     status_code = status.HTTP_404_NOT_FOUND
+
+
+class AIImageInvalid(AIServiceError):
+    code = "AI_IMAGE_INVALID"
+    public_message = "X-ray image is invalid."
+    status_code = status.HTTP_400_BAD_REQUEST
 
 
 class AIAnalysisFailed(AIServiceError):
@@ -66,6 +76,7 @@ class AISourceStateInvalid(AIServiceError):
     code = "INVALID_STATUS_TRANSITION"
     public_message = "AI can only run on temporary external X-ray cases."
     status_code = status.HTTP_409_CONFLICT
+    audit_outcome = "rejected"
 
 
 @dataclass(frozen=True)
@@ -77,8 +88,14 @@ class _ProcessingClaim:
 def select_inference_adapter(ai_mode: str) -> InferenceAdapter:
     if ai_mode == ClinicSettings.AiMode.MOCK_ADAPTER:
         return _MOCK_ADAPTER
-    # AI-R2B will provide the DJANGO_INTERNAL implementation. The separate
-    # service mode remains intentionally unavailable.
+    if ai_mode == ClinicSettings.AiMode.DJANGO_INTERNAL:
+        try:
+            from apps.ai_results.adapters.dentex import get_dentex_adapter
+
+            return get_dentex_adapter()
+        except InferenceConfigurationError as exc:
+            raise AIServiceNotConfigured from exc
+    # Separate-service mode remains intentionally unavailable.
     raise AIServiceNotConfigured
 
 
@@ -233,6 +250,14 @@ def _execute_analysis(*, source_model, source_id: int, source_field: str, conten
         exc.result_id = claim.result_id
         exc.model_version = adapter.model_version
         raise
+    except InferenceImageInvalidError as exc:
+        service_error = AIImageInvalid(result_id=claim.result_id, model_version=adapter.model_version)
+        _mark_failed(claim, error_message=service_error.public_message)
+        raise service_error from exc
+    except InferenceConfigurationError as exc:
+        service_error = AIServiceNotConfigured(result_id=claim.result_id, model_version=adapter.model_version)
+        _mark_failed(claim, error_message=service_error.public_message)
+        raise service_error from exc
     except Exception as exc:
         _mark_failed(claim, error_message=AIAnalysisFailed.public_message)
         raise AIAnalysisFailed(result_id=claim.result_id, model_version=adapter.model_version) from exc

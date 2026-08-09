@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from apps.ai_results import services
 from apps.ai_results.adapters import InferenceAdapter, MockInferenceAdapter
+from apps.ai_results.adapters.base import InferenceImageInvalidError
 from apps.ai_results.models import AIResult
 from apps.ai_results.result_types import ImageInput
 from apps.audit.models import ActivityLog
@@ -80,6 +81,10 @@ def test_active_processing_duplicate_is_stable_409_without_new_row(
     assert response.data["code"] == "AI_ANALYSIS_IN_PROGRESS"
     assert response.data["details"]["result_id"] == result.id
     assert AIResult.objects.filter(xray_attachment=xray).count() == 1
+    rejected_log = ActivityLog.objects.get(action="xray_ai_rejected")
+    assert rejected_log.metadata_json["request_outcome"] == "REJECTED"
+    assert "status" not in rejected_log.metadata_json
+    assert not ActivityLog.objects.filter(action="xray_ai_failed").exists()
 
 
 @pytest.mark.django_db
@@ -130,6 +135,32 @@ def test_adapter_failure_persists_safe_failed_result_and_audit_event(
 
 
 @pytest.mark.django_db
+def test_corrupt_image_adapter_error_maps_to_safe_400_and_failed_result(
+    doctor_client,
+    xray_attachment_factory,
+    monkeypatch,
+):
+    xray = xray_attachment_factory()
+
+    class InvalidImageAdapter:
+        model_version = "invalid-image-fixture"
+
+        def analyze(self, _image):
+            raise InferenceImageInvalidError("private decoder details")
+
+    monkeypatch.setattr(services, "select_inference_adapter", lambda _mode: InvalidImageAdapter())
+    response = doctor_client.post(f"/api/xrays/{xray.id}/run-ai/")
+
+    result = AIResult.objects.get(xray_attachment=xray)
+    assert response.status_code == 400
+    assert response.data["code"] == "AI_IMAGE_INVALID"
+    assert "private" not in str(response.data)
+    assert result.status == AIResult.Status.FAILED
+    assert result.error_message == "X-ray image is invalid."
+    assert ActivityLog.objects.filter(action="xray_ai_failed").exists()
+
+
+@pytest.mark.django_db
 def test_failed_result_retries_in_place_to_completion(
     doctor_client,
     xray_attachment_factory,
@@ -164,6 +195,27 @@ def test_success_records_requested_completed_and_legacy_audit_events(
     assert response.status_code == 200
     actions = set(ActivityLog.objects.values_list("action", flat=True))
     assert {"xray_ai_requested", "xray_ai_completed", "xray_ai_run"} <= actions
+
+
+@pytest.mark.django_db
+def test_service_not_configured_is_audited_as_rejected_not_failed(
+    doctor_client,
+    xray_attachment_factory,
+):
+    clinic_settings = ClinicSettings.get_solo()
+    clinic_settings.ai_mode = ClinicSettings.AiMode.SEPARATE_SERVICE
+    clinic_settings.save(update_fields=["ai_mode", "updated_at"])
+    xray = xray_attachment_factory()
+
+    response = doctor_client.post(f"/api/xrays/{xray.id}/run-ai/")
+
+    assert response.status_code == 503
+    assert response.data["code"] == "AI_SERVICE_NOT_CONFIGURED"
+    rejected_log = ActivityLog.objects.get(action="xray_ai_rejected")
+    assert rejected_log.metadata_json["request_outcome"] == "REJECTED"
+    assert "status" not in rejected_log.metadata_json
+    assert not ActivityLog.objects.filter(action="xray_ai_failed").exists()
+    assert not AIResult.objects.filter(xray_attachment=xray).exists()
 
 
 @pytest.mark.django_db
@@ -229,7 +281,7 @@ def test_external_attach_copies_overlay_to_independent_storage_key(
 
 
 @pytest.mark.django_db
-def test_django_internal_selection_is_safe_until_real_adapter_exists():
+def test_django_internal_selection_fails_safely_when_model_root_is_not_configured():
     with pytest.raises(services.AIServiceNotConfigured) as exc_info:
         services.select_inference_adapter(ClinicSettings.AiMode.DJANGO_INTERNAL)
 
