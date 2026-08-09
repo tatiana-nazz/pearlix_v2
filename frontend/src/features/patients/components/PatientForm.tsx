@@ -89,7 +89,7 @@ export function PatientForm({
 
   const isMedicalOnly = section === "medical";
   const showGeneralInformation = !isMedicalOnly;
-  const showMedicalInformation = mode === "edit";
+  const showMedicalInformation = section === "medical";
 
   function cancel() {
     if (isSubmitting) return;

@@ -1,5 +1,6 @@
 import type { Page, QueryParams } from "../../types/api";
 import type { AIResult } from "../../types/ai";
+import type { AppointmentList } from "../../types/appointments";
 import type {
   CreatePatientPayload,
   PatientDetail,
@@ -60,6 +61,10 @@ export function getPatientVisits(id: number, query?: QueryParams) {
   return api.get<Page<VisitDetail>>(`/patients/${id}/visits/`, query);
 }
 
+export function getPatientAppointments(id: number, query?: QueryParams) {
+  return api.get<Page<AppointmentList>>(`/patients/${id}/appointments/`, query);
+}
+
 export function getPatientXrays(id: number, query?: QueryParams) {
   return api.get<Page<XrayAttachment>>(`/patients/${id}/xrays/`, query);
 }
@@ -77,6 +82,7 @@ export const patientsApi = {
   archive: archivePatient,
   unarchive: unarchivePatient,
   visits: getPatientVisits,
+  appointments: getPatientAppointments,
   xrays: getPatientXrays,
   uploadXray: (id: number, formData: FormData) => api.postFormData<XrayAttachment>(`/patients/${id}/xrays/`, formData),
   aiResults: getPatientAiResults,

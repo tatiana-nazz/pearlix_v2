@@ -23,6 +23,7 @@ describe("ProtectedXrayViewer", () => {
     expect(container.querySelectorAll(".protected-xray-canvas")).toHaveLength(1);
     expect(container.querySelector(".protected-xray-original")).toBeInTheDocument();
     expect(container.querySelector(".protected-xray-overlay")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Overlay colors")).toHaveTextContent("Q1 upper rightQ2 upper leftQ3 lower leftQ4 lower rightReview");
 
     fireEvent.click(button);
     expect(screen.getByRole("button", { name: "Hide AI Overlay" })).toHaveAttribute("aria-pressed", "true");

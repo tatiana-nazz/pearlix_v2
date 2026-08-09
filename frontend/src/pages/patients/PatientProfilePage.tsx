@@ -27,7 +27,6 @@ import { getPatientPermissions, patientListPath } from "../../features/patients/
 import type { PatientFormValues } from "../../features/patients/utils/patientFormMapping";
 import type { UserRole } from "../../types/auth";
 import { useAuthStore } from "../../auth/authStore";
-import { Modal } from "../../components/v2";
 
 interface PatientProfilePageProps {
   role: UserRole;
@@ -44,7 +43,6 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const patientId = Number(params.patientId);
-  const [isEditing, setIsEditing] = useState(Boolean(searchParams.get("edit")));
   const [editDirty, setEditDirty] = useState(false);
   const [archiveMode, setArchiveMode] = useState<"archive" | "unarchive" | null>(null);
   const activeTab = searchParams.get("tab") ? tabFromSearch(searchParams.get("tab")) : defaultTab;
@@ -59,13 +57,38 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const xrays = usePatientXrays(patientId, tabQueriesEnabled && activeTab === "xrays");
   const aiResults = usePatientAiResults(patientId, tabQueriesEnabled && activeTab === "xrays");
 
-  useEffect(() => {
-    const section = searchParams.get("edit");
-    setIsEditing(section === "1" || section === "general" || section === "medical");
-  }, [searchParams]);
-
   const permissions = useMemo(() => getPatientPermissions(role, patient.data), [role, patient.data]);
   const visibleTab = activeTab === "billing" && !permissions.canViewBillingTab ? "overview" : activeTab;
+  const requestedEdit = searchParams.get("edit");
+  const editSection = requestedEdit === "medical" ? "medical" : requestedEdit === "general" || requestedEdit === "1" ? "general" : null;
+  const isEditing = Boolean(
+    permissions.canEdit
+    && editSection
+    && ((visibleTab === "overview" && editSection === "general") || (visibleTab === "medical" && editSection === "medical")),
+  );
+
+  useEffect(() => {
+    if (!patient.data) return;
+    const next = new URLSearchParams(searchParams);
+    let changed = false;
+    if (activeTab === "billing" && !permissions.canViewBillingTab) {
+      next.set("tab", "overview");
+      next.delete("edit");
+      changed = true;
+    } else if (requestedEdit) {
+      const normalizedEdit = requestedEdit === "1" ? "general" : requestedEdit;
+      const validCombination = permissions.canEdit
+        && ((visibleTab === "overview" && normalizedEdit === "general") || (visibleTab === "medical" && normalizedEdit === "medical"));
+      if (!validCombination) {
+        next.delete("edit");
+        changed = true;
+      } else if (requestedEdit !== normalizedEdit) {
+        next.set("edit", normalizedEdit);
+        changed = true;
+      }
+    }
+    if (changed) setSearchParams(next, { replace: true });
+  }, [activeTab, patient.data, permissions.canEdit, permissions.canViewBillingTab, requestedEdit, searchParams, setSearchParams, visibleTab]);
 
   if (!Number.isFinite(patientId)) {
     return <EmptyState title={c.invalidPatient} />;
@@ -76,6 +99,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   if (!patient.data) return <EmptyState title={c.missingPatient} />;
 
   function setTab(tab: PatientProfileTab) {
+    if (isEditing && editDirty && !window.confirm(c.discardChanges)) return;
+    setEditDirty(false);
     const next = new URLSearchParams(searchParams);
     next.set("tab", tab);
     next.delete("edit");
@@ -85,6 +110,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   function openEdit(section: "general" | "medical" = "general") {
     setEditDirty(false);
     const next = new URLSearchParams(searchParams);
+    next.set("tab", section === "medical" ? "medical" : "overview");
     next.set("edit", section);
     setSearchParams(next);
   }
@@ -98,7 +124,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
 
   async function handleUpdate(values: PatientFormValues) {
     if (!patient.data) return;
-    await updatePatient.mutateAsync(updatePayloadFromForm(values, patient.data.version));
+    await updatePatient.mutateAsync(updatePayloadFromForm(values, patient.data.version, editSection ?? "general"));
     closeEdit();
   }
 
@@ -122,11 +148,17 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
 
   return (
     <div className="patient-page">
-      <Link className="inline-back-link" to={patientListPath(role)}>
+      <Link
+        className="inline-back-link"
+        to={patientListPath(role)}
+        onClick={(event) => {
+          if (isEditing && editDirty && !window.confirm(c.discardChanges)) event.preventDefault();
+        }}
+      >
         {c.backToPatients}
       </Link>
-      <div className="patient-detail-surface">
-        <aside className="patient-identity-rail" aria-label={patient.data.full_name}>
+      <div className={`patient-detail-surface${isEditing ? " is-editing" : ""}`}>
+        {!isEditing ? <aside className="patient-identity-rail" aria-label={patient.data.full_name}>
           <span className="profile-initials" aria-hidden="true">
             {patient.data.first_name.slice(0, 1).toUpperCase()}{patient.data.last_name.slice(0, 1).toUpperCase()}
           </span>
@@ -142,13 +174,14 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
             <div><dt>{c.bloodGroup}</dt><dd>{patient.data.blood_group || c.notRecorded}</dd></div>
             <div><dt>{c.emergencyContact}</dt><dd>{patient.data.emergency_contact || c.notRecorded}</dd></div>
           </dl>
-        </aside>
+        </aside> : null}
 
         <section className="patient-detail-main">
           <PatientProfileHeader
             role={role}
             patient={patient.data}
-            onEdit={() => openEdit("general")}
+            onEdit={() => openEdit(visibleTab === "medical" ? "medical" : "general")}
+            showEdit={!isEditing && (visibleTab === "overview" || visibleTab === "medical")}
             onArchive={() => {
               archivePatient.reset();
               setArchiveMode("archive");
@@ -159,39 +192,35 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
             }}
           />
 
-          <Modal
-            open={isEditing && permissions.canEdit}
-            title={searchParams.get("edit") === "medical" ? c.medicalHistory : c.editPatient}
-            onClose={closeEdit}
-            pending={updatePatient.isPending}
-            dirty={editDirty}
-            wide
-          >
-                <PatientForm
-                  mode="edit"
-                  section={searchParams.get("edit") === "medical" ? "medical" : "general"}
-                  role={role}
-                  patient={patient.data}
-                  submitLabel={c.saveChanges}
-                  isSubmitting={updatePatient.isPending}
-                  error={updatePatient.error}
-                  onSubmit={handleUpdate}
-                  onCancel={closeEdit}
-                  onReloadLatest={() => void handleReloadLatestPatient()}
-                  onContinueReviewing={() => updatePatient.reset()}
-                  onDirtyChange={setEditDirty}
-                />
-          </Modal>
-
           <PatientProfileTabs role={role} activeTab={visibleTab} onTabChange={setTab} />
 
           <div id={`patient-profile-panel-${visibleTab}`} role="tabpanel" aria-labelledby={`patient-profile-tab-${visibleTab}`} tabIndex={0}>
-            {visibleTab === "overview" ? <PatientOverview patient={patient.data} /> : null}
-            {visibleTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} onEdit={() => openEdit("medical")} /> : null}
-            {visibleTab === "visits" ? (
+            {isEditing && editSection ? <section className="patient-inline-edit" aria-labelledby="patient-inline-edit-title">
+              <header>
+                <p className="eyebrow">{c.patientProfile}</p>
+                <h3 id="patient-inline-edit-title">{editSection === "medical" ? c.medicalHistory : c.editPatient}</h3>
+              </header>
+              <PatientForm
+                mode="edit"
+                section={editSection}
+                role={role}
+                patient={patient.data}
+                submitLabel={c.saveChanges}
+                isSubmitting={updatePatient.isPending}
+                error={updatePatient.error}
+                onSubmit={handleUpdate}
+                onCancel={closeEdit}
+                onReloadLatest={() => void handleReloadLatestPatient()}
+                onContinueReviewing={() => updatePatient.reset()}
+                onDirtyChange={setEditDirty}
+              />
+            </section> : null}
+            {!isEditing && visibleTab === "overview" ? <PatientOverview patient={patient.data} /> : null}
+            {!isEditing && visibleTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} /> : null}
+            {!isEditing && visibleTab === "visits" ? (
               <PatientVisitsSummary role={role} visits={visits.data} isLoading={visits.isLoading} error={visits.error} onRetry={() => void visits.refetch()} />
             ) : null}
-            {visibleTab === "appointments" ? (
+            {!isEditing && visibleTab === "appointments" ? (
               <PatientAppointmentsSummary
                 role={role}
                 appointments={appointments.data}
@@ -200,7 +229,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
                 onRetry={() => void appointments.refetch()}
               />
             ) : null}
-            {visibleTab === "xrays" ? (
+            {!isEditing && visibleTab === "xrays" ? (
               <PatientXraySummary
                 role={role}
                 patientId={patientId}
@@ -214,7 +243,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
                 }}
               />
             ) : null}
-            {visibleTab === "billing" ? <PatientBillingSummary role={role} patientId={patientId} /> : null}
+            {!isEditing && visibleTab === "billing" ? <PatientBillingSummary role={role} patientId={patientId} /> : null}
           </div>
         </section>
       </div>

@@ -13,6 +13,10 @@ export function canRunSavedXrayAi(role: UserRole, xray?: XrayAttachment): boolea
   return role === "DOCTOR" && Boolean(xray);
 }
 
+export function canDeleteSavedXray(role: UserRole, currentUserId: number | undefined, xray?: XrayAttachment): boolean {
+  return role === "DOCTOR" && Boolean(xray && xray.uploaded_by.id === currentUserId);
+}
+
 export function canManageExternalXray(role: UserRole, currentUserId: number | undefined, external: ExternalXrayCase): boolean {
   return external.status === "TEMPORARY" && (role === "ADMIN" || (role === "DOCTOR" && external.uploaded_by.id === currentUserId));
 }

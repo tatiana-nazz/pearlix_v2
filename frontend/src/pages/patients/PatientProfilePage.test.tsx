@@ -57,11 +57,14 @@ describe("PatientProfilePage", () => {
       </MemoryRouter>,
     );
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-    expect(await screen.findByRole("dialog", { name: "Edit patient" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Edit patient" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.querySelector(".patient-identity-rail")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/First name/)).toHaveValue("Ava");
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: "Avery" } });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ first_name: "Avery", version: 4 })));
+    expect(mutation.mutateAsync.mock.calls[0][0]).not.toHaveProperty("medical_conditions_history");
   });
 
   it("allows Doctor edit for permitted fields without archive controls", async () => {
@@ -109,5 +112,16 @@ describe("PatientProfilePage", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Medical Summary" }));
     expect(container.querySelector(".patient-identity-rail")).toBe(rail);
     expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "patient-profile-tab-medical");
+  });
+
+  it("keeps Edit contextual and normalizes incompatible direct edit queries", async () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/doctor/patients/12?tab=appointments&edit=medical"]}>
+        <Routes><Route path="/doctor/patients/:patientId" element={<PatientProfilePage role="DOCTOR" />} /></Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.querySelector(".patient-identity-rail")).toBeInTheDocument();
   });
 });

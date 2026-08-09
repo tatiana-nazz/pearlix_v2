@@ -5,10 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiClientError } from "../../../api/errors";
 import type { AIResult, AIResultStatus } from "../../../types/ai";
+import type { XrayAttachment } from "../../../types/xrays";
 import {
   AI_RESULT_POLL_INTERVAL_MS,
   aiResultRefetchInterval,
   useExternalXrayMutations,
+  useDeleteSavedXray,
   useRunSavedXrayAi,
 } from "./useXrays";
 
@@ -22,6 +24,7 @@ const api = vi.hoisted(() => ({
   createExternal: vi.fn(),
   discardExternal: vi.fn(),
   attachExternalToPatient: vi.fn(),
+  delete: vi.fn(),
 }));
 
 vi.mock("../../../api/endpoints/xrays", () => ({ xraysApi: api }));
@@ -107,5 +110,36 @@ describe("X-ray AI lifecycle queries", () => {
     await act(async () => { await result.current.runAi.mutateAsync(8); });
 
     expect(client.getQueryData(["external-xray-ai-result", 8])).toEqual(completed);
+  });
+
+  it("removes a deleted saved X-ray from active list caches", async () => {
+    const xray = {
+      id: 4,
+      patient: { id: 3, full_name: "Patient" },
+      visit: { id: 2, status: "ACTIVE", started_at: "2026-08-09", completed_at: null },
+      uploaded_by: { id: 7, full_name: "Doctor" },
+      source: "ACTIVE_VISIT",
+      title: "Saved",
+      notes: "",
+      stored_file_name: "stored.png",
+      original_file_name: "original.png",
+      content_type: "image/png",
+      size_bytes: 10,
+      file_endpoint: "/api/xrays/4/file/",
+      ai_result_endpoint: "/api/xrays/4/ai-result/",
+      ai_overlay_endpoint: "/api/xrays/4/ai-overlay/",
+      has_ai_result: true,
+      created_at: "2026-08-09",
+      updated_at: "2026-08-09",
+    } as unknown as XrayAttachment;
+    api.delete.mockResolvedValue(undefined);
+    const { client, wrapper } = setup();
+    client.setQueryData(["xrays", { visit_id: 2 }], { count: 1, next: null, previous: null, results: [xray] });
+    const { result } = renderHook(() => useDeleteSavedXray(), { wrapper });
+
+    await act(async () => { await result.current.mutateAsync(xray); });
+
+    expect(api.delete).toHaveBeenCalledWith(4);
+    expect(client.getQueryData<{ results: unknown[] }>(["xrays", { visit_id: 2 }])?.results).toEqual([]);
   });
 });

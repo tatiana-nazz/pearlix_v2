@@ -1,7 +1,9 @@
 import pytest
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.ai_results.models import AIResult
+from apps.audit.models import ActivityLog
 from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
 from apps.xrays.models import XrayAttachment
@@ -36,6 +38,7 @@ def other_doctor_visit(visit_factory, appointment_factory, other_doctor_user, pa
         ("post", "/api/visits/{visit_id}/xrays/"),
         ("get", "/api/xrays/"),
         ("get", "/api/xrays/{xray_id}/"),
+        ("delete", "/api/xrays/{xray_id}/"),
         ("get", "/api/xrays/{xray_id}/file/"),
         ("post", "/api/xrays/{xray_id}/run-ai/"),
         ("get", "/api/xrays/{xray_id}/ai-result/"),
@@ -175,6 +178,74 @@ def test_missing_xray_file_is_rejected(doctor_client, active_visit):
     assert response.status_code == 400
     assert response.data["code"] == "VALIDATION_ERROR"
     assert "file" in response.data["details"]
+
+
+@pytest.mark.django_db
+def test_uploader_doctor_can_delete_saved_xray_ai_and_storage(
+    doctor_client,
+    xray_attachment_factory,
+    ai_result_factory,
+    django_capture_on_commit_callbacks,
+):
+    xray = xray_attachment_factory()
+    result = ai_result_factory(xray_attachment=xray)
+    result.overlay_file.save("delete-overlay.png", ContentFile(b"overlay"), save=True)
+    original_storage = xray.original_file.storage
+    original_name = xray.original_file.name
+    overlay_storage = result.overlay_file.storage
+    overlay_name = result.overlay_file.name
+
+    with django_capture_on_commit_callbacks(execute=True):
+        response = doctor_client.delete(f"/api/xrays/{xray.id}/")
+
+    assert response.status_code == 204
+    assert not XrayAttachment.objects.filter(pk=xray.id).exists()
+    assert not AIResult.objects.filter(pk=result.id).exists()
+    assert not original_storage.exists(original_name)
+    assert not overlay_storage.exists(overlay_name)
+    audit = ActivityLog.objects.get(action="xray_deleted", entity_id=xray.id)
+    assert audit.metadata_json == {
+        "xray_id": xray.id,
+        "patient_id": xray.patient_id,
+        "visit_id": xray.visit_id,
+        "uploaded_by_id": xray.uploaded_by_id,
+        "had_ai_result": True,
+    }
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("client_fixture", ["admin_client", "staff_client"])
+def test_admin_and_staff_cannot_delete_saved_xray(request, client_fixture, xray_attachment_factory):
+    client = request.getfixturevalue(client_fixture)
+    xray = xray_attachment_factory()
+
+    response = client.delete(f"/api/xrays/{xray.id}/")
+
+    assert response.status_code == 403
+    assert XrayAttachment.objects.filter(pk=xray.id).exists()
+
+
+@pytest.mark.django_db
+def test_other_doctor_cannot_delete_saved_xray(doctor_client, xray_attachment_factory, other_doctor_user):
+    xray = xray_attachment_factory(uploaded_by=other_doctor_user)
+
+    response = doctor_client.delete(f"/api/xrays/{xray.id}/")
+
+    assert response.status_code == 403
+    assert XrayAttachment.objects.filter(pk=xray.id).exists()
+
+
+@pytest.mark.django_db
+def test_processing_ai_blocks_saved_xray_delete(doctor_client, xray_attachment_factory, ai_result_factory):
+    xray = xray_attachment_factory()
+    result = ai_result_factory(xray_attachment=xray, status=AIResult.Status.PROCESSING, model_version="")
+
+    response = doctor_client.delete(f"/api/xrays/{xray.id}/")
+
+    assert response.status_code == 409
+    assert response.data["code"] == "AI_ANALYSIS_IN_PROGRESS"
+    assert XrayAttachment.objects.filter(pk=xray.id).exists()
+    assert AIResult.objects.filter(pk=result.id).exists()
 
 
 @pytest.mark.django_db

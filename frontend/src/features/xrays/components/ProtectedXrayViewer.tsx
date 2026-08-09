@@ -173,6 +173,14 @@ export function ProtectedXrayViewer({
         </div>
         <output className="protected-xray-scale" aria-live="polite">{Math.round(scale * 100)}%</output>
       </figcaption>
+      {overlayAvailable ? <div className="xray-overlay-legend" aria-label={c.overlayLegend}>
+        <strong>{c.overlayLegend}</strong>
+        <span><i className="q1" aria-hidden="true" />{c.quadrantUpperRight}</span>
+        <span><i className="q2" aria-hidden="true" />{c.quadrantUpperLeft}</span>
+        <span><i className="q3" aria-hidden="true" />{c.quadrantLowerLeft}</span>
+        <span><i className="q4" aria-hidden="true" />{c.quadrantLowerRight}</span>
+        <span><i className="review" aria-hidden="true" />{c.reviewColor}</span>
+      </div> : null}
       {overlayFailed ? <p className="protected-xray-overlay-error" role="alert">{c.overlayUnavailable}</p> : null}
     </figure>
   );

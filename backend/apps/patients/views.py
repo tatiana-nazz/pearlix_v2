@@ -235,6 +235,33 @@ class PatientViewSet(
         return Response(PatientDetailSerializer(patient, context=self.get_serializer_context()).data)
 
     @action(detail=True, methods=["get"])
+    def appointments(self, request, pk=None):
+        from apps.scheduling.models import Appointment
+        from apps.scheduling.serializers import AppointmentListSerializer
+
+        patient = self.get_object()
+        queryset = (
+            Appointment.objects.select_related(
+                "patient",
+                "doctor",
+                "created_by",
+                "updated_by",
+                "reschedule_source_exception",
+                "reschedule_source_working_shift",
+            )
+            .filter(patient=patient)
+            .order_by("start_datetime", "id")
+        )
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = AppointmentListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = AppointmentListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["get"])
     def visits(self, request, pk=None):
         from apps.visits.models import Visit
         from apps.visits.serializers import VisitListSerializer

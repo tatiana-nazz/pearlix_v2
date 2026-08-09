@@ -47,6 +47,16 @@ class XrayUploadError(Exception):
         return error_response(self.code, self.message, self.details, self.status_code)
 
 
+class XrayDeleteError(Exception):
+    def __init__(self, code: str, message: str, status_code: int):
+        self.code = code
+        self.message = message
+        self.status_code = status_code
+
+    def to_response(self):
+        return error_response(self.code, self.message, status_code=self.status_code)
+
+
 def _metadata_filename(name: str) -> str:
     return name.replace("\\", "/").split("/")[-1]
 
@@ -217,6 +227,48 @@ def _copy_external_file_to_saved_xray(
         raise
     created_storage_files.append((xray.original_file.storage, xray.original_file.name))
     return xray
+
+
+def _delete_storage_files(files):
+    for storage, name in files:
+        if not name:
+            continue
+        try:
+            storage.delete(name)
+        except Exception:
+            continue
+
+
+def delete_xray_attachment(*, xray):
+    with transaction.atomic():
+        locked_xray = (
+            XrayAttachment.objects.select_for_update()
+            .select_related("patient", "visit", "uploaded_by", "ai_result")
+            .get(pk=xray.pk)
+        )
+        ai_result = getattr(locked_xray, "ai_result", None)
+        if ai_result is not None and ai_result.status == AIResult.Status.PROCESSING:
+            raise XrayDeleteError(
+                "AI_ANALYSIS_IN_PROGRESS",
+                "AI analysis is already in progress.",
+                status.HTTP_409_CONFLICT,
+            )
+
+        files = [(locked_xray.original_file.storage, locked_xray.original_file.name)]
+        if ai_result is not None and ai_result.overlay_file:
+            files.append((ai_result.overlay_file.storage, ai_result.overlay_file.name))
+
+        summary = {
+            "xray_id": locked_xray.id,
+            "patient_id": locked_xray.patient_id,
+            "visit_id": locked_xray.visit_id,
+            "uploaded_by_id": locked_xray.uploaded_by_id,
+            "had_ai_result": ai_result is not None,
+        }
+        ExternalXrayCase.objects.filter(attached_xray=locked_xray).update(attached_xray=None)
+        locked_xray.delete()
+        transaction.on_commit(lambda: _delete_storage_files(files))
+        return summary
 
 
 def _copy_external_ai_result(*, external_case, xray_attachment, created_storage_files):

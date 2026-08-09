@@ -753,36 +753,40 @@
 .protected-xray-viewer.is-enlarged .protected-xray-canvas,.protected-xray-viewer:fullscreen .protected-xray-canvas { min-block-size: calc(100vh - 170px); }
 .active-xray-ai-result > .card { min-width: 0; min-height: 0; height: 100%; overflow: visible; border-color: #2b4057; border-radius: 12px; padding: 16px; background: #102035; color: #edf5ff; box-shadow: none; }
 .active-xray-ai-panel { display: grid; min-width: 0; min-height: 0; align-content: start; gap: 10px; }
-.active-xray-ai-panel h3,.active-xray-ai-panel h4,.active-xray-ai-panel dd { color: #f4f8ff; }
 .active-xray-ai-panel .section-header h3,.active-xray-ai-panel.xray-ai-empty h3 { display: flex; align-items: center; gap: 8px; }
-.active-xray-ai-panel .section-header p,.active-xray-ai-panel p,.active-xray-ai-panel dt,.active-xray-ai-panel span { color: #b7c7d9; }
+.active-xray-workspace .active-xray-ai-panel h3,.active-xray-workspace .active-xray-ai-panel h4,.active-xray-workspace .active-xray-ai-panel dd { color: #f4f8ff; }
+.active-xray-workspace .active-xray-ai-panel .section-header p,.active-xray-workspace .active-xray-ai-panel p,.active-xray-workspace .active-xray-ai-panel dt,.active-xray-workspace .active-xray-ai-panel span { color: #b7c7d9; }
 .xray-ai-highlight { margin: 0; }
-.xray-ai-highlight div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-block: 1px solid #2b4057; padding-block: 8px; }
-.xray-ai-highlight dt { color: #b7c7d9; }
-.xray-ai-highlight dd { margin: 0; color: #42d7ee; font-size: 24px; font-weight: 850; }
-.xray-findings-scroll { max-width: 100%; overflow: visible; border: 1px solid #3d5670; border-radius: 10px; }
+.xray-ai-highlight div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-block: 1px solid var(--v2-border); padding-block: 8px; }
+.xray-ai-highlight dt { color: var(--v2-muted); }
+.xray-ai-highlight dd { margin: 0; color: var(--v2-primary); font-size: 24px; font-weight: 850; }
+.xray-findings-scroll { max-width: 100%; overflow: auto; border: 1px solid var(--v2-border); border-radius: 10px; }
 .xray-findings table { inline-size: 100%; min-inline-size: 0; table-layout: fixed; border-collapse: collapse; }
 .xray-findings { margin-block: 4px; }
 .xray-findings h4 { margin-block-end: 6px; }
-.xray-findings th,.xray-findings td { border-block-end: 1px solid #3d5670; padding: 7px; color: #edf5ff; text-align: start; }
-.xray-findings th { color: #b7c7d9; font-size: 11px; }
+.xray-findings th,.xray-findings td { border-block-end: 1px solid var(--v2-border); padding: 7px; color: var(--v2-text); text-align: start; }
+.xray-findings th { color: var(--v2-muted); font-size: 11px; }
 .xray-findings th,.xray-findings td { overflow-wrap: anywhere; }
 .xray-finding-score { display: grid; gap: 2px; white-space: nowrap; }
-.xray-finding-score small { color: #9fb1c6; font-size: 10px; white-space: normal; }
+.xray-finding-score small { color: var(--v2-muted); font-size: 10px; white-space: normal; }
 .xray-analysis-progress { margin: 0; font-weight: 750; }
 .active-xray-ai-panel .ai-disclaimer span { display: block; }
 .protected-xray-fullscreen-overlay-control { position: absolute; z-index: 3; inset-block-start: 16px; inset-inline-end: 16px; display: grid; max-inline-size: min(360px,calc(100% - 32px)); justify-items: end; gap: 6px; border-radius: 14px; padding: 8px; background: rgba(3,10,18,.82); box-shadow: 0 10px 28px rgba(0,0,0,.35); backdrop-filter: blur(8px); }
 .protected-xray-fullscreen-overlay-control .active-xray-overlay-switch { min-block-size: 44px; }
 .protected-xray-fullscreen-overlay-unavailable { color: #d7e2ee; font-size: 11px; line-height: 1.35; text-align: end; }
-.active-xray-analysis-details { display: grid; min-width: 0; gap: 12px; border: 1px solid #2b4057; border-radius: 12px; padding: 14px; background: #0d1b2b; }
-.active-xray-analysis-details h4 { margin: 0; color: #edf5ff; font-size: 14px; }
+.active-xray-analysis-details { display: grid; min-width: 0; gap: 12px; border: 1px solid var(--v2-border); border-radius: 12px; padding: 14px; background: var(--v2-surface); color: var(--v2-text); }
+.active-xray-analysis-details h4 { margin: 0; color: var(--v2-text); font-size: 14px; }
 .active-xray-analysis-details .xray-ai-metadata { grid-template-columns: repeat(4,minmax(0,1fr)); margin: 0; }
-.active-xray-analysis-details .xray-ai-metadata div { border-color: #2b4057; background: #14283d; }
-.active-xray-analysis-details .xray-ai-metadata dt { color: #9fb1c6; }
-.active-xray-analysis-details .xray-ai-metadata dd { color: #edf5ff; }
-.active-xray-analysis-details .ai-disclaimer { display: grid; gap: 5px; margin: 0; border-color: #42d7ee; background: #14283d; color: #b7c7d9; }
-.active-xray-analysis-details .ai-disclaimer strong { color: #edf5ff; }
+.active-xray-analysis-details .xray-ai-metadata div { border-color: var(--v2-border); background: var(--v2-surface-subtle); }
+.active-xray-analysis-details .xray-ai-metadata dt { color: var(--v2-muted); }
+.active-xray-analysis-details .xray-ai-metadata dd { color: var(--v2-text); }
+.active-xray-analysis-details .ai-disclaimer { display: grid; gap: 5px; margin: 0; border-color: var(--v2-accent); background: var(--v2-surface-subtle); color: var(--v2-muted); }
+.active-xray-analysis-details .ai-disclaimer strong { color: var(--v2-text); }
 .active-xray-analysis-details .ai-disclaimer span { display: block; }
+.active-xray-workspace .xray-ai-highlight div { border-color:#2b4057; }.active-xray-workspace .xray-ai-highlight dt { color:#b7c7d9; }.active-xray-workspace .xray-ai-highlight dd { color:#42d7ee; }
+.active-xray-workspace .xray-findings-scroll { border-color:#3d5670; overflow:visible; }.active-xray-workspace .xray-findings th,.active-xray-workspace .xray-findings td { border-color:#3d5670; color:#edf5ff; }.active-xray-workspace .xray-findings th { color:#b7c7d9; }.active-xray-workspace .xray-finding-score small { color:#9fb1c6; }
+.active-xray-workspace .xray-overlay-legend { border-color:#2b4057; background:#14283d; color:#b7c7d9; }.active-xray-workspace .xray-overlay-legend strong { color:#edf5ff; }
+.active-xray-workspace .active-xray-analysis-details { border-color:#2b4057; background:#0d1b2b; color:#edf5ff; }.active-xray-workspace .active-xray-analysis-details h4 { color:#edf5ff; }.active-xray-workspace .active-xray-analysis-details .xray-ai-metadata div { border-color:#2b4057; background:#14283d; }.active-xray-workspace .active-xray-analysis-details .xray-ai-metadata dt { color:#9fb1c6; }.active-xray-workspace .active-xray-analysis-details .xray-ai-metadata dd { color:#edf5ff; }.active-xray-workspace .active-xray-analysis-details .ai-disclaimer { border-color:#42d7ee; background:#14283d; color:#b7c7d9; }.active-xray-workspace .active-xray-analysis-details .ai-disclaimer strong { color:#edf5ff; }
 @media (max-width:1279px) {
   .active-xray-history-panel { overflow: hidden; }
   .active-xray-header { gap: 12px; }

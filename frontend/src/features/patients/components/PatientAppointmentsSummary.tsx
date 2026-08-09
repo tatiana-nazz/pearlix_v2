@@ -25,8 +25,9 @@ interface PatientAppointmentsSummaryProps {
   description?: string;
 }
 
-export function PatientAppointmentsSummary({ role, appointments, isLoading, error, onRetry, title = "Appointments", description = "Read-only patient appointment summary. Scheduling actions remain in Phase 13F." }: PatientAppointmentsSummaryProps) {
-  const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
+export function PatientAppointmentsSummary({ role, appointments, isLoading, error, onRetry, title = "Appointments", description = "Read-only patient appointment summary." }: PatientAppointmentsSummaryProps) {
+  const user = useAuthStore((state) => state.user);
+  const language = user?.language_preference ?? "EN";
   const c = appointmentCopy(language);
   if (isLoading) return <LoadingState title="Loading appointments..." />;
   if (error) return <ErrorState error={error} onRetry={onRetry} title="Unable to load appointments" />;
@@ -46,9 +47,11 @@ export function PatientAppointmentsSummary({ role, appointments, isLoading, erro
               </div>
               <div className="row-actions">
                 <StatusPill status={appointment.status} />
-                <Link className="button secondary compact-button" to={appointmentDetailPath(role, appointment.id)}>
-                  {c.openAppointment}
-                </Link>
+                {role !== "DOCTOR" || appointment.doctor.id === user?.id ? (
+                  <Link className="button secondary compact-button" to={appointmentDetailPath(role, appointment.id)}>
+                    {c.openAppointment}
+                  </Link>
+                ) : null}
               </div>
             </li>
           ))}

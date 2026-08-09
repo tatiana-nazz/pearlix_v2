@@ -72,8 +72,25 @@ export function createPayloadFromForm(values: PatientFormValues): CreatePatientP
   };
 }
 
-export function updatePayloadFromForm(values: PatientFormValues, version: number): UpdatePatientPayload {
-  return { ...createPayloadFromForm(values), version };
+export function updatePayloadFromForm(
+  values: PatientFormValues,
+  version: number,
+  section?: "general" | "medical",
+): UpdatePatientPayload {
+  const payload = createPayloadFromForm(values);
+  if (section === "medical") {
+    return {
+      version,
+      medical_conditions_history: payload.medical_conditions_history,
+      insurance_info: payload.insurance_info,
+      general_notes: payload.general_notes,
+    };
+  }
+  if (section === "general") {
+    const { medical_conditions_history: _medical, insurance_info: _insurance, general_notes: _notes, ...general } = payload;
+    return { ...general, version };
+  }
+  return { ...payload, version };
 }
 
 export function validatePatientForm(values: PatientFormValues): PatientFormErrors {

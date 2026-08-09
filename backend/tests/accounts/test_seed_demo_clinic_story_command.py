@@ -3,6 +3,8 @@ from io import StringIO
 from zoneinfo import ZoneInfo
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management.base import CommandError
 from django.core.management import call_command
 from django.test import override_settings
 
@@ -14,7 +16,9 @@ from apps.clinic.models import ClinicSettings
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
-from apps.xrays.models import XrayAttachment
+from apps.xrays.models import ExternalXrayCase, XrayAttachment
+from apps.xrays.services import create_external_xray_case, create_xray_attachment
+from apps.accounts.management.commands.seed_demo_clinic_story import Command, DEMO_TAG
 
 
 PASSWORD = "PearlixDemo123!"
@@ -144,3 +148,97 @@ def test_demo_story_runs_without_preexisting_clinic_settings(tmp_path):
     assert ClinicSettings.objects.exists()
     assert demo_counts()["patients"] == 24
     assert AIResult.objects.count() == 0
+
+
+def runtime_png(name):
+    return SimpleUploadedFile(name, b"runtime-image", content_type="image/png")
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_demo_reset_aborts_before_deleting_manual_saved_xray(tmp_path):
+    with override_settings(MEDIA_ROOT=tmp_path):
+        seed("--reset-demo", "--reference-date", "2026-08-08")
+        patient = Patient.objects.filter(national_id_or_passport__startswith=PREFIX).first()
+        doctor = User.objects.get(email=f"doctor.one@{DOMAIN}")
+        manual = create_xray_attachment(
+            patient=patient,
+            visit=None,
+            uploaded_by=doctor,
+            uploaded_file=runtime_png("manual.png"),
+            stored_file_name="runtime-manual.png",
+        )
+
+        with pytest.raises(CommandError, match="non-seed saved X-ray"):
+            seed("--reset-demo", "--reference-date", "2026-08-08")
+
+    assert XrayAttachment.objects.filter(pk=manual.pk).exists()
+    assert Patient.objects.filter(pk=patient.pk).exists()
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_demo_reset_aborts_when_runtime_ai_exists(tmp_path):
+    with override_settings(MEDIA_ROOT=tmp_path):
+        seed("--reset-demo", "--reference-date", "2026-08-08")
+        xray = XrayAttachment.objects.filter(patient__national_id_or_passport__startswith=PREFIX).first()
+        result = AIResult.objects.create(
+            xray_attachment=xray,
+            status=AIResult.Status.COMPLETED,
+            model_version="runtime-real-model",
+        )
+
+        with pytest.raises(CommandError, match="runtime AI result"):
+            seed("--reset-demo", "--reference-date", "2026-08-08")
+
+    assert AIResult.objects.filter(pk=result.pk).exists()
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_demo_reset_aborts_when_demo_account_has_manual_external_xray(tmp_path):
+    with override_settings(MEDIA_ROOT=tmp_path):
+        seed("--reset-demo", "--reference-date", "2026-08-08")
+        doctor = User.objects.get(email=f"doctor.one@{DOMAIN}")
+        external = create_external_xray_case(
+            uploaded_by=doctor,
+            uploaded_file=runtime_png("manual-external.png"),
+            stored_file_name="runtime-external.png",
+        )
+
+        with pytest.raises(CommandError, match="non-seed external X-ray"):
+            seed("--reset-demo", "--reference-date", "2026-08-08")
+
+    assert ExternalXrayCase.objects.filter(pk=external.pk).exists()
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_demo_reset_preserves_runtime_activity_and_uses_storage_api(tmp_path, django_capture_on_commit_callbacks):
+    with override_settings(MEDIA_ROOT=tmp_path):
+        seed("--reset-demo", "--reference-date", "2026-08-08")
+        doctor = User.objects.get(email=f"doctor.one@{DOMAIN}")
+        runtime_log = ActivityLog.objects.create(
+            actor=doctor,
+            action="runtime_review",
+            entity_type="patient",
+            entity_id=999,
+            metadata_json={"source": "runtime"},
+        )
+        stored_files = [
+            (record.original_file.storage, record.original_file.name)
+            for record in XrayAttachment.objects.filter(patient__national_id_or_passport__startswith=PREFIX)
+        ] + [
+            (record.original_file.storage, record.original_file.name)
+            for record in ExternalXrayCase.objects.filter(uploaded_by__email__endswith=f"@{DOMAIN}")
+        ]
+        assert stored_files and all(storage.exists(name) for storage, name in stored_files)
+
+        with django_capture_on_commit_callbacks(execute=True):
+            Command()._reset_demo()
+
+        runtime_log.refresh_from_db()
+        assert runtime_log.actor is None
+        assert runtime_log.metadata_json == {"source": "runtime"}
+        assert not ActivityLog.objects.filter(metadata_json__demo_story=DEMO_TAG).exists()
+        assert all(not storage.exists(name) for storage, name in stored_files)

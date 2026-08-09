@@ -19,7 +19,7 @@ def user_can_read_xray(user, xray) -> bool:
 
 
 class XrayPermission(BasePermission):
-    doctor_write_actions = {"run_ai"}
+    doctor_write_actions = {"run_ai", "destroy"}
 
     def has_permission(self, request, view) -> bool:
         if not request.user or not request.user.is_authenticated:
@@ -31,6 +31,12 @@ class XrayPermission(BasePermission):
         return False
 
     def has_object_permission(self, request, view, obj) -> bool:
+        if view.action == "destroy":
+            return (
+                request.user.role == "DOCTOR"
+                and obj.uploaded_by_id == request.user.id
+                and user_can_read_xray(request.user, obj)
+            )
         if view.action in self.doctor_write_actions:
             return request.user.role == "DOCTOR" and user_can_read_xray(request.user, obj)
         if request.method in SAFE_METHODS:

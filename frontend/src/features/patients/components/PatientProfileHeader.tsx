@@ -9,11 +9,12 @@ interface PatientProfileHeaderProps {
   role: UserRole;
   patient: PatientDetail;
   onEdit: () => void;
+  showEdit?: boolean;
   onArchive: () => void;
   onUnarchive: () => void;
 }
 
-export function PatientProfileHeader({ role, patient, onEdit, onArchive, onUnarchive }: PatientProfileHeaderProps) {
+export function PatientProfileHeader({ role, patient, onEdit, showEdit = true, onArchive, onUnarchive }: PatientProfileHeaderProps) {
   const c = patientCopy(useAuthStore((state) => state.user?.language_preference));
   const permissions = getPatientPermissions(role, patient);
   const canShowStatus = role !== "DOCTOR";
@@ -27,7 +28,7 @@ export function PatientProfileHeader({ role, patient, onEdit, onArchive, onUnarc
       </div>
       <div className="profile-actions">
         {canShowStatus ? <PatientStatusBadge patient={patient} /> : null}
-        {permissions.canEdit ? (
+        {permissions.canEdit && showEdit ? (
           <button className="button secondary" type="button" onClick={onEdit}>
             {c.edit}
           </button>

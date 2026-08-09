@@ -9,11 +9,14 @@ import { ActiveVisitXrayWorkspace } from "./ActiveVisitXrayWorkspace";
 
 const hookState = vi.hoisted(() => ({
   run: vi.fn(),
+  remove: vi.fn(),
   upload: vi.fn(),
   uploadReset: vi.fn(),
   runReset: vi.fn(),
+  removeReset: vi.fn(),
   runPending: false,
   runError: null as unknown,
+  removeError: null as unknown,
   aiResult: undefined as AIResult | undefined,
 }));
 
@@ -46,6 +49,7 @@ vi.mock("../hooks/useXrays", () => ({
   useXrayAiResult: (id: number, enabled: boolean) => ({ data: id === 2 && enabled ? hookState.aiResult : undefined, isLoading: false, error: null, refetch: vi.fn() }),
   useXrayAiResults: (ids: number[]) => ids.map((id) => ({ data: id === 2 ? hookState.aiResult : undefined, isLoading: false, error: null })),
   useRunSavedXrayAi: () => ({ mutate: hookState.run, reset: hookState.runReset, isPending: hookState.runPending, error: hookState.runError }),
+  useDeleteSavedXray: () => ({ mutateAsync: hookState.remove, reset: hookState.removeReset, isPending: false, error: hookState.removeError }),
   useVisitXrayUpload: () => ({ mutateAsync: hookState.upload, reset: hookState.uploadReset, isPending: false, error: null }),
 }));
 vi.mock("../hooks/useProtectedMedia", () => ({ useProtectedMedia: (endpoint?: string | null) => ({ url: endpoint ? `blob:${endpoint}` : null, isLoading: false, error: null, retry: vi.fn() }) }));
@@ -59,17 +63,19 @@ const visit = {
   status: "ACTIVE", started_at: "2026-07-26T09:01:00Z", completed_at: null, symptoms: "", diagnosis: "", treatment: "", clinical_notes: "", follow_up_notes: "", created_at: "2026-07-26", updated_at: "2026-07-26",
 } as VisitDetail;
 
-function setUser(role: "DOCTOR" | "STAFF") {
-  useAuthStore.setState({ user: { id: role === "DOCTOR" ? 7 : 8, full_name: "Workspace User", email: "user@example.test", role, is_active: true, must_change_password: false, password_changed_at: null, theme_preference: "LIGHT", language_preference: "EN" } });
+function setUser(role: "DOCTOR" | "STAFF" | "ADMIN", id = role === "DOCTOR" ? 7 : 8) {
+  useAuthStore.setState({ user: { id, full_name: "Workspace User", email: "user@example.test", role, is_active: true, must_change_password: false, password_changed_at: null, theme_preference: "LIGHT", language_preference: "EN" } });
 }
 
 describe("ActiveVisitXrayWorkspace", () => {
   beforeEach(() => {
     hookState.run.mockReset();
+    hookState.remove.mockReset().mockResolvedValue(undefined);
     hookState.upload.mockReset();
     hookState.upload.mockResolvedValue(uploadedXray);
     hookState.runPending = false;
     hookState.runError = null;
+    hookState.removeError = null;
     hookState.aiResult = result;
     setUser("DOCTOR");
   });
@@ -144,11 +150,47 @@ describe("ActiveVisitXrayWorkspace", () => {
     await waitFor(() => expect(screen.getByTestId("protected-viewer")).toHaveAttribute("data-endpoint", "/api/xrays/3/file/"));
   });
 
-  it("keeps Staff read-only without upload or AI-run actions", async () => {
-    setUser("STAFF");
-    render(<ActiveVisitXrayWorkspace role="STAFF" visit={visit} />);
+  it("confirms and deletes only the selected uploader-owned saved X-ray", async () => {
+    render(<ActiveVisitXrayWorkspace role="DOCTOR" visit={visit} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Delete saved X-ray" }));
+    const dialog = screen.getByRole("dialog", { name: "Delete saved X-ray" });
+    expect(within(dialog).getByText("Panoramic with AI")).toBeInTheDocument();
+    expect(within(dialog).getByText(/bitewing\.png/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete saved X-ray" }));
+    await waitFor(() => expect(hookState.remove).toHaveBeenCalledWith(storedXray));
+  });
+
+  it("cancels deletion without mutating the selected X-ray", async () => {
+    render(<ActiveVisitXrayWorkspace role="DOCTOR" visit={visit} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Delete saved X-ray" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Delete saved X-ray" })).getByRole("button", { name: "Keep X-ray" }));
+    expect(screen.queryByRole("dialog", { name: "Delete saved X-ray" })).not.toBeInTheDocument();
+    expect(hookState.remove).not.toHaveBeenCalled();
+  });
+
+  it("keeps the selected X-ray and confirmation open when deletion fails", async () => {
+    hookState.remove.mockRejectedValueOnce(new Error("Delete failed"));
+    render(<ActiveVisitXrayWorkspace role="DOCTOR" visit={visit} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Delete saved X-ray" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Delete saved X-ray" })).getByRole("button", { name: "Delete saved X-ray" }));
+    await waitFor(() => expect(hookState.remove).toHaveBeenCalledWith(storedXray));
+    expect(screen.getByRole("dialog", { name: "Delete saved X-ray" })).toBeInTheDocument();
+    expect(screen.getByTestId("protected-viewer")).toHaveAttribute("data-endpoint", "/api/xrays/2/file/");
+  });
+
+  it.each(["STAFF", "ADMIN"] as const)("keeps %s read-only without upload, AI-run, or delete actions", async (role) => {
+    setUser(role);
+    render(<ActiveVisitXrayWorkspace role={role} visit={visit} />);
     expect(await screen.findByTestId("protected-viewer")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Upload X-ray" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Run AI Analysis" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete saved X-ray" })).not.toBeInTheDocument();
+  });
+
+  it("hides deletion from a Doctor who did not upload the selected X-ray", async () => {
+    setUser("DOCTOR", 70);
+    render(<ActiveVisitXrayWorkspace role="DOCTOR" visit={visit} />);
+    expect(await screen.findByTestId("protected-viewer")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete saved X-ray" })).not.toBeInTheDocument();
   });
 });

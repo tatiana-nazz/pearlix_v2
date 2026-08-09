@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
-from pathlib import Path
 from zoneinfo import ZoneInfo
 import binascii
 import struct
@@ -501,18 +500,43 @@ class Command(BaseCommand):
     def _reset_demo(self):
         patient_ids = list(Patient.objects.filter(national_id_or_passport__startswith=PATIENT_ID_PREFIX).values_list("id", flat=True))
         user_ids = list(User.objects.filter(email__endswith=f"@{EMAIL_DOMAIN}").values_list("id", flat=True))
+        demo_xrays = XrayAttachment.objects.filter(patient_id__in=patient_ids)
+        runtime_xrays = demo_xrays.exclude(
+            Q(stored_file_name__startswith="demo14a-")
+            & Q(original_file_name__startswith="demo14a-")
+        )
+        if runtime_xrays.exists():
+            raise CommandError("Refusing to reset: a demo patient has a non-seed saved X-ray.")
+        if AIResult.objects.filter(xray_attachment__patient_id__in=patient_ids).exists():
+            raise CommandError("Refusing to reset: a demo patient X-ray has a runtime AI result.")
+
+        demo_external_cases = ExternalXrayCase.objects.filter(uploaded_by_id__in=user_ids)
+        runtime_external_cases = demo_external_cases.exclude(
+            Q(stored_file_name__startswith="demo14a-")
+            & Q(original_file_name__startswith="demo14a-")
+        )
+        if runtime_external_cases.exists():
+            raise CommandError("Refusing to reset: a demo account has a non-seed external X-ray case.")
+
         files = []
-        for field in ("original_file",):
-            files.extend(XrayAttachment.objects.filter(patient_id__in=patient_ids).values_list(field, flat=True))
-            files.extend(ExternalXrayCase.objects.filter(uploaded_by_id__in=user_ids).values_list(field, flat=True))
-        files.extend(AIResult.objects.filter(xray_attachment__patient_id__in=patient_ids).values_list("overlay_file", flat=True))
+        for xray in demo_xrays:
+            if xray.original_file:
+                files.append((xray.original_file.storage, xray.original_file.name))
+        for external in demo_external_cases:
+            if external.original_file:
+                files.append((external.original_file.storage, external.original_file.name))
+
+        def delete_seed_files():
+            for storage, name in files:
+                try:
+                    storage.delete(name)
+                except Exception:
+                    continue
+
         with transaction.atomic():
-            ActivityLog.objects.filter(
-                Q(metadata_json__demo_story=DEMO_TAG) | Q(actor_id__in=user_ids)
-            ).delete()
+            ActivityLog.objects.filter(metadata_json__demo_story=DEMO_TAG).delete()
             Invoice.objects.filter(billing_handoff__patient_id__in=patient_ids).delete()
             BillingHandoff.objects.filter(patient_id__in=patient_ids).delete()
-            AIResult.objects.filter(xray_attachment__patient_id__in=patient_ids).delete()
             ExternalXrayCase.objects.filter(uploaded_by_id__in=user_ids).delete()
             XrayAttachment.objects.filter(patient_id__in=patient_ids).delete()
             Visit.objects.filter(patient_id__in=patient_ids).delete()
@@ -521,9 +545,4 @@ class Command(BaseCommand):
             WorkingShift.objects.filter(employee_id__in=user_ids).delete()
             Patient.objects.filter(id__in=patient_ids).delete()
             User.objects.filter(id__in=user_ids).delete()
-        for name in files:
-            if name and Path(name).name.startswith("demo14a-"):
-                try:
-                    (Path(settings.MEDIA_ROOT) / name).unlink(missing_ok=True)
-                except OSError:
-                    pass
+            transaction.on_commit(delete_seed_files)

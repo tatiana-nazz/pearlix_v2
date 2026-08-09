@@ -17,9 +17,11 @@ from apps.xrays.serializers import ExternalXrayCaseSerializer, XrayAttachmentSer
 from apps.xrays.services import (
     ExternalXrayRuleError,
     XrayUploadError,
+    XrayDeleteError,
     attach_external_case_to_patient,
     create_external_xray_case,
     discard_external_case,
+    delete_xray_attachment,
     validate_external_temporary,
 )
 
@@ -32,7 +34,7 @@ class XrayViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = XrayAttachmentSerializer
     permission_classes = [XrayPermission]
     pagination_class = XrayPagination
-    http_method_names = ["get", "post", "head", "options"]
+    http_method_names = ["get", "post", "delete", "head", "options"]
 
     def get_queryset(self):
         queryset = XrayAttachment.objects.select_related("patient", "visit", "uploaded_by", "ai_result").all()
@@ -50,6 +52,21 @@ class XrayViewSet(viewsets.ReadOnlyModelViewSet):
         if uploaded_by:
             queryset = queryset.filter(uploaded_by_id=uploaded_by)
         return queryset
+
+    def destroy(self, request, *args, **kwargs):
+        xray = self.get_object()
+        try:
+            metadata = delete_xray_attachment(xray=xray)
+        except XrayDeleteError as exc:
+            return exc.to_response()
+        log_activity(
+            request=request,
+            action="xray_deleted",
+            entity_type="xray_attachment",
+            entity_id=metadata["xray_id"],
+            metadata=metadata,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["get"])
     def file(self, request, pk=None):

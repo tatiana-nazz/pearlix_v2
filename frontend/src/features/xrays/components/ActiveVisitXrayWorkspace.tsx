@@ -1,4 +1,4 @@
-import { Image, Sparkles, Upload } from "lucide-react";
+import { Image, Sparkles, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuthStore } from "../../../auth/authStore";
@@ -11,12 +11,13 @@ import type { VisitDetail } from "../../../types/visits";
 import type { XrayAttachment, XrayUploadPayload } from "../../../types/xrays";
 import { formatDateTime } from "../../../utils/dates";
 import { useProtectedMedia } from "../hooks/useProtectedMedia";
-import { useRunSavedXrayAi, useVisitXrayUpload, useXray, useXrayAiResult, useXrayAiResults, useXrays } from "../hooks/useXrays";
+import { useDeleteSavedXray, useRunSavedXrayAi, useVisitXrayUpload, useXray, useXrayAiResult, useXrayAiResults, useXrays } from "../hooks/useXrays";
 import { xrayCopy } from "../i18n";
 import { aiErrorCode, aiRunErrorMessage, isAiAnalysisActive } from "../utils/aiLifecycle";
-import { canRunSavedXrayAi, canUploadVisitXray } from "../utils/xrayPermissions";
+import { canDeleteSavedXray, canRunSavedXrayAi, canUploadVisitXray } from "../utils/xrayPermissions";
 import { xrayText } from "../utils/xrayPresentation";
 import { AiAnalysisDetails, AiResultPanel } from "./AiResultPanel";
+import { DeleteSavedXrayDialog } from "./DeleteSavedXrayDialog";
 import { ProtectedXrayViewer } from "./ProtectedXrayViewer";
 import { XrayUploadDialog } from "./XrayUploadDialog";
 
@@ -44,6 +45,8 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
   const selectedXray = useXray(selectedXrayId ?? 0);
   const runAi = useRunSavedXrayAi(selectedXrayId ?? 0);
   const upload = useVisitXrayUpload(visit.id);
+  const deleteXray = useDeleteSavedXray();
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const canUpload = canUploadVisitXray(role, user?.id, visit.doctor.id);
   const selected = selectedXray.data ?? xrays.data?.results.find((xray) => xray.id === selectedXrayId);
@@ -56,6 +59,7 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
   const authorizedToRunAi = canRunSavedXrayAi(role, selected);
   const canStartAi = authorizedToRunAi && !analysisActive && (!aiResult.data || aiResult.data.status === "FAILED");
   const showRunAi = authorizedToRunAi && (canStartAi || analysisActive);
+  const canDelete = canDeleteSavedXray(role, user?.id, selected);
 
   useEffect(() => {
     const records = xrays.data?.results;
@@ -95,6 +99,7 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
       <div className="active-xray-selected-copy"><p className="eyebrow">{c.researchOnly}</p><h3 id="active-xray-title">{c.selectedXray}</h3><p>{selected ? xrayText(selected.title || selected.original_file_name) : c.noXrays}</p></div>
       <div className="active-xray-primary-actions">
         {showRunAi ? <Button variant="secondary" type="button" loading={runAi.isPending} disabled={analysisActive} aria-live="polite" onClick={() => runAi.mutate()}><Sparkles size={18} aria-hidden="true" />{analysisActive ? c.analyzing : aiResult.data?.status === "FAILED" ? c.retryAi : c.runAi}</Button> : null}
+        {canDelete ? <Button variant="danger" type="button" disabled={analysisActive} onClick={() => { deleteXray.reset(); setDeleteOpen(true); }}><Trash2 size={18} aria-hidden="true" />{c.deleteSavedXray}</Button> : null}
         <button className="active-xray-overlay-switch" type="button" role="switch" aria-checked={overlayVisible} aria-label={`${c.aiOverlay}: ${overlayVisible ? c.overlayOn : c.overlayOff}`} disabled={!overlayAvailable} title={!overlayAvailable ? c.noOverlayAvailable : undefined} onClick={() => setOverlayVisible((visible) => !visible)}>
           <span className="active-xray-overlay-label">{c.aiOverlay}</span>
           <span className="active-xray-overlay-value">{overlayVisible ? c.overlayOn : c.overlayOff}</span>
@@ -127,5 +132,6 @@ export function ActiveVisitXrayWorkspace({ role, visit }: { role: UserRole; visi
     </div> : null}
 
     {uploadOpen ? <XrayUploadDialog title={c.uploadXray} isSubmitting={upload.isPending} error={upload.error} onCancel={() => setUploadOpen(false)} onSubmit={finishUpload} /> : null}
+    <DeleteSavedXrayDialog xray={deleteOpen ? selected ?? null : null} error={deleteXray.error} isSubmitting={deleteXray.isPending} onCancel={() => setDeleteOpen(false)} onConfirm={() => selected && void deleteXray.mutateAsync(selected).then(() => { setDeleteOpen(false); setSelectedXrayId(null); }).catch(() => undefined)} />
   </section>;
 }

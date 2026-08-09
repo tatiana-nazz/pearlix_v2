@@ -636,6 +636,8 @@ p {
 .xray-ai-header span { color:var(--v2-muted); font-size:var(--font-size-sm); }.xray-ai-empty { display:grid; gap:var(--v2-space-3); }.xray-ai-empty h3,.xray-ai-empty p { margin:0; }.xray-ai-empty p { color:var(--v2-muted); }
 .xray-summary { margin: 0 0 var(--space-4); }
 .xray-findings { margin-block:var(--v2-space-5); }.xray-findings h4 { margin:0 0 var(--v2-space-3); }.xray-ai-metadata { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:var(--v2-space-3); margin:var(--v2-space-5) 0; }.xray-ai-metadata div { min-width:0; border:1px solid var(--v2-border); border-radius:var(--v2-radius-control); padding:var(--v2-space-3); background:var(--v2-surface-subtle); }.xray-ai-metadata dt { color:var(--v2-muted); font-size:var(--font-size-xs); }.xray-ai-metadata dd { margin:var(--v2-space-1) 0 0; overflow-wrap:anywhere; }
+.xray-overlay-legend { display:flex; min-width:0; flex-wrap:wrap; align-items:center; gap:6px 12px; border:1px solid var(--v2-border); border-radius:var(--v2-radius-control); padding:8px 10px; background:var(--v2-surface-subtle); color:var(--v2-muted); font-size:var(--font-size-xs); }
+.xray-overlay-legend strong { color:var(--v2-text); }.xray-overlay-legend span { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }.xray-overlay-legend i { inline-size:9px; block-size:9px; flex:0 0 auto; border-radius:2px; background:#22c55e; }.xray-overlay-legend .q2 { background:#ef4444; }.xray-overlay-legend .q3 { background:#0ea5e9; }.xray-overlay-legend .q4 { background:#eab308; }.xray-overlay-legend .review { background:#f97316; }
 @media (max-width:767px) { .protected-xray-toolbar { align-items:stretch; flex-direction:column; }.protected-xray-toolbar .v2-button { width:100%; }.protected-xray-canvas { min-height:220px; padding:var(--space-2); } }
 .ai-disclaimer { margin-top: var(--space-5); border-inline-start: 3px solid var(--color-accent); padding: var(--space-3) var(--space-4); background: var(--v2-surface-subtle); }
 .ai-disclaimer p { margin: 0; }
@@ -2477,6 +2479,29 @@ body {
 
 .patient-detail-main > [role="tabpanel"] {
   min-width: 0;
+}
+
+.patient-detail-surface.is-editing {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.patient-inline-edit {
+  display: grid;
+  gap: var(--space-5);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-card);
+  padding: clamp(20px, 3vw, 32px);
+  background: var(--v2-surface-subtle);
+}
+
+.patient-inline-edit header h3,
+.patient-inline-edit header p {
+  margin: 0;
+}
+
+.patient-inline-edit header {
+  display: grid;
+  gap: var(--space-2);
 }
 
 @media (max-width: 1023px) {

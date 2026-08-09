@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AppointmentList } from "../../../types/appointments";
 import { PatientAppointmentsSummary } from "./PatientAppointmentsSummary";
+import { useAuthStore } from "../../../auth/authStore";
 
 const appointment = {
   id: 47,
@@ -25,9 +26,18 @@ const appointment = {
 
 describe("PatientAppointmentsSummary", () => {
   it("links each patient-profile appointment to its exact role-aware detail", () => {
+    useAuthStore.setState({ user: { id: 20, full_name: "Dr. Lin", email: "lin@example.test", role: "DOCTOR", is_active: true, theme_preference: "LIGHT", language_preference: "EN", must_change_password: false, password_changed_at: null } });
     render(<MemoryRouter><PatientAppointmentsSummary role="DOCTOR" appointments={{ count: 1, next: null, previous: null, results: [appointment] }} isLoading={false} error={null} onRetry={vi.fn()} /></MemoryRouter>);
 
     expect(screen.getByRole("link", { name: "Open appointment" })).toHaveAttribute("href", "/doctor/appointments/47");
     expect(screen.queryByRole("link", { name: "Appointments" })).not.toBeInTheDocument();
+  });
+
+  it("shows another Doctor's appointment summary without exposing its detail route", () => {
+    useAuthStore.setState({ user: { id: 21, full_name: "Dr. Other", email: "other@example.test", role: "DOCTOR", is_active: true, theme_preference: "LIGHT", language_preference: "EN", must_change_password: false, password_changed_at: null } });
+    render(<MemoryRouter><PatientAppointmentsSummary role="DOCTOR" appointments={{ count: 1, next: null, previous: null, results: [appointment] }} isLoading={false} error={null} onRetry={vi.fn()} /></MemoryRouter>);
+
+    expect(screen.getByText("Dr. Lin")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open appointment" })).not.toBeInTheDocument();
   });
 });

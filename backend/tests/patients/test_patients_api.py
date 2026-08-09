@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import pytest
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment
@@ -393,3 +394,62 @@ def test_legacy_blank_last_name_must_be_fixed_before_profile_update(staff_client
     assert "last_name" in blocked.data["details"]
     assert allowed.status_code == 200
     assert allowed.data["last_name"] == "Resolved"
+
+
+def test_patient_appointments_are_clinic_wide_read_only_without_changing_doctor_schedule_scope(
+    doctor_client,
+    doctor_user,
+    other_doctor_user,
+    patient_factory,
+    appointment_factory,
+):
+    patient = patient_factory(first_name="Cross", last_name="Doctor")
+    later = appointment_factory(
+        patient=patient,
+        doctor=doctor_user,
+        start_datetime=timezone.now() + timedelta(days=2),
+        end_datetime=timezone.now() + timedelta(days=2, minutes=30),
+    )
+    earlier = appointment_factory(
+        patient=patient,
+        doctor=other_doctor_user,
+        start_datetime=timezone.now() + timedelta(days=1),
+        end_datetime=timezone.now() + timedelta(days=1, minutes=30),
+    )
+
+    patient_response = doctor_client.get(f"/api/patients/{patient.id}/appointments/")
+    global_response = doctor_client.get(f"/api/appointments/?patient_id={patient.id}")
+    mutation_response = doctor_client.post(f"/api/patients/{patient.id}/appointments/", {}, format="json")
+
+    assert patient_response.status_code == 200
+    assert [row["id"] for row in patient_response.data["results"]] == [earlier.id, later.id]
+    assert [row["doctor"]["id"] for row in patient_response.data["results"]] == [other_doctor_user.id, doctor_user.id]
+    assert [row["id"] for row in global_response.data["results"]] == [later.id]
+    assert mutation_response.status_code == 405
+
+
+def test_patient_directory_next_appointment_matches_patient_appointment_summary(
+    staff_client,
+    patient_factory,
+    appointment_factory,
+):
+    patient = patient_factory(first_name="Directory", last_name="Consistency")
+    expected = appointment_factory(
+        patient=patient,
+        status=Appointment.Status.UPCOMING,
+        start_datetime=timezone.now() + timedelta(days=1),
+        end_datetime=timezone.now() + timedelta(days=1, minutes=30),
+    )
+    appointment_factory(
+        patient=patient,
+        status=Appointment.Status.CANCELLED,
+        start_datetime=timezone.now() + timedelta(hours=1),
+        end_datetime=timezone.now() + timedelta(hours=1, minutes=30),
+    )
+
+    directory = staff_client.get(f"/api/patients/?search={patient.first_name}%20{patient.last_name}")
+    summary = staff_client.get(f"/api/patients/{patient.id}/appointments/")
+
+    assert directory.status_code == 200
+    assert parse_datetime(directory.data["results"][0]["next_appointment_at"]) == expected.start_datetime
+    assert expected.id in [row["id"] for row in summary.data["results"]]

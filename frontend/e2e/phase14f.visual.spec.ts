@@ -132,11 +132,14 @@ test("Staff visual acceptance covers appointments, profile, patient, and payment
   await page.getByText("Dania Farhat", { exact: true }).click();
   await expect(page.locator(".profile-header").getByRole("heading", { name: "Dania Farhat", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Edit", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Edit patient" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Edit patient" })).toBeVisible();
+  await expect(page.locator(".patient-identity-rail")).toHaveCount(0);
   await expect(page.getByLabel(/First name/)).toHaveValue("Dania");
   await page.getByLabel("Phone", { exact: true }).fill("+963-93-1400023");
-  await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("+963-93-1400023", { exact: true }).first()).toBeVisible();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("heading", { name: "Edit patient" })).toHaveCount(0);
+  await expect(page.locator(".patient-identity-rail")).toHaveCount(1);
   await capture(page, "after-staff-patient-profile");
 
   await page.goto("/staff/billing/invoices");

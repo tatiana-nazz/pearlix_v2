@@ -5,7 +5,8 @@ import { patientsApi } from "../../../api/endpoints/patients";
 import { visitsApi } from "../../../api/endpoints/visits";
 import { xraysApi } from "../../../api/endpoints/xrays";
 import type { AIResult } from "../../../types/ai";
-import type { ExternalAttachPayload, XrayUploadPayload } from "../../../types/xrays";
+import type { Page } from "../../../types/api";
+import type { ExternalAttachPayload, XrayAttachment, XrayUploadPayload } from "../../../types/xrays";
 import { xrayUploadFormData } from "../utils/xrayValidation";
 
 export const AI_RESULT_POLL_INTERVAL_MS = 2_000;
@@ -87,6 +88,24 @@ export function useRunSavedXrayAi(xrayId: number) {
         queryFn: () => xraysApi.aiResult(xrayId),
       }).catch(() => undefined);
       void queryClient.invalidateQueries({ queryKey: ["xray", xrayId] });
+    },
+  });
+}
+
+export function useDeleteSavedXray() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (xray: XrayAttachment) => xraysApi.delete(xray.id),
+    onSuccess: (_response, xray) => {
+      queryClient.setQueriesData<Page<XrayAttachment>>({ queryKey: ["xrays"] }, (page) => {
+        if (!page?.results.some((row) => row.id === xray.id)) return page;
+        return { ...page, count: Math.max(0, page.count - 1), results: page.results.filter((row) => row.id !== xray.id) };
+      });
+      queryClient.removeQueries({ queryKey: ["xray", xray.id], exact: true });
+      queryClient.removeQueries({ queryKey: ["xray-ai-result", xray.id], exact: true });
+      invalidateSavedXrayContext(queryClient, xray.patient.id, xray.visit?.id);
+      void queryClient.invalidateQueries({ queryKey: ["active-visit"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

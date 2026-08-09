@@ -6,6 +6,7 @@ import { api } from "../http";
 export const xraysApi = {
   list: (query?: QueryParams) => api.get<Page<XrayAttachment>>("/xrays/", query),
   detail: (id: number) => api.get<XrayAttachment>(`/xrays/${id}/`),
+  delete: (id: number) => api.delete<void>(`/xrays/${id}/`),
   file: (id: number) => api.getBlob(`/xrays/${id}/file/`),
   runAi: (id: number) => api.post<AIResult>(`/xrays/${id}/run-ai/`),
   aiResult: (id: number) => api.get<AIResult>(`/xrays/${id}/ai-result/`),

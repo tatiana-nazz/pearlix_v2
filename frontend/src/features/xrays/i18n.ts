@@ -80,6 +80,17 @@ export type XrayCopy = {
   overlayOn: string;
   overlayOff: string;
   noOverlayAvailable: string;
+  deleteSavedXray: string;
+  deleteSavedXrayDescription: string;
+  keepSavedXray: string;
+  deletingSavedXray: string;
+  deleteSavedXrayFailed: string;
+  overlayLegend: string;
+  quadrantUpperRight: string;
+  quadrantUpperLeft: string;
+  quadrantLowerLeft: string;
+  quadrantLowerRight: string;
+  reviewColor: string;
 };
 
 const en: XrayCopy = {
@@ -162,9 +173,31 @@ const en: XrayCopy = {
   overlayOn: "On",
   overlayOff: "Off",
   noOverlayAvailable: "No AI overlay is available for this X-ray.",
+  deleteSavedXray: "Delete saved X-ray",
+  deleteSavedXrayDescription: "The saved X-ray, its AI result, and its overlay will be permanently removed.",
+  keepSavedXray: "Keep X-ray",
+  deletingSavedXray: "Deletingâ€¦",
+  deleteSavedXrayFailed: "Unable to delete saved X-ray",
+  overlayLegend: "Overlay colors",
+  quadrantUpperRight: "Q1 upper right",
+  quadrantUpperLeft: "Q2 upper left",
+  quadrantLowerLeft: "Q3 lower left",
+  quadrantLowerRight: "Q4 lower right",
+  reviewColor: "Review",
 };
 
 const ar: XrayCopy = {
+  deleteSavedXray: "حذف الأشعة المحفوظة",
+  deleteSavedXrayDescription: "سيتم حذف الأشعة المحفوظة ونتيجة الذكاء الاصطناعي والطبقة نهائياً.",
+  keepSavedXray: "الاحتفاظ بالأشعة",
+  deletingSavedXray: "جارٍ الحذف…",
+  deleteSavedXrayFailed: "تعذر حذف الأشعة المحفوظة",
+  overlayLegend: "ألوان الطبقة",
+  quadrantUpperRight: "Q1 أعلى اليمين",
+  quadrantUpperLeft: "Q2 أعلى اليسار",
+  quadrantLowerLeft: "Q3 أسفل اليسار",
+  quadrantLowerRight: "Q4 أسفل اليمين",
+  reviewColor: "مراجعة",
   savedXrays: "الأشعة المحفوظة",
   externalWorkspace: "مساحة عمل الأشعة الخارجية",
   uploadXray: "رفع أشعة",
