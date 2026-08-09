@@ -23,13 +23,13 @@ Phase 14A demo accounts use `@pearlix-demo.local`. Older development QA accounts
 - `doctor.mustchange@pearlix-demo.local` — active Doctor; must change password
 - `staff.inactive@pearlix-demo.local` — inactive Staff account with a linked inactive professional profile; login is intentionally blocked
 
-All use the supplied password. The clinic is configured for Damascus, `Asia/Damascus`, English/Arabic, SYP/USD, 30-minute default appointments, capacity 3, and `MOCK_ADAPTER` AI.
+All use the supplied password. The clinic is configured for Damascus, `Asia/Damascus`, English/Arabic, SYP/USD, 30-minute default appointments, and capacity 3. Seeding preserves the clinic's pre-existing AI mode.
 
 Phase 14C.0 gives the Doctors distinct stored specialties, phones, and biographies, and Staff distinct positions and phones. Their login and professional statuses are independently represented through valid profile linkage.
 
 ## Anchor story
 
-The 24 synthetic patients include today's confirmed and checked-in appointments, Lina Mansour's Doctor One ACTIVE Visit and ACTIVE Appointment with no Handoff or Invoice, completed clinical history with all five note fields, a returning patient with multiple visits, saved X-rays with and without mock AI, temporary/attached/discarded external X-rays, cancelled/no-show/future appointments, and archived history. The Stage 7 financial story contains six Handoff/Bills: two OPEN, two PARTIALLY_PAID, one PAID, and one CANCELLED; six payment-receipt Invoices include both today's and historical SYP/USD collections, with multiple receipts beneath partial and fully paid Bills. The canonical demo has no normal Staff-approval pending handoff and no Payment rows. Doctors have schedules, Doctor Four and Staff Two demonstrate split shifts, and Staff leave is visible in the consolidated profile.
+The 24 synthetic patients include today's confirmed and checked-in appointments, Lina Mansour's Doctor One ACTIVE Visit and ACTIVE Appointment with no Handoff or Invoice, completed clinical history with all five note fields, a returning patient with multiple visits, saved X-rays eligible for normal AI workflow testing, temporary/attached/discarded external X-rays, cancelled/no-show/future appointments, and archived history. The Stage 7 financial story contains six Handoff/Bills: two OPEN, two PARTIALLY_PAID, one PAID, and one CANCELLED; six payment-receipt Invoices include both today's and historical SYP/USD collections, with multiple receipts beneath partial and fully paid Bills. The canonical demo has no normal Staff-approval pending handoff and no Payment rows. Doctors have schedules, Doctor Four and Staff Two demonstrate split shifts, and Staff leave is visible in the consolidated profile.
 
 The reschedule story uses real domain transitions: three future appointments are created before Doctor leave, the leave service marks them, one is then rescheduled to a valid doctor/time and logged with old/new slots, and two remain in the queue. A later Doctor shift reduction marks one additional appointment through the confirmed shift-impact service. A second Doctor leave and parallel same-time appointments across different Doctors make Admin and Staff views meaningfully populated.
 
@@ -41,9 +41,7 @@ The seeded Admin, Staff, and Doctor dashboards are non-empty and their related r
 
 Phase 14F.3 makes the clinical demo state explicit: Doctor One has named Morning (08:00–12:00) and Evening (14:00–18:00) shifts Monday–Friday with weekends Off; Doctor Two and Staff One have different valid split-shift examples. Exactly one Doctor One visit is started through the normal service transition, while a separate Doctor Two appointment remains checked in and eligible for Start Visit. Eligible appointments fit active shifts; explicit leave/shift-impact records remain intentionally marked Needs Reschedule.
 
-Phase 14F.4 keeps that active visit populated with two visit-owned synthetic X-rays: an active-visit panoramic image with stored structured mock result and protected overlay, plus an active-visit bitewing image without a result so the existing authorized MOCK_ADAPTER run can be exercised. This remains DEBUG-only seed tooling and changes no production model, API, permission, protected-media, or AI behavior.
-
-The mock-AI record uses a distinct transparent 320×180 overlay over a same-size synthetic original and retains structured stored findings. These bytes remain non-clinical demo media; no inference is performed.
+Phase 14F.4 keeps that active visit populated with two visit-owned synthetic X-rays suitable for exercising the normal authorized AI workflow. The seed creates no `AIResult`, overlay, findings, confidence, or fake AI-run audit event; inference results exist only after an authorized runtime request.
 
 Focused command coverage is in `tests/accounts/test_seed_demo_clinic_story_command.py`. It verifies first seed, idempotency, reset preservation, deterministic reference dates, account/profile creation, scheduling/reschedule relationships, visits, imaging/external states, billing reconciliation, audit sanitization, role dashboards, and demo media naming.
 

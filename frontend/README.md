@@ -227,7 +227,7 @@ Phase 14F.3 closes content-sized status presentation, repeated-card row stabilit
 
 Phase 14F.4 gives Month items shared semantic appointment-status tones, makes the Patient Profile identity rail sticky on desktop, and recomposes Active Visit around a static patient/visit summary plus the exact four approved tabs. The X-ray tab now selects protected visit X-rays inline, supports the owning Doctor's existing upload and `POST /api/xrays/{id}/run-ai/` workflows, layers the stored overlay on the original transform, exposes working viewer controls, and shows only backend-provided research-only result data. Production backend behavior, API contracts, models, migrations, and RBAC are unchanged. See `design_v3/PHASE_14F4_ACTIVE_VISIT_PATIENT_RAIL_MONTH_XRAY_WORKSPACE_RECORD.md` and `QA_14F4_ACTIVE_VISIT_PATIENT_RAIL_MONTH_XRAY_WORKSPACE.md`.
 
-- Real AI integration beyond the MVP `MOCK_ADAPTER`.
+- Separate-service AI inference; the current real integration is the locked backend `DJANGO_INTERNAL` DENTEX path.
 - Email forgot-password. Gender, qualifications, license, profile photo, Staff biography, and activity notes remain intentionally unsupported professional fields.
 - Online payments, invoice itemization, tax, discount, and insurance workflows.
 - No additional browser phase is implicitly authorized; new work requires approved scope.

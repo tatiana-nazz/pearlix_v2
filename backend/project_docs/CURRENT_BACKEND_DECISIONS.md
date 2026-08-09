@@ -105,10 +105,10 @@ This document summarizes current accepted backend decisions for human developers
 
 ## AI Mode
 
-- MVP supports `MOCK_ADAPTER` only.
-- If `ai_mode` is `DJANGO_INTERNAL` or `SEPARATE_SERVICE`, AI run should return `AI_SERVICE_NOT_CONFIGURED` until real AI exists.
-- Do not silently run mock analysis when settings claim a real or separate AI mode.
-- Real AI should replace the adapter later without changing API contracts.
+- `DJANGO_INTERNAL` runs the locked real DENTEX adapter when its trusted artifacts and runtime are configured.
+- `SEPARATE_SERVICE` remains unavailable and returns `AI_SERVICE_NOT_CONFIGURED`.
+- `MOCK_ADAPTER` is a test harness gated by `PEARLIX_ALLOW_MOCK_AI`; ordinary local and production settings keep it disabled and return `AI_SERVICE_NOT_CONFIGURED`.
+- No mode may silently fall back to mock analysis.
 
 ## Handoff Bills and Invoice Receipts
 

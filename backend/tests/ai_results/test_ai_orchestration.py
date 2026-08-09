@@ -3,6 +3,7 @@ from io import BytesIO
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.utils import timezone
 
 from apps.ai_results import services
@@ -216,6 +217,27 @@ def test_service_not_configured_is_audited_as_rejected_not_failed(
     assert "status" not in rejected_log.metadata_json
     assert not ActivityLog.objects.filter(action="xray_ai_failed").exists()
     assert not AIResult.objects.filter(xray_attachment=xray).exists()
+
+
+@pytest.mark.django_db
+@override_settings(PEARLIX_ALLOW_MOCK_AI=False)
+def test_mock_mode_fails_closed_when_runtime_mock_support_is_disabled(
+    doctor_client,
+    xray_attachment_factory,
+):
+    clinic_settings = ClinicSettings.get_solo()
+    clinic_settings.ai_mode = ClinicSettings.AiMode.MOCK_ADAPTER
+    clinic_settings.save(update_fields=["ai_mode", "updated_at"])
+    xray = xray_attachment_factory()
+
+    response = doctor_client.post(f"/api/xrays/{xray.id}/run-ai/")
+
+    assert response.status_code == 503
+    assert response.data["code"] == "AI_SERVICE_NOT_CONFIGURED"
+    assert not AIResult.objects.filter(xray_attachment=xray).exists()
+    rejected_log = ActivityLog.objects.get(action="xray_ai_rejected")
+    assert rejected_log.metadata_json["request_outcome"] == "REJECTED"
+    assert not ActivityLog.objects.filter(action="xray_ai_failed").exists()
 
 
 @pytest.mark.django_db

@@ -115,6 +115,9 @@ PEARLIX_AI_DEVICE = env("PEARLIX_AI_DEVICE", "cpu")
 PEARLIX_AI_MAX_CONCURRENT_INFERENCES = int(
     env("PEARLIX_AI_MAX_CONCURRENT_INFERENCES", "1") or "1"
 )
+# The deterministic adapter is a test harness. Production and ordinary local
+# runtime paths fail closed even if the persisted clinic mode still names it.
+PEARLIX_ALLOW_MOCK_AI = env_bool("PEARLIX_ALLOW_MOCK_AI", False)
 # A bounded lease allows a later request to recover work abandoned by a dead worker.
 PEARLIX_AI_PROCESSING_STALE_SECONDS = int(
     env("PEARLIX_AI_PROCESSING_STALE_SECONDS", "900") or "900"

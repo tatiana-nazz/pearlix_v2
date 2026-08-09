@@ -7,10 +7,14 @@ from django.core.management import call_command
 from django.test import override_settings
 
 from apps.accounts.models import User
+from apps.ai_results.models import AIResult
+from apps.audit.models import ActivityLog
 from apps.billing.models import BillingHandoff, Invoice
+from apps.clinic.models import ClinicSettings
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
+from apps.xrays.models import XrayAttachment
 
 
 PASSWORD = "PearlixDemo123!"
@@ -95,3 +99,48 @@ def test_canonical_lina_visit_remains_active_without_financial_records(tmp_path)
     assert visit.completed_at is None
     assert BillingHandoff.objects.filter(visit=visit).count() == 0
     assert Invoice.objects.filter(billing_handoff__visit=visit).count() == 0
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "ai_mode",
+    [
+        ClinicSettings.AiMode.DJANGO_INTERNAL,
+        ClinicSettings.AiMode.SEPARATE_SERVICE,
+        ClinicSettings.AiMode.MOCK_ADAPTER,
+    ],
+)
+@override_settings(DEBUG=True)
+def test_demo_story_preserves_existing_ai_mode_and_seeds_no_ai_results(tmp_path, ai_mode):
+    clinic = ClinicSettings.get_solo()
+    clinic.ai_mode = ai_mode
+    clinic.save(update_fields=["ai_mode", "updated_at"])
+
+    with override_settings(MEDIA_ROOT=tmp_path):
+        seed("--reset-demo", "--reference-date", "2026-08-08")
+
+    clinic.refresh_from_db()
+    assert clinic.ai_mode == ai_mode
+    assert AIResult.objects.count() == 0
+    assert not AIResult.objects.filter(model_version="pearlix-mock-xray-v1").exists()
+    assert XrayAttachment.objects.filter(
+        patient__national_id_or_passport__startswith=PREFIX
+    ).exists()
+    assert not ActivityLog.objects.filter(
+        metadata_json__demo_story="phase-14a-integrated-demo-story",
+        action__in=["ai_run", "xray_ai_run"],
+    ).exists()
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_demo_story_runs_without_preexisting_clinic_settings(tmp_path):
+    assert not ClinicSettings.objects.exists()
+
+    with override_settings(MEDIA_ROOT=tmp_path):
+        output = seed("--reset-demo", "--reference-date", "2026-08-08")
+
+    assert "Seeded phase-14a-integrated-demo-story" in output
+    assert ClinicSettings.objects.exists()
+    assert demo_counts()["patients"] == 24
+    assert AIResult.objects.count() == 0

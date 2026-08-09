@@ -10,7 +10,6 @@ import struct
 import zlib
 
 from django.conf import settings
-from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Q
@@ -18,7 +17,6 @@ from django.utils import timezone
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
 from apps.ai_results.models import AIResult
-from apps.ai_results.services import run_ai_for_xray
 from apps.audit.models import ActivityLog
 from apps.audit.services import log_activity
 from apps.billing.models import BillingHandoff, Invoice
@@ -70,30 +68,7 @@ def _synthetic_dental_png(width=320, height=180):
     return b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", header) + _png_chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + _png_chunk(b"IEND", b"")
 
 
-def _synthetic_overlay_png(width=320, height=180):
-    """Return a transparent QA overlay with deterministic non-clinical markers."""
-    rows = []
-    regions = ((54, 42, 126, 112), (184, 58, 262, 138))
-    for y in range(height):
-        row = bytearray([0])
-        for x in range(width):
-            pixel = (0, 0, 0, 0)
-            for left, top, right, bottom in regions:
-                on_edge = (left <= x <= right and y in {top, top + 1, bottom - 1, bottom}) or (top <= y <= bottom and x in {left, left + 1, right - 1, right})
-                if on_edge:
-                    pixel = (255, 78, 92, 220)
-                elif left < x < right and top < y < bottom:
-                    pixel = (255, 78, 92, 24)
-            if (abs(x - 160) <= 2 or abs(y - 90) <= 2) and 145 <= x <= 175 and 75 <= y <= 105:
-                pixel = (36, 220, 230, 235)
-            row.extend(pixel)
-        rows.append(bytes(row))
-    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    return b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", header) + _png_chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + _png_chunk(b"IEND", b"")
-
-
 XRAY_PNG_BYTES = _synthetic_dental_png()
-OVERLAY_PNG_BYTES = _synthetic_overlay_png()
 
 DOCTOR_SHIFT_SPECS = {
     "doctor.one": ((range(5), "Morning", time(8), time(12)), (range(5), "Evening", time(14), time(18))),
@@ -230,7 +205,6 @@ class Command(BaseCommand):
         clinic.default_appointment_duration_minutes = 30
         clinic.allowed_durations_minutes = [15, 30, 45, 60]
         clinic.capacity_per_slot = 3
-        clinic.ai_mode = ClinicSettings.AiMode.MOCK_ADAPTER
         clinic.save()
         log_activity(actor=admin, action="clinic_settings_updated", entity_type="clinic_settings", entity_id=clinic.id, metadata={"demo_story": DEMO_TAG, "timezone": clinic.timezone})
 
@@ -376,11 +350,7 @@ class Command(BaseCommand):
     def _create_imaging_story(self, accounts, patients, story):
         d1, d2 = accounts["doctor.one"], accounts["doctor.two"]
         active_visit = story["active_visit"]
-        xray = create_xray_attachment(patient=active_visit.patient, visit=active_visit, uploaded_by=d1, uploaded_file=self._upload("demo14a-active-visit-ai.png"), stored_file_name="demo14a-active-visit-ai.png", title="Active visit panoramic X-ray with mock AI", notes="Non-clinical synthetic active-visit image.")
-        result = run_ai_for_xray(xray_attachment=xray, user=d1)
-        result.overlay_file.save("demo14a-overlay.png", ContentFile(OVERLAY_PNG_BYTES), save=False)
-        result.result_summary = "Mock/supportive only — synthetic markers, not a diagnosis."
-        result.save()
+        xray = create_xray_attachment(patient=active_visit.patient, visit=active_visit, uploaded_by=d1, uploaded_file=self._upload("demo14a-active-visit-ai.png"), stored_file_name="demo14a-active-visit-ai.png", title="Active visit panoramic X-ray", notes="Non-clinical synthetic active-visit image eligible for AI-run testing.")
         create_xray_attachment(patient=active_visit.patient, visit=active_visit, uploaded_by=d1, uploaded_file=self._upload("demo14a-active-visit-no-ai.png"), stored_file_name="demo14a-active-visit-no-ai.png", title="Active visit bitewing X-ray without AI", notes="Non-clinical synthetic active-visit image eligible for AI-run testing.")
         temporary = create_external_xray_case(uploaded_by=d1, uploaded_file=self._upload("demo14a-external-temporary.png"), stored_file_name="demo14a-external-temporary.png", title="Temporary synthetic external image", notes="Non-clinical synthetic image.")
         attached = create_external_xray_case(uploaded_by=d2, uploaded_file=self._upload("demo14a-external-attached.png"), stored_file_name="demo14a-external-attached.png", title="Attached synthetic external image", notes="Non-clinical synthetic image.")
@@ -523,9 +493,6 @@ class Command(BaseCommand):
             log_activity(actor=actor, action=action, entity_type=entity_type, entity_id=entity_id, metadata={"demo_story": DEMO_TAG, "record_id": entity_id})
         for xray in XrayAttachment.objects.filter(patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX):
             log_activity(actor=xray.uploaded_by, action="xray_uploaded", entity_type="xray", entity_id=xray.id, metadata={"demo_story": DEMO_TAG, "xray_id": xray.id})
-        for action, item in (("ai_run", story["imaging"]["xray"]),):
-            if item:
-                log_activity(actor=item.uploaded_by, action=action, entity_type="xray", entity_id=item.id, metadata={"demo_story": DEMO_TAG, "xray_id": item.id})
         for handoff in story["billing"]["handoffs"]:
             log_activity(actor=handoff.created_by, action="billing_handoff_created", entity_type="billing_handoff", entity_id=handoff.id, metadata={"demo_story": DEMO_TAG, "record_id": handoff.id})
         for invoice in story["billing"]["invoices"]:

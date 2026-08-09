@@ -87,7 +87,9 @@ class _ProcessingClaim:
 
 def select_inference_adapter(ai_mode: str) -> InferenceAdapter:
     if ai_mode == ClinicSettings.AiMode.MOCK_ADAPTER:
-        return _MOCK_ADAPTER
+        if getattr(settings, "PEARLIX_ALLOW_MOCK_AI", False):
+            return _MOCK_ADAPTER
+        raise AIServiceNotConfigured
     if ai_mode == ClinicSettings.AiMode.DJANGO_INTERNAL:
         try:
             from apps.ai_results.adapters.dentex import get_dentex_adapter
