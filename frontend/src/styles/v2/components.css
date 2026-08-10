@@ -755,7 +755,12 @@
 .active-xray-ai-panel { display: grid; min-width: 0; min-height: 0; align-content: start; gap: 10px; }
 .active-xray-ai-panel .section-header h3,.active-xray-ai-panel.xray-ai-empty h3 { display: flex; align-items: center; gap: 8px; }
 .active-xray-workspace .active-xray-ai-panel h3,.active-xray-workspace .active-xray-ai-panel h4,.active-xray-workspace .active-xray-ai-panel dd { color: #f4f8ff; }
-.active-xray-workspace .active-xray-ai-panel .section-header p,.active-xray-workspace .active-xray-ai-panel p,.active-xray-workspace .active-xray-ai-panel dt,.active-xray-workspace .active-xray-ai-panel span { color: #b7c7d9; }
+.active-xray-workspace .active-xray-ai-panel .section-header p,.active-xray-workspace .active-xray-ai-panel p,.active-xray-workspace .active-xray-ai-panel dt,.active-xray-workspace .active-xray-ai-panel span:not(.v2-status) { color: #b7c7d9; }
+.active-xray-ai-panel .v2-status { border: 1px solid currentColor; }
+.active-xray-ai-panel .v2-status.success { background: color-mix(in srgb,var(--v2-success) 16%,transparent); color: var(--v2-success); }
+.active-xray-ai-panel .v2-status.warning { background: color-mix(in srgb,var(--v2-warning) 17%,transparent); color: var(--v2-warning); }
+.active-xray-ai-panel .v2-status.danger { background: color-mix(in srgb,var(--v2-danger) 15%,transparent); color: var(--v2-danger); }
+.active-xray-ai-panel .v2-status.info { background: color-mix(in srgb,var(--v2-info) 15%,transparent); color: var(--v2-info); }
 .xray-ai-highlight { margin: 0; }
 .xray-ai-highlight div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-block: 1px solid var(--v2-border); padding-block: 8px; }
 .xray-ai-highlight dt { color: var(--v2-muted); }

@@ -7,17 +7,18 @@ This is the canonical current-phase tracker. Other project documents describe ca
 
 Project: Dental Clinic Management System Website
 
-Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace contract closure. Live Admin, Staff, and Doctor browser execution closed responsive RTL overflow and static shell-navigation localization defects without changing backend runtime contracts. The backend regression gate remains closed with 420 passing tests.
+Phase 14D browser acceptance is delivered after Phase 14D.4A patient workspace contract closure. Live Admin, Staff, and Doctor browser execution closed responsive RTL overflow and static shell-navigation localization defects without changing backend runtime contracts. R3A closes the cumulative backend regression gate with 504 passing and 1 skipped test.
 
 Local login connectivity is now deterministic: the documented frontend uses `127.0.0.1:5173` with Vite strict-port behavior, and the local CORS/CSRF example is aligned to that origin. See `frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md`.
 
-- Current phase: Stage 7 Handoff Bill and Invoice Ledger with visit-only Bill origin authority — delivered
+- Current phase: R3A final product acceptance and real-AI deployment readiness — delivered on the accepted Stage 7/R2F product lineage
 - Phase 13 series: complete
 - Next phase: no phase is implicitly authorized; use a new approved scope
-- Next step: preserve Stage 7 financial semantics, the Phase 14F.4 clinical closure, and current runtime/RBAC contracts
-- Final backend full regression: 420 passed
-- Final frontend regression: 158 passed in 51 files
-- Final browser regression: 17 serial Phase 14D/14F/14F.2/14F.3/14F.4 Chromium scenarios passed, including 3 new role and responsive clinical-workspace scenarios
+- Next step: preserve Stage 7 financial semantics, the R2F patient/X-ray closure, the locked real DENTEX contract, and current runtime/RBAC contracts
+- Final backend full regression: 504 passed, 1 skipped
+- Final frontend regression: 231 passed in 65 files
+- Final browser regression: bounded R3A live Admin/Staff/Doctor acceptance passed across EN, Arabic RTL, light/dark themes, and a 1024-pixel narrower viewport
+- R3A acceptance fixes: scoped AI status contrast, PostgreSQL-safe row locking for external discard and saved-X-ray deletion, neutral not-found copy, AI preflight, and authoritative AI deployment documentation
 - Stage 7 backend/model change: `BillingHandoff` is the Bill with computed paid/remaining/Invoice count and canonical statuses; `Invoice` is one Handoff-linked receipt; legacy `Payment` runtime/model is removed through a preserving migration.
 - Stage 7 visit change: Doctor completion atomically creates one OPEN Handoff and zero Invoices; Staff payment issues an Invoice and recomputes Handoff status.
 - Stage 7 final authority correction: Doctor Active Visit completion is the only current-workflow Bill creation path. Staff Billing and Patient Billing have no New Bill workflow; Handoff Detail is immutable except that eligible Staff may record payment to issue an Invoice. Admin and Doctor Handoff views are read-only, and historical migrated manual/cancelled Bills remain readable.
@@ -47,7 +48,7 @@ Local login connectivity is now deterministic: the documented frontend uses `127
 - Phase 14E.4 historical acceptance note: the original browser surface limitation is superseded by the closed Phase 14F protected-media Chromium acceptance
 - Frontend visible UI changes in Phase 14F: supplied reference tokens, shell, navigation, topbar, shared components, overlays, appointments, profiles, Team/Users & Access, dashboards, Active Visit, Billing, X-ray/AI, authentication, and settings adopted across every current route family
 - Phase 14F user acceptance: rejected; conflicting visual conclusions are superseded by Phase 14F.1
-- Frontend visible UI changes in Phase 14F.1: Pearlix brand mark, simplified identity/topbar/collapse controls, consolidated profile navigation, semantic dashboard colors and role actions, Calendar/Reschedule Queue hierarchy, complete Day/Week/Month/List support, compact filters, repaired versioned patient Edit modal, and structured Admin Clinic Settings cards
+- Frontend visible UI changes in Phase 14F.1 and R2F: Pearlix brand mark, simplified identity/topbar/collapse controls, consolidated profile navigation, semantic dashboard colors and role actions, Calendar/Reschedule Queue hierarchy, complete Day/Week/Month/List support, compact filters, inline versioned patient editing, and structured Admin Clinic Settings cards
 - Backend runtime changes in Phase 14F.1: none; backend edits are limited to the DEBUG-only demo management command, tests, and docs
 - API changes in Phase 14F.1: none
 - Migrations in Phase 14F.1: none
@@ -79,8 +80,8 @@ Local login connectivity is now deterministic: the documented frontend uses `127
 - Migrations in Phase 14D.4A: none
 - Backend regression gate: closed
 - Browser QA/UAT: Phase 14D integrated acceptance passed with seeded local QA accounts
-- Release recommendation: deployment paused; complete Phases 14E–14F before controlled deployment
+- Release recommendation: ready for controlled fast-forward promotion after R3A acceptance; deployment still requires the documented AI preflight and explicit operator enablement
 
 Completed capability summary: authenticated role workspaces; patient, scheduling, visit, X-ray/AI, and billing workflows; Admin account management, clinic settings, and audit-log visibility; deterministic development-only integrated demo story; the Phase 14B UI refocus design freeze; Phase 14C.0 Team APIs; Phase 14D.1 Team and Users & Access routes; Phase 14D.2 role dashboard redesign; and Phase 14R booking/availability stabilization. Team uses the User ID as its stable member ID, has transactional Doctor/Staff onboarding, profile optimistic locking, professional/login status separation, linkage-state reporting, protected role transitions, reactivation, and sanitized audit events. Phase 14A seed story remains available.
 
-Remaining post-MVP limitations: real AI integration, email forgot-password, unsupported professional fields (gender, qualifications, license, profile photo, Staff biography, and activity notes), online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization. Phase 14D priority workspace redesigns and browser acceptance are delivered.
+Real DENTEX integration is delivered under the locked research-only contract documented in `AI_MODEL_DEPLOYMENT.md`. Remaining post-MVP limitations include email forgot-password, unsupported professional fields (gender, qualifications, license, profile photo, Staff biography, and activity notes), online payments, invoice itemization, tax, discounts, insurance billing, automatic notifications, multi-clinic tenancy, and full mobile-first optimization.

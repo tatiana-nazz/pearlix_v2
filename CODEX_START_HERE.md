@@ -8,10 +8,11 @@
 2. This file.
 3. [`PROJECT_STATUS.md`](backend/project_docs/PROJECT_STATUS.md).
 4. [`CURRENT_BACKEND_DECISIONS.md`](backend/project_docs/CURRENT_BACKEND_DECISIONS.md) and the affected backend contracts/tests.
-5. [`CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](frontend/CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md).
-6. Affected runtime code, API contracts, routes, and tests.
-7. Current QA acceptance evidence and supporting specifications.
-8. Historical and superseded material, for context only.
+5. [`AI_MODEL_DEPLOYMENT.md`](backend/project_docs/AI_MODEL_DEPLOYMENT.md) for real DENTEX installation and operations.
+6. [`CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md`](frontend/CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md).
+7. Affected runtime code, API contracts, routes, and tests.
+8. Current QA acceptance evidence and supporting specifications.
+9. Historical and superseded material, for context only.
 
 The authoritative document inventory and classifications are in [`DOCUMENT_AUTHORITY_REGISTER.md`](backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md). Only documents registered there may claim globally binding/current authority.
 

@@ -718,6 +718,7 @@ Hidden actions:
 
 - Endpoints:
   - `GET /api/xrays/`
+  - `DELETE /api/xrays/{id}/` (uploader Doctor only; processing AI returns `409`)
   - `GET /api/patients/{id}/xrays/`
   - `POST /api/patients/{id}/xrays/`
   - `POST /api/visits/{id}/xrays/`
@@ -729,7 +730,7 @@ Hidden actions:
 
 - Endpoints: `GET /api/patients/{id}/ai-results/`, `GET /api/xrays/{id}/ai-result/`, `POST /api/xrays/{id}/run-ai/`.
 - Result status values: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`.
-- Current MVP run behavior returns completed mock result when clinic `ai_mode` is `MOCK_ADAPTER`; other modes return `AI_SERVICE_NOT_CONFIGURED` 503.
+- `DJANGO_INTERNAL` runs the locked real DENTEX adapter when its trusted bundle passes integrity/runtime validation. `MOCK_ADAPTER` is test-only and additionally requires `PEARLIX_ALLOW_MOCK_AI=true`; otherwise it returns `AI_SERVICE_NOT_CONFIGURED` without fallback.
 - Frontend must display returned disclaimer text with AI output.
 
 ### External X-ray Workspace

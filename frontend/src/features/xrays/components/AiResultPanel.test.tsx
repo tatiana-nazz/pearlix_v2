@@ -99,6 +99,33 @@ describe("AiResultPanel real lifecycle presentation", () => {
     expect(screen.queryByLabelText("Status: Flagged")).not.toBeInTheDocument();
   });
 
+  it("preserves semantic status tones for AI lifecycle and finding decisions", () => {
+    const review: AIFinding = {
+      fdi_tooth_id: "17",
+      disease_label: "Any Caries",
+      model_score: 0.42,
+      threshold: 0.44,
+      decision: "review",
+      is_positive: false,
+    };
+    const { rerender } = render(
+      <AiResultPanel result={result({ findings: [realFinding, review] })} isLoading={false} onRetry={vi.fn()} />,
+    );
+
+    expect(screen.getByLabelText("Status: Completed")).toHaveClass("success");
+    expect(screen.getByLabelText("Status: Flagged")).toHaveClass("success");
+    expect(screen.getByLabelText("Status: Review")).toHaveClass("warning");
+
+    rerender(<AiResultPanel result={result({ status: "FAILED", findings: [] })} isLoading={false} onRetry={vi.fn()} />);
+    expect(screen.getByLabelText("Status: Failed")).toHaveClass("danger");
+
+    rerender(<AiResultPanel result={result({ status: "PROCESSING", findings: [] })} isLoading={false} onRetry={vi.fn()} />);
+    expect(screen.getByLabelText("Status: Analyzing…")).toHaveClass("info");
+
+    rerender(<AiResultPanel result={result({ status: "PENDING", findings: [] })} isLoading={false} onRetry={vi.fn()} />);
+    expect(screen.getByLabelText("Status: Pending")).toHaveClass("warning");
+  });
+
   it("keeps multiple real findings for the same FDI as independent rows", () => {
     render(<AiResultPanel result={result({
       findings: [realFinding, { ...realFinding, disease_label: "Any Caries", model_score: 0.91 }],

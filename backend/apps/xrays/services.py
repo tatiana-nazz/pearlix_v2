@@ -173,7 +173,11 @@ def validate_external_not_processing(external_case):
 
 def discard_external_case(*, external_case, user):
     with transaction.atomic():
-        external_case = ExternalXrayCase.objects.select_for_update().select_related("ai_result").get(pk=external_case.pk)
+        external_case = (
+            ExternalXrayCase.objects.select_for_update(of=("self",))
+            .select_related("ai_result")
+            .get(pk=external_case.pk)
+        )
         validate_external_temporary(external_case, "Only temporary external X-ray cases can be discarded.")
         validate_external_not_processing(external_case)
         external_case.status = ExternalXrayCase.Status.DISCARDED
@@ -242,7 +246,7 @@ def _delete_storage_files(files):
 def delete_xray_attachment(*, xray):
     with transaction.atomic():
         locked_xray = (
-            XrayAttachment.objects.select_for_update()
+            XrayAttachment.objects.select_for_update(of=("self",))
             .select_related("patient", "visit", "uploaded_by", "ai_result")
             .get(pk=xray.pk)
         )

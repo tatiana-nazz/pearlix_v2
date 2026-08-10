@@ -336,9 +336,16 @@ def test_external_overlay_permission_and_missing_behavior(api_client, admin_clie
 
 
 @pytest.mark.django_db
-def test_admin_and_doctor_can_discard_temporary_case(admin_client, doctor_client, admin_user, external_xray_case_factory):
+def test_admin_and_doctor_can_discard_temporary_case(
+    admin_client,
+    doctor_client,
+    admin_user,
+    external_xray_case_factory,
+    ai_result_factory,
+):
     admin_case = external_xray_case_factory(uploaded_by=admin_user)
     doctor_case = external_xray_case_factory(stored_file_name="doctor-discard.png")
+    ai_result_factory(external_xray_case=doctor_case)
 
     admin_response = admin_client.post(f"/api/external-xrays/{admin_case.id}/discard/")
     doctor_response = doctor_client.post(f"/api/external-xrays/{doctor_case.id}/discard/")

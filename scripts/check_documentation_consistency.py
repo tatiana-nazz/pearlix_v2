@@ -11,6 +11,7 @@ FILES = {
     "register": "backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md",
     "status": "backend/project_docs/PROJECT_STATUS.md",
     "backend_decisions": "backend/project_docs/CURRENT_BACKEND_DECISIONS.md",
+    "ai_deployment": "backend/project_docs/AI_MODEL_DEPLOYMENT.md",
     "audit": "backend/project_docs/FRONTEND_BACKEND_INTEGRATION_AUDIT.md",
     "backend_phase_tracker": "backend/project_docs/BACKEND_PHASE_TRACKER.md",
     "ui": "frontend/CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md",
@@ -21,7 +22,7 @@ FILES = {
     "legacy_handoff": "_codex_backend_handoff/00_CODEX_START_HERE.md",
     "local_login_record": "frontend/design_v2/LOCAL_LOGIN_NETWORK_FIX_RECORD.md",
 }
-CANONICAL = ("status", "backend_decisions", "ui")
+CANONICAL = ("status", "backend_decisions", "ai_deployment", "ui")
 SUPPORTING = ("audit", "backend_phase_tracker", "frontend_readme", "backend_readme")
 LEGACY = ("legacy_design", "legacy_sequence", "legacy_handoff")
 BASELINE = "e54a858"
@@ -50,6 +51,7 @@ def global_claims_outside_register() -> list[str]:
         "backend/project_docs/DOCUMENT_AUTHORITY_REGISTER.md",
         "backend/project_docs/PROJECT_STATUS.md",
         "backend/project_docs/CURRENT_BACKEND_DECISIONS.md",
+        "backend/project_docs/AI_MODEL_DEPLOYMENT.md",
         "frontend/CURRENT_PRODUCT_UI_SOURCE_OF_TRUTH.md",
     }
     errors = []
