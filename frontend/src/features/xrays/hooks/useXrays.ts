@@ -67,7 +67,10 @@ export function useVisitXrayUpload(visitId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: XrayUploadPayload) => visitsApi.uploadXray(visitId, xrayUploadFormData(payload)),
-    onSuccess: (xray) => invalidateSavedXrayContext(queryClient, xray.patient.id, xray.visit?.id),
+    onSuccess: (xray) => {
+      queryClient.setQueryData(["xray", xray.id], xray);
+      invalidateSavedXrayContext(queryClient, xray.patient.id, xray.visit?.id);
+    },
   });
 }
 
