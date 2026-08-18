@@ -11,27 +11,30 @@ Netlify (React/Vite)
         |
         | HTTPS / JSON + protected media requests
         v
-Render (Django/DRF)
-   |             |
-   | PostgreSQL  | private S3 API
-   v             v
-Supabase DB   Supabase Storage
+Vercel Hobby (Django/DRF, Python Functions)
+   |                    |
+   | PostgreSQL         | private S3 API
+   v                    v
+Supabase DB        Supabase Storage
 ```
 
-The real DENTEX model is intentionally **not loaded into the Render Free web process**. External AI deployment is a separate later phase. The locked model hashes, thresholds, class order, preprocessing, and FDI map remain governed by `AI_MODEL_DEPLOYMENT.md`.
+The real DENTEX detector/classifier bundle is intentionally **not loaded into the Vercel Django function**. External AI deployment is a separate later phase. The locked model hashes, thresholds, class order, preprocessing, and FDI map remain governed by `AI_MODEL_DEPLOYMENT.md`.
+
+Vercel Hobby is suitable here only for the current personal/research/staging use. It is not the future commercial-clinic hosting target.
 
 ## Deployment order
 
-1. Create the Supabase project.
+1. Create/configure the Supabase project.
 2. Create a **private** Supabase Storage bucket.
 3. Generate Supabase S3 server-side access credentials.
 4. Copy the Supabase **Session pooler** PostgreSQL connection string.
-5. Create the Render backend service and configure all backend secrets.
-6. Verify Render `/api/health/`.
-7. Create the Netlify frontend site and set `VITE_API_BASE_URL`.
-8. Update Render CORS/CSRF/frontend origins to the final Netlify URL.
-9. Run hosted acceptance without real AI.
-10. Deploy/connect the external AI service in the later AI deployment phase.
+5. Apply the current Django migrations once through a controlled trusted runtime.
+6. Import the backend into Vercel from `deploy/staging-prep` with Root Directory `backend`.
+7. Configure Vercel backend environment variables and verify `/api/health/`.
+8. Create the Netlify frontend site and set `VITE_API_BASE_URL`.
+9. Add the final Netlify origin to backend CORS/CSRF/frontend settings.
+10. Run hosted acceptance without real AI.
+11. Deploy/connect the external AI service in the later AI deployment phase.
 
 ---
 
@@ -41,55 +44,53 @@ The real DENTEX model is intentionally **not loaded into the Render Free web pro
 
 Pearlix continues to use Django ORM, migrations, authentication, permissions, and business logic. Supabase is only the managed PostgreSQL host.
 
-Render is an IPv4-only platform. For the free Supabase project, use the **Shared Pooler / Supavisor Session mode** connection string (port `5432`) from the Supabase **Connect** panel, not the IPv6-only direct database hostname.
-
-Set that complete value as Render's:
+Use the **Shared Pooler / Supavisor Session mode** connection string (port `5432`) for hosted application traffic when IPv4 compatibility is needed:
 
 ```text
 DATABASE_URL=postgresql://postgres.<project-ref>:<password>@<region-pooler-host>:5432/postgres?sslmode=require
 ```
 
-If the copied URL already contains SSL options, keep the provider-supplied value rather than duplicating them.
+Never put this connection string in frontend/browser configuration.
 
-Do not use Supabase client libraries in the browser for Pearlix domain data. Django remains the sole application/data-access boundary.
+### Migrations
+
+The staging database has already received the current Pearlix migration set during controlled deployment verification. Do **not** run migrations automatically on every Vercel Preview deployment, because Preview and Production deployments would otherwise mutate the same Supabase database.
+
+For later schema changes, run migrations intentionally against the intended database before promoting the matching application revision. Do not seed demo data automatically during deployment.
 
 ### Private Storage bucket
 
-Create one bucket for Pearlix media, for example:
+Use the private bucket:
 
 ```text
 pearlix-media
 ```
 
-The bucket must remain **private**.
-
-In Supabase Storage S3 configuration:
-
-1. Enable/use the S3-compatible interface.
-2. Generate an **Access Key ID** and **Secret Access Key**.
-3. Copy the direct S3 endpoint shown by Supabase. Prefer the direct storage hostname:
-   `https://<project-ref>.storage.supabase.co/storage/v1/s3`
-4. Copy the project storage region.
-
-These S3 credentials are privileged server-side credentials and bypass Storage RLS. Never put them in Netlify, `VITE_*` variables, browser code, Git, screenshots, or documentation.
-
-Render receives:
+Current staging policy:
 
 ```text
-SUPABASE_S3_ENDPOINT_URL=<copied S3 endpoint>
+public: false
+file size limit: 10 MB
+allowed MIME: image/png, image/jpeg
+```
+
+Supabase S3 server credentials are privileged server-side credentials and bypass Storage RLS. Never put them in Netlify, `VITE_*` variables, browser code, Git, screenshots, or documentation.
+
+Backend variables:
+
+```text
+SUPABASE_S3_ENDPOINT_URL=<Supabase direct S3 endpoint>
 SUPABASE_S3_ACCESS_KEY_ID=<server-side access key id>
 SUPABASE_S3_SECRET_ACCESS_KEY=<server-side secret access key>
 SUPABASE_S3_BUCKET_NAME=pearlix-media
-SUPABASE_S3_REGION=<copied storage region>
+SUPABASE_S3_REGION=<Supabase storage region>
 ```
-
-Pearlix uses Django `FileField` with `django-storages`/boto3. Supabase requires S3 Signature V4 and path-style addressing; production settings enforce those options.
 
 ### Protected media behavior
 
 The browser does **not** receive permanent Supabase object URLs.
 
-The existing protected endpoints remain authoritative, for example:
+Existing protected endpoints remain authoritative, including:
 
 ```text
 /api/xrays/<id>/file/
@@ -97,50 +98,38 @@ The existing protected endpoints remain authoritative, for example:
 /api/external-xrays/<id>/file/
 ```
 
-Django authorizes the request first, then opens the `FileField` through the configured storage backend and streams it to the authenticated client. Local development still uses `MEDIA_ROOT`; production uses the private Supabase bucket.
+Django authorizes the request first, then opens the `FileField` through the configured storage backend and streams the content to the authenticated client.
 
 ---
 
-## 2. Render backend
+## 2. Vercel backend
 
-Create a **Web Service** from `tatiana-nazz/pearlix_v2`.
+Vercel now supports Django directly through its Python runtime. Pearlix uses that native Django detection; no `/api` wrapper or routing rewrite is required.
 
-For staging, deploy the approved deployment branch until it is merged:
-
-```text
-deploy/staging-prep
-```
-
-### Service settings
+### Git import
 
 ```text
-Language: Python
+Repository: tatiana-nazz/pearlix_v2
+Branch: deploy/staging-prep
 Root Directory: backend
-Build Command: ./build.sh
-Start Command: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120
-Health Check Path: /api/health/
+Framework: Django/Python auto-detected
 ```
 
-The build script:
+`backend/.python-version` pins Python 3.13 for Vercel.
 
-1. installs `backend/requirements.txt`
-2. collects Django static files
-3. applies Django migrations
+Do not set a custom frontend Output Directory for this backend project.
 
-It never seeds demo data and never loads AI weights.
+### Required Vercel environment variables
 
-### Required environment variables
+Set these for the backend deployment environment:
 
 ```text
 DJANGO_SETTINGS_MODULE=config.settings.production
-SECRET_KEY=<generate a strong unique production secret>
+DEBUG=false
+SECRET_KEY=<strong unique Django secret>
+DATABASE_URL=<Supabase Session pooler URL with sslmode=require>
 
-DATABASE_URL=<Supabase Session pooler URL with SSL>
-
-ALLOWED_HOSTS=<render-hostname>
-CORS_ALLOWED_ORIGINS=<netlify-origin>
-CSRF_TRUSTED_ORIGINS=<netlify-origin>
-FRONTEND_URL=<netlify-origin>
+ALLOWED_HOSTS=.vercel.app
 TIME_ZONE=Asia/Damascus
 
 SUPABASE_S3_ENDPOINT_URL=<Supabase S3 endpoint>
@@ -152,23 +141,39 @@ SUPABASE_S3_REGION=<Supabase storage region>
 PEARLIX_ALLOW_MOCK_AI=false
 ```
 
-Keep the existing AI variables unset unless the separate AI phase explicitly requires them.
+After the Netlify production hostname is known, add:
 
-Do not place thresholds, hashes, class order, or model preprocessing in environment variables.
+```text
+CORS_ALLOWED_ORIGINS=https://<netlify-host>
+CSRF_TRUSTED_ORIGINS=https://<netlify-host>
+FRONTEND_URL=https://<netlify-host>
+```
 
-### Production security
+Keep the existing AI service/model-path variables unset for this phase.
 
-Production settings already require:
+### Health check
 
-- `DEBUG=False`
-- explicit `SECRET_KEY`
-- explicit `DATABASE_URL`
-- no wildcard CORS
-- secure session and CSRF cookies
-- HTTPS proxy awareness
-- HSTS/SSL redirect
+The safe public health endpoint is:
 
-Production additionally fails closed if any private Supabase S3 setting is missing, preventing accidental use of Render's ephemeral local filesystem for patient media.
+```text
+/api/health/
+```
+
+Expected body:
+
+```json
+{"status":"ok"}
+```
+
+It exposes no secrets, storage paths, model paths, or patient information.
+
+### Runtime notes
+
+- Vercel Hobby is a serverless/functions environment, not a persistent Django process.
+- The ordinary Pearlix API is suitable for this staging use.
+- Do not load the DENTEX PyTorch/Ultralytics models in this backend function.
+- Supabase Storage remains the durable location for X-rays/overlays.
+- Vercel's ephemeral filesystem must not become the source of truth for media or database state.
 
 ---
 
@@ -181,46 +186,32 @@ The repository-level `netlify.toml` defines:
 ```text
 Base directory: frontend
 Build command: npm run build
-Publish directory: frontend/dist (resolved from base as dist)
+Publish directory: dist (relative to the frontend base)
 ```
 
-It also includes the SPA rewrite:
-
-```text
-/*  /index.html  200
-```
-
-so React Router URLs work on refresh/direct navigation.
+It also provides the SPA rewrite so React Router URLs work on direct navigation and refresh.
 
 ### Required Netlify environment variable
 
-After Render has a final public hostname:
+After Vercel has a final backend URL:
 
 ```text
-VITE_API_BASE_URL=https://<render-service>.onrender.com/api
+VITE_API_BASE_URL=https://<vercel-backend-host>/api
 ```
 
 Only non-secret browser configuration belongs in `VITE_*`.
 
-Never place:
-
-- Supabase S3 access key
-- Supabase S3 secret
-- database URL/password
-- Django secret key
-- AI service token
-
-in Netlify/Vite environment variables.
+Never place the database URL/password, Supabase S3 server keys, Django secret key, or future AI service token in Netlify/Vite environment variables.
 
 ---
 
 ## Rollback
 
-Deployment configuration should be promoted only after local regression and hosted staging acceptance.
+Promote deployment configuration only after hosted staging acceptance.
 
-If a new Render deployment fails, keep/redeploy the last known-good application revision. Database migrations in this staging-prep phase do not change the Pearlix domain schema.
+If a Vercel deployment fails, keep the last known-good deployment and do not compensate by weakening Django production settings or exposing media publicly.
 
-If remote media configuration is incorrect, disable the new deployment rather than falling back to Render-local media. Do not change the bucket to public as a workaround.
+If remote media configuration is incorrect, fix the backend configuration. Do not change the Supabase bucket to public as a workaround.
 
 If external AI is unavailable, preserve historical AI results and leave real AI disabled. Never fall back to fabricated/mock findings.
 
