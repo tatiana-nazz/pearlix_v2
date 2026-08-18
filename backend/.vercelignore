@@ -1,0 +1,14 @@
+tests/
+project_docs/
+Dockerfile
+.dockerignore
+build.sh
+requirements-ai.txt
+media/
+test_media/
+*.log
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
