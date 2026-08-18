@@ -2,7 +2,15 @@ FROM python:3.13.2-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=8000
+    PORT=8000 \
+    DJANGO_SETTINGS_MODULE=config.settings.production \
+    DEBUG=false \
+    ALLOWED_HOSTS=.b4a.run \
+    TIME_ZONE=Asia/Damascus \
+    SUPABASE_S3_ENDPOINT_URL=https://nhxcuormtcnnauhhjedm.storage.supabase.co/storage/v1/s3 \
+    SUPABASE_S3_REGION=eu-west-1 \
+    SUPABASE_S3_BUCKET_NAME=pearlix-media \
+    PEARLIX_ALLOW_MOCK_AI=false
 
 WORKDIR /app
 
