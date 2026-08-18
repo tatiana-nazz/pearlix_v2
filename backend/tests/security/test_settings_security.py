@@ -54,3 +54,19 @@ def test_production_settings_source_has_safe_defaults():
     assert "SECURE_PROXY_SSL_HEADER" in production_source
     assert "SECURE_HSTS_SECONDS" in production_source
     assert "CORS_ALLOWED_ORIGINS must not contain wildcard" in production_source
+
+
+def test_production_settings_require_private_remote_media_storage():
+    production_path = settings.BASE_DIR / "config" / "settings" / "production.py"
+    production_source = production_path.read_text(encoding="utf-8")
+
+    assert "storages.backends.s3.S3Storage" in production_source
+    assert "SUPABASE_S3_ENDPOINT_URL" in production_source
+    assert "SUPABASE_S3_ACCESS_KEY_ID" in production_source
+    assert "SUPABASE_S3_SECRET_ACCESS_KEY" in production_source
+    assert "SUPABASE_S3_BUCKET_NAME" in production_source
+    assert "SUPABASE_S3_REGION" in production_source
+    assert '"addressing_style": "path"' in production_source
+    assert '"signature_version": "s3v4"' in production_source
+    assert "Private Supabase media storage is required in production" in production_source
+    assert "whitenoise.storage.CompressedManifestStaticFilesStorage" in production_source
