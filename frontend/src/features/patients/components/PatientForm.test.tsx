@@ -45,19 +45,18 @@ describe("PatientForm", () => {
     expect(screen.queryByLabelText("General notes")).not.toBeInTheDocument();
   });
 
-  it("keeps general and medical edit sections isolated", () => {
+  it("shows general and clinical fields together in the unified edit form", () => {
     const patient = {
       id: 1, first_name: "Maya", last_name: "Haddad", full_name: "Maya Haddad", gender: "Female", date_of_birth: null,
       age: null, phone_number: "", email: "", national_id_or_passport: null, address: "", emergency_contact: "", blood_group: "",
       medical_conditions_history: "History", insurance_info: "Plan", general_notes: "Notes", is_archived: false, version: 1,
       created_by: null, updated_by: null, created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z",
     } as const;
-    const { rerender } = render(<PatientForm mode="edit" section="general" role="STAFF" patient={patient} onSubmit={vi.fn()} />);
+    render(<PatientForm mode="edit" section="general" role="STAFF" patient={patient} onSubmit={vi.fn()} />);
     expect(screen.getByLabelText(/First name/)).toBeInTheDocument();
-    expect(screen.queryByLabelText("Medical conditions history")).not.toBeInTheDocument();
-    rerender(<PatientForm mode="edit" section="medical" role="STAFF" patient={patient} onSubmit={vi.fn()} />);
-    expect(screen.queryByLabelText(/First name/)).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Medical conditions history")).toBeInTheDocument();
+    expect(screen.getByLabelText("Medical conditions history")).toHaveValue("History");
+    expect(screen.getByLabelText("Insurance information")).toHaveValue("Plan");
+    expect(screen.getByLabelText("General notes")).toHaveValue("Notes");
   });
 
   it("submits the exact patient payload without a derived age", async () => {
