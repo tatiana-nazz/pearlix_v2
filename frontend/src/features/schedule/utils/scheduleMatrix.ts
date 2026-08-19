@@ -22,25 +22,38 @@ function normalizedIdentity(name: string) {
   return name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 }
 
+function rowLabel(shifts: Array<ScheduleShiftLike | undefined>, rowIndex: number) {
+  const named = shifts
+    .map((shift) => shift?.name.trim() ?? "")
+    .filter(Boolean);
+  if (named.length) {
+    const identity = normalizedIdentity(named[0]);
+    if (named.every((name) => normalizedIdentity(name) === identity)) return named[0];
+  }
+  return `Shift ${rowIndex + 1}`;
+}
+
 export function buildScheduleMatrix(shifts: ScheduleShiftLike[]): ScheduleMatrixRow[] {
-  const rows = new Map<string, ScheduleMatrixRow>();
+  const byDay: ScheduleShiftLike[][] = Array.from({ length: 7 }, () => []);
   shifts
     .filter((shift) => shift.is_active !== false && shift.weekday >= 0 && shift.weekday <= 6)
-    .forEach((shift) => {
-      const label = shift.name.trim() || "Shift";
-      const id = normalizedIdentity(label);
-      const row = rows.get(id) ?? { id, label, days: Array.from({ length: 7 }, () => []) };
-      row.days[shift.weekday].push({ start: shift.start_time, end: shift.end_time });
-      rows.set(id, row);
-    });
+    .forEach((shift) => byDay[shift.weekday].push(shift));
 
-  return [...rows.values()]
-    .map((row) => ({ ...row, days: row.days.map((ranges) => [...ranges].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end))) }))
-    .sort((a, b) => {
-      const firstA = a.days.flat()[0]?.start ?? "99:99";
-      const firstB = b.days.flat()[0]?.start ?? "99:99";
-      return firstA.localeCompare(firstB) || a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: "base" });
-    });
+  byDay.forEach((day) => day.sort(
+    (a, b) => a.start_time.localeCompare(b.start_time)
+      || a.end_time.localeCompare(b.end_time)
+      || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }),
+  ));
+
+  const rowCount = Math.max(0, ...byDay.map((day) => day.length));
+  return Array.from({ length: rowCount }, (_, rowIndex) => {
+    const slotShifts = byDay.map((day) => day[rowIndex]);
+    return {
+      id: `shift-slot-${rowIndex + 1}`,
+      label: rowLabel(slotShifts, rowIndex),
+      days: slotShifts.map((shift) => shift ? [{ start: shift.start_time, end: shift.end_time }] : []),
+    };
+  });
 }
 
 export function scheduleSummaryText(shifts: ScheduleShiftLike[], language: "EN" | "AR") {
