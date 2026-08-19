@@ -35,7 +35,7 @@ class RemoteInferenceConfig:
 
     @classmethod
     def from_settings(cls) -> "RemoteInferenceConfig":
-        service_url = str(getattr(settings, "AI_SERVICE_URL", "") or "").strip()
+        service_url = str(getattr(settings, "AI_SERVICE_URL", "") or "").strip().rstrip("/")
         hf_token = str(getattr(settings, "AI_SERVICE_TOKEN", "") or "").strip()
         api_name = DEFAULT_REMOTE_API_NAME
         if not service_url or not hf_token:
@@ -48,7 +48,7 @@ class RemoteInferenceConfig:
             )
         if not api_name.startswith("/"):
             raise InferenceConfigurationError("The separate AI service API name is invalid.")
-        return cls(service_url=service_url.rstrip("/"), hf_token=hf_token, api_name=api_name)
+        return cls(service_url=service_url, hf_token=hf_token, api_name=api_name)
 
 
 def _load_remote_payload(raw: Any) -> dict:
