@@ -1,9 +1,11 @@
 tests/
 project_docs/
+deployment/
 Dockerfile
 .dockerignore
 build.sh
 requirements-ai.txt
+requirements-ai-service.txt
 media/
 test_media/
 *.log
