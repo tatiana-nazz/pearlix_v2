@@ -8,7 +8,6 @@ import { ArchivePatientDialog } from "../../features/patients/components/Archive
 import { PatientAppointmentsSummary } from "../../features/patients/components/PatientAppointmentsSummary";
 import { PatientBillingSummary } from "../../features/patients/components/PatientBillingSummary";
 import { PatientForm, updatePayloadFromForm } from "../../features/patients/components/PatientForm";
-import { PatientMedicalSummary } from "../../features/patients/components/PatientMedicalSummary";
 import { PatientOverview } from "../../features/patients/components/PatientOverview";
 import { PatientProfileHeader } from "../../features/patients/components/PatientProfileHeader";
 import { PatientProfileTab, PatientProfileTabs } from "../../features/patients/components/PatientProfileTabs";
@@ -33,7 +32,7 @@ interface PatientProfilePageProps {
   defaultTab?: PatientProfileTab;
 }
 
-const tabValues: PatientProfileTab[] = ["overview", "medical", "visits", "appointments", "xrays", "billing"];
+const tabValues: PatientProfileTab[] = ["overview", "visits", "appointments", "xrays", "billing"];
 
 function tabFromSearch(value: string | null): PatientProfileTab {
   return tabValues.includes(value as PatientProfileTab) ? (value as PatientProfileTab) : "overview";
@@ -60,12 +59,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
   const permissions = useMemo(() => getPatientPermissions(role, patient.data), [role, patient.data]);
   const visibleTab = activeTab === "billing" && !permissions.canViewBillingTab ? "overview" : activeTab;
   const requestedEdit = searchParams.get("edit");
-  const editSection = requestedEdit === "medical" ? "medical" : requestedEdit === "general" || requestedEdit === "1" ? "general" : null;
-  const isEditing = Boolean(
-    permissions.canEdit
-    && editSection
-    && ((visibleTab === "overview" && editSection === "general") || (visibleTab === "medical" && editSection === "medical")),
-  );
+  const editSection = requestedEdit === "general" || requestedEdit === "1" ? "general" : null;
+  const isEditing = Boolean(permissions.canEdit && editSection === "general" && visibleTab === "overview");
 
   useEffect(() => {
     if (!patient.data) return;
@@ -77,8 +72,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
       changed = true;
     } else if (requestedEdit) {
       const normalizedEdit = requestedEdit === "1" ? "general" : requestedEdit;
-      const validCombination = permissions.canEdit
-        && ((visibleTab === "overview" && normalizedEdit === "general") || (visibleTab === "medical" && normalizedEdit === "medical"));
+      const validCombination = permissions.canEdit && visibleTab === "overview" && normalizedEdit === "general";
       if (!validCombination) {
         next.delete("edit");
         changed = true;
@@ -107,11 +101,11 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
     setSearchParams(next);
   }
 
-  function openEdit(section: "general" | "medical" = "general") {
+  function openEdit() {
     setEditDirty(false);
     const next = new URLSearchParams(searchParams);
-    next.set("tab", section === "medical" ? "medical" : "overview");
-    next.set("edit", section);
+    next.set("tab", "overview");
+    next.set("edit", "general");
     setSearchParams(next);
   }
 
@@ -124,7 +118,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
 
   async function handleUpdate(values: PatientFormValues) {
     if (!patient.data) return;
-    await updatePatient.mutateAsync(updatePayloadFromForm(values, patient.data.version, editSection ?? "general"));
+    await updatePatient.mutateAsync(updatePayloadFromForm(values, patient.data.version, "general"));
     closeEdit();
   }
 
@@ -180,8 +174,8 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
           <PatientProfileHeader
             role={role}
             patient={patient.data}
-            onEdit={() => openEdit(visibleTab === "medical" ? "medical" : "general")}
-            showEdit={!isEditing && (visibleTab === "overview" || visibleTab === "medical")}
+            onEdit={openEdit}
+            showEdit={!isEditing && visibleTab === "overview"}
             onArchive={() => {
               archivePatient.reset();
               setArchiveMode("archive");
@@ -198,11 +192,11 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
             {isEditing && editSection ? <section className="patient-inline-edit" aria-labelledby="patient-inline-edit-title">
               <header>
                 <p className="eyebrow">{c.patientProfile}</p>
-                <h3 id="patient-inline-edit-title">{editSection === "medical" ? c.medicalHistory : c.editPatient}</h3>
+                <h3 id="patient-inline-edit-title">{c.editPatient}</h3>
               </header>
               <PatientForm
                 mode="edit"
-                section={editSection}
+                section="general"
                 role={role}
                 patient={patient.data}
                 submitLabel={c.saveChanges}
@@ -216,7 +210,6 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
               />
             </section> : null}
             {!isEditing && visibleTab === "overview" ? <PatientOverview patient={patient.data} /> : null}
-            {!isEditing && visibleTab === "medical" ? <PatientMedicalSummary role={role} patient={patient.data} /> : null}
             {!isEditing && visibleTab === "visits" ? (
               <PatientVisitsSummary role={role} visits={visits.data} isLoading={visits.isLoading} error={visits.error} onRetry={() => void visits.refetch()} />
             ) : null}
