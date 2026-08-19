@@ -4,6 +4,44 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$backendDir = $PSScriptRoot
+$venvDir = Join-Path $backendDir ".venv"
+$venvPython = Join-Path $venvDir "Scripts\python.exe"
+$requirements = Join-Path $backendDir "requirements.txt"
+
+function Invoke-Checked {
+    param(
+        [Parameter(Mandatory = $true)][string]$Executable,
+        [Parameter(Mandatory = $true)][string[]]$Arguments,
+        [Parameter(Mandatory = $true)][string]$FailureMessage
+    )
+
+    & $Executable @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "$FailureMessage (exit code $LASTEXITCODE)."
+    }
+}
+
+# Keep staging seeding isolated from the user's global Python installation.
+# On the first run this creates backend/.venv and installs the checked-in
+# backend requirements. Later runs reuse the same environment and only repair
+# it if required runtime imports are missing.
+if (-not (Test-Path $venvPython)) {
+    Write-Host "Creating isolated backend Python environment (.venv)..."
+    Invoke-Checked -Executable "python" -Arguments @("-m", "venv", $venvDir) -FailureMessage "Could not create backend .venv"
+
+    Write-Host "Installing backend dependencies..."
+    Invoke-Checked -Executable $venvPython -Arguments @("-m", "pip", "install", "--upgrade", "pip") -FailureMessage "Could not upgrade pip in backend .venv"
+    Invoke-Checked -Executable $venvPython -Arguments @("-m", "pip", "install", "-r", $requirements) -FailureMessage "Could not install backend requirements"
+}
+else {
+    & $venvPython -c "import django, rest_framework, corsheaders, psycopg, storages"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Backend .venv is missing required packages; repairing dependencies..."
+        Invoke-Checked -Executable $venvPython -Arguments @("-m", "pip", "install", "-r", $requirements) -FailureMessage "Could not repair backend requirements"
+    }
+}
+
 $securePassword = Read-Host "Supabase database password" -AsSecureString
 $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
 
@@ -17,10 +55,7 @@ try {
         $commandArgs += "--reset"
     }
 
-    python @commandArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "Pearlix demo seeding failed with exit code $LASTEXITCODE."
-    }
+    Invoke-Checked -Executable $venvPython -Arguments $commandArgs -FailureMessage "Pearlix demo seeding failed"
 }
 finally {
     Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
