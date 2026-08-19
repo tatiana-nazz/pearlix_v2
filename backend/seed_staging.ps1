@@ -22,10 +22,6 @@ function Invoke-Checked {
     }
 }
 
-# Keep staging seeding isolated from the user's global Python installation.
-# On the first run this creates backend/.venv and installs the checked-in
-# backend requirements. Later runs reuse the same environment and only repair
-# it if required runtime imports are missing.
 if (-not (Test-Path $venvPython)) {
     Write-Host "Creating isolated backend Python environment (.venv)..."
     Invoke-Checked -Executable "python" -Arguments @("-m", "venv", $venvDir) -FailureMessage "Could not create backend .venv"
@@ -57,6 +53,12 @@ try {
 
     Invoke-Checked -Executable $venvPython -Arguments $commandArgs -FailureMessage "Pearlix demo seeding failed"
     Invoke-Checked -Executable $venvPython -Arguments @("manage.py", "finalize_demo_seed") -FailureMessage "Pearlix demo finalization/audit failed"
+
+    $analyticsArgs = @("manage.py", "populate_demo_analytics")
+    if ($Reset) {
+        $analyticsArgs += "--reset"
+    }
+    Invoke-Checked -Executable $venvPython -Arguments $analyticsArgs -FailureMessage "Pearlix analytics demo population failed"
 }
 finally {
     Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
