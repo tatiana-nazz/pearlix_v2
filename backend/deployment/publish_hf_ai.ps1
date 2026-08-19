@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Bundle
+    [string]$Bundle,
+    [switch]$LegacyUpload
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,5 +22,23 @@ Write-Host "Authenticating with Hugging Face in your browser..."
 & $hf auth login
 if ($LASTEXITCODE -ne 0) { throw "Hugging Face login failed." }
 
-& $python (Join-Path $PSScriptRoot "publish_hf_ai.py") --bundle $Bundle
-if ($LASTEXITCODE -ne 0) { throw "Pearlix Hugging Face publication failed." }
+$previousDisableXet = $env:HF_HUB_DISABLE_XET
+try {
+    $publishArgs = @((Join-Path $PSScriptRoot "publish_hf_ai.py"), "--bundle", $Bundle)
+    if ($LegacyUpload) {
+        Write-Host "Compatibility upload mode enabled: hf-xet is disabled and files will upload one at a time over the legacy HTTP path."
+        $env:HF_HUB_DISABLE_XET = "1"
+        $publishArgs += "--legacy-upload"
+    }
+
+    & $python @publishArgs
+    if ($LASTEXITCODE -ne 0) { throw "Pearlix Hugging Face publication failed." }
+}
+finally {
+    if ($null -eq $previousDisableXet) {
+        Remove-Item Env:HF_HUB_DISABLE_XET -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:HF_HUB_DISABLE_XET = $previousDisableXet
+    }
+}
