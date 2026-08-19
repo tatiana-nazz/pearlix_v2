@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import tempfile
 from dataclasses import dataclass
@@ -66,6 +68,14 @@ def _load_remote_payload(raw: Any) -> dict:
     return payload
 
 
+def _validate_overlay_png(data: bytes | None) -> bytes | None:
+    if data is None:
+        return None
+    if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise InferenceRuntimeError("The AI service overlay is not a PNG file.")
+    return data
+
+
 def _read_overlay_bytes(raw: Any) -> bytes | None:
     if raw is None or raw == "":
         return None
@@ -76,13 +86,22 @@ def _read_overlay_bytes(raw: Any) -> bytes | None:
     path = Path(raw)
     if not path.is_file():
         raise InferenceRuntimeError("The AI service overlay could not be downloaded.")
-    data = path.read_bytes()
-    if not data.startswith(b"\x89PNG\r\n\x1a\n"):
-        raise InferenceRuntimeError("The AI service overlay is not a PNG file.")
-    return data
+    return _validate_overlay_png(path.read_bytes())
 
 
-def pipeline_result_from_remote(payload: dict, overlay_png: bytes | None) -> PipelineResult:
+def _decode_overlay_base64(raw: Any) -> bytes | None:
+    if raw in {None, ""}:
+        return None
+    if not isinstance(raw, str):
+        raise InferenceRuntimeError("The AI service returned an invalid overlay payload.")
+    try:
+        data = base64.b64decode(raw, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise InferenceRuntimeError("The AI service returned invalid overlay encoding.") from exc
+    return _validate_overlay_png(data)
+
+
+def pipeline_result_from_remote(payload: dict, overlay_png: bytes | None, *, transport: str = "remote") -> PipelineResult:
     if payload.get("contract_version") != REMOTE_CONTRACT_VERSION:
         raise InferenceRuntimeError("The AI service contract version is unsupported.")
     if payload.get("model_version") != PIPELINE_VERSION:
@@ -102,8 +121,6 @@ def pipeline_result_from_remote(payload: dict, overlay_png: bytes | None) -> Pip
                 bbox_xyxy=tuple(row["bbox_xyxy"]),
             )
             scores = ToothScores.from_mapping(row["model_scores"])
-            # The remote service is not trusted to make final decisions. Pearlix
-            # reapplies its code-locked thresholds/review band/hierarchy locally.
             teeth.append(apply_locked_policy(tooth, scores))
         except (KeyError, TypeError, ValueError) as exc:
             raise InferenceRuntimeError("The AI service returned a tooth row outside the locked contract.") from exc
@@ -114,7 +131,7 @@ def pipeline_result_from_remote(payload: dict, overlay_png: bytes | None) -> Pip
         metadata["remote_runtime"] = runtime
     metadata["remote_service"] = {
         "contract_version": REMOTE_CONTRACT_VERSION,
-        "transport": "hugging-face-gradio",
+        "transport": transport,
     }
 
     return PipelineResult(
@@ -133,14 +150,37 @@ class RemoteInferenceAdapter:
     def __init__(self, config: RemoteInferenceConfig):
         self.config = config
 
-    def analyze(self, image: ImageInput) -> PipelineResult:
-        if not isinstance(image, ImageInput):
-            raise TypeError("RemoteInferenceAdapter requires ImageInput.")
-        content_type = image.content_type.lower()
-        suffix = ".png" if content_type == "image/png" else ".jpg" if content_type == "image/jpeg" else None
-        if suffix is None:
-            raise InferenceImageInvalidError("The image content type is unsupported.")
+    def _analyze_https(self, image: ImageInput, suffix: str) -> PipelineResult:
+        try:
+            import httpx
+        except ImportError as exc:
+            raise InferenceConfigurationError("The HTTP client dependency is unavailable.") from exc
 
+        try:
+            response = httpx.post(
+                f"{self.config.service_url}{self.config.api_name}",
+                headers={"Authorization": f"Bearer {self.config.hf_token}"},
+                files={"image": (f"panoramic{suffix}", image.content, image.content_type)},
+                timeout=httpx.Timeout(180.0, connect=20.0),
+                follow_redirects=True,
+            )
+        except Exception as exc:
+            raise InferenceRuntimeError("The separate AI service request failed.") from exc
+        if response.status_code == 401:
+            raise InferenceConfigurationError("The separate AI service rejected its bearer token.")
+        if response.status_code >= 400:
+            raise InferenceRuntimeError(f"The separate AI service returned HTTP {response.status_code}.")
+        try:
+            envelope = response.json()
+        except ValueError as exc:
+            raise InferenceRuntimeError("The AI service returned invalid JSON.") from exc
+        if not isinstance(envelope, dict):
+            raise InferenceRuntimeError("The AI service returned an invalid response envelope.")
+        payload = _load_remote_payload(envelope.get("payload"))
+        overlay_png = _decode_overlay_base64(envelope.get("overlay_png_base64"))
+        return pipeline_result_from_remote(payload, overlay_png, transport="https-json")
+
+    def _analyze_hf_space(self, image: ImageInput, suffix: str) -> PipelineResult:
         try:
             from gradio_client import Client, handle_file
         except ImportError as exc:
@@ -154,15 +194,12 @@ class RemoteInferenceAdapter:
                 temporary_path = Path(handle.name)
 
             client = Client(self.config.service_url, token=self.config.hf_token, verbose=False)
-            result = client.predict(
-                image=handle_file(str(temporary_path)),
-                api_name=self.config.api_name,
-            )
+            result = client.predict(image=handle_file(str(temporary_path)), api_name=self.config.api_name)
             if not isinstance(result, (tuple, list)) or len(result) != 2:
                 raise InferenceRuntimeError("The AI service returned the wrong output shape.")
             payload = _load_remote_payload(result[0])
             overlay_png = _read_overlay_bytes(result[1])
-            return pipeline_result_from_remote(payload, overlay_png)
+            return pipeline_result_from_remote(payload, overlay_png, transport="hugging-face-gradio")
         except (InferenceConfigurationError, InferenceImageInvalidError, InferenceRuntimeError):
             raise
         except Exception as exc:
@@ -170,6 +207,17 @@ class RemoteInferenceAdapter:
         finally:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
+
+    def analyze(self, image: ImageInput) -> PipelineResult:
+        if not isinstance(image, ImageInput):
+            raise TypeError("RemoteInferenceAdapter requires ImageInput.")
+        content_type = image.content_type.lower()
+        suffix = ".png" if content_type == "image/png" else ".jpg" if content_type == "image/jpeg" else None
+        if suffix is None:
+            raise InferenceImageInvalidError("The image content type is unsupported.")
+        if self.config.service_url.startswith("https://"):
+            return self._analyze_https(image, suffix)
+        return self._analyze_hf_space(image, suffix)
 
 
 _REMOTE_ADAPTER: RemoteInferenceAdapter | None = None
