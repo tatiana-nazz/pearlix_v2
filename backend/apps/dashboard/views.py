@@ -14,6 +14,13 @@ from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.selectors import annotate_handoff_financials
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
+from apps.dashboard.analytics import (
+    appointment_daily_activity,
+    appointment_problem_rate,
+    doctor_utilization,
+    patient_mix,
+    receivables_aging,
+)
 from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
 
@@ -191,6 +198,11 @@ def admin_dashboard(request):
             "today_appointments": [_appointment_summary(item) for item in today_appointments[:7]],
             "appointment_status_last_7_days": _appointment_status_activity(today, clinic_timezone),
             "billing_activity_last_30_days": _billing_activity(today, clinic_timezone),
+            "appointments_daily_last_30_days": appointment_daily_activity(today, clinic_timezone),
+            "doctor_utilization_last_30_days": doctor_utilization(today, clinic_timezone),
+            "patient_mix_last_8_weeks": patient_mix(today, clinic_timezone),
+            "appointment_problem_rate_last_8_weeks": appointment_problem_rate(today, clinic_timezone),
+            "receivables_aging": receivables_aging(today, clinic_timezone),
             "recent_handoffs": [_handoff_summary(item) for item in recent_handoffs],
         }
     )
