@@ -20,9 +20,9 @@ Displayed values are uncalibrated model scores, not medical probabilities. Real 
 
 ## Runtime and artifact layout
 
-Install the base requirements and `backend/requirements-ai.txt`. The locked AI runtime requires Torch `2.11.0`, TorchVision `0.26.0`, and Ultralytics `8.4.48` (the accepted CPU wheels carry a `+cpu` build suffix).
+The accepted inference runtime requires Torch `2.11.0`, TorchVision `0.26.0`, and Ultralytics `8.4.48`. CPU deployments use the accepted `+cpu` wheels. GPU deployments must preserve the same base versions while using the platform-compatible CUDA runtime.
 
-Mount one immutable, operator-controlled directory outside Git and the public web root:
+The immutable bundle layout is:
 
 ```text
 PEARLIX_AI_MODEL_ROOT/
@@ -33,48 +33,69 @@ PEARLIX_AI_MODEL_ROOT/
     fdi_class_map.json
 ```
 
+Never move thresholds, class order, expected hashes, or preprocessing policy into mutable environment variables.
+
+## Supported deployment modes
+
+### `DJANGO_INTERNAL`
+
+The Django process loads and runs the locked bundle itself. This remains the canonical local/operator preflight path and is suitable only on a host with adequate memory and model-file access.
+
 Configure:
 
-| Variable | Purpose / initial value |
-| --- | --- |
-| `PEARLIX_AI_MODEL_ROOT` | Absolute trusted bundle root; required for real AI. |
-| `PEARLIX_AI_DETECTOR_PATH` | Relative path beneath the root; default `weights/detector_yolo_fdi_seg_v1-3_best.pt`. |
-| `PEARLIX_AI_CLASSIFIER_PATH` | Relative path beneath the root; default `weights/classifier_exp1_epoch12.pt`. |
-| `PEARLIX_AI_FDI_MAP_PATH` | Relative path beneath the root; default `contract/fdi_class_map.json`. |
-| `PEARLIX_AI_DEVICE` | `cpu` initially; `cuda` is accepted only when CUDA is actually available. |
-| `PEARLIX_AI_MAX_CONCURRENT_INFERENCES` | `1` initially. |
-| `PEARLIX_AI_PROCESSING_STALE_SECONDS` | Processing-lease recovery interval; default `900`. |
-| `PEARLIX_ALLOW_MOCK_AI` | `false` for ordinary local and production operation. |
+```text
+PEARLIX_AI_MODEL_ROOT=<trusted absolute root>
+PEARLIX_AI_DETECTOR_PATH=weights/detector_yolo_fdi_seg_v1-3_best.pt
+PEARLIX_AI_CLASSIFIER_PATH=weights/classifier_exp1_epoch12.pt
+PEARLIX_AI_FDI_MAP_PATH=contract/fdi_class_map.json
+PEARLIX_AI_DEVICE=cpu|cuda
+PEARLIX_AI_MAX_CONCURRENT_INFERENCES=1
+```
 
-Never move thresholds, class order, expected hashes, or preprocessing policy into mutable environment variables.
+### `SEPARATE_SERVICE`
+
+This mode is operational for staging through `apps.ai_results.adapters.remote`. The current zero-cost target is a **private Hugging Face Gradio ZeroGPU Space** documented in [`ZEROGPU_AI_DEPLOYMENT.md`](ZEROGPU_AI_DEPLOYMENT.md).
+
+Configure the Django/Vercel backend with:
+
+```text
+AI_SERVICE_URL=<Hugging Face Space ID or HTTPS Gradio URL>
+AI_SERVICE_TOKEN=<Hugging Face read/fine-grained token authorized for the private Space>
+```
+
+The remote service returns only the locked pipeline version, detector geometry, detector confidence, raw four-class model scores, runtime metadata, and optional PNG overlay. The Django backend does **not** trust remote disease decisions: it reconstructs the tooth objects and reapplies the code-locked thresholds, review band, and Deep-Caries hierarchy locally before persistence.
+
+If the service reference/token is absent, invalid, unreachable, or returns a different contract/model version, Pearlix fails closed. There is no mock fallback.
 
 ## Preflight and enablement
 
-Run from `backend/` with the deployment environment loaded:
+For an internal/local model installation, run from `backend/` with the deployment environment loaded:
 
 ```powershell
 python manage.py ai_preflight
 python manage.py ai_preflight --load-models
 ```
 
-The default command validates trusted-root containment, regular files, all three hashes, device support, required imports, and locked runtime versions without deserializing weights. `--load-models` additionally uses the production trusted loader to validate detector names, the FDI map, classifier checkpoint metadata, architecture, class order, and epoch. Both commands are read-only and do not change `ClinicSettings` or analyze an X-ray.
+The default command validates trusted-root containment, regular files, all three hashes, device support, required imports, and locked runtime versions without deserializing weights. `--load-models` additionally uses the production trusted loader to validate detector names, the FDI map, classifier checkpoint metadata, architecture, class order, and epoch. Both commands are read-only and do not analyze an X-ray.
 
-Enable real inference only after both pass:
+For the ZeroGPU staging path, `backend/deployment/publish_hf_ai.py` independently verifies all three locked hashes before uploading the model repository. The Space then uses the same `model_contract.py`, `result_types.py`, `overlay.py`, and `adapters/dentex.py` copied from the Pearlix revision being published.
 
-1. Install base and AI requirements.
-2. Mount the verified artifacts read-only.
-3. Configure the environment above.
-4. Run both preflight commands.
-5. Explicitly set `ClinicSettings.ai_mode` to `DJANGO_INTERNAL` through controlled operator administration.
-6. Run one authorized, research-only X-ray acceptance through the ordinary application.
+Enable real inference only after the target path is ready:
 
-The seed command never chooses AI mode.
+1. Verify the three immutable artifacts and hashes.
+2. Verify the exact accepted runtime versions.
+3. For internal mode, run both preflight commands; for ZeroGPU, verify successful Space build on ZeroGPU with the private model volume mounted.
+4. Set `ClinicSettings.ai_mode` to the intended real mode (`DJANGO_INTERNAL` or `SEPARATE_SERVICE`).
+5. Run one authorized, de-identified research X-ray acceptance through the ordinary Pearlix application.
+6. Verify persisted findings and overlay survive reload and remain protected by Pearlix authorization.
+
+The demo seed must never enable mock AI or fabricate AI findings.
 
 ## Safe disablement and mock policy
 
-If real inference must be disabled, use the explicit unavailable mode in the current contract (`SEPARATE_SERVICE`, which is not operational) and leave historical real results intact. Do not fall back to fake findings and do not delete or migrate existing results.
+To disable external inference, remove/rotate `AI_SERVICE_TOKEN` or clear `AI_SERVICE_URL`; `SEPARATE_SERVICE` then fails safely with `AI_SERVICE_NOT_CONFIGURED` while historical real results remain intact.
 
-`MOCK_ADAPTER` is test-harness-only. It can run only when both `ClinicSettings.ai_mode == MOCK_ADAPTER` and `PEARLIX_ALLOW_MOCK_AI=true`. A mock request with normal `PEARLIX_ALLOW_MOCK_AI=false` fails safely with `503`; no real-to-mock fallback exists.
+`MOCK_ADAPTER` is test-harness-only. It can run only when both `ClinicSettings.ai_mode == MOCK_ADAPTER` and `PEARLIX_ALLOW_MOCK_AI=true`. A mock request with normal `PEARLIX_ALLOW_MOCK_AI=false` fails safely; no real-to-mock fallback exists.
 
 ## Measured acceptance evidence and capacity
 
@@ -82,15 +103,17 @@ The accepted R2C/R2D environment measured Python `3.13.2`, Torch `2.11.0+cpu`, T
 
 Measured warm panoramic inference was approximately `2.8 s`, process RSS approximately `760 MB`, and cold/model initialization approximately `3–8 s` across measured runs. These are machine-specific measurements, not formal minimum requirements.
 
-CPU is sufficient for the functional MVP. Start with one model-loaded backend worker/process and `PEARLIX_AI_MAX_CONCURRENT_INFERENCES=1`, because each process can load its own detector/classifier bundle and multiply RAM. Provide approximately `1.5–2 GB` or more available memory for the backend/container so the measured 760 MB process has meaningful headroom. No cloud provider is prescribed.
+CPU is sufficient for the functional MVP when adequately provisioned. Use one model-loaded process and `PEARLIX_AI_MAX_CONCURRENT_INFERENCES=1` initially because each process can load its own detector/classifier bundle and multiply RAM. Provide approximately `1.5–2 GB` or more available memory for a conventional CPU container. The free ZeroGPU staging path instead uses dynamic GPU allocation and accepts queue/sleep/quota behavior as a research-demo constraint.
 
 ## Security and upgrades
 
-- Mount the bundle read-only with least-privilege filesystem access.
-- Keep the root outside static/media serving and reject paths escaping the trusted root.
-- Verify hashes at every deployment; never bypass preflight.
-- Do not expose preflight or artifact paths through HTTP.
+- Keep model artifacts out of Git and the public web root.
+- Mount/serve the model bundle read-only with least privilege.
+- Verify hashes at every model publication/deployment; never bypass verification.
+- Keep the ZeroGPU Space and model repository private for the current staging design.
+- Keep Hugging Face/Vercel tokens in platform secrets only.
+- Do not expose preflight or artifact paths through public HTTP.
 - Never log image bytes, raw score matrices, patient data, secrets, or storage paths.
-- Never commit `*.pt`, `.local/ai_integration`, golden X-rays, generated overlays, presentation databases, `.env`, or temporary smoke output.
+- Never commit `*.pt`, `.local/ai_integration`, golden X-rays, generated overlays, `.env`, or temporary smoke output.
 
-A future model upgrade requires a new immutable bundle and pipeline version, reviewed code-locked hashes/contract, independent golden-equivalence evidence, explicit clinical/research acceptance, full automated/browser regression, and an intentional deployment change. Never overwrite `locked_v1`, silently reinterpret historical results, or reuse this pipeline version for different artifacts.
+A future model upgrade requires a new immutable bundle and pipeline version, reviewed code-locked hashes/contract, independent golden-equivalence evidence, explicit clinical/research acceptance, full automated/browser regression, and an intentional deployment change. Never overwrite the locked model identity, silently reinterpret historical results, or reuse this pipeline version for different artifacts.
