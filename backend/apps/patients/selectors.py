@@ -30,13 +30,15 @@ def get_patients_for_user(user) -> QuerySet[Patient]:
 def annotate_patient_directory(queryset: QuerySet[Patient]) -> QuerySet[Patient]:
     """Add read-only directory dates without per-row frontend requests."""
     last_visit = Visit.objects.filter(patient_id=OuterRef("pk")).order_by("-started_at", "-id").values("started_at")[:1]
+    # A NEEDS_RESCHEDULE record is not a valid future booking anymore. Showing it
+    # as the patient's "next appointment" makes the directory contradict the
+    # scheduling workflow, so only actionable booked states count here.
     next_appointment = Appointment.objects.filter(
         patient_id=OuterRef("pk"),
         start_datetime__gte=timezone.now(),
         status__in=(
             Appointment.Status.UPCOMING,
             Appointment.Status.CHECKED_IN,
-            Appointment.Status.NEEDS_RESCHEDULE,
         ),
     ).order_by("start_datetime", "id").values("start_datetime")[:1]
     return queryset.annotate(
