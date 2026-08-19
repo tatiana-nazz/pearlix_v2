@@ -21,9 +21,9 @@ const patient = {
   version: 4,
   address: "1 Clinic Street",
   emergency_contact: "Sam Stone",
-  medical_conditions_history: "",
-  insurance_info: "",
-  general_notes: "",
+  medical_conditions_history: "Mild asthma",
+  insurance_info: "Private dental plan",
+  general_notes: "Prefers morning appointments",
   created_by: null,
   updated_by: null,
   created_at: "2026-07-10T08:00:00Z",
@@ -49,7 +49,20 @@ vi.mock("../../features/patients/hooks/usePatientMutations", () => ({
 
 describe("PatientProfilePage", () => {
   beforeEach(() => mutation.mutateAsync.mockClear());
-  it("opens Staff Edit with loaded values and submits the current version", async () => {
+
+  it("shows profile-level clinical information in Overview instead of a separate Medical Summary tab", () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/staff/patients/12"]}>
+        <Routes><Route path="/staff/patients/:patientId" element={<PatientProfilePage role="STAFF" />} /></Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("tab", { name: "Medical Summary" })).not.toBeInTheDocument();
+    expect(screen.getByText("Mild asthma")).toBeInTheDocument();
+    expect(screen.getByText("Private dental plan")).toBeInTheDocument();
+    expect(screen.getByText("Prefers morning appointments")).toBeInTheDocument();
+  });
+
+  it("opens Staff Edit with loaded general and clinical values and submits the current version", async () => {
     mutation.mutateAsync.mockResolvedValue(patient);
     render(
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/staff/patients/12"]}>
@@ -61,10 +74,11 @@ describe("PatientProfilePage", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(document.querySelector(".patient-identity-rail")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/First name/)).toHaveValue("Ava");
+    expect(screen.getByLabelText("Medical conditions history")).toHaveValue("Mild asthma");
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: "Avery" } });
+    fireEvent.change(screen.getByLabelText("Medical conditions history"), { target: { value: "Asthma - controlled" } });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
-    await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ first_name: "Avery", version: 4 })));
-    expect(mutation.mutateAsync.mock.calls[0][0]).not.toHaveProperty("medical_conditions_history");
+    await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ first_name: "Avery", medical_conditions_history: "Asthma - controlled", version: 4 })));
   });
 
   it("allows Doctor edit for permitted fields without archive controls", async () => {
@@ -109,9 +123,19 @@ describe("PatientProfilePage", () => {
     expect(rail).toBeInTheDocument();
     expect(main).toBeInTheDocument();
     expect(rail!.compareDocumentPosition(main!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    fireEvent.click(screen.getByRole("tab", { name: "Medical Summary" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Visits" }));
     expect(container.querySelector(".patient-identity-rail")).toBe(rail);
-    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "patient-profile-tab-medical");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "patient-profile-tab-visits");
+  });
+
+  it("normalizes legacy Medical Summary URLs to Overview", () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/staff/patients/12?tab=medical"]}>
+        <Routes><Route path="/staff/patients/:patientId" element={<PatientProfilePage role="STAFF" />} /></Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("tab", { name: "Medical Summary" })).not.toBeInTheDocument();
   });
 
   it("keeps Edit contextual and normalizes incompatible direct edit queries", async () => {
