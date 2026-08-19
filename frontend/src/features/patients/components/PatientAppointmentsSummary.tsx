@@ -25,13 +25,32 @@ interface PatientAppointmentsSummaryProps {
   description?: string;
 }
 
+function timelineRank(appointment: AppointmentList, now: number) {
+  if (appointment.status === "NEEDS_RESCHEDULE") return 0;
+  const startsAt = Date.parse(appointment.start_datetime);
+  if (startsAt >= now && ["UPCOMING", "CHECKED_IN", "ACTIVE"].includes(appointment.status)) return 1;
+  return 2;
+}
+
+function sortPatientAppointments(appointments: AppointmentList[]) {
+  const now = Date.now();
+  return [...appointments].sort((left, right) => {
+    const leftRank = timelineRank(left, now);
+    const rightRank = timelineRank(right, now);
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    const leftTime = Date.parse(left.start_datetime);
+    const rightTime = Date.parse(right.start_datetime);
+    return leftRank < 2 ? leftTime - rightTime : rightTime - leftTime;
+  });
+}
+
 export function PatientAppointmentsSummary({ role, appointments, isLoading, error, onRetry, title = "Appointments", description = "Read-only patient appointment summary." }: PatientAppointmentsSummaryProps) {
   const user = useAuthStore((state) => state.user);
   const language = user?.language_preference ?? "EN";
   const c = appointmentCopy(language);
   if (isLoading) return <LoadingState title="Loading appointments..." />;
   if (error) return <ErrorState error={error} onRetry={onRetry} title="Unable to load appointments" />;
-  const rows = appointments?.results ?? [];
+  const rows = sortPatientAppointments(appointments?.results ?? []);
 
   return (
     <Card>
