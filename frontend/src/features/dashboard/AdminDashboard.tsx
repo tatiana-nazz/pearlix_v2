@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 
 import { dashboardApi } from "../../api/endpoints/dashboard";
 import { useAuthStore } from "../../auth/authStore";
-import { AttentionList, DashboardAppointmentList, DashboardEmpty, DashboardError, DashboardHandoffList, DashboardHeader, DashboardLoading, DashboardMetric, DashboardMetrics, DashboardSection, SimpleBillingActivityChart, SimpleStatusBarChart } from "./DashboardShared";
+import { AdminAnalyticsCharts } from "./AdminAnalyticsCharts";
+import { AttentionList, DashboardAppointmentList, DashboardEmpty, DashboardError, DashboardHandoffList, DashboardHeader, DashboardLoading, DashboardMetric, DashboardMetrics, DashboardSection } from "./DashboardShared";
 import { dashboardCopy } from "./i18n";
 
 export function AdminDashboard() {
@@ -31,10 +32,15 @@ export function AdminDashboard() {
       { label: c.partiallyPaidBills, count: data.partially_paid_bills_count, to: "/admin/billing/handoffs?status=PARTIALLY_PAID", tone: "info" },
       { label: c.patientsReady, count: data.checked_in_appointments_count, to: dayPath, tone: "info" },
     ]} /></DashboardSection>
-    <div className="dashboard-v2-chart-grid">
-      <DashboardSection title={c.appointmentsByStatus} eyebrow={c.last7Days} className="dashboard-v2-chart-card"><SimpleStatusBarChart language={language} counts={data.appointment_status_last_7_days} /></DashboardSection>
-      <DashboardSection title={c.billingActivity} eyebrow={c.last30Days} className="dashboard-v2-chart-card"><SimpleBillingActivityChart language={language} days={data.billing_activity_last_30_days} /></DashboardSection>
-    </div>
+    <AdminAnalyticsCharts
+      language={language}
+      outcomes={data.appointments_daily_last_30_days}
+      utilization={data.doctor_utilization_last_30_days}
+      billing={data.billing_activity_last_30_days}
+      patientMix={data.patient_mix_last_8_weeks}
+      problemRate={data.appointment_problem_rate_last_8_weeks}
+      aging={data.receivables_aging}
+    />
     <div className="dashboard-v2-lower-grid">
       <DashboardSection title={c.todaysAppointments} action={<Link to={dayPath}>{c.viewDay}</Link>}><DashboardAppointmentList language={language} clinicTimezone={data.clinic_timezone} items={data.today_appointments} empty={c.noAppointmentsToday} role="ADMIN" showDoctor limit={7} /></DashboardSection>
       <DashboardSection title={c.recentBills} action={<Link to="/admin/billing/handoffs">{c.viewHandoffHistory}</Link>}><DashboardHandoffList language={language} items={data.recent_handoffs} role="ADMIN" empty={c.noOpenBills} showTotal /></DashboardSection>
