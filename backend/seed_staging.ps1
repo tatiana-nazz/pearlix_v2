@@ -56,6 +56,7 @@ try {
     }
 
     Invoke-Checked -Executable $venvPython -Arguments $commandArgs -FailureMessage "Pearlix demo seeding failed"
+    Invoke-Checked -Executable $venvPython -Arguments @("manage.py", "finalize_demo_seed") -FailureMessage "Pearlix demo finalization/audit failed"
 }
 finally {
     Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
