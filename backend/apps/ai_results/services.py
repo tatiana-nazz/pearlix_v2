@@ -97,7 +97,13 @@ def select_inference_adapter(ai_mode: str) -> InferenceAdapter:
             return get_dentex_adapter()
         except InferenceConfigurationError as exc:
             raise AIServiceNotConfigured from exc
-    # Separate-service mode remains intentionally unavailable.
+    if ai_mode == ClinicSettings.AiMode.SEPARATE_SERVICE:
+        try:
+            from apps.ai_results.adapters.remote import get_remote_adapter
+
+            return get_remote_adapter()
+        except InferenceConfigurationError as exc:
+            raise AIServiceNotConfigured from exc
     raise AIServiceNotConfigured
 
 
