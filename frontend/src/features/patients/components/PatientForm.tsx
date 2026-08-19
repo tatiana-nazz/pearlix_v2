@@ -89,7 +89,7 @@ export function PatientForm({
 
   const isMedicalOnly = section === "medical";
   const showGeneralInformation = !isMedicalOnly;
-  const showMedicalInformation = section === "medical" || (mode === "edit" && section === "general");
+  const showMedicalInformation = section === "medical";
 
   function cancel() {
     if (isSubmitting) return;
@@ -190,6 +190,7 @@ export function PatientForm({
           <label>
             {c.emergencyContact}
             <input value={values.emergency_contact} onChange={(event) => updateField("emergency_contact", event.target.value)} />
+            {errors.emergency_contact ? <span className="field-error">{errors.emergency_contact}</span> : null}
           </label>
         </div>
         <label>
