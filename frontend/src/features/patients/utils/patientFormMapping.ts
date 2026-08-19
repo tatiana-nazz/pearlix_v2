@@ -86,6 +86,10 @@ export function updatePayloadFromForm(
       general_notes: payload.general_notes,
     };
   }
+  if (section === "general") {
+    const { medical_conditions_history: _medical, insurance_info: _insurance, general_notes: _notes, ...general } = payload;
+    return { ...general, version };
+  }
   return { ...payload, version };
 }
 
