@@ -18,21 +18,6 @@ export interface ScheduleMatrixRow {
   days: ScheduleRange[][];
 }
 
-function normalizedIdentity(name: string) {
-  return name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
-}
-
-function rowLabel(shifts: Array<ScheduleShiftLike | undefined>, rowIndex: number) {
-  const named = shifts
-    .map((shift) => shift?.name.trim() ?? "")
-    .filter(Boolean);
-  if (named.length) {
-    const identity = normalizedIdentity(named[0]);
-    if (named.every((name) => normalizedIdentity(name) === identity)) return named[0];
-  }
-  return `Shift ${rowIndex + 1}`;
-}
-
 export function buildScheduleMatrix(shifts: ScheduleShiftLike[]): ScheduleMatrixRow[] {
   const byDay: ScheduleShiftLike[][] = Array.from({ length: 7 }, () => []);
   shifts
@@ -50,7 +35,7 @@ export function buildScheduleMatrix(shifts: ScheduleShiftLike[]): ScheduleMatrix
     const slotShifts = byDay.map((day) => day[rowIndex]);
     return {
       id: `shift-slot-${rowIndex + 1}`,
-      label: rowLabel(slotShifts, rowIndex),
+      label: `Shift ${rowIndex + 1}`,
       days: slotShifts.map((shift) => shift ? [{ start: shift.start_time, end: shift.end_time }] : []),
     };
   });
