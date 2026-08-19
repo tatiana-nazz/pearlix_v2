@@ -5,7 +5,7 @@ import type { UserRole } from "../../../types/auth";
 import { patientCopy } from "../i18n";
 import { getPatientPermissions } from "../utils/patientPermissions";
 
-export type PatientProfileTab = "overview" | "medical" | "visits" | "appointments" | "xrays" | "billing";
+export type PatientProfileTab = "overview" | "visits" | "appointments" | "xrays" | "billing";
 
 interface PatientProfileTabsProps {
   role: UserRole;
@@ -18,7 +18,7 @@ export function PatientProfileTabs({ role, activeTab, onTabChange, idPrefix = "p
   const language = useAuthStore((state) => state.user?.language_preference);
   const c = patientCopy(language);
   const baseTabs: Array<{ id: PatientProfileTab; label: string }> = [
-    { id: "overview", label: c.overview }, { id: "medical", label: c.medicalHistory }, { id: "visits", label: c.visits },
+    { id: "overview", label: c.overview }, { id: "visits", label: c.visits },
     { id: "appointments", label: c.appointments }, { id: "xrays", label: c.xraysAi },
   ];
   const tabs = getPatientPermissions(role).canViewBillingTab ? [...baseTabs, { id: "billing" as const, label: c.billing }] : baseTabs;
