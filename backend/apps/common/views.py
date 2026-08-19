@@ -22,7 +22,7 @@ def health_check(request):
     return Response({"status": "ok"})
 
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @permission_classes([AllowAny])
 def temporary_demo_seed(request):
     """One-time staging bootstrap. Removed immediately after successful use."""
