@@ -3,7 +3,6 @@
   "env": {
     "CORS_ALLOWED_ORIGINS": "https://pearlix-web-staging.vercel.app",
     "CSRF_TRUSTED_ORIGINS": "https://pearlix-web-staging.vercel.app",
-    "FRONTEND_URL": "https://pearlix-web-staging.vercel.app",
-    "PEARLIX_DEMO_FINALIZE_HTTP_ENABLED": "true"
+    "FRONTEND_URL": "https://pearlix-web-staging.vercel.app"
   }
 }
