@@ -1,6 +1,6 @@
+import os
 from io import StringIO
 
-from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils.crypto import get_random_string
@@ -26,7 +26,7 @@ def health_check(request):
 @permission_classes([AllowAny])
 def temporary_demo_seed(request):
     """One-time staging bootstrap. Removed immediately after successful use."""
-    if not getattr(settings, "PEARLIX_DEMO_SEED_HTTP_ENABLED", False):
+    if os.environ.get("PEARLIX_DEMO_SEED_HTTP_ENABLED", "").lower() not in {"1", "true", "yes", "on"}:
         return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
     password = get_random_string(22)
