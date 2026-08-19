@@ -61,6 +61,30 @@ def build_space(repo_root: Path, output: Path) -> None:
         shutil.copy2(source, target)
 
 
+def upload_model_bundle(api, *, bundle_root: Path, model_repo: str, legacy_upload: bool) -> None:
+    if not legacy_upload:
+        api.upload_folder(repo_id=model_repo, repo_type="model", folder_path=str(bundle_root))
+        return
+
+    files = sorted(
+        (path for path in bundle_root.rglob("*") if path.is_file()),
+        key=lambda path: (path.stat().st_size, path.as_posix()),
+    )
+    print(f"Compatibility upload: {len(files)} files will be sent one at a time with hf-xet disabled.")
+    for index, path in enumerate(files, start=1):
+        relative = path.relative_to(bundle_root).as_posix()
+        size_mb = path.stat().st_size / (1024 * 1024)
+        print(f"[{index}/{len(files)}] Uploading {relative} ({size_mb:.1f} MB)...", flush=True)
+        api.upload_file(
+            repo_id=model_repo,
+            repo_type="model",
+            path_or_fileobj=str(path),
+            path_in_repo=relative,
+            commit_message=f"Upload {relative}",
+        )
+        print(f"[{index}/{len(files)}] Uploaded {relative}.", flush=True)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Publish Pearlix DENTEX to a private free Hugging Face ZeroGPU Space."
@@ -70,6 +94,11 @@ def parse_args():
     )
     parser.add_argument("--space-name", default="pearlix-dentex-ai")
     parser.add_argument("--model-name", default="pearlix-dentex-models")
+    parser.add_argument(
+        "--legacy-upload",
+        action="store_true",
+        help="Disable hf-xet in the parent process and upload model files sequentially over the compatibility HTTP path.",
+    )
     return parser.parse_args()
 
 
@@ -117,7 +146,12 @@ def main() -> None:
 
         print(f"Creating/updating private model repo: {model_repo}")
         api.create_repo(repo_id=model_repo, repo_type="model", private=True, exist_ok=True)
-        api.upload_folder(repo_id=model_repo, repo_type="model", folder_path=str(bundle_root))
+        upload_model_bundle(
+            api,
+            bundle_root=bundle_root,
+            model_repo=model_repo,
+            legacy_upload=args.legacy_upload,
+        )
 
         space_build = temp / "space"
         build_space(repo_root, space_build)
@@ -142,7 +176,6 @@ def main() -> None:
                 + str(exc)
             ) from exc
 
-        # Ensure an existing Space also gets the canonical private model mount and ZeroGPU request.
         api.set_space_volumes(
             repo_id=space_repo,
             volumes=[Volume(type="model", source=model_repo, mount_path="/models", read_only=True)],
