@@ -105,3 +105,16 @@ def test_dashboard_bill_rows_characterize_shared_financial_values_and_role_conte
     assert "recent_handoffs" not in doctor_response.data
     assert "open_handoffs" not in doctor_response.data
     assert "collected_today" not in doctor_response.data
+
+
+@pytest.mark.django_db
+def test_admin_dashboard_exposes_complete_analytics_windows(admin_client):
+    response = admin_client.get("/api/dashboard/admin/")
+    assert response.status_code == 200
+    data = response.data
+    assert len(data["appointments_daily_last_30_days"]) == 30
+    assert len(data["patient_mix_last_8_weeks"]) == 8
+    assert len(data["appointment_problem_rate_last_8_weeks"]) == 8
+    assert [row["bucket"] for row in data["receivables_aging"]] == ["0_7", "8_30", "31_60", "60_plus"]
+    assert all({"SYP", "USD"}.issubset(row) for row in data["receivables_aging"])
+    assert "doctor_utilization_last_30_days" in data
