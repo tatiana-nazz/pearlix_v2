@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 
 import {
+  getAllPatientAppointments,
+  getAllPatientVisits,
   getPatient,
   getPatientAiResults,
-  getPatientAppointments,
-  getPatientVisits,
   getPatientXrays,
 } from "../../../api/endpoints/patients";
 
@@ -22,16 +22,16 @@ export function usePatient(patientId: number) {
 
 export function usePatientVisits(patientId: number, enabled = true) {
   return useQuery({
-    queryKey: ["patient", patientId, "visits"],
-    queryFn: () => getPatientVisits(patientId),
+    queryKey: ["patient", patientId, "visits", "all"],
+    queryFn: () => getAllPatientVisits(patientId),
     enabled,
   });
 }
 
 export function usePatientAppointments(patientId: number, enabled = true) {
   return useQuery({
-    queryKey: ["patient", patientId, "appointments"],
-    queryFn: () => getPatientAppointments(patientId),
+    queryKey: ["patient", patientId, "appointments", "all"],
+    queryFn: () => getAllPatientAppointments(patientId),
     enabled,
   });
 }
