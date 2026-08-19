@@ -58,6 +58,37 @@ export interface DashboardBillingActivityDay {
   USD: { billed: string; collected: string };
 }
 
+export interface DashboardAppointmentActivityDay extends DashboardAppointmentStatusCounts {
+  date: string;
+}
+
+export interface DashboardDoctorUtilization {
+  doctor: { id: number; full_name: string };
+  booked_minutes: number;
+  available_minutes: number;
+  utilization_percent: number;
+}
+
+export interface DashboardPatientMixWeek {
+  week_start: string;
+  new: number;
+  returning: number;
+}
+
+export interface DashboardProblemRateWeek {
+  week_start: string;
+  scheduled: number;
+  cancelled: number;
+  no_show: number;
+  rate_percent: number;
+}
+
+export interface DashboardReceivablesAgingBucket {
+  bucket: "0_7" | "8_30" | "31_60" | "60_plus";
+  SYP: string;
+  USD: string;
+}
+
 export interface AdminDashboardResponse {
   clinic_date: string;
   clinic_timezone: string;
@@ -72,6 +103,11 @@ export interface AdminDashboardResponse {
   today_appointments: DashboardAppointmentSummary[];
   appointment_status_last_7_days: DashboardAppointmentStatusCounts;
   billing_activity_last_30_days: DashboardBillingActivityDay[];
+  appointments_daily_last_30_days: DashboardAppointmentActivityDay[];
+  doctor_utilization_last_30_days: DashboardDoctorUtilization[];
+  patient_mix_last_8_weeks: DashboardPatientMixWeek[];
+  appointment_problem_rate_last_8_weeks: DashboardProblemRateWeek[];
+  receivables_aging: DashboardReceivablesAgingBucket[];
   recent_handoffs: DashboardHandoffSummary[];
 }
 
