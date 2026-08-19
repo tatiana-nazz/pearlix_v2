@@ -73,6 +73,24 @@ export function PatientOverview({ patient }: PatientOverviewProps) {
           <dd>{patient.updated_by?.full_name ?? c.notRecorded}</dd>
         </div>
       </dl>
+
+      <section className="patient-overview-clinical" aria-labelledby="patient-overview-clinical-title">
+        <h3 id="patient-overview-clinical-title">{c.clinicalProfile}</h3>
+        <div className="medical-summary-grid">
+          <section>
+            <h4>{c.medicalConditions}</h4>
+            <p>{patient.medical_conditions_history || c.noMedicalHistory}</p>
+          </section>
+          <section>
+            <h4>{c.insurance}</h4>
+            <p>{patient.insurance_info || c.noInsurance}</p>
+          </section>
+          <section>
+            <h4>{c.generalNotes}</h4>
+            <p>{patient.general_notes || c.noNotes}</p>
+          </section>
+        </div>
+      </section>
     </Card>
   );
 }
