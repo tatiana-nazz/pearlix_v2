@@ -2,6 +2,7 @@
 @import "./typography.css";
 @import "./components.css";
 @import "./dashboard-analytics.css";
+@import "./dashboard-analytics-shell.css";
 @import "./utilities.css";
 @import "./overlay.css";
 @import "./compatibility.css";
