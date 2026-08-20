@@ -1,3 +1,6 @@
+import { useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+
 import type { LanguagePreference } from "../../types/auth";
 import type {
   DashboardAppointmentActivityDay,
@@ -15,31 +18,75 @@ const palette = {
   teal: "#5AD8A6",
   green: "#5FC27E",
   amber: "#F6BD16",
-  orange: "#F6903D",
   red: "#E8684A",
   rose: "#E66A8E",
   violet: "#9270CA",
-  grid: "rgba(148, 163, 184, 0.16)",
-  axis: "rgba(203, 213, 225, 0.64)",
-  muted: "rgba(203, 213, 225, 0.72)",
 } as const;
 
 const labels = {
   EN: {
-    outcomes: "Appointments & outcomes", utilization: "Doctor utilization", patientMix: "New vs returning patients",
-    problemRate: "No-show & cancellation rate", aging: "Outstanding receivables aging", billing: "Billed vs collected",
-    last30: "Last 30 days", last8: "Last 8 weeks", completed: "Completed", cancelled: "Cancelled", noShow: "No show",
-    reschedule: "Needs reschedule", other: "Other scheduled", newPatients: "New", returning: "Returning", booked: "booked",
-    available: "available", age0: "0–7 days", age1: "8–30 days", age2: "31–60 days", age3: "60+ days",
-    billed: "Billed", collected: "Collected", appointments: "appointments", ofCapacity: "of available clinical time",
+    outcomes: "Appointments & outcomes",
+    utilization: "Doctor utilization",
+    patientMix: "New vs returning patients",
+    problemRate: "No-show & cancellation rate",
+    aging: "Outstanding receivables aging",
+    billing: "Billed vs collected",
+    last30: "Last 30 days",
+    last8: "Last 8 weeks",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    noShow: "No show",
+    reschedule: "Needs reschedule",
+    other: "Other scheduled",
+    newPatients: "New",
+    returning: "Returning",
+    booked: "booked",
+    available: "available",
+    age0: "0–7 days",
+    age1: "8–30 days",
+    age2: "31–60 days",
+    age3: "60+ days",
+    billed: "Billed",
+    collected: "Collected",
+    appointments: "appointments",
+    ofCapacity: "of available clinical time",
+    hoverHint: "Hover or focus the chart for exact values.",
+    clickDay: "Click a day to open its schedule.",
+    collectionRate: "Collection rate",
+    difference: "Gap",
+    scheduled: "Scheduled",
   },
   AR: {
-    outcomes: "المواعيد والنتائج", utilization: "استفادة وقت الأطباء", patientMix: "المرضى الجدد والعائدون",
-    problemRate: "معدل عدم الحضور والإلغاء", aging: "أعمار الذمم المدينة", billing: "المفوتر مقابل المحصل",
-    last30: "آخر 30 يوماً", last8: "آخر 8 أسابيع", completed: "مكتمل", cancelled: "ملغى", noShow: "لم يحضر",
-    reschedule: "تحتاج إعادة جدولة", other: "مواعيد أخرى", newPatients: "جدد", returning: "عائدون", booked: "محجوز",
-    available: "متاح", age0: "0–7 أيام", age1: "8–30 يوماً", age2: "31–60 يوماً", age3: "60+ يوماً",
-    billed: "المفوتر", collected: "المحصل", appointments: "موعد", ofCapacity: "من وقت العيادة المتاح",
+    outcomes: "المواعيد والنتائج",
+    utilization: "استفادة وقت الأطباء",
+    patientMix: "المرضى الجدد والعائدون",
+    problemRate: "معدل عدم الحضور والإلغاء",
+    aging: "أعمار الذمم المدينة",
+    billing: "المفوتر مقابل المحصل",
+    last30: "آخر 30 يوماً",
+    last8: "آخر 8 أسابيع",
+    completed: "مكتمل",
+    cancelled: "ملغى",
+    noShow: "لم يحضر",
+    reschedule: "تحتاج إعادة جدولة",
+    other: "مواعيد أخرى",
+    newPatients: "جدد",
+    returning: "عائدون",
+    booked: "محجوز",
+    available: "متاح",
+    age0: "0–7 أيام",
+    age1: "8–30 يوماً",
+    age2: "31–60 يوماً",
+    age3: "60+ يوماً",
+    billed: "المفوتر",
+    collected: "المحصل",
+    appointments: "موعد",
+    ofCapacity: "من وقت العيادة المتاح",
+    hoverHint: "مرر المؤشر أو ركّز على الرسم لعرض القيم الدقيقة.",
+    clickDay: "انقر على يوم لفتح جدوله.",
+    collectionRate: "معدل التحصيل",
+    difference: "الفجوة",
+    scheduled: "المجدول",
   },
 } as const;
 
@@ -73,17 +120,37 @@ function Legend({ items }: { items: Array<{ label: string; color: string }> }) {
   ))}</div>;
 }
 
+function InteractiveLegend({ items, active, onToggle }: {
+  items: Array<{ key: string; label: string; color: string }>;
+  active: Partial<Record<string, boolean>>;
+  onToggle: (key: string) => void;
+}) {
+  return <div className="analytics-legend analytics-legend-interactive" aria-label="Chart series controls">
+    {items.map((item) => (
+      <button type="button" key={item.key} className={active[item.key] ? "active" : "muted"} aria-pressed={active[item.key]} onClick={() => onToggle(item.key)}>
+        <i style={{ backgroundColor: item.color }} />{item.label}
+      </button>
+    ))}
+  </div>;
+}
+
+function ChartReadout({ children }: { children: ReactNode }) {
+  return <div className="analytics-readout" aria-live="polite">{children}</div>;
+}
+
 function OutcomesChart({ language, days }: { language: LanguagePreference; days: DashboardAppointmentActivityDay[] }) {
   const c = labels[language];
-  const width = 980;
-  const height = 300;
-  const margin = { top: 14, right: 20, bottom: 42, left: 44 };
+  const navigate = useNavigate();
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const width = 1120;
+  const height = 370;
+  const margin = { top: 18, right: 22, bottom: 48, left: 52 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   const totals = days.map((day) => Object.entries(day).reduce((sum, [key, value]) => key === "date" ? sum : sum + Number(value), 0));
   const yMax = niceMax(Math.max(1, ...totals));
   const band = plotWidth / Math.max(days.length, 1);
-  const barWidth = Math.max(5, Math.min(22, band * 0.72));
+  const barWidth = Math.max(8, Math.min(28, band * 0.72));
   const series = [
     { key: "COMPLETED", label: c.completed, color: palette.green },
     { key: "CANCELLED", label: c.cancelled, color: palette.red },
@@ -91,15 +158,33 @@ function OutcomesChart({ language, days }: { language: LanguagePreference; days:
     { key: "NEEDS_RESCHEDULE", label: c.reschedule, color: palette.amber },
     { key: "OTHER", label: c.other, color: palette.blue },
   ] as const;
+  const activeDay = activeIndex === null ? null : days[activeIndex];
+  const activeTotal = activeIndex === null ? 0 : totals[activeIndex];
+  const activeOther = activeDay ? Math.max(0, activeTotal - Number(activeDay.COMPLETED) - Number(activeDay.CANCELLED) - Number(activeDay.NO_SHOW) - Number(activeDay.NEEDS_RESCHEDULE)) : 0;
 
-  return <div className="analytics-chart-block">
+  function openDay(index: number) {
+    navigate(`/admin/appointments/day?date=${days[index].date}`);
+  }
+
+  return <div className="analytics-chart-block analytics-interactive-chart">
     <Legend items={series.map(({ label, color }) => ({ label, color }))} />
+    <ChartReadout>
+      {activeDay ? <>
+        <strong>{shortDate(activeDay.date, language)}</strong>
+        <span>{activeTotal} {c.appointments}</span>
+        <span>{c.completed}: {activeDay.COMPLETED}</span>
+        <span>{c.cancelled}: {activeDay.CANCELLED}</span>
+        <span>{c.noShow}: {activeDay.NO_SHOW}</span>
+        <span>{c.reschedule}: {activeDay.NEEDS_RESCHEDULE}</span>
+        <span>{c.other}: {activeOther}</span>
+      </> : <><span>{c.hoverHint}</span><span>{c.clickDay}</span></>}
+    </ChartReadout>
     <svg className="analytics-svg analytics-svg-wide" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={c.outcomes}>
       {ticks(yMax).map((tick) => {
         const y = margin.top + plotHeight - (tick / yMax) * plotHeight;
         return <g key={tick}>
           <line className="analytics-gridline" x1={margin.left} x2={width - margin.right} y1={y} y2={y} />
-          <text className="analytics-axis-label" x={margin.left - 10} y={y + 4} textAnchor="end">{Math.round(tick)}</text>
+          <text className="analytics-axis-label" x={margin.left - 11} y={y + 5} textAnchor="end">{Math.round(tick)}</text>
         </g>;
       })}
       {days.map((day, index) => {
@@ -113,18 +198,33 @@ function OutcomesChart({ language, days }: { language: LanguagePreference; days:
         };
         let cumulative = 0;
         const x = margin.left + index * band + (band - barWidth) / 2;
-        return <g key={day.date}>
-          <title>{`${day.date}: ${total} ${c.appointments}`}</title>
+        return <g
+          key={day.date}
+          className={`analytics-outcome-day${activeIndex === index ? " active" : ""}`}
+          tabIndex={0}
+          role="button"
+          aria-label={`${day.date}: ${total} ${c.appointments}`}
+          onMouseEnter={() => setActiveIndex(index)}
+          onMouseLeave={() => setActiveIndex(null)}
+          onFocus={() => setActiveIndex(index)}
+          onBlur={() => setActiveIndex(null)}
+          onClick={() => openDay(index)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              openDay(index);
+            }
+          }}
+        >
+          <rect className="analytics-hit-target" x={margin.left + index * band} y={margin.top} width={band} height={plotHeight} />
           {series.map((item) => {
             const value = values[item.key];
             const rectHeight = (value / yMax) * plotHeight;
             cumulative += value;
             const y = margin.top + plotHeight - (cumulative / yMax) * plotHeight;
-            return value > 0 ? <rect key={item.key} x={x} y={y} width={barWidth} height={rectHeight} rx="2" fill={item.color} /> : null;
+            return value > 0 ? <rect key={item.key} x={x} y={y} width={barWidth} height={rectHeight} rx="2.5" fill={item.color} /> : null;
           })}
-          {(index % 5 === 0 || index === days.length - 1) ? (
-            <text className="analytics-axis-label" x={x + barWidth / 2} y={height - 14} textAnchor="middle">{shortDate(day.date, language)}</text>
-          ) : null}
+          {(index % 4 === 0 || index === days.length - 1) ? <text className="analytics-axis-label" x={x + barWidth / 2} y={height - 15} textAnchor="middle">{shortDate(day.date, language)}</text> : null}
         </g>;
       })}
     </svg>
@@ -133,32 +233,41 @@ function OutcomesChart({ language, days }: { language: LanguagePreference; days:
 
 function UtilizationChart({ language, rows }: { language: LanguagePreference; rows: DashboardDoctorUtilization[] }) {
   const c = labels[language];
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const visible = rows.slice(0, 8);
-  const width = 620;
-  const rowHeight = 42;
-  const height = 42 + Math.max(1, visible.length) * rowHeight;
-  const margin = { top: 18, right: 38, bottom: 28, left: 168 };
+  const width = 820;
+  const rowHeight = 50;
+  const height = 46 + Math.max(1, visible.length) * rowHeight;
+  const margin = { top: 20, right: 58, bottom: 34, left: 210 };
   const plotWidth = width - margin.left - margin.right;
+  const active = activeIndex === null ? null : visible[activeIndex];
 
-  return <div className="analytics-chart-block">
+  return <div className="analytics-chart-block analytics-interactive-chart">
+    <ChartReadout>
+      {active ? <>
+        <strong>{active.doctor.full_name}</strong>
+        <span>{active.utilization_percent.toFixed(1)}%</span>
+        <span>{active.booked_minutes} min {c.booked}</span>
+        <span>{active.available_minutes} min {c.available}</span>
+      </> : <span>{c.hoverHint}</span>}
+    </ChartReadout>
     <svg className="analytics-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={c.utilization}>
       {[0, 25, 50, 75, 100].map((tick) => {
         const x = margin.left + (tick / 100) * plotWidth;
         return <g key={tick}>
           <line className="analytics-gridline" x1={x} x2={x} y1={margin.top} y2={height - margin.bottom} />
-          <text className="analytics-axis-label" x={x} y={height - 8} textAnchor="middle">{tick}%</text>
+          <text className="analytics-axis-label" x={x} y={height - 10} textAnchor="middle">{tick}%</text>
         </g>;
       })}
       {visible.map((row, index) => {
-        const y = margin.top + index * rowHeight + 8;
-        const barHeight = 16;
+        const y = margin.top + index * rowHeight + 9;
+        const barHeight = 20;
         const value = Math.min(100, Math.max(0, row.utilization_percent));
-        return <g key={row.doctor.id}>
-          <title>{`${row.doctor.full_name}: ${row.booked_minutes} min ${c.booked}, ${row.available_minutes} min ${c.available}`}</title>
-          <text className="analytics-doctor-label" x={margin.left - 12} y={y + 12} textAnchor="end">{row.doctor.full_name}</text>
-          <rect className="analytics-track" x={margin.left} y={y} width={plotWidth} height={barHeight} rx="5" />
-          <rect x={margin.left} y={y} width={(value / 100) * plotWidth} height={barHeight} rx="5" fill={palette.teal} />
-          <text className="analytics-value-label" x={margin.left + plotWidth + 10} y={y + 12}>{row.utilization_percent.toFixed(1)}%</text>
+        return <g key={row.doctor.id} className={`analytics-hover-row${activeIndex === index ? " active" : ""}`} tabIndex={0} onMouseEnter={() => setActiveIndex(index)} onMouseLeave={() => setActiveIndex(null)} onFocus={() => setActiveIndex(index)} onBlur={() => setActiveIndex(null)}>
+          <text className="analytics-doctor-label" x={margin.left - 14} y={y + 15} textAnchor="end">{row.doctor.full_name}</text>
+          <rect className="analytics-track" x={margin.left} y={y} width={plotWidth} height={barHeight} rx="6" />
+          <rect className="analytics-data-bar" x={margin.left} y={y} width={(value / 100) * plotWidth} height={barHeight} rx="6" fill={palette.teal} />
+          <text className="analytics-value-label" x={margin.left + plotWidth + 12} y={y + 15}>{row.utilization_percent.toFixed(1)}%</text>
         </g>;
       })}
     </svg>
@@ -166,16 +275,21 @@ function UtilizationChart({ language, rows }: { language: LanguagePreference; ro
   </div>;
 }
 
-function BillingMiniChart({ language, currency, days }: { language: LanguagePreference; currency: "USD" | "SYP"; days: DashboardBillingActivityDay[] }) {
+type BillingSeriesKey = "billed" | "collected";
+
+function BillingCurrencyChart({ language, currency, days }: { language: LanguagePreference; currency: "USD" | "SYP"; days: DashboardBillingActivityDay[] }) {
   const c = labels[language];
-  const width = 500;
-  const height = 250;
-  const margin = { top: 18, right: 18, bottom: 36, left: 58 };
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [seriesVisible, setSeriesVisible] = useState<Record<BillingSeriesKey, boolean>>({ billed: true, collected: true });
+  const width = 1120;
+  const height = 410;
+  const margin = { top: 22, right: 24, bottom: 52, left: 76 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   const billed = days.map((day) => Number(day[currency].billed));
   const collected = days.map((day) => Number(day[currency].collected));
-  const yMax = niceMax(Math.max(1, ...billed, ...collected));
+  const activeValues = [...(seriesVisible.billed ? billed : []), ...(seriesVisible.collected ? collected : [])];
+  const yMax = niceMax(Math.max(1, ...activeValues));
   const point = (value: number, index: number) => {
     const x = margin.left + (index / Math.max(1, days.length - 1)) * plotWidth;
     const y = margin.top + plotHeight - (value / yMax) * plotHeight;
@@ -185,68 +299,111 @@ function BillingMiniChart({ language, currency, days }: { language: LanguagePref
   const collectedPoints = collected.map((value, index) => point(value, index).join(",")).join(" ");
   const billedTotal = billed.reduce((sum, value) => sum + value, 0);
   const collectedTotal = collected.reduce((sum, value) => sum + value, 0);
+  const hoverDay = hoverIndex === null ? null : days[hoverIndex];
+  const hoverBilled = hoverIndex === null ? 0 : billed[hoverIndex];
+  const hoverCollected = hoverIndex === null ? 0 : collected[hoverIndex];
+  const hoverRate = hoverBilled > 0 ? (hoverCollected / hoverBilled) * 100 : hoverCollected > 0 ? 100 : 0;
 
-  return <div className="analytics-billing-panel">
-    <header><strong>{currency}</strong><span>{formatMoney(billedTotal, currency)} / {formatMoney(collectedTotal, currency)}</span></header>
-    <Legend items={[{ label: c.billed, color: palette.blue }, { label: c.collected, color: palette.teal }]} />
-    <svg className="analytics-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${currency} ${c.billing}`}>
-      {ticks(yMax).map((tick) => {
+  function toggleSeries(key: BillingSeriesKey) {
+    setSeriesVisible((current) => {
+      const nextValue = !current[key];
+      if (!nextValue && Object.entries(current).every(([series, visible]) => series === key || !visible)) return current;
+      return { ...current, [key]: nextValue };
+    });
+  }
+
+  function updateHover(clientX: number, svg: SVGSVGElement) {
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width || !days.length) return;
+    const svgX = ((clientX - rect.left) / rect.width) * width;
+    const ratio = Math.max(0, Math.min(1, (svgX - margin.left) / plotWidth));
+    setHoverIndex(Math.round(ratio * Math.max(0, days.length - 1)));
+  }
+
+  return <div className="analytics-billing-panel analytics-billing-panel-large">
+    <header>
+      <div><strong>{currency}</strong><small>{c.billed}: {formatMoney(billedTotal, currency)} · {c.collected}: {formatMoney(collectedTotal, currency)}</small></div>
+      <span>{c.collectionRate}: {billedTotal > 0 ? `${((collectedTotal / billedTotal) * 100).toFixed(1)}%` : "—"}</span>
+    </header>
+    <InteractiveLegend items={[{ key: "billed", label: c.billed, color: palette.blue }, { key: "collected", label: c.collected, color: palette.teal }]} active={seriesVisible} onToggle={(key) => toggleSeries(key as BillingSeriesKey)} />
+    <ChartReadout>
+      {hoverDay ? <>
+        <strong>{shortDate(hoverDay.date, language)}</strong>
+        <span>{c.billed}: {formatMoney(hoverBilled, currency)}</span>
+        <span>{c.collected}: {formatMoney(hoverCollected, currency)}</span>
+        <span>{c.difference}: {formatMoney(hoverBilled - hoverCollected, currency)}</span>
+        <span>{c.collectionRate}: {hoverRate.toFixed(1)}%</span>
+      </> : <span>{c.hoverHint}</span>}
+    </ChartReadout>
+    <svg className="analytics-svg analytics-billing-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${currency} ${c.billing}`} onPointerMove={(event) => updateHover(event.clientX, event.currentTarget)} onPointerLeave={() => setHoverIndex(null)}>
+      {ticks(yMax, 5).map((tick) => {
         const y = margin.top + plotHeight - (tick / yMax) * plotHeight;
         return <g key={tick}>
           <line className="analytics-gridline" x1={margin.left} x2={width - margin.right} y1={y} y2={y} />
-          <text className="analytics-axis-label" x={margin.left - 10} y={y + 4} textAnchor="end">{compactNumber(tick)}</text>
+          <text className="analytics-axis-label" x={margin.left - 12} y={y + 5} textAnchor="end">{compactNumber(tick)}</text>
         </g>;
       })}
-      <polyline className="analytics-line analytics-line-blue" points={billedPoints} />
-      <polyline className="analytics-line analytics-line-teal" points={collectedPoints} />
+      {seriesVisible.billed ? <polyline className="analytics-line analytics-line-blue" points={billedPoints} /> : null}
+      {seriesVisible.collected ? <polyline className="analytics-line analytics-line-teal" points={collectedPoints} /> : null}
+      {hoverIndex !== null ? (() => {
+        const [x, billedY] = point(hoverBilled, hoverIndex);
+        const [, collectedY] = point(hoverCollected, hoverIndex);
+        return <g className="analytics-crosshair">
+          <line x1={x} x2={x} y1={margin.top} y2={margin.top + plotHeight} />
+          {seriesVisible.billed ? <circle cx={x} cy={billedY} r="6" fill={palette.blue} /> : null}
+          {seriesVisible.collected ? <circle cx={x} cy={collectedY} r="6" fill={palette.teal} /> : null}
+        </g>;
+      })() : null}
       {days.map((day, index) => {
-        if (index % 6 !== 0 && index !== days.length - 1) return null;
+        if (index % 4 !== 0 && index !== days.length - 1) return null;
         const [x] = point(0, index);
-        return <text key={day.date} className="analytics-axis-label" x={x} y={height - 10} textAnchor="middle">{shortDate(day.date, language)}</text>;
+        return <text key={day.date} className="analytics-axis-label" x={x} y={height - 14} textAnchor="middle">{shortDate(day.date, language)}</text>;
       })}
     </svg>
   </div>;
 }
 
 function BillingChart({ language, days }: { language: LanguagePreference; days: DashboardBillingActivityDay[] }) {
-  return <div className="analytics-billing-grid">
-    <BillingMiniChart language={language} currency="USD" days={days} />
-    <BillingMiniChart language={language} currency="SYP" days={days} />
+  return <div className="analytics-billing-grid analytics-billing-grid-large">
+    <BillingCurrencyChart language={language} currency="USD" days={days} />
+    <BillingCurrencyChart language={language} currency="SYP" days={days} />
   </div>;
 }
 
 function PatientMixChart({ language, weeks }: { language: LanguagePreference; weeks: DashboardPatientMixWeek[] }) {
   const c = labels[language];
-  const width = 620;
-  const height = 280;
-  const margin = { top: 18, right: 18, bottom: 44, left: 42 };
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const width = 820;
+  const height = 340;
+  const margin = { top: 20, right: 20, bottom: 52, left: 52 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   const totals = weeks.map((week) => week.new + week.returning);
   const yMax = niceMax(Math.max(1, ...totals));
   const band = plotWidth / Math.max(weeks.length, 1);
-  const barWidth = Math.min(42, band * 0.54);
+  const barWidth = Math.min(54, band * 0.56);
+  const active = activeIndex === null ? null : weeks[activeIndex];
 
-  return <div className="analytics-chart-block">
+  return <div className="analytics-chart-block analytics-interactive-chart">
     <Legend items={[{ label: c.newPatients, color: palette.teal }, { label: c.returning, color: palette.violet }]} />
+    <ChartReadout>
+      {active ? <><strong>{shortDate(active.week_start, language)}</strong><span>{c.newPatients}: {active.new}</span><span>{c.returning}: {active.returning}</span><span>{c.scheduled}: {active.new + active.returning}</span></> : <span>{c.hoverHint}</span>}
+    </ChartReadout>
     <svg className="analytics-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={c.patientMix}>
       {ticks(yMax).map((tick) => {
         const y = margin.top + plotHeight - (tick / yMax) * plotHeight;
-        return <g key={tick}>
-          <line className="analytics-gridline" x1={margin.left} x2={width - margin.right} y1={y} y2={y} />
-          <text className="analytics-axis-label" x={margin.left - 9} y={y + 4} textAnchor="end">{Math.round(tick)}</text>
-        </g>;
+        return <g key={tick}><line className="analytics-gridline" x1={margin.left} x2={width - margin.right} y1={y} y2={y} /><text className="analytics-axis-label" x={margin.left - 10} y={y + 5} textAnchor="end">{Math.round(tick)}</text></g>;
       })}
       {weeks.map((week, index) => {
         const x = margin.left + index * band + (band - barWidth) / 2;
         const returningHeight = (week.returning / yMax) * plotHeight;
         const newHeight = (week.new / yMax) * plotHeight;
         const bottom = margin.top + plotHeight;
-        return <g key={week.week_start}>
-          <title>{`${week.week_start}: ${c.newPatients} ${week.new}, ${c.returning} ${week.returning}`}</title>
-          <rect x={x} y={bottom - returningHeight} width={barWidth} height={returningHeight} fill={palette.violet} rx="3" />
-          <rect x={x} y={bottom - returningHeight - newHeight} width={barWidth} height={newHeight} fill={palette.teal} rx="3" />
-          <text className="analytics-axis-label" x={x + barWidth / 2} y={height - 13} textAnchor="middle">{shortDate(week.week_start, language)}</text>
+        return <g key={week.week_start} className={`analytics-hover-row${activeIndex === index ? " active" : ""}`} tabIndex={0} onMouseEnter={() => setActiveIndex(index)} onMouseLeave={() => setActiveIndex(null)} onFocus={() => setActiveIndex(index)} onBlur={() => setActiveIndex(null)}>
+          <rect className="analytics-hit-target" x={margin.left + index * band} y={margin.top} width={band} height={plotHeight} />
+          <rect className="analytics-data-bar" x={x} y={bottom - returningHeight} width={barWidth} height={returningHeight} fill={palette.violet} rx="3" />
+          <rect className="analytics-data-bar" x={x} y={bottom - returningHeight - newHeight} width={barWidth} height={newHeight} fill={palette.teal} rx="3" />
+          <text className="analytics-axis-label" x={x + barWidth / 2} y={height - 16} textAnchor="middle">{shortDate(week.week_start, language)}</text>
         </g>;
       })}
     </svg>
@@ -255,9 +412,10 @@ function PatientMixChart({ language, weeks }: { language: LanguagePreference; we
 
 function ProblemRateChart({ language, weeks }: { language: LanguagePreference; weeks: DashboardProblemRateWeek[] }) {
   const c = labels[language];
-  const width = 620;
-  const height = 280;
-  const margin = { top: 18, right: 18, bottom: 44, left: 46 };
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const width = 820;
+  const height = 340;
+  const margin = { top: 24, right: 22, bottom: 52, left: 58 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   const yMax = Math.max(20, niceMax(Math.max(1, ...weeks.map((week) => week.rate_percent))));
@@ -268,37 +426,35 @@ function ProblemRateChart({ language, weeks }: { language: LanguagePreference; w
   });
   const linePoints = coords.map(({ x, y }) => `${x},${y}`).join(" ");
   const areaPoints = coords.length ? `${margin.left},${margin.top + plotHeight} ${linePoints} ${margin.left + plotWidth},${margin.top + plotHeight}` : "";
+  const active = activeIndex === null ? null : weeks[activeIndex];
 
-  return <div className="analytics-chart-block">
+  return <div className="analytics-chart-block analytics-interactive-chart">
+    <ChartReadout>
+      {active ? <><strong>{shortDate(active.week_start, language)}</strong><span>{active.rate_percent.toFixed(1)}%</span><span>{c.cancelled}: {active.cancelled}</span><span>{c.noShow}: {active.no_show}</span><span>{c.scheduled}: {active.scheduled}</span></> : <span>{c.hoverHint}</span>}
+    </ChartReadout>
     <svg className="analytics-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={c.problemRate}>
       {ticks(yMax).map((tick) => {
         const y = margin.top + plotHeight - (tick / yMax) * plotHeight;
-        return <g key={tick}>
-          <line className="analytics-gridline" x1={margin.left} x2={width - margin.right} y1={y} y2={y} />
-          <text className="analytics-axis-label" x={margin.left - 9} y={y + 4} textAnchor="end">{Math.round(tick)}%</text>
-        </g>;
+        return <g key={tick}><line className="analytics-gridline" x1={margin.left} x2={width - margin.right} y1={y} y2={y} /><text className="analytics-axis-label" x={margin.left - 10} y={y + 5} textAnchor="end">{Math.round(tick)}%</text></g>;
       })}
       <polygon className="analytics-area" points={areaPoints} />
       <polyline className="analytics-line analytics-line-violet" points={linePoints} />
-      {coords.map(({ x, y, week }) => <g key={week.week_start}>
-        <circle className="analytics-point" cx={x} cy={y} r="4.5"><title>{`${week.week_start}: ${week.rate_percent}% · ${week.cancelled} ${c.cancelled}, ${week.no_show} ${c.noShow}`}</title></circle>
-        <text className="analytics-value-label" x={x} y={Math.max(14, y - 10)} textAnchor="middle">{week.rate_percent.toFixed(1)}%</text>
-        <text className="analytics-axis-label" x={x} y={height - 13} textAnchor="middle">{shortDate(week.week_start, language)}</text>
+      {coords.map(({ x, y, week }, index) => <g key={week.week_start} className={`analytics-hover-row${activeIndex === index ? " active" : ""}`} tabIndex={0} onMouseEnter={() => setActiveIndex(index)} onMouseLeave={() => setActiveIndex(null)} onFocus={() => setActiveIndex(index)} onBlur={() => setActiveIndex(null)}>
+        <circle className="analytics-point" cx={x} cy={y} r={activeIndex === index ? 7 : 5} />
+        <text className="analytics-value-label" x={x} y={Math.max(18, y - 12)} textAnchor="middle">{week.rate_percent.toFixed(1)}%</text>
+        <text className="analytics-axis-label" x={x} y={height - 16} textAnchor="middle">{shortDate(week.week_start, language)}</text>
       </g>)}
     </svg>
   </div>;
 }
 
-function AgingCurrencyChart({ currency, rows, bucketName }: {
-  currency: "USD" | "SYP";
-  rows: DashboardReceivablesAgingBucket[];
-  bucketName: Record<DashboardReceivablesAgingBucket["bucket"], string>;
-}) {
-  const width = 500;
-  const height = 210;
-  const margin = { top: 12, right: 94, bottom: 18, left: 92 };
+function AgingCurrencyChart({ currency, rows, bucketName }: { currency: "USD" | "SYP"; rows: DashboardReceivablesAgingBucket[]; bucketName: Record<DashboardReceivablesAgingBucket["bucket"], string> }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const width = 650;
+  const height = 250;
+  const margin = { top: 16, right: 132, bottom: 20, left: 116 };
   const plotWidth = width - margin.left - margin.right;
-  const rowHeight = 42;
+  const rowHeight = 50;
   const values = rows.map((row) => Number(row[currency]));
   const max = niceMax(Math.max(1, ...values));
 
@@ -306,14 +462,13 @@ function AgingCurrencyChart({ currency, rows, bucketName }: {
     <strong>{currency}</strong>
     <svg className="analytics-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${currency} receivables aging`}>
       {rows.map((row, index) => {
-        const y = margin.top + index * rowHeight + 7;
+        const y = margin.top + index * rowHeight + 9;
         const value = Number(row[currency]);
-        return <g key={row.bucket}>
-          <title>{`${bucketName[row.bucket]}: ${formatMoney(value, currency)}`}</title>
-          <text className="analytics-axis-label analytics-axis-label-strong" x={margin.left - 10} y={y + 13} textAnchor="end">{bucketName[row.bucket]}</text>
-          <rect className="analytics-track" x={margin.left} y={y} width={plotWidth} height="17" rx="5" />
-          <rect x={margin.left} y={y} width={(value / max) * plotWidth} height="17" rx="5" fill={currency === "USD" ? palette.blue : palette.teal} />
-          <text className="analytics-value-label" x={margin.left + plotWidth + 10} y={y + 13}>{formatMoney(value, currency)}</text>
+        return <g key={row.bucket} className={`analytics-hover-row${activeIndex === index ? " active" : ""}`} tabIndex={0} onMouseEnter={() => setActiveIndex(index)} onMouseLeave={() => setActiveIndex(null)} onFocus={() => setActiveIndex(index)} onBlur={() => setActiveIndex(null)}>
+          <text className="analytics-axis-label analytics-axis-label-strong" x={margin.left - 12} y={y + 15} textAnchor="end">{bucketName[row.bucket]}</text>
+          <rect className="analytics-track" x={margin.left} y={y} width={plotWidth} height="20" rx="6" />
+          <rect className="analytics-data-bar" x={margin.left} y={y} width={(value / max) * plotWidth} height="20" rx="6" fill={currency === "USD" ? palette.blue : palette.teal} />
+          <text className="analytics-value-label" x={margin.left + plotWidth + 12} y={y + 15}>{formatMoney(value, currency)}</text>
         </g>;
       })}
     </svg>
@@ -342,7 +497,7 @@ export function AdminAnalyticsCharts({ language, outcomes, utilization, billing,
   return <div className="admin-analytics-grid">
     <DashboardSection title={c.outcomes} eyebrow={c.last30} className="admin-analytics-wide"><OutcomesChart language={language} days={outcomes} /></DashboardSection>
     <DashboardSection title={c.utilization} eyebrow={c.last30}><UtilizationChart language={language} rows={utilization} /></DashboardSection>
-    <DashboardSection title={c.billing} eyebrow={c.last30}><BillingChart language={language} days={billing} /></DashboardSection>
+    <DashboardSection title={c.billing} eyebrow={c.last30} className="admin-analytics-wide admin-analytics-billing"><BillingChart language={language} days={billing} /></DashboardSection>
     <DashboardSection title={c.patientMix} eyebrow={c.last8}><PatientMixChart language={language} weeks={patientMix} /></DashboardSection>
     <DashboardSection title={c.problemRate} eyebrow={c.last8}><ProblemRateChart language={language} weeks={problemRate} /></DashboardSection>
     <DashboardSection title={c.aging} className="admin-analytics-wide"><AgingChart language={language} rows={aging} /></DashboardSection>
