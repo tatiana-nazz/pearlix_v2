@@ -9,7 +9,7 @@ type TokenAccessors = {
   getRefreshToken: () => string | null;
   getSessionRevision: () => number;
   setAccessToken: (token: string) => void;
-  clearAuth: () => void;
+  clearAuth: (reason?: "SESSION_REVOKED") => void;
 };
 
 type AuthSessionSnapshot = {
@@ -103,7 +103,10 @@ async function refreshAccessToken(session: AuthSessionSnapshot): Promise<string>
         return access;
       })
       .catch((error) => {
-        if (isCurrentAuthSession(session)) tokenAccessors?.clearAuth();
+        if (isCurrentAuthSession(session)) {
+          const apiError = toApiClientError(error);
+          tokenAccessors?.clearAuth(apiError.status === 401 ? "SESSION_REVOKED" : undefined);
+        }
         throw error;
       })
       .finally(() => {
@@ -136,13 +139,21 @@ async function request<T>(method: Method, url: string, config: AxiosRequestConfi
         const accessToken = await refreshAccessToken(initiatingSession);
         if (!isCurrentAuthSession(initiatingSession)) throw sessionChangedError();
         const retryHeaders = { ...(config.headers ?? {}), "X-Retry-After-Refresh": "true" };
-        const response = await client.request<T>(
-          bindAccessToken(
-            { ...config, method, url, headers: retryHeaders },
-            accessToken,
-          ),
-        );
-        return response.data;
+        try {
+          const response = await client.request<T>(
+            bindAccessToken(
+              { ...config, method, url, headers: retryHeaders },
+              accessToken,
+            ),
+          );
+          return response.data;
+        } catch (retryError) {
+          const retryApiError = toApiClientError(retryError);
+          if (retryApiError.status === 401 && isCurrentAuthSession(initiatingSession)) {
+            tokenAccessors?.clearAuth("SESSION_REVOKED");
+          }
+          throw retryError;
+        }
       } catch (refreshError) {
         throw toApiClientError(refreshError);
       }

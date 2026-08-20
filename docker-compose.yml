@@ -4,9 +4,9 @@ services:
     environment:
       POSTGRES_DB: pearlix
       POSTGRES_USER: pearlix
-      POSTGRES_PASSWORD: pearlix_dev_password
+      POSTGRES_PASSWORD: ${PEARLIX_LOCAL_DB_PASSWORD:?Set PEARLIX_LOCAL_DB_PASSWORD in the ignored backend/.env file}
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

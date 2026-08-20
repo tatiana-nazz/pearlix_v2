@@ -1,11 +1,11 @@
 from django.db.models import Q
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from apps.patients.selectors import user_can_read_patient_clinical_history
+from apps.patients.selectors import get_patients_for_user, user_can_read_patient_clinical_history
 
 
 def doctor_xray_scope(user):
-    return Q(patient__is_archived=False)
+    return Q(patient__in=get_patients_for_user(user))
 
 
 def user_can_read_xray(user, xray) -> bool:
@@ -50,7 +50,13 @@ def user_can_read_external_xray(user, external_case) -> bool:
     if user.role == "ADMIN":
         return True
     if user.role == "DOCTOR":
-        return external_case.uploaded_by_id == user.id
+        return (
+            external_case.uploaded_by_id == user.id
+            and (
+                external_case.attached_patient_id is None
+                or user_can_read_patient_clinical_history(user, external_case.attached_patient)
+            )
+        )
     return False
 
 

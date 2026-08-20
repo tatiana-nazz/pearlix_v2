@@ -5,9 +5,16 @@ import { authApi } from "../api/endpoints/auth";
 import { configureAuthAccessors } from "../api/http";
 import { rotateAuthenticatedQueryClient } from "../app/queryClient";
 import type { AuthStatus, AuthUser, ChangePasswordPayload, LanguagePreference, LoginPayload, ThemePreference, UserRole } from "../types/auth";
+import {
+  getAuthSessionId,
+  publishAuthSessionEvent,
+  subscribeToAuthSessionEvents,
+  type AuthSessionEvent,
+} from "./authSessionSync";
 
 let authSessionRevision = 0;
 let latestLoginRequest = 0;
+const AUTH_STORAGE_KEY = "pearlix-auth";
 
 class AuthSessionSupersededError extends Error {
   constructor() {
@@ -56,6 +63,8 @@ export const useAuthStore = create<AuthState>()(
       async login(payload) {
         const loginRequest = ++latestLoginRequest;
         const startingRevision = authSessionRevision;
+        const previousUser = get().user;
+        const previousAuthSessionId = getAuthSessionId(get().accessToken, get().refreshToken);
         const response = await authApi.login(payload);
         if (loginRequest !== latestLoginRequest || startingRevision !== authSessionRevision) {
           throw new AuthSessionSupersededError();
@@ -70,13 +79,21 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: response.refresh,
           ...deriveAuth(response.user, response.access),
         });
+        if (previousUser && (
+          previousUser.id !== response.user.id
+          || previousUser.role !== response.user.role
+        )) {
+          publishAuthSessionEvent("IDENTITY_CHANGED", previousAuthSessionId);
+        }
         return response.user;
       },
       async logout() {
         const refresh = get().refreshToken;
+        const authSessionId = getAuthSessionId(get().accessToken, refresh);
         // The refresh token is sufficient proof for the server to revoke
         // itself. Drop local identity and PHI before any network wait.
         get().clearAuth();
+        publishAuthSessionEvent("LOGOUT", authSessionId);
         if (refresh) {
           try {
             await authApi.logout(refresh);
@@ -102,8 +119,12 @@ export const useAuthStore = create<AuthState>()(
           }
           const currentUser = get().user;
           if (currentUser?.id !== user.id || currentUser?.role !== user.role) {
+            const previousAuthSessionId = getAuthSessionId(get().accessToken, get().refreshToken);
             rotateAuthenticatedQueryClient();
             authSessionRevision += 1;
+            if (currentUser) {
+              publishAuthSessionEvent("IDENTITY_CHANGED", previousAuthSessionId);
+            }
           }
           set({ ...deriveAuth(user, get().accessToken) });
           return user;
@@ -122,6 +143,7 @@ export const useAuthStore = create<AuthState>()(
         const startingRevision = authSessionRevision;
         const startingRefreshToken = get().refreshToken;
         const startingUserId = get().user?.id;
+        const startingAuthSessionId = getAuthSessionId(get().accessToken, startingRefreshToken);
         const response = await authApi.changePassword(payload);
         if (
           startingRevision !== authSessionRevision
@@ -136,6 +158,7 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: response.refresh,
           ...deriveAuth(response.user, response.access),
         });
+        publishAuthSessionEvent("IDENTITY_CHANGED", startingAuthSessionId);
         return response.user;
       },
       async updatePreferences(preferences) {
@@ -211,5 +234,53 @@ configureAuthAccessors({
   getRefreshToken: () => useAuthStore.getState().refreshToken,
   getSessionRevision: () => authSessionRevision,
   setAccessToken: (token) => useAuthStore.getState().setTokens(token),
-  clearAuth: () => useAuthStore.getState().clearAuth(),
+  clearAuth: (reason) => {
+    const state = useAuthStore.getState();
+    const authSessionId = getAuthSessionId(state.accessToken, state.refreshToken);
+    state.clearAuth();
+    if (reason === "SESSION_REVOKED") {
+      publishAuthSessionEvent(reason, authSessionId);
+    }
+  },
+});
+
+function eventTargetsCurrentAuth(event: AuthSessionEvent) {
+  const state = useAuthStore.getState();
+  const authSessionId = getAuthSessionId(state.accessToken, state.refreshToken);
+  return Boolean(
+    event.authSessionId === authSessionId,
+  );
+}
+
+function persistedReplacementSnapshot(event: AuthSessionEvent) {
+  if (event.type !== "IDENTITY_CHANGED" || typeof window === "undefined") return null;
+  try {
+    const snapshot = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!snapshot) return null;
+    const persisted = JSON.parse(snapshot) as {
+      state?: { accessToken?: unknown; refreshToken?: unknown };
+    };
+    const persistedSessionId = getAuthSessionId(
+      typeof persisted.state?.accessToken === "string" ? persisted.state.accessToken : null,
+      typeof persisted.state?.refreshToken === "string" ? persisted.state.refreshToken : null,
+    );
+    return persistedSessionId && persistedSessionId !== event.authSessionId ? snapshot : null;
+  } catch {
+    return null;
+  }
+}
+
+subscribeToAuthSessionEvents((event) => {
+  if (!eventTargetsCurrentAuth(event)) return;
+  const replacementSnapshot = persistedReplacementSnapshot(event);
+  // This local-only clear increments the request revision and rotates the
+  // QueryClient. It deliberately does not publish another event.
+  useAuthStore.getState().clearAuth();
+  if (replacementSnapshot) {
+    try {
+      window.localStorage.setItem(AUTH_STORAGE_KEY, replacementSnapshot);
+    } catch {
+      // The receiving tab remains safely anonymous if storage is unavailable.
+    }
+  }
 });

@@ -21,6 +21,7 @@ from apps.dashboard.analytics import (
     patient_mix,
     receivables_aging,
 )
+from apps.patients.selectors import get_patients_for_user
 from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
 
@@ -263,14 +264,22 @@ def doctor_dashboard(request):
     settings, clinic_timezone, now = _clinic_context()
     today = now.date()
     today_start, tomorrow_start = _local_day_bounds(today, clinic_timezone)
-    own_appointments = Appointment.objects.select_related("patient", "doctor").filter(doctor=request.user)
+    accessible_patients = get_patients_for_user(request.user)
+    own_appointments = Appointment.objects.select_related("patient", "doctor").filter(
+        doctor=request.user,
+        patient__in=accessible_patients,
+    )
     today_appointments = own_appointments.filter(
         start_datetime__gte=today_start,
         start_datetime__lt=tomorrow_start,
     ).order_by("start_datetime", "id")
     active_visit = (
         Visit.objects.select_related("patient", "appointment")
-        .filter(doctor=request.user, status=Visit.Status.ACTIVE)
+        .filter(
+            doctor=request.user,
+            patient__in=accessible_patients,
+            status=Visit.Status.ACTIVE,
+        )
         .order_by("-started_at", "-id")
         .first()
     )
@@ -287,6 +296,7 @@ def doctor_dashboard(request):
                 completed_at__gte=today_start,
                 completed_at__lt=tomorrow_start,
                 doctor=request.user,
+                patient__in=accessible_patients,
                 status=Visit.Status.COMPLETED,
             ).count(),
         }

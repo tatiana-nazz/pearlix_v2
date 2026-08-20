@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -9,7 +10,7 @@ from apps.ai_results.services import AIServiceError, run_ai_for_external_case, r
 from apps.audit.services import log_activity
 from apps.common.errors import error_response
 from apps.common.protected_media import protected_file_response
-from apps.patients.models import Patient
+from apps.patients.selectors import get_patients_for_user
 from apps.visits.models import Visit
 from apps.xrays.models import ExternalXrayCase, XrayAttachment
 from apps.xrays.permissions import ExternalXrayPermission, XrayPermission, doctor_xray_scope
@@ -179,7 +180,11 @@ class ExternalXrayViewSet(viewsets.ModelViewSet):
         ).all()
         user = self.request.user
         if user.is_authenticated and user.role == "DOCTOR":
-            queryset = queryset.filter(uploaded_by=user)
+            accessible_patients = get_patients_for_user(user)
+            queryset = queryset.filter(
+                Q(attached_patient__isnull=True) | Q(attached_patient__in=accessible_patients),
+                uploaded_by=user,
+            )
 
         case_status = self.request.query_params.get("status")
         uploaded_by = self.request.query_params.get("uploaded_by")
@@ -332,11 +337,18 @@ class ExternalXrayViewSet(viewsets.ModelViewSet):
         patient_id = request.data.get("patient_id")
         if not patient_id:
             return error_response("VALIDATION_ERROR", "Some fields are invalid.", {"patient_id": ["This field is required."]})
-        patient = get_object_or_404(Patient, pk=patient_id)
+        accessible_patients = get_patients_for_user(request.user)
+        patient = get_object_or_404(accessible_patients, pk=patient_id)
         visit = None
         visit_id = request.data.get("visit_id")
         if visit_id not in (None, ""):
-            visit = get_object_or_404(Visit, pk=visit_id)
+            visit = get_object_or_404(
+                Visit.objects.filter(
+                    doctor=request.user,
+                    patient__in=accessible_patients,
+                ),
+                pk=visit_id,
+            )
         try:
             external = attach_external_case_to_patient(
                 external_case=external,

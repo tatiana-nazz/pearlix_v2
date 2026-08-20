@@ -13,6 +13,7 @@ from rest_framework.response import Response
 
 from apps.audit.services import log_activity
 from apps.common.errors import error_response
+from apps.patients.selectors import get_patients_for_user
 from apps.scheduling.appointment_services import (
     AppointmentRuleError,
     cancel_appointment,
@@ -217,7 +218,11 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     serializer_class = AppointmentDetailSerializer; permission_classes = [AppointmentPermission]; pagination_class = AppointmentPagination; http_method_names = ["get", "post", "patch", "head", "options"]
     def get_queryset(self):
         query = Appointment.objects.select_related("patient", "doctor", "created_by", "updated_by", "reschedule_source_exception", "reschedule_source_working_shift").all()
-        if self.request.user.is_authenticated and self.request.user.role == "DOCTOR": query = query.filter(doctor=self.request.user)
+        if self.request.user.is_authenticated and self.request.user.role == "DOCTOR":
+            query = query.filter(
+                doctor=self.request.user,
+                patient__in=get_patients_for_user(self.request.user),
+            )
         for field in ("doctor_id", "patient_id", "status"):
             if self.request.query_params.get(field): query = query.filter(**{field: self.request.query_params[field]})
         if self.request.query_params.get("date"): query = query.filter(start_datetime__date=self.request.query_params["date"])

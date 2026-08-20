@@ -17,7 +17,9 @@ Local development expects Python virtualenv at `backend/.venv` and PostgreSQL fr
 - Database: `pearlix`
 - User: `pearlix`
 - Host port: `5433`
-- Default local `DATABASE_URL`: `postgresql://pearlix:pearlix_dev_password@127.0.0.1:5433/pearlix`
+- Local `DATABASE_URL`: use the ignored `backend/.env` and its unique
+  `PEARLIX_LOCAL_DB_PASSWORD` as documented in `LOCAL_DEVELOPMENT.md`; the
+  database binds only to `127.0.0.1:5433`.
 
 Run backend commands from `backend` with the virtualenv active.
 

@@ -45,19 +45,22 @@ describe("HTTP authentication-session isolation", () => {
     revision: number;
   };
   let clearCalls: number;
+  let clearReasons: Array<"SESSION_REVOKED" | undefined>;
 
   beforeEach(() => {
     axiosMocks.post.mockReset();
     axiosMocks.request.mockReset();
     clearCalls = 0;
+    clearReasons = [];
     state = {
       accessToken: "access-A",
       refreshToken: "refresh-A",
       revision: 1,
     };
     configureAuthAccessors({
-      clearAuth: () => {
+      clearAuth: (reason) => {
         clearCalls += 1;
+        clearReasons.push(reason);
         state = { accessToken: null, refreshToken: null, revision: state.revision + 1 };
       },
       getAccessToken: () => state.accessToken,
@@ -155,5 +158,50 @@ describe("HTTP authentication-session isolation", () => {
     });
     expect(state.accessToken).toBe("replacement-access-B");
     expect(clearCalls).toBe(0);
+  });
+
+  it("marks a terminal 401 refresh failure as a revoked session", async () => {
+    axiosMocks.request.mockRejectedValueOnce(unauthorized());
+    axiosMocks.post.mockRejectedValueOnce(unauthorized());
+
+    await expect(api.get("/patients/")).rejects.toMatchObject({ status: 401 });
+
+    expect(clearCalls).toBe(1);
+    expect(clearReasons).toEqual(["SESSION_REVOKED"]);
+    expect(state).toEqual({ accessToken: null, refreshToken: null, revision: 2 });
+  });
+
+  it("clears a current session when the post-refresh retry is also rejected", async () => {
+    axiosMocks.request
+      .mockRejectedValueOnce(unauthorized())
+      .mockRejectedValueOnce(unauthorized());
+    axiosMocks.post.mockResolvedValueOnce({ data: { access: "replacement-access-A" } });
+
+    await expect(api.get("/dashboard/doctor/")).rejects.toMatchObject({ status: 401 });
+
+    expect(clearReasons).toEqual(["SESSION_REVOKED"]);
+    expect(state).toEqual({ accessToken: null, refreshToken: null, revision: 2 });
+  });
+
+  it("does not clear B when A's delayed post-refresh retry is rejected", async () => {
+    const delayedRetry = deferred<never>();
+    axiosMocks.request
+      .mockRejectedValueOnce(unauthorized())
+      .mockReturnValueOnce(delayedRetry.promise);
+    axiosMocks.post.mockResolvedValueOnce({ data: { access: "replacement-access-A" } });
+
+    const pendingARequest = api.get("/dashboard/doctor/");
+    await vi.waitFor(() => expect(axiosMocks.request).toHaveBeenCalledTimes(2));
+
+    state = { accessToken: "access-B", refreshToken: "refresh-B", revision: 2 };
+    delayedRetry.reject(unauthorized());
+
+    await expect(pendingARequest).rejects.toMatchObject({ status: 401 });
+    expect(clearCalls).toBe(0);
+    expect(state).toEqual({
+      accessToken: "access-B",
+      refreshToken: "refresh-B",
+      revision: 2,
+    });
   });
 });

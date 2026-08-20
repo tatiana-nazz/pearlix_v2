@@ -27,6 +27,7 @@ from apps.billing.services import (
 )
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
+from apps.patients.selectors import get_patients_for_user
 
 
 ZERO = Decimal("0.00")
@@ -104,7 +105,10 @@ class BillingHandoffViewSet(
     def get_queryset(self):
         queryset = handoffs_for_billing_api()
         if self.request.user.is_authenticated and self.request.user.role == "DOCTOR":
-            queryset = queryset.filter(doctor=self.request.user)
+            queryset = queryset.filter(
+                doctor=self.request.user,
+                patient__in=get_patients_for_user(self.request.user),
+            )
         return self._filter_queryset(queryset, self._query_params())
 
     @action(detail=True, methods=["post"], url_path="invoices")
@@ -138,7 +142,10 @@ class BillingHandoffViewSet(
         timezone_name, _, clinic_date = _clinic_context()
         queryset = BillingHandoff.objects.all()
         if request.user.role == "DOCTOR":
-            queryset = queryset.filter(doctor=request.user)
+            queryset = queryset.filter(
+                doctor=request.user,
+                patient__in=get_patients_for_user(request.user),
+            )
         queryset = self._filter_queryset(queryset, params)
         status_counts = {choice: 0 for choice, _ in BillingHandoff.Status.choices}
         for row in queryset.values("status").annotate(count=Count("id")):

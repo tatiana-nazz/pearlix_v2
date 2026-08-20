@@ -161,11 +161,27 @@ REST_FRAMEWORK = {
         "auth_refresh_source": (
             env("AUTH_REFRESH_SOURCE_THROTTLE_RATE", "120/min") or "120/min"
         ),
+        "auth_refresh_identifier": (
+            env("AUTH_REFRESH_IDENTIFIER_THROTTLE_RATE", "30/min") or "30/min"
+        ),
         "auth_logout_source": (
             env("AUTH_LOGOUT_SOURCE_THROTTLE_RATE", "120/min") or "120/min"
         ),
     },
 }
+
+# Authentication throttles use PostgreSQL-shared state. Every evaluation drains
+# a tiny indexed expiry batch; one request periodically leases an additional
+# configurable batch. Neither path scans or deletes a full table.
+AUTH_THROTTLE_CLEANUP_INTERVAL_SECONDS = int(
+    env("AUTH_THROTTLE_CLEANUP_INTERVAL_SECONDS", "60") or "60"
+)
+AUTH_THROTTLE_CLEANUP_BATCH_SIZE = int(
+    env("AUTH_THROTTLE_CLEANUP_BATCH_SIZE", "256") or "256"
+)
+AUTH_SESSION_REVOKED_RETENTION_SECONDS = int(
+    env("AUTH_SESSION_REVOKED_RETENTION_SECONDS", "86400") or "86400"
+)
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),

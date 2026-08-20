@@ -7,6 +7,8 @@ from rest_framework.decorators import action, api_view, permission_classes, thro
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -14,6 +16,9 @@ from apps.accounts.authentication import (
     ACCOUNT_VERSION_CLAIM,
     AccountAuthorityChanged,
     AccountVersionTokenRefreshSerializer,
+    AuthSessionEnded,
+    issue_refresh_for_user,
+    require_active_auth_session,
 )
 from apps.accounts.models import User
 from apps.accounts.serializers import (
@@ -47,6 +52,7 @@ from apps.accounts.throttling import (
     LoginIdentifierThrottle,
     LoginSourceThrottle,
     LogoutSourceThrottle,
+    RefreshIdentifierThrottle,
     RefreshSourceThrottle,
 )
 from apps.audit.services import log_activity
@@ -57,8 +63,7 @@ from apps.visits.models import Visit
 
 
 def _token_payload(user):
-    refresh = RefreshToken.for_user(user)
-    refresh[ACCOUNT_VERSION_CLAIM] = user.version
+    refresh = issue_refresh_for_user(user)
     return {
         "access": str(refresh.access_token),
         "refresh": str(refresh),
@@ -93,7 +98,7 @@ def login_view(request):
 
 class RefreshView(TokenRefreshView):
     serializer_class = AccountVersionTokenRefreshSerializer
-    throttle_classes = [RefreshSourceThrottle]
+    throttle_classes = [RefreshSourceThrottle, RefreshIdentifierThrottle]
 
 
 @api_view(["POST"])
@@ -108,8 +113,19 @@ def logout_view(request):
             {"refresh": ["This field is required."]},
         )
     try:
-        RefreshToken(refresh_token).blacklist()
-    except Exception:
+        token = RefreshToken(refresh_token)
+        user_id = token.payload.get(api_settings.USER_ID_CLAIM)
+        with transaction.atomic():
+            user = User.objects.select_for_update().get(
+                **{api_settings.USER_ID_FIELD: user_id}
+            )
+            if token.get(ACCOUNT_VERSION_CLAIM) != user.version:
+                raise AccountAuthorityChanged()
+            session = require_active_auth_session(user=user, token=token, lock=True)
+            session.revoked_at = timezone.now()
+            session.save(update_fields=["revoked_at"])
+            token.blacklist()
+    except (TokenError, User.DoesNotExist, AccountAuthorityChanged, AuthSessionEnded):
         return error_response("VALIDATION_ERROR", "Invalid refresh token.")
     return Response(status=status.HTTP_204_NO_CONTENT)
 

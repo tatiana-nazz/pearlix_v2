@@ -1,13 +1,22 @@
 """JWT authentication boundaries for account security state."""
 
+from datetime import datetime, timezone as datetime_timezone
+from uuid import UUID
+
 from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.utils import timezone
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.accounts.models import AuthSession
 
 
 ACCOUNT_VERSION_CLAIM = "account_version"
+AUTH_SESSION_CLAIM = "auth_session_id"
 
 # Public token-lifecycle endpoints do not require an access token.  Ignoring
 # an accidentally attached stale Authorization header keeps recovery and
@@ -29,9 +38,60 @@ class AccountAuthorityChanged(AuthenticationFailed):
     default_code = "account_authority_changed"
 
 
+class AuthSessionEnded(AuthenticationFailed):
+    default_detail = "Session ended. Sign in again."
+    default_code = "session_revoked"
+
+
 class PasswordChangeRequired(PermissionDenied):
     default_detail = "Change the temporary password before using this account."
     default_code = "password_change_required"
+
+
+def token_auth_session_id(token):
+    """Return the normalized server-session UUID or reject an invalid claim."""
+
+    value = token.get(AUTH_SESSION_CLAIM)
+    try:
+        return UUID(str(value))
+    except (AttributeError, TypeError, ValueError):
+        raise AuthSessionEnded() from None
+
+
+def require_active_auth_session(*, user, token, lock=False):
+    """Enforce the shared revocable token-family boundary."""
+
+    session_id = token_auth_session_id(token)
+    sessions = AuthSession.objects
+    if lock:
+        sessions = sessions.select_for_update()
+    session = sessions.filter(
+        pk=session_id,
+        user_id=user.pk,
+        account_version=user.version,
+        revoked_at__isnull=True,
+        expires_at__gt=timezone.now(),
+    ).first()
+    if session is None:
+        raise AuthSessionEnded()
+    return session
+
+
+def issue_refresh_for_user(user):
+    """Create a fresh per-login token family and its server authority row."""
+
+    refresh = RefreshToken.for_user(user)
+    expires_at = datetime.fromtimestamp(
+        int(refresh["exp"]), tz=datetime_timezone.utc
+    )
+    session = AuthSession.objects.create(
+        user=user,
+        account_version=user.version,
+        expires_at=expires_at,
+    )
+    refresh[ACCOUNT_VERSION_CLAIM] = user.version
+    refresh[AUTH_SESSION_CLAIM] = str(session.pk)
+    return refresh
 
 
 class AccountVersionTokenRefreshSerializer(TokenRefreshSerializer):
@@ -49,7 +109,9 @@ class AccountVersionTokenRefreshSerializer(TokenRefreshSerializer):
             or refresh.get(ACCOUNT_VERSION_CLAIM) != user.version
         ):
             raise AccountAuthorityChanged()
-        return super().validate(attrs)
+        with transaction.atomic():
+            require_active_auth_session(user=user, token=refresh, lock=True)
+            return super().validate(attrs)
 
 
 class PasswordLifecycleJWTAuthentication(JWTAuthentication):
@@ -75,6 +137,7 @@ class PasswordLifecycleJWTAuthentication(JWTAuthentication):
         user, validated_token = authenticated
         if validated_token.get(ACCOUNT_VERSION_CLAIM) != user.version:
             raise AccountAuthorityChanged()
+        require_active_auth_session(user=user, token=validated_token)
         if user.must_change_password and url_name not in PASSWORD_CHANGE_ALLOWED_URLS:
             raise PasswordChangeRequired()
         return authenticated
