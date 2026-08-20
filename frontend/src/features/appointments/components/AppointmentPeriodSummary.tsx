@@ -15,5 +15,8 @@ export function AppointmentPeriodSummary({ rows, total, language, periodLabel, t
     summary[appointment.status] = (summary[appointment.status] ?? 0) + 1;
     return summary;
   }, {}));
-  return <aside className="appointments-summary-rail" aria-label={periodLabel}><SurfaceCard><h2>{periodLabel}</h2><dl><div><dt>{totalLabel}</dt><dd>{total}</dd></div></dl><p className="appointments-summary-scope">{loadedLabel}</p><dl>{statuses.map(([status, count]) => <div key={status} className={appointmentStatusClass("appointment-status-summary", status as AppointmentStatus)} data-status={status}><dt>{appointmentStatusLabel(language, status as AppointmentStatus)}</dt><dd>{count}</dd></div>)}</dl></SurfaceCard></aside>;
+  const scopeLabel = rows.length === total
+    ? (language === "AR" ? "حالات جميع مواعيد هذه الفترة" : "Status counts for the complete period")
+    : loadedLabel;
+  return <aside className="appointments-summary-rail" aria-label={periodLabel}><SurfaceCard><h2>{periodLabel}</h2><dl><div><dt>{totalLabel}</dt><dd>{total}</dd></div></dl><p className="appointments-summary-scope">{scopeLabel}</p><dl>{statuses.map(([status, count]) => <div key={status} className={appointmentStatusClass("appointment-status-summary", status as AppointmentStatus)} data-status={status}><dt>{appointmentStatusLabel(language, status as AppointmentStatus)}</dt><dd>{count}</dd></div>)}</dl></SurfaceCard></aside>;
 }
