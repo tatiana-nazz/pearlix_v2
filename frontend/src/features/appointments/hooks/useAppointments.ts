@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { getAppointment, getAppointmentAvailability, getAppointments } from "../../../api/endpoints/appointments";
+import { getAllAppointments, getAppointment, getAppointmentAvailability, getAppointments } from "../../../api/endpoints/appointments";
 import type { AppointmentAvailabilityFilters, AppointmentListFilters } from "../../../types/appointments";
 
 export function appointmentListKey(filters: AppointmentListFilters) {
@@ -11,10 +11,10 @@ export function appointmentKey(appointmentId: number) {
   return ["appointments", appointmentId] as const;
 }
 
-export function useAppointments(filters: AppointmentListFilters) {
+export function useAppointments(filters: AppointmentListFilters, fetchAllPages = false) {
   return useQuery({
-    queryKey: appointmentListKey(filters),
-    queryFn: () => getAppointments(filters),
+    queryKey: [...appointmentListKey(filters), fetchAllPages ? "all-pages" : "page"],
+    queryFn: () => fetchAllPages ? getAllAppointments(filters) : getAppointments(filters),
   });
 }
 
