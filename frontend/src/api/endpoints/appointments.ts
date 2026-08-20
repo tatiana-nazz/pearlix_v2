@@ -38,6 +38,40 @@ export function getAppointments(filters?: AppointmentListFilters) {
   return api.get<AppointmentPage>("/appointments/", appointmentListQuery(filters));
 }
 
+// Calendar surfaces represent an entire bounded day/week/month, not a single
+// DRF page. Follow pagination here so a busy period cannot silently render only
+// its first 20 appointments while the period total reports a much larger count.
+export async function getAllAppointments(filters?: AppointmentListFilters): Promise<AppointmentPage> {
+  const baseFilters = { ...(filters ?? {}) };
+  delete baseFilters.page;
+
+  const results: AppointmentList[] = [];
+  let pageNumber = 1;
+  let firstPage: AppointmentPage | null = null;
+
+  while (true) {
+    const page = await getAppointments({ ...baseFilters, page: pageNumber });
+    firstPage ??= page;
+    results.push(...page.results);
+
+    if (!page.next || results.length >= page.count) {
+      return {
+        count: page.count,
+        next: null,
+        previous: null,
+        results,
+        clinic_date: firstPage.clinic_date,
+        clinic_timezone: firstPage.clinic_timezone,
+      };
+    }
+
+    pageNumber += 1;
+    if (pageNumber > 100) {
+      throw new Error("Appointment calendar pagination exceeded the safety limit.");
+    }
+  }
+}
+
 export function getAppointment(id: number) {
   return api.get<AppointmentDetail>(`/appointments/${id}/`);
 }
@@ -72,6 +106,7 @@ export function getAppointmentAvailability(filters: AppointmentAvailabilityFilte
 
 export const appointmentsApi = {
   list: getAppointments,
+  all: getAllAppointments,
   create: createAppointment,
   detail: getAppointment,
   update: updateAppointment,
