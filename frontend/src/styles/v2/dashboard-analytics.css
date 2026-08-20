@@ -1,7 +1,5 @@
 .admin-analytics-grid {
   display: grid;
-  /* Give analytical plots enough room to be legible. On normal laptop/desktop
-     widths the cards are full-width; ultrawide screens can use two columns. */
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 680px), 1fr));
   gap: 1.25rem;
   margin-block: 1.25rem;
@@ -22,11 +20,9 @@
   min-width: 0;
 }
 
-/* Keep single-series charts generous but prevent them from becoming absurdly
-   large when their card spans a very wide dashboard. */
 .analytics-chart-block {
   inline-size: 100%;
-  max-inline-size: 980px;
+  max-inline-size: 1080px;
   margin-inline: auto;
 }
 
@@ -43,7 +39,7 @@
 }
 
 .analytics-svg-wide {
-  max-block-size: 420px;
+  max-block-size: 500px;
 }
 
 .analytics-gridline {
@@ -53,24 +49,24 @@
 }
 
 .analytics-axis-label {
-  fill: rgba(203, 213, 225, 0.74);
+  fill: rgba(203, 213, 225, 0.76);
   font-size: 12px;
   font-weight: 520;
 }
 
 .analytics-axis-label-strong {
-  fill: rgba(226, 232, 240, 0.9);
+  fill: rgba(226, 232, 240, 0.92);
   font-weight: 650;
 }
 
 .analytics-doctor-label {
-  fill: rgba(241, 245, 249, 0.94);
+  fill: rgba(241, 245, 249, 0.96);
   font-size: 13px;
   font-weight: 650;
 }
 
 .analytics-value-label {
-  fill: rgba(241, 245, 249, 0.94);
+  fill: rgba(241, 245, 249, 0.95);
   font-size: 12px;
   font-weight: 650;
 }
@@ -79,9 +75,39 @@
   fill: rgba(148, 163, 184, 0.13);
 }
 
+.analytics-data-bar,
+.analytics-line,
+.analytics-point {
+  transition: opacity 140ms ease, filter 140ms ease, stroke-width 140ms ease;
+}
+
+.analytics-hover-row {
+  outline: none;
+}
+
+.analytics-hover-row:hover .analytics-data-bar,
+.analytics-hover-row.active .analytics-data-bar,
+.analytics-hover-row:focus .analytics-data-bar,
+.analytics-outcome-day:hover rect:not(.analytics-hit-target),
+.analytics-outcome-day.active rect:not(.analytics-hit-target),
+.analytics-outcome-day:focus rect:not(.analytics-hit-target) {
+  filter: brightness(1.12);
+}
+
+.analytics-hit-target {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.analytics-outcome-day {
+  cursor: pointer;
+  outline: none;
+}
+
 .analytics-line {
   fill: none;
-  stroke-width: 2.8;
+  stroke-width: 3.2;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
@@ -106,7 +132,20 @@
 .analytics-point {
   fill: #111b2b;
   stroke: #b8a7df;
-  stroke-width: 2.8;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.analytics-crosshair line {
+  stroke: rgba(226, 232, 240, 0.52);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.analytics-crosshair circle {
+  stroke: #111b2b;
+  stroke-width: 3;
   vector-effect: non-scaling-stroke;
 }
 
@@ -115,13 +154,14 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.65rem 1.15rem;
-  margin-block-end: 0.9rem;
-  color: rgba(226, 232, 240, 0.84);
+  margin-block-end: 0.8rem;
+  color: rgba(226, 232, 240, 0.86);
   font-size: 0.82rem;
   font-weight: 560;
 }
 
-.analytics-legend > span {
+.analytics-legend > span,
+.analytics-legend > button {
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
@@ -131,8 +171,67 @@
 .analytics-legend i {
   inline-size: 0.68rem;
   block-size: 0.68rem;
+  flex: 0 0 auto;
   border-radius: 3px;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+.analytics-legend-interactive > button {
+  appearance: none;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.35);
+  color: inherit;
+  padding: 0.38rem 0.68rem;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, opacity 140ms ease;
+}
+
+.analytics-legend-interactive > button:hover,
+.analytics-legend-interactive > button:focus-visible {
+  border-color: rgba(148, 163, 184, 0.48);
+  background: rgba(51, 65, 85, 0.38);
+  outline: none;
+}
+
+.analytics-legend-interactive > button.muted {
+  opacity: 0.42;
+}
+
+.analytics-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 1rem;
+  min-block-size: 2.7rem;
+  margin-block-end: 0.8rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.24);
+  padding: 0.58rem 0.75rem;
+  color: rgba(203, 213, 225, 0.78);
+  font-size: 0.78rem;
+}
+
+.analytics-readout strong {
+  color: rgba(248, 250, 252, 0.98);
+  font-size: 0.82rem;
+}
+
+.analytics-readout span + span {
+  position: relative;
+}
+
+.analytics-readout span + span::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -0.55rem;
+  inset-block-start: 50%;
+  inline-size: 3px;
+  block-size: 3px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.55);
 }
 
 .analytics-caption {
@@ -148,6 +247,11 @@
   gap: 1rem;
 }
 
+.analytics-billing-grid-large {
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
 .analytics-billing-panel,
 .analytics-aging-panel {
   border: 1px solid rgba(148, 163, 184, 0.17);
@@ -156,25 +260,42 @@
   padding: 1rem 1rem 0.65rem;
 }
 
+.analytics-billing-panel-large {
+  padding: 1.1rem 1.2rem 0.85rem;
+}
+
 .analytics-billing-panel > header {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-block-end: 0.7rem;
+  margin-block-end: 0.75rem;
+}
+
+.analytics-billing-panel > header > div {
+  display: grid;
+  gap: 0.28rem;
 }
 
 .analytics-billing-panel > header strong,
 .analytics-aging-panel > strong {
-  color: rgba(248, 250, 252, 0.97);
-  font-size: 0.96rem;
+  color: rgba(248, 250, 252, 0.98);
+  font-size: 1rem;
+}
+
+.analytics-billing-panel > header small,
+.analytics-billing-panel > header span {
+  color: rgba(203, 213, 225, 0.72);
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .analytics-billing-panel > header span {
-  color: rgba(203, 213, 225, 0.72);
-  font-size: 0.76rem;
-  font-weight: 600;
   text-align: end;
+}
+
+.analytics-billing-svg {
+  min-block-size: 360px;
 }
 
 .analytics-aging-panel > strong {
@@ -182,9 +303,6 @@
   margin: 0.15rem 0 0.35rem;
 }
 
-/* A typical 1366–1680 px desktop has less usable width after the Pearlix
-   navigation rail. At that size, prioritize readable charts over packing two
-   cards side-by-side. */
 @media (max-width: 1720px) {
   .admin-analytics-grid {
     grid-template-columns: 1fr;
@@ -193,18 +311,23 @@
   .admin-analytics-grid > .admin-analytics-wide {
     grid-column: auto;
   }
+
+  .analytics-chart-block {
+    max-inline-size: none;
+  }
 }
 
-/* Billing and aging each contain two independent currency plots. Keep them
-   side-by-side while they have enough room, then stack them cleanly. */
 @media (max-width: 1180px) {
-  .analytics-billing-grid,
   .analytics-aging-grid {
     grid-template-columns: 1fr;
   }
 
-  .analytics-chart-block {
-    max-inline-size: none;
+  .analytics-billing-panel > header {
+    flex-direction: column;
+  }
+
+  .analytics-billing-panel > header span {
+    text-align: start;
   }
 }
 
@@ -220,8 +343,12 @@
   }
 
   .analytics-legend {
-    gap: 0.45rem 0.75rem;
+    gap: 0.45rem 0.65rem;
     font-size: 0.72rem;
+  }
+
+  .analytics-readout {
+    font-size: 0.7rem;
   }
 
   .analytics-axis-label {
@@ -236,14 +363,14 @@
     font-size: 11px;
   }
 
-  /* Thirty daily bars need a minimum plotting width on phones. Preserve the
-     analytical scale and allow horizontal scrolling instead of crushing labels. */
-  .analytics-svg-wide {
-    min-inline-size: 760px;
+  .analytics-svg-wide,
+  .analytics-billing-svg {
+    min-inline-size: 820px;
     max-block-size: none;
   }
 
-  .admin-analytics-wide .analytics-chart-block {
+  .admin-analytics-wide .analytics-chart-block,
+  .analytics-billing-panel-large {
     overflow-x: auto;
     overscroll-behavior-inline: contain;
   }
