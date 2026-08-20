@@ -9,9 +9,12 @@ from rest_framework_simplejwt.settings import api_settings
 
 ACCOUNT_VERSION_CLAIM = "account_version"
 
-# Login and refresh do not require an access token.  Ignoring an accidentally
-# attached stale Authorization header keeps those recovery paths usable.
-UNAUTHENTICATED_TOKEN_LIFECYCLE_URLS = frozenset({"auth-login", "auth-refresh"})
+# Public token-lifecycle endpoints do not require an access token.  Ignoring
+# an accidentally attached stale Authorization header keeps recovery and
+# refresh-token blacklisting usable during identity transitions.
+UNAUTHENTICATED_TOKEN_LIFECYCLE_URLS = frozenset(
+    {"auth-login", "auth-refresh", "auth-logout"}
+)
 PASSWORD_CHANGE_ALLOWED_URLS = frozenset(
     {
         "auth-change-password",
@@ -40,7 +43,11 @@ class AccountVersionTokenRefreshSerializer(TokenRefreshSerializer):
         user = get_user_model().objects.filter(
             **{api_settings.USER_ID_FIELD: user_id}
         ).first()
-        if user is not None and refresh.get(ACCOUNT_VERSION_CLAIM) != user.version:
+        if (
+            user is None
+            or not user.is_active
+            or refresh.get(ACCOUNT_VERSION_CLAIM) != user.version
+        ):
             raise AccountAuthorityChanged()
         return super().validate(attrs)
 
@@ -48,9 +55,10 @@ class AccountVersionTokenRefreshSerializer(TokenRefreshSerializer):
 class PasswordLifecycleJWTAuthentication(JWTAuthentication):
     """Reject stale role authority and gate temporary-password accounts.
 
-    Every issued Pearlix token is bound to ``User.version``.  Role transitions
-    increment that version, so an access or refresh token issued under the old
-    role cannot retain authority.  A current token for an account with
+    Every issued Pearlix token is bound to ``User.version``.  Credential,
+    activation, and role lifecycle transitions increment that version, so an
+    access or refresh token issued under old state cannot retain authority.  A
+    current token for an account with
     ``must_change_password`` may reach only identity, password-change, and
     logout endpoints until the password is changed.
     """
@@ -65,9 +73,7 @@ class PasswordLifecycleJWTAuthentication(JWTAuthentication):
             return None
 
         user, validated_token = authenticated
-        # Logout remains available for a signed token after a role transition,
-        # allowing its paired refresh token to be blacklisted deliberately.
-        if url_name != "auth-logout" and validated_token.get(ACCOUNT_VERSION_CLAIM) != user.version:
+        if validated_token.get(ACCOUNT_VERSION_CLAIM) != user.version:
             raise AccountAuthorityChanged()
         if user.must_change_password and url_name not in PASSWORD_CHANGE_ALLOWED_URLS:
             raise PasswordChangeRequired()

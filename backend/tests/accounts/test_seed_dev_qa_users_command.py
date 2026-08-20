@@ -4,6 +4,7 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import override_settings
+from rest_framework.test import APIClient
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
 
@@ -38,18 +39,25 @@ def test_command_creates_admin_staff_and_doctor_users():
     assert "created: admin.qa@pearlix.local" in output
     assert "profile=staff created" in output
     assert "profile=doctor created" in output
+    assert QA_PASSWORD not in output
 
 
 @pytest.mark.django_db
 @override_settings(DEBUG=True)
 def test_command_is_idempotent_and_does_not_duplicate_users():
     run_command("--password", QA_PASSWORD)
-    first_ids = set(User.objects.filter(email__in=QA_EMAILS).values_list("id", flat=True))
+    first_users = {
+        user.email: (user.id, user.version)
+        for user in User.objects.filter(email__in=QA_EMAILS)
+    }
 
     output = run_command("--password", QA_PASSWORD)
 
     assert User.objects.filter(email__in=QA_EMAILS).count() == 3
-    assert set(User.objects.filter(email__in=QA_EMAILS).values_list("id", flat=True)) == first_ids
+    assert {
+        user.email: (user.id, user.version)
+        for user in User.objects.filter(email__in=QA_EMAILS)
+    } == first_users
     assert "updated: admin.qa@pearlix.local" in output
     assert "profile=staff present" in output
     assert "profile=doctor present" in output
@@ -72,12 +80,46 @@ def test_existing_password_is_preserved_without_reset_passwords():
 @override_settings(DEBUG=True)
 def test_existing_password_changes_with_reset_passwords():
     run_command("--password", QA_PASSWORD)
+    user = User.objects.get(email=STAFF_EMAIL)
+    initial_version = user.version
 
     run_command("--password", "AnotherDev123!", "--reset-passwords")
 
     user = User.objects.get(email=STAFF_EMAIL)
     assert user.check_password("AnotherDev123!")
     assert user.check_password(QA_PASSWORD) is False
+    assert user.version == initial_version + 1
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_existing_password_reset_revokes_pre_reset_access_and_refresh_tokens():
+    run_command("--password", QA_PASSWORD)
+    user = User.objects.get(email=STAFF_EMAIL)
+    initial_version = user.version
+    client = APIClient()
+    login = client.post(
+        "/api/auth/login/",
+        {"email": user.email, "password": QA_PASSWORD},
+        format="json",
+        REMOTE_ADDR="198.51.100.177",
+    )
+    assert login.status_code == 200
+
+    run_command("--password", "AnotherDev123!", "--reset-passwords")
+
+    user.refresh_from_db()
+    assert user.version == initial_version + 1
+    old_access_client = APIClient()
+    old_access_client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+    assert old_access_client.get("/api/me/").status_code == 401
+    old_refresh = APIClient().post(
+        "/api/auth/refresh/",
+        {"refresh": login.data["refresh"]},
+        format="json",
+        REMOTE_ADDR="198.51.100.177",
+    )
+    assert old_refresh.status_code == 401
 
 
 @pytest.mark.django_db
@@ -92,13 +134,13 @@ def test_environment_variable_password_works(monkeypatch):
 
 @pytest.mark.django_db
 @override_settings(DEBUG=True)
-def test_fallback_password_works_when_no_arg_or_env_password_exists(monkeypatch):
+def test_password_is_required_when_no_arg_or_env_password_exists(monkeypatch):
     monkeypatch.delenv("PEARLIX_DEV_QA_PASSWORD", raising=False)
 
-    output = run_command()
+    with pytest.raises(CommandError, match="Provide a local QA password"):
+        run_command()
 
-    assert "Using local development fallback password. Never use this password in production." in output
-    assert User.objects.get(email=ADMIN_EMAIL).check_password(QA_PASSWORD)
+    assert not User.objects.filter(email__in=QA_EMAILS).exists()
 
 
 @pytest.mark.django_db
@@ -146,18 +188,17 @@ def test_command_can_run_when_debug_false_with_allow_non_debug():
 @pytest.mark.django_db
 @override_settings(DEBUG=False)
 def test_show_passwords_is_rejected_when_debug_false_even_with_allow_non_debug():
-    with pytest.raises(CommandError, match="--show-passwords is only allowed when DEBUG is true"):
+    with pytest.raises(CommandError, match="Credential output is disabled"):
         run_command("--password", QA_PASSWORD, "--allow-non-debug", "--show-passwords")
 
 
 @pytest.mark.django_db
 @override_settings(DEBUG=True)
-def test_show_passwords_prints_credentials_in_debug_mode():
-    output = run_command("--password", QA_PASSWORD, "--include-must-change-user", "--show-passwords")
+def test_show_passwords_is_rejected_in_debug_mode():
+    with pytest.raises(CommandError, match="Credential output is disabled"):
+        run_command("--password", QA_PASSWORD, "--include-must-change-user", "--show-passwords")
 
-    assert "Local-only credentials:" in output
-    assert f"{ADMIN_EMAIL} / {QA_PASSWORD}" in output
-    assert f"{MUST_CHANGE_EMAIL} / {QA_PASSWORD}" in output
+    assert not User.objects.filter(email__in=QA_EMAILS).exists()
 
 
 @pytest.mark.django_db

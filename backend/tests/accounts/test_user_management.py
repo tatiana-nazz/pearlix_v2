@@ -86,7 +86,11 @@ def test_deactivated_user_cannot_log_in(api_client, admin_client, staff_user):
     )
 
     assert response.status_code == 401
-    assert response.data["code"] == "ACCOUNT_DISABLED"
+    assert response.data == {
+        "code": "INVALID_CREDENTIALS",
+        "message": "Invalid email or password.",
+        "details": {},
+    }
 
 
 @pytest.mark.django_db
@@ -268,8 +272,8 @@ def test_last_active_admin_cannot_be_deactivated_even_by_different_admin_user(ad
 
     response = client.post(f"/api/users/{admin_user.id}/deactivate/")
 
-    assert response.status_code == 409
-    assert response.data["code"] == "INVALID_OPERATION"
+    assert response.status_code == 403
+    assert response.data["code"] == "PERMISSION_DENIED"
     admin_user.refresh_from_db()
     assert admin_user.is_active is True
 

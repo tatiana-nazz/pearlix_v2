@@ -8,7 +8,6 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
-from django.utils.crypto import get_random_string
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
 from apps.ai_results.models import AIResult
@@ -16,6 +15,7 @@ from apps.audit.models import ActivityLog
 from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.services import refresh_handoff_status
 from apps.clinic.models import ClinicSettings
+from apps.common.demo_safety import assert_demo_environment_safe
 from apps.patients.models import Patient
 from apps.patients.selectors import annotate_patient_directory, patient_has_archive_blocking_appointments
 from apps.scheduling.appointment_services import (
@@ -63,10 +63,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true", help="Replace demo records only; preserve non-demo data.")
-        parser.add_argument("--password", default="", help="Shared demo password; random when omitted.")
+        parser.add_argument("--password", default="", help="Shared local/test demo password; never printed.")
 
     def handle(self, *args, **options):
-        password = options["password"] or get_random_string(22)
+        assert_demo_environment_safe()
+        password = options["password"]
+        if not password:
+            raise CommandError(
+                "Provide the local/test demo password with --password; credentials are never printed."
+            )
         existing = User.objects.filter(email__endswith=DEMO_EMAIL_SUFFIX).exists() or Patient.objects.filter(
             national_id_or_passport__startswith=DEMO_PATIENT_PREFIX
         ).exists()
@@ -95,7 +100,7 @@ class Command(BaseCommand):
             ("Doctor", "omar.doctor@pearlix.demo"),
         ):
             self.stdout.write(f"  {label:6} {email}")
-        self.stdout.write(f"  Password for all demo accounts: {password}")
+        self.stdout.write("  Credential values are not printed.")
         self.stdout.write("\nStories: Layla restorative; Omar endodontic; Maya periodontal; Karim no-show/rebook; Noor extraction; Rami needs-reschedule; Hala archived history; Dima new; Tarek cancel/rebook; Salma preventive.")
 
     def reset_demo(self):

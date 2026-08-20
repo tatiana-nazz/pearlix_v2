@@ -40,7 +40,11 @@ def test_inactive_user_login_fails(api_client, inactive_user):
     )
 
     assert response.status_code == 401
-    assert response.data["code"] == "ACCOUNT_DISABLED"
+    assert response.data == {
+        "code": "INVALID_CREDENTIALS",
+        "message": "Invalid email or password.",
+        "details": {},
+    }
 
 
 @pytest.mark.django_db

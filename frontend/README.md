@@ -100,7 +100,7 @@ Phase 13D.1 adds a local development QA account command. Local browser QA users 
 
 ```bash
 cd backend
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user --settings=config.settings.local
+python manage.py seed_dev_qa_users --password "<LOCAL_QA_PASSWORD>" --include-must-change-user --settings=config.settings.local
 ```
 
 - Admin: `admin.qa@pearlix.local`

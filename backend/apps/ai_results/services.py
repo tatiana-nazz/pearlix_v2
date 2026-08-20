@@ -87,7 +87,11 @@ class _ProcessingClaim:
 
 def select_inference_adapter(ai_mode: str) -> InferenceAdapter:
     if ai_mode == ClinicSettings.AiMode.MOCK_ADAPTER:
-        if getattr(settings, "PEARLIX_ALLOW_MOCK_AI", False):
+        is_production = (
+            str(getattr(settings, "PEARLIX_RUNTIME_ENVIRONMENT", "") or "").strip().lower()
+            == "production"
+        )
+        if getattr(settings, "PEARLIX_ALLOW_MOCK_AI", False) and not is_production:
             return _MOCK_ADAPTER
         raise AIServiceNotConfigured
     if ai_mode == ClinicSettings.AiMode.DJANGO_INTERNAL:

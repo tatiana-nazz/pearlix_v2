@@ -1,11 +1,15 @@
 from datetime import datetime, timedelta
 
 import pytest
+from django.contrib import admin
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import RequestFactory, override_settings
 from django.utils import timezone
 
 from apps.accounts.models import User
+from apps.audit.admin import ActivityLogAdmin
 from apps.audit.models import ActivityLog
+from apps.audit.services import log_activity
 from apps.billing.models import Invoice
 from apps.patients.models import Patient
 from apps.scheduling.models import Appointment, WorkingShift
@@ -47,6 +51,122 @@ def test_audit_log_endpoint_permissions_and_no_public_mutations(api_client, admi
     assert create_response.status_code == 405
     assert update_response.status_code == 405
     assert delete_response.status_code == 405
+
+
+@pytest.mark.django_db
+def test_activity_log_django_admin_is_view_only(client):
+    django_admin = User.objects.create_superuser(
+        email="audit-django-admin@example.com",
+        password="strong-admin-password",
+        full_name="Audit Django Admin",
+    )
+    log = ActivityLog.objects.create(
+        actor=django_admin,
+        actor_role=User.Role.ADMIN,
+        action="security_event",
+        entity_type="user",
+        entity_id=str(django_admin.id),
+    )
+    request = RequestFactory().get("/admin/audit/activitylog/")
+    request.user = django_admin
+    model_admin = ActivityLogAdmin(ActivityLog, admin.site)
+
+    assert model_admin.has_view_permission(request, log) is True
+    assert model_admin.has_add_permission(request) is False
+    assert model_admin.has_change_permission(request, log) is False
+    assert model_admin.has_delete_permission(request, log) is False
+
+    client.force_login(django_admin)
+    changelist = client.get("/admin/audit/activitylog/")
+    detail = client.get(f"/admin/audit/activitylog/{log.id}/change/")
+    add = client.get("/admin/audit/activitylog/add/")
+    change = client.post(
+        f"/admin/audit/activitylog/{log.id}/change/",
+        {"action": "tampered"},
+    )
+    delete = client.post(f"/admin/audit/activitylog/{log.id}/delete/", {"post": "yes"})
+
+    assert changelist.status_code == 200
+    assert detail.status_code == 200
+    assert add.status_code == 403
+    assert change.status_code == 403
+    assert delete.status_code == 403
+    log.refresh_from_db()
+    assert log.action == "security_event"
+
+
+@pytest.mark.django_db
+def test_audit_ip_ignores_untrusted_forwarding_header(rf):
+    request = rf.get(
+        "/api/probe",
+        REMOTE_ADDR="203.0.113.40",
+        HTTP_X_FORWARDED_FOR="198.51.100.25",
+    )
+
+    log_activity(request=request, action="ip_probe", entity_type="request")
+
+    assert ActivityLog.objects.get(action="ip_probe").ip_address == "203.0.113.40"
+
+
+@pytest.mark.django_db
+@override_settings(TRUSTED_PROXY_CIDRS=("10.0.0.0/8",))
+def test_audit_ip_uses_rightmost_untrusted_address_from_trusted_proxy_chain(rf):
+    request = rf.get(
+        "/api/probe",
+        REMOTE_ADDR="10.0.0.8",
+        HTTP_X_FORWARDED_FOR="192.0.2.200, 198.51.100.25, 10.1.2.3",
+    )
+
+    log_activity(request=request, action="trusted_ip_probe", entity_type="request")
+
+    # The left-most value can be attacker-supplied.  The right-most untrusted
+    # hop is the address accepted by the trusted reverse-proxy boundary.
+    assert ActivityLog.objects.get(action="trusted_ip_probe").ip_address == "198.51.100.25"
+
+
+@pytest.mark.django_db
+@override_settings(TRUSTED_PROXY_CIDRS=("10.0.0.0/8", "not-a-network"))
+@pytest.mark.parametrize(
+    "remote_address,forwarded_for,expected",
+    [
+        ("10.0.0.8", "not-an-ip, 198.51.100.25", "10.0.0.8"),
+        ("10.0.0.8", "198.51.100.25,", "10.0.0.8"),
+        ("not-an-ip", "198.51.100.25", None),
+        ("10.0.0.8", ",".join(["198.51.100.25"] * 33), "10.0.0.8"),
+        ("10.0.0.8", "1" * 2049, "10.0.0.8"),
+    ],
+)
+def test_malformed_or_oversized_forwarding_data_cannot_break_audit_logging(
+    rf,
+    remote_address,
+    forwarded_for,
+    expected,
+):
+    request = rf.get(
+        "/api/probe",
+        REMOTE_ADDR=remote_address,
+        HTTP_X_FORWARDED_FOR=forwarded_for,
+    )
+
+    log_activity(request=request, action="malformed_ip_probe", entity_type="request")
+
+    assert ActivityLog.objects.get(action="malformed_ip_probe").ip_address == expected
+
+
+@pytest.mark.django_db
+def test_audit_failure_policy_is_fail_open_by_default_and_explicitly_fail_closed_for_durable_events(monkeypatch):
+    def audit_unavailable(**_kwargs):
+        raise RuntimeError("audit unavailable")
+
+    monkeypatch.setattr(ActivityLog.objects, "create", audit_unavailable)
+
+    log_activity(action="ordinary_read_audit", entity_type="request")
+    with pytest.raises(RuntimeError, match="audit unavailable"):
+        log_activity(
+            action="security_lifecycle_audit",
+            entity_type="user",
+            raise_on_error=True,
+        )
 
 
 @pytest.mark.django_db

@@ -105,6 +105,13 @@ class UserManagementSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"role": ["Use the transition-role action for professional role changes."]})
             if "is_active" in attrs and attrs["is_active"] != self.instance.is_active:
                 raise serializers.ValidationError({"is_active": ["Use the deactivate or reactivate action."]})
+            password_fields = {
+                field: ["Use the reset-password action."]
+                for field in ("password", "temporary_password")
+                if field in attrs
+            }
+            if password_fields:
+                raise serializers.ValidationError(password_fields)
         password = attrs.get("temporary_password") or attrs.get("password")
         if self.instance is None and not password:
             raise serializers.ValidationError({"password": ["This field is required."]})
@@ -132,11 +139,8 @@ class UserManagementSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        password = validated_data.pop("temporary_password", None) or validated_data.pop("password", None)
         for field, value in validated_data.items():
             setattr(instance, field, value)
-        if password:
-            instance.set_user_password(password, must_change_password=True, mark_changed=False)
         instance.save()
         return instance
 

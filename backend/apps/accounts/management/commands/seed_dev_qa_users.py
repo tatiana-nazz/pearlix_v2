@@ -5,14 +5,20 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
+from apps.common.demo_safety import assert_demo_environment_safe
 
 
-FALLBACK_PASSWORD = "PearlixDev123!"
-FALLBACK_WARNING = "Using local development fallback password. Never use this password in production."
 NON_DEBUG_WARNING = (
     "WARNING: seed_dev_qa_users is intended only for controlled QA/dev environments. "
     "Do not run it against production data."
 )
+SECURITY_SENSITIVE_USER_FIELDS = {
+    "role",
+    "is_active",
+    "is_staff",
+    "is_superuser",
+    "must_change_password",
+}
 
 
 QA_USERS = [
@@ -58,7 +64,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--show-passwords",
             action="store_true",
-            help="Print local-only credentials. Allowed only when DEBUG is true.",
+            help="Deprecated compatibility flag; raw credentials are never printed.",
         )
         parser.add_argument(
             "--allow-non-debug",
@@ -67,16 +73,15 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        assert_demo_environment_safe()
+        if options["show_passwords"]:
+            raise CommandError("Credential output is disabled; raw passwords are never printed.")
         if not settings.DEBUG and not options["allow_non_debug"]:
             raise CommandError("Refusing to seed QA users when DEBUG is false. Use --allow-non-debug only for controlled QA/dev environments.")
-        if options["show_passwords"] and not settings.DEBUG:
-            raise CommandError("--show-passwords is only allowed when DEBUG is true.")
         if not settings.DEBUG and options["allow_non_debug"]:
             self.stdout.write(self.style.WARNING(NON_DEBUG_WARNING))
 
-        password, used_fallback = self._password_from_options(options)
-        if used_fallback:
-            self.stdout.write(self.style.WARNING(FALLBACK_WARNING))
+        password = self._password_from_options(options)
 
         users = list(QA_USERS)
         if options["include_must_change_user"]:
@@ -95,19 +100,15 @@ class Command(BaseCommand):
                 )
             )
 
-        if options["show_passwords"]:
-            self.stdout.write("")
-            self.stdout.write("Local-only credentials:")
-            for spec in users:
-                self.stdout.write(f"{spec['email']} / {password}")
-
     def _password_from_options(self, options):
         if options["password"]:
-            return options["password"], False
+            return options["password"]
         env_password = os.environ.get("PEARLIX_DEV_QA_PASSWORD")
         if env_password:
-            return env_password, False
-        return FALLBACK_PASSWORD, True
+            return env_password
+        raise CommandError(
+            "Provide a local QA password with --password or PEARLIX_DEV_QA_PASSWORD; credentials are never printed."
+        )
 
     def _upsert_user(self, spec, *, password, reset_passwords):
         email = User.objects.normalize_email(spec["email"])
@@ -124,6 +125,7 @@ class Command(BaseCommand):
         )
 
         changed_fields = []
+        security_state_changed = False
         for field, value in {
             "full_name": spec["full_name"],
             "role": spec["role"],
@@ -135,10 +137,18 @@ class Command(BaseCommand):
             if getattr(user, field) != value:
                 setattr(user, field, value)
                 changed_fields.append(field)
+                if field in SECURITY_SENSITIVE_USER_FIELDS:
+                    security_state_changed = True
 
         if created or reset_passwords:
             user.set_password(password)
             changed_fields.append("password")
+            if not created:
+                security_state_changed = True
+
+        if security_state_changed:
+            user.version += 1
+            changed_fields.append("version")
 
         if changed_fields:
             user.save(update_fields=sorted(set([*changed_fields, "updated_at"])))

@@ -3,7 +3,18 @@ import { persist } from "zustand/middleware";
 
 import { authApi } from "../api/endpoints/auth";
 import { configureAuthAccessors } from "../api/http";
+import { rotateAuthenticatedQueryClient } from "../app/queryClient";
 import type { AuthStatus, AuthUser, ChangePasswordPayload, LanguagePreference, LoginPayload, ThemePreference, UserRole } from "../types/auth";
+
+let authSessionRevision = 0;
+let latestLoginRequest = 0;
+
+class AuthSessionSupersededError extends Error {
+  constructor() {
+    super("The authentication session changed while the request was in progress.");
+    this.name = "AuthSessionSupersededError";
+  }
+}
 
 interface AuthState {
   accessToken: string | null;
@@ -43,7 +54,17 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       authStatus: "unknown",
       async login(payload) {
+        const loginRequest = ++latestLoginRequest;
+        const startingRevision = authSessionRevision;
         const response = await authApi.login(payload);
+        if (loginRequest !== latestLoginRequest || startingRevision !== authSessionRevision) {
+          throw new AuthSessionSupersededError();
+        }
+        const currentUser = get().user;
+        if (currentUser?.id !== response.user.id || currentUser?.role !== response.user.role) {
+          rotateAuthenticatedQueryClient();
+        }
+        authSessionRevision += 1;
         set({
           accessToken: response.access,
           refreshToken: response.refresh,
@@ -53,6 +74,9 @@ export const useAuthStore = create<AuthState>()(
       },
       async logout() {
         const refresh = get().refreshToken;
+        // The refresh token is sufficient proof for the server to revoke
+        // itself. Drop local identity and PHI before any network wait.
+        get().clearAuth();
         if (refresh) {
           try {
             await authApi.logout(refresh);
@@ -60,24 +84,53 @@ export const useAuthStore = create<AuthState>()(
             // Local auth state must clear even if the server token is already invalid.
           }
         }
-        get().clearAuth();
       },
       async loadMe() {
         if (!get().accessToken) {
           set({ authStatus: "anonymous" });
           return null;
         }
+        const startingRevision = authSessionRevision;
+        const startingRefreshToken = get().refreshToken;
         try {
           const user = await authApi.me();
+          if (
+            startingRevision !== authSessionRevision
+            || startingRefreshToken !== get().refreshToken
+          ) {
+            return get().user;
+          }
+          const currentUser = get().user;
+          if (currentUser?.id !== user.id || currentUser?.role !== user.role) {
+            rotateAuthenticatedQueryClient();
+            authSessionRevision += 1;
+          }
           set({ ...deriveAuth(user, get().accessToken) });
           return user;
         } catch {
-          get().clearAuth();
-          return null;
+          if (
+            startingRevision === authSessionRevision
+            && startingRefreshToken === get().refreshToken
+          ) {
+            get().clearAuth();
+            return null;
+          }
+          return get().user;
         }
       },
       async changePassword(payload) {
+        const startingRevision = authSessionRevision;
+        const startingRefreshToken = get().refreshToken;
+        const startingUserId = get().user?.id;
         const response = await authApi.changePassword(payload);
+        if (
+          startingRevision !== authSessionRevision
+          || startingRefreshToken !== get().refreshToken
+          || startingUserId !== get().user?.id
+        ) {
+          throw new AuthSessionSupersededError();
+        }
+        authSessionRevision += 1;
         set({
           accessToken: response.access,
           refreshToken: response.refresh,
@@ -88,14 +141,29 @@ export const useAuthStore = create<AuthState>()(
       async updatePreferences(preferences) {
         const previous = get().user;
         if (!previous) throw new Error("You must be signed in to update preferences.");
+        const startingRevision = authSessionRevision;
+        const startingRefreshToken = get().refreshToken;
         const optimistic = { ...previous, ...preferences };
         set({ user: optimistic, role: optimistic.role });
         try {
           const user = await authApi.updatePreferences(preferences);
+          if (
+            startingRevision !== authSessionRevision
+            || startingRefreshToken !== get().refreshToken
+            || previous.id !== get().user?.id
+          ) {
+            throw new AuthSessionSupersededError();
+          }
           set({ ...deriveAuth(user, get().accessToken) });
           return user;
         } catch (error) {
-          set({ user: previous, role: previous.role });
+          if (
+            startingRevision === authSessionRevision
+            && startingRefreshToken === get().refreshToken
+            && previous.id === get().user?.id
+          ) {
+            set({ user: previous, role: previous.role });
+          }
           throw error;
         }
       },
@@ -108,6 +176,8 @@ export const useAuthStore = create<AuthState>()(
         }));
       },
       clearAuth() {
+        authSessionRevision += 1;
+        rotateAuthenticatedQueryClient();
         set({
           accessToken: null,
           refreshToken: null,
@@ -139,6 +209,7 @@ export const useAuthStore = create<AuthState>()(
 configureAuthAccessors({
   getAccessToken: () => useAuthStore.getState().accessToken,
   getRefreshToken: () => useAuthStore.getState().refreshToken,
+  getSessionRevision: () => authSessionRevision,
   setAccessToken: (token) => useAuthStore.getState().setTokens(token),
   clearAuth: () => useAuthStore.getState().clearAuth(),
 });

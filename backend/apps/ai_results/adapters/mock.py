@@ -4,6 +4,8 @@ from apps.ai_results.result_types import DisplayFinding, FindingDecision, ImageI
 
 
 MOCK_MODEL_VERSION = "pearlix-mock-xray-v1"
+MOCK_SCORE_SEMANTICS = "DETERMINISTIC_MOCK_SCORE"
+MOCK_ADAPTER_NAME = "mock"
 
 
 class MockInferenceAdapter:
@@ -16,8 +18,8 @@ class MockInferenceAdapter:
             result_summary="Research-only AI analysis completed.",
             overall_confidence=0.74,
             model_version=self.model_version,
-            score_semantics="DETERMINISTIC_MOCK_SCORE",
-            pipeline_metadata={"adapter": "mock"},
+            score_semantics=MOCK_SCORE_SEMANTICS,
+            pipeline_metadata={"adapter": MOCK_ADAPTER_NAME},
             display_findings=(
                 DisplayFinding(
                     fdi_tooth_id="36",

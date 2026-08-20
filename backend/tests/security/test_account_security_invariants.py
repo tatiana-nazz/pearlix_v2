@@ -233,15 +233,17 @@ def test_privilege_cleanup_migration_repairs_preexisting_non_admin_rows():
 
     new_target = (
         "accounts",
-        "0006_clear_non_admin_django_privileges",
+        "0007_accountsecuritystate",
     )
     executor = MigrationExecutor(connection)
     executor.migrate([new_target])
     new_apps = executor.loader.project_state([new_target]).apps
     migrated_user = new_apps.get_model("accounts", "User").objects.get(pk=user.pk)
+    security_state_model = new_apps.get_model("accounts", "AccountSecurityState")
 
     assert migrated_user.is_staff is False
     assert migrated_user.is_superuser is False
+    assert security_state_model.objects.filter(pk=1).exists()
 
 
 @pytest.mark.django_db

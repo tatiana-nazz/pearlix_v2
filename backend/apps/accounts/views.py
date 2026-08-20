@@ -3,7 +3,7 @@ from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
 from rest_framework import status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -34,6 +34,7 @@ from apps.accounts.team_services import (
     clinic_today_window,
     confirm_transition,
     create_team_member,
+    deactivate_user,
     linked_profile,
     profile_state,
     reactivate_user,
@@ -41,6 +42,12 @@ from apps.accounts.team_services import (
     transition_preview,
     update_team_profile,
     user_account_summary,
+)
+from apps.accounts.throttling import (
+    LoginIdentifierThrottle,
+    LoginSourceThrottle,
+    LogoutSourceThrottle,
+    RefreshSourceThrottle,
 )
 from apps.audit.services import log_activity
 from apps.common.errors import error_payload, error_response
@@ -61,6 +68,7 @@ def _token_payload(user):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([LoginSourceThrottle, LoginIdentifierThrottle])
 def login_view(request):
     serializer = LoginSerializer(data=request.data)
     if not serializer.is_valid():
@@ -73,12 +81,6 @@ def login_view(request):
 
     email = serializer.validated_data["email"]
     password = serializer.validated_data["password"]
-    if User.objects.filter(email__iexact=email, is_active=False).exists():
-        return error_response(
-            "ACCOUNT_DISABLED",
-            "This account is disabled.",
-            status_code=status.HTTP_401_UNAUTHORIZED,
-        )
     user = authenticate(request=request, username=email, password=password)
     if user is None:
         return error_response(
@@ -91,10 +93,12 @@ def login_view(request):
 
 class RefreshView(TokenRefreshView):
     serializer_class = AccountVersionTokenRefreshSerializer
+    throttle_classes = [RefreshSourceThrottle]
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
+@throttle_classes([LogoutSourceThrottle])
 def logout_view(request):
     refresh_token = request.data.get("refresh")
     if not refresh_token:
@@ -161,6 +165,7 @@ def change_password_view(request):
             entity_type="user",
             entity_id=user.id,
             metadata={"user_id": user.id},
+            raise_on_error=True,
         )
         token_payload = _token_payload(user)
     return Response(token_payload)
@@ -175,13 +180,15 @@ class UserViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         if request.data.get("role") in {User.Role.DOCTOR, User.Role.STAFF}:
             return error_response("PROFILE_REQUIRED", "Use /api/team-members/ to create Doctor or Staff accounts with a professional profile.", {"role": ["Professional accounts must be onboarded through Team."]})
-        return super().create(request, *args, **kwargs)
+        with transaction.atomic():
+            return super().create(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         user = self.get_object()
         if "role" in request.data and request.data["role"] != user.role:
             return error_response("PROFILE_INTEGRITY_ERROR", "Use the transition-role action for professional role changes.", {"role": ["Direct role changes are protected."]})
-        return super().partial_update(request, *args, **kwargs)
+        with transaction.atomic():
+            return super().partial_update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         user = serializer.save()
@@ -191,6 +198,7 @@ class UserViewSet(viewsets.ModelViewSet):
             entity_type="user",
             entity_id=user.id,
             metadata={"created_user_role": user.role},
+            raise_on_error=True,
         )
 
     def perform_update(self, serializer):
@@ -201,51 +209,63 @@ class UserViewSet(viewsets.ModelViewSet):
             entity_type="user",
             entity_id=user.id,
             metadata={"updated_fields": sorted(self.request.data.keys()), "updated_user_role": user.role},
+            raise_on_error=True,
         )
 
     @action(detail=True, methods=["post"], url_path="reset-password")
     def reset_password(self, request, pk=None):
-        user = self.get_object()
-        serializer = AdminResetPasswordSerializer(data=request.data, context={"target_user": user})
-        serializer.is_valid(raise_exception=True)
-        user.set_user_password(serializer.validated_data["temporary_password"], must_change_password=True, mark_changed=False)
-        user.save(update_fields=["password", "must_change_password", "password_changed_at", "updated_at"])
-        log_activity(
-            request=request,
-            action="user_password_reset",
-            entity_type="user",
-            entity_id=user.id,
-            metadata={"target_user_role": user.role},
-        )
-        return Response(UserManagementSerializer(user).data)
+        target_id = self.get_object().id
+        with transaction.atomic():
+            user = User.objects.select_for_update().get(pk=target_id)
+            serializer = AdminResetPasswordSerializer(
+                data=request.data,
+                context={"target_user": user},
+            )
+            serializer.is_valid(raise_exception=True)
+            user.set_user_password(
+                serializer.validated_data["temporary_password"],
+                must_change_password=True,
+                mark_changed=False,
+            )
+            user.version += 1
+            user.save(
+                update_fields=[
+                    "password",
+                    "must_change_password",
+                    "password_changed_at",
+                    "version",
+                    "updated_at",
+                ]
+            )
+            log_activity(
+                request=request,
+                action="user_password_reset",
+                entity_type="user",
+                entity_id=user.id,
+                metadata={"target_user_role": user.role},
+                raise_on_error=True,
+            )
+            response_data = UserManagementSerializer(user).data
+        return Response(response_data)
 
     @action(detail=True, methods=["post"])
     def deactivate(self, request, pk=None):
-        user = self.get_object()
-        if user.id == request.user.id:
-            return error_response(
-                "INVALID_OPERATION",
-                "Admin cannot deactivate their own account.",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-        if user.role == User.Role.ADMIN and user.is_active:
-            active_admins = User.objects.filter(role=User.Role.ADMIN, is_active=True).count()
-            if active_admins <= 1:
-                return error_response(
-                    "INVALID_OPERATION",
-                    "Cannot deactivate the last active admin.",
-                    status_code=status.HTTP_409_CONFLICT,
+        target_id = self.get_object().id
+        try:
+            with transaction.atomic():
+                user = deactivate_user(user_id=target_id, actor_id=request.user.id)
+                log_activity(
+                    request=request,
+                    action="user_deactivated",
+                    entity_type="user",
+                    entity_id=user.id,
+                    metadata={"deactivated_user_role": user.role},
+                    raise_on_error=True,
                 )
-        user.is_active = False
-        user.save(update_fields=["is_active", "updated_at"])
-        log_activity(
-            request=request,
-            action="user_deactivated",
-            entity_type="user",
-            entity_id=user.id,
-            metadata={"deactivated_user_role": user.role},
-        )
-        return Response(UserManagementSerializer(user).data)
+                response_data = UserManagementSerializer(user).data
+        except TeamRuleError as exc:
+            return error_response(exc.code, exc.message, exc.details, exc.status_code)
+        return Response(response_data)
 
     @action(detail=True, methods=["post"], url_path="transition-role")
     def transition_role(self, request, pk=None):
@@ -257,27 +277,48 @@ class UserViewSet(viewsets.ModelViewSet):
             if data["mode"] == "PREVIEW":
                 result = transition_preview(user=user, target_role=data["target_role"], actor=request.user)
                 return Response(result)
-            changed = confirm_transition(
-                user_id=user.id,
-                actor=request.user,
-                target_role=data["target_role"],
-                token=data["confirmation_token"],
-                version=data["version"],
-                profile=data.get("profile", {}),
-            )
+            with transaction.atomic():
+                changed = confirm_transition(
+                    user_id=user.id,
+                    actor=request.user,
+                    target_role=data["target_role"],
+                    token=data["confirmation_token"],
+                    version=data["version"],
+                    profile=data.get("profile", {}),
+                )
+                log_activity(
+                    request=request,
+                    action="user_role_transitioned",
+                    entity_type="user",
+                    entity_id=changed.id,
+                    metadata={"source_role": user.role, "target_role": changed.role},
+                    raise_on_error=True,
+                )
+                response_data = UserManagementSerializer(changed).data
         except TeamRuleError as exc:
             return error_response(exc.code, exc.message, exc.details, exc.status_code)
-        log_activity(request=request, action="user_role_transitioned", entity_type="user", entity_id=changed.id, metadata={"source_role": user.role, "target_role": changed.role})
-        return Response(UserManagementSerializer(changed).data)
+        return Response(response_data)
 
     @action(detail=True, methods=["post"])
     def reactivate(self, request, pk=None):
         try:
-            user = reactivate_user(user_id=self.get_object().id)
+            with transaction.atomic():
+                user = reactivate_user(
+                    user_id=self.get_object().id,
+                    actor_id=request.user.id,
+                )
+                log_activity(
+                    request=request,
+                    action="user_reactivated",
+                    entity_type="user",
+                    entity_id=user.id,
+                    metadata={"reactivated_user_role": user.role},
+                    raise_on_error=True,
+                )
+                response_data = UserManagementSerializer(user).data
         except TeamRuleError as exc:
             return error_response(exc.code, exc.message, exc.details, exc.status_code)
-        log_activity(request=request, action="user_reactivated", entity_type="user", entity_id=user.id, metadata={"reactivated_user_role": user.role})
-        return Response(UserManagementSerializer(user).data)
+        return Response(response_data)
 
 
 class TeamMemberPagination(PageNumberPagination):
@@ -371,11 +412,20 @@ class TeamMemberViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         try:
-            user = create_team_member(account=data["account"], role=data["role"], profile=data.get("doctor_profile") or data.get("staff_profile"))
+            with transaction.atomic():
+                user = create_team_member(account=data["account"], role=data["role"], profile=data.get("doctor_profile") or data.get("staff_profile"))
+                log_activity(
+                    request=request,
+                    action="team_member_created",
+                    entity_type="user",
+                    entity_id=user.id,
+                    metadata={"role": user.role, "profile_state": profile_state(user)},
+                    raise_on_error=True,
+                )
+                response_data = _team_summary(user)
         except TeamRuleError as exc:
             return error_response(exc.code, exc.message, exc.details, exc.status_code)
-        log_activity(request=request, action="team_member_created", entity_type="user", entity_id=user.id, metadata={"role": user.role, "profile_state": profile_state(user)})
-        return Response(_team_summary(user), status=status.HTTP_201_CREATED)
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, pk=None):
         try:

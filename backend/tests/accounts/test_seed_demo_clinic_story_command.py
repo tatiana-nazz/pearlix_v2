@@ -51,6 +51,7 @@ def test_demo_story_reset_is_safe_and_second_seed_is_idempotent(tmp_path, billin
     with override_settings(MEDIA_ROOT=tmp_path):
         output = seed("--reset-demo", "--reference-date", "2026-08-08")
         assert "Seeded phase-14a-integrated-demo-story" in output
+        assert PASSWORD not in output
         first = demo_counts()
         assert first["users"] == 9
         assert first["patients"] == 24

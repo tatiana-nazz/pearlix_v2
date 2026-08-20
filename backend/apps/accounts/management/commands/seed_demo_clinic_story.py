@@ -13,6 +13,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
 from apps.ai_results.models import AIResult
@@ -24,6 +25,7 @@ from apps.billing.services import (
     issue_invoice,
 )
 from apps.clinic.models import ClinicSettings
+from apps.common.demo_safety import assert_demo_environment_safe
 from apps.patients.models import Patient
 from apps.scheduling.appointment_services import update_appointment
 from apps.scheduling.exception_services import mark_overlapping_appointments_needs_reschedule
@@ -44,7 +46,6 @@ from apps.xrays.services import (
 DEMO_TAG = "phase-14a-integrated-demo-story"
 EMAIL_DOMAIN = "pearlix-demo.local"
 PATIENT_ID_PREFIX = "DEMO14A-"
-DEFAULT_PASSWORD = "PearlixDemo123!"
 def _png_chunk(kind, payload):
     return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", binascii.crc32(kind + payload) & 0xFFFFFFFF)
 
@@ -125,14 +126,16 @@ class Command(BaseCommand):
     help = "Create the deterministic, development-only Phase 14A integrated clinic demo story."
 
     def add_arguments(self, parser):
-        parser.add_argument("--password", default=DEFAULT_PASSWORD, help="Local demo password (default: PearlixDemo123!).")
+        parser.add_argument("--password", default="", help="Local/test demo password; never printed.")
         parser.add_argument("--reset-demo", action="store_true", help="Delete only records explicitly tagged as this demo story before seeding.")
         parser.add_argument("--include-must-change-user", action="store_true", help="Compatibility flag; the QA password-change account is always included.")
         parser.add_argument("--reference-date", help="Deterministic local reference date in YYYY-MM-DD format.")
 
     def handle(self, *args, **options):
+        assert_demo_environment_safe()
         if not settings.DEBUG:
             raise CommandError("Refusing to seed the demo clinic story when DEBUG is false.")
+        password = options["password"] or get_random_string(22)
         reference_date = self._reference_date(options["reference_date"])
         if options["reset_demo"]:
             self._reset_demo()
@@ -141,7 +144,7 @@ class Command(BaseCommand):
             return
 
         with transaction.atomic():
-            accounts = self._create_accounts(options["password"])
+            accounts = self._create_accounts(password)
             self._configure_clinic(accounts["admin"])
             patients = self._create_patients(accounts["staff.one"], reference_date)
             self._create_schedules(accounts, reference_date)
@@ -159,7 +162,8 @@ class Command(BaseCommand):
         ))
         self.stdout.write("QA accounts (local development only):")
         for key in ("admin", "staff.one", "staff.two", "doctor.one", "doctor.two", "doctor.three", "doctor.four", "doctor.mustchange"):
-            self.stdout.write(f"- {accounts[key].email} / {options['password']}")
+            self.stdout.write(f"- {accounts[key].email}")
+        self.stdout.write("  Credential values are not printed.")
         self.stdout.write(f"  {accounts['doctor.mustchange'].email} requires a password change.")
         self.stdout.write(f"- {accounts['staff.inactive'].email} (inactive; sign-in intentionally blocked)")
 

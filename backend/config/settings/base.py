@@ -114,6 +114,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", [])
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", [])
+# Forwarded client addresses are trusted only when the directly connected
+# peer belongs to an explicitly configured reverse-proxy network.
+TRUSTED_PROXY_CIDRS = env_list("TRUSTED_PROXY_CIDRS", [])
 FRONTEND_URL = env("FRONTEND_URL", "http://localhost:5173")
 AI_SERVICE_URL = env("AI_SERVICE_URL", "")
 AI_SERVICE_TOKEN = env("AI_SERVICE_TOKEN", "")
@@ -148,6 +151,20 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "EXCEPTION_HANDLER": "apps.common.exceptions.standard_exception_handler",
+    "DEFAULT_THROTTLE_RATES": {
+        "auth_login_source": (
+            env("AUTH_LOGIN_SOURCE_THROTTLE_RATE", "60/min") or "60/min"
+        ),
+        "auth_login_identifier": (
+            env("AUTH_LOGIN_IDENTIFIER_THROTTLE_RATE", "10/min") or "10/min"
+        ),
+        "auth_refresh_source": (
+            env("AUTH_REFRESH_SOURCE_THROTTLE_RATE", "120/min") or "120/min"
+        ),
+        "auth_logout_source": (
+            env("AUTH_LOGOUT_SOURCE_THROTTLE_RATE", "120/min") or "120/min"
+        ),
+    },
 }
 
 SIMPLE_JWT = {

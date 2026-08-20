@@ -65,8 +65,8 @@ class User(AbstractBaseUser, TimeStampedModel):
     )
     must_change_password = models.BooleanField(default=False)
     password_changed_at = models.DateTimeField(null=True, blank=True)
-    # Used by explicit account-linkage transitions and bound into JWTs so a
-    # completed role transition invalidates authority issued for the old role.
+    # Bound into JWTs and incremented for credential, activation, and role
+    # lifecycle changes so previously issued authority becomes stale.
     version = models.PositiveIntegerField(default=1)
 
     objects = UserManager()
@@ -112,6 +112,20 @@ class User(AbstractBaseUser, TimeStampedModel):
         self.set_password(raw_password)
         self.must_change_password = must_change_password
         self.password_changed_at = timezone.now() if mark_changed else None
+
+
+class AccountSecurityState(models.Model):
+    """Singleton row used to serialize cross-account authority transitions."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+
+    class Meta:
+        verbose_name = "account security state"
+
+    def save(self, *args, **kwargs):
+        if self.pk != 1:
+            raise ValidationError("Account security state must use the singleton primary key.")
+        return super().save(*args, **kwargs)
 
 
 class DoctorProfile(TimeStampedModel):

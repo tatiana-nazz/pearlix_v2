@@ -7,8 +7,15 @@ import { ApiClientError, toApiClientError } from "./errors";
 type TokenAccessors = {
   getAccessToken: () => string | null;
   getRefreshToken: () => string | null;
+  getSessionRevision: () => number;
   setAccessToken: (token: string) => void;
   clearAuth: () => void;
+};
+
+type AuthSessionSnapshot = {
+  accessToken: string | null;
+  refreshToken: string | null;
+  revision: number;
 };
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api";
@@ -19,7 +26,11 @@ function normalizeBlobEndpoint(url: string) {
 }
 
 let tokenAccessors: TokenAccessors | null = null;
-let refreshPromise: Promise<string> | null = null;
+let refreshAttempt: {
+  promise: Promise<string>;
+  refreshToken: string;
+  revision: number;
+} | null = null;
 
 const client: AxiosInstance = axios.create({
   baseURL: apiBaseUrl,
@@ -32,54 +43,105 @@ export function configureAuthAccessors(accessors: TokenAccessors) {
   tokenAccessors = accessors;
 }
 
-client.interceptors.request.use((config) => {
-  const token = tokenAccessors?.getAccessToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+function captureAuthSession(): AuthSessionSnapshot {
+  return {
+    accessToken: tokenAccessors?.getAccessToken() ?? null,
+    refreshToken: tokenAccessors?.getRefreshToken() ?? null,
+    revision: tokenAccessors?.getSessionRevision() ?? 0,
+  };
+}
 
-async function refreshAccessToken(): Promise<string> {
-  if (!tokenAccessors?.getRefreshToken()) {
+function isCurrentAuthSession(session: AuthSessionSnapshot) {
+  return Boolean(
+    tokenAccessors
+    && tokenAccessors.getSessionRevision() === session.revision
+    && tokenAccessors.getRefreshToken() === session.refreshToken,
+  );
+}
+
+function sessionChangedError() {
+  return new ApiClientError({
+    code: "AUTH_SESSION_CHANGED",
+    message: "Authentication session changed while the request was in progress.",
+    details: {},
+    status: 401,
+  });
+}
+
+function bindAccessToken(config: AxiosRequestConfig, accessToken: string | null) {
+  if (!accessToken) return config;
+  return {
+    ...config,
+    headers: {
+      ...(config.headers ?? {}),
+      Authorization: `Bearer ${accessToken}`,
+    },
+  };
+}
+
+async function refreshAccessToken(session: AuthSessionSnapshot): Promise<string> {
+  if (!session.refreshToken || !tokenAccessors) {
     throw new ApiClientError({ code: "AUTH_REQUIRED", message: "Authentication required.", details: {}, status: 401 });
   }
+  if (!isCurrentAuthSession(session)) throw sessionChangedError();
 
-  if (!refreshPromise) {
-    refreshPromise = axios
+  if (
+    !refreshAttempt
+    || refreshAttempt.revision !== session.revision
+    || refreshAttempt.refreshToken !== session.refreshToken
+  ) {
+    const refreshToken = session.refreshToken;
+    const revision = session.revision;
+    const promise = axios
       .post<RefreshResponse>(`${apiBaseUrl}/auth/refresh/`, {
-        refresh: tokenAccessors.getRefreshToken(),
+        refresh: refreshToken,
       })
       .then((response) => {
+        if (!isCurrentAuthSession(session)) throw sessionChangedError();
         const access = response.data.access;
         tokenAccessors?.setAccessToken(access);
         return access;
       })
       .catch((error) => {
-        tokenAccessors?.clearAuth();
+        if (isCurrentAuthSession(session)) tokenAccessors?.clearAuth();
         throw error;
       })
       .finally(() => {
-        refreshPromise = null;
+        if (refreshAttempt?.promise === promise) refreshAttempt = null;
       });
+    refreshAttempt = { promise, refreshToken, revision };
   }
 
-  return refreshPromise;
+  return refreshAttempt.promise;
 }
 
 async function request<T>(method: Method, url: string, config: AxiosRequestConfig = {}): Promise<T> {
+  const initiatingSession = captureAuthSession();
   try {
-    const response = await client.request<T>({ ...config, method, url });
+    const response = await client.request<T>(
+      bindAccessToken({ ...config, method, url }, initiatingSession.accessToken),
+    );
     return response.data;
   } catch (error) {
     const apiError = toApiClientError(error);
     const alreadyRetried = Boolean(config.headers && "X-Retry-After-Refresh" in config.headers);
 
-    if (apiError.status === 401 && !alreadyRetried && tokenAccessors?.getRefreshToken()) {
+    if (
+      apiError.status === 401
+      && !alreadyRetried
+      && initiatingSession.refreshToken
+      && isCurrentAuthSession(initiatingSession)
+    ) {
       try {
-        await refreshAccessToken();
+        const accessToken = await refreshAccessToken(initiatingSession);
+        if (!isCurrentAuthSession(initiatingSession)) throw sessionChangedError();
         const retryHeaders = { ...(config.headers ?? {}), "X-Retry-After-Refresh": "true" };
-        const response = await client.request<T>({ ...config, method, url, headers: retryHeaders });
+        const response = await client.request<T>(
+          bindAccessToken(
+            { ...config, method, url, headers: retryHeaders },
+            accessToken,
+          ),
+        );
         return response.data;
       } catch (refreshError) {
         throw toApiClientError(refreshError);

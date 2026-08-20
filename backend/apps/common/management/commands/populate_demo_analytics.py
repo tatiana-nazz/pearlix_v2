@@ -13,6 +13,7 @@ from apps.accounts.models import User
 from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.services import create_visit_completion_handoff, issue_invoice
 from apps.clinic.models import ClinicSettings
+from apps.common.demo_safety import assert_demo_environment_safe
 from apps.patients.models import Patient
 from apps.scheduling.appointment_services import (
     AppointmentRuleError,
@@ -64,6 +65,7 @@ class Command(BaseCommand):
         parser.add_argument("--reset", action="store_true", help="Replace only this supplemental analytics dataset.")
 
     def handle(self, *args, **options):
+        assert_demo_environment_safe()
         generated_patient_ids = self.generated_patient_ids()
         if generated_patient_ids and not options["reset"]:
             raise CommandError("Supplemental analytics demo data already exists. Re-run with --reset.")

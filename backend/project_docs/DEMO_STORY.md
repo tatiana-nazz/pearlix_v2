@@ -9,7 +9,7 @@ cd backend
 python manage.py seed_demo_clinic_story --password "<LOCAL_QA_PASSWORD>" --reset-demo --reference-date 2026-08-08 --settings=config.settings.local
 ```
 
-`--password` accepts a local QA password and defaults to a development-only value. Do not commit or reuse it outside local development. The command refuses to run unless `DEBUG=true`. `--reference-date YYYY-MM-DD` makes the relative story dates deterministic; without it the command derives the date in the configured clinic timezone. `--include-must-change-user` remains accepted for compatibility, but the must-change QA account is now always included.
+`--password` accepts a local QA password; when omitted, the command generates an inaccessible random value and never prints credentials. Do not commit or reuse supplied credentials outside local development. The command refuses production/deployed/live-database targets and also requires `DEBUG=true`. `--reference-date YYYY-MM-DD` makes the relative story dates deterministic; without it the command derives the date in the configured clinic timezone. `--include-must-change-user` remains accepted for compatibility, but the must-change QA account is now always included.
 
 Without `--reset-demo`, an existing Phase 14A story is left untouched. With it, only accounts whose email ends with `@pearlix-demo.local` are removed, together with patients whose identity begins `DEMO14A-`, their transitively owned workflow records, audit rows tagged by the `phase-14a-integrated-demo-story` marker, and `demo14a-` media. It never deletes unrelated users, patients, workflow records, audit rows, settings, or media.
 

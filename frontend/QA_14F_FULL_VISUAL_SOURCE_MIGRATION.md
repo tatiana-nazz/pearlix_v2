@@ -6,10 +6,10 @@ Run against the deterministic Phase 14A local story:
 
 ```powershell
 cd backend
-.\.venv\Scripts\python.exe manage.py seed_demo_clinic_story --password "PearlixDemo123!" --reset-demo --include-must-change-user --settings=config.settings.local
+.\.venv\Scripts\python.exe manage.py seed_demo_clinic_story --password "<LOCAL_QA_PASSWORD>" --reset-demo --include-must-change-user --settings=config.settings.local
 
 cd ..\frontend
-$env:PEARLIX_E2E_PASSWORD = "PearlixDemo123!"
+$env:PEARLIX_E2E_PASSWORD = "<LOCAL_QA_PASSWORD>"
 $env:PHASE14F_EVIDENCE_DIR = "<outside-git-evidence-directory>"
 npm run test:e2e
 ```

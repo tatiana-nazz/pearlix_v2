@@ -15,6 +15,7 @@ from apps.accounts.models import DoctorProfile, StaffProfile, User
 from apps.audit.models import ActivityLog
 from apps.billing.models import BillingHandoff, Invoice
 from apps.clinic.models import ClinicSettings
+from apps.common.demo_safety import assert_demo_environment_safe
 from apps.patients.models import Patient
 from apps.patients.selectors import annotate_patient_directory, patient_has_archive_blocking_appointments
 from apps.scheduling.appointment_services import (
@@ -44,6 +45,7 @@ class Command(BaseCommand):
     help = "Normalize demo-seed chronology and run a stronger cross-module consistency audit."
 
     def handle(self, *args, **options):
+        assert_demo_environment_safe()
         demo = Patient.objects.filter(national_id_or_passport__startswith=DEMO_PATIENT_PREFIX)
         if not demo.exists():
             raise CommandError("No Pearlix demo patients were found.")

@@ -35,7 +35,8 @@ pytestmark = pytest.mark.django_db(transaction=True)
 
 def test_demo_seed_creates_coherent_longitudinal_stories_and_is_resettable():
     output = StringIO()
-    call_command("seed_demo", password="StrongDemoPassword!2026", stdout=output)
+    supplied_password = "StrongDemoPassword!2026"
+    call_command("seed_demo", password=supplied_password, stdout=output)
 
     assert User.objects.filter(email__endswith="@pearlix.demo").count() == 4
     assert Patient.objects.filter(national_id_or_passport__startswith="DEMO-P").count() == 10
@@ -48,11 +49,22 @@ def test_demo_seed_creates_coherent_longitudinal_stories_and_is_resettable():
         employee__email="sara.doctor@pearlix.demo", weekday=4, is_active=True
     ).exists()
     assert "consistency audit PASS" in output.getvalue()
+    assert supplied_password not in output.getvalue()
 
     # A reset replaces demo records without duplicating them.
     call_command("seed_demo", reset=True, password="StrongDemoPassword!2026")
     assert User.objects.filter(email__endswith="@pearlix.demo").count() == 4
     assert Patient.objects.filter(national_id_or_passport__startswith="DEMO-P").count() == 10
+
+
+def test_demo_seed_requires_an_explicit_password_and_creates_no_rows():
+    with pytest.raises(CommandError, match="Provide the local/test demo password"):
+        call_command("seed_demo")
+
+    assert not User.objects.filter(email__endswith="@pearlix.demo").exists()
+    assert not Patient.objects.filter(
+        national_id_or_passport__startswith="DEMO-P"
+    ).exists()
 
 
 def test_realistic_analytics_population_requires_billing_provenance_and_canonical_finalization(monkeypatch):

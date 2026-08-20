@@ -1,9 +1,15 @@
 from pathlib import Path
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
+from apps.ai_results.adapters.mock import (
+    MOCK_ADAPTER_NAME,
+    MOCK_MODEL_VERSION,
+    MOCK_SCORE_SEMANTICS,
+)
 from apps.common.models import TimeStampedModel
 
 
@@ -66,8 +72,34 @@ class AIResult(TimeStampedModel):
             errors["model_version"] = "Model version is required for completed AI results."
         if self.overlay_file and Path(self.overlay_file.name).suffix.lower() != ".png":
             errors["overlay_file"] = "AI overlay file must be png."
+        if self._is_production_mock_result():
+            errors["model_version"] = "Synthetic AI results cannot be persisted in production."
         if errors:
             raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self._is_production_mock_result():
+            raise ValidationError(
+                {"model_version": "Synthetic AI results cannot be persisted in production."}
+            )
+        return super().save(*args, **kwargs)
+
+    def _is_production_mock_result(self) -> bool:
+        if (
+            str(getattr(settings, "PEARLIX_RUNTIME_ENVIRONMENT", "") or "").strip().lower()
+            != "production"
+        ):
+            return False
+        pipeline = (
+            self.findings_json.get("pipeline", {})
+            if isinstance(self.findings_json, dict)
+            else {}
+        )
+        return (
+            self.model_version == MOCK_MODEL_VERSION
+            or pipeline.get("adapter") == MOCK_ADAPTER_NAME
+            or pipeline.get("score_semantics") == MOCK_SCORE_SEMANTICS
+        )
 
     def __str__(self) -> str:
         source_id = self.xray_attachment_id or self.external_xray_case_id

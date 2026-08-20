@@ -7,10 +7,10 @@ These accounts are for local development and browser QA only. They are not produ
 ## Safety
 
 - The command is DEBUG-only by default.
-- Never use the fallback password in production.
+- Supply the password explicitly or through `PEARLIX_DEV_QA_PASSWORD`.
 - Never commit `.env` files or secrets.
 - Never expose these accounts on a public deployment.
-- Passwords are set with Django password hashing and are not printed unless `--show-passwords` is explicitly used in DEBUG mode.
+- Passwords are set with Django password hashing and are never printed by the command.
 
 ## Default QA Users
 
@@ -34,10 +34,9 @@ Optional must-change-password Doctor:
 
 ```bash
 cd backend
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --settings=config.settings.local
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --reset-passwords --settings=config.settings.local
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user --settings=config.settings.local
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user --show-passwords --settings=config.settings.local
+python manage.py seed_dev_qa_users --password "<LOCAL_QA_PASSWORD>" --settings=config.settings.local
+python manage.py seed_dev_qa_users --password "<LOCAL_QA_PASSWORD>" --reset-passwords --settings=config.settings.local
+python manage.py seed_dev_qa_users --password "<LOCAL_QA_PASSWORD>" --include-must-change-user --settings=config.settings.local
 ```
 
 ## Environment Variable Example
@@ -45,7 +44,7 @@ python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-ch
 PowerShell:
 
 ```powershell
-$env:PEARLIX_DEV_QA_PASSWORD="PearlixDev123!"
+$env:PEARLIX_DEV_QA_PASSWORD="<LOCAL_QA_PASSWORD>"
 python manage.py seed_dev_qa_users --reset-passwords --settings=config.settings.local
 ```
 

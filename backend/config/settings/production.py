@@ -1,6 +1,8 @@
+from urllib.parse import parse_qs, urlparse
+
 from django.core.exceptions import ImproperlyConfigured
 
-from config.env import env, env_bool
+from config.env import env, env_bool, env_list
 
 from .base import *  # noqa: F403
 
@@ -14,8 +16,37 @@ if (
 ):
     raise ImproperlyConfigured("SECRET_KEY must be configured in production.")
 
-if not env("DATABASE_URL"):
+_database_url = env("DATABASE_URL")
+if not _database_url:
     raise ImproperlyConfigured("DATABASE_URL must be configured in production.")
+
+_parsed_database_url = urlparse(_database_url)
+if _parsed_database_url.scheme.lower() not in {"postgres", "postgresql"}:
+    raise ImproperlyConfigured("Production DATABASE_URL must use PostgreSQL.")
+
+_database_ssl_values = parse_qs(
+    _parsed_database_url.query,
+    keep_blank_values=True,
+).get("sslmode", [])
+if len(_database_ssl_values) > 1:
+    raise ImproperlyConfigured("Production DATABASE_URL must configure sslmode exactly once.")
+_database_ssl_mode = (_database_ssl_values[0] if _database_ssl_values else "require").strip().lower()
+if _database_ssl_mode not in {"require", "verify-ca", "verify-full"}:
+    raise ImproperlyConfigured("Production database transport must require TLS.")
+
+# Supabase Session Pooler accepts the standard libpq sslmode contract. Default
+# an omitted mode to `require` so Supabase-generated URLs remain compatible,
+# while an explicitly downgrade-capable value is rejected above.
+DATABASES = {  # noqa: F405
+    **DATABASES,  # noqa: F405
+    "default": {
+        **DATABASES["default"],  # noqa: F405
+        "OPTIONS": {
+            **DATABASES["default"].get("OPTIONS", {}),  # noqa: F405
+            "sslmode": _database_ssl_mode,
+        },
+    },
+}
 
 if "*" in CORS_ALLOWED_ORIGINS:  # noqa: F405
     raise ImproperlyConfigured("CORS_ALLOWED_ORIGINS must not contain wildcard origins in production.")
@@ -33,6 +64,24 @@ if _missing_storage_env:
         "Private Supabase media storage is required in production. Missing: "
         + ", ".join(sorted(_missing_storage_env))
     )
+
+_storage_endpoint = urlparse(_required_storage_env["SUPABASE_S3_ENDPOINT_URL"])
+if (
+    _storage_endpoint.scheme.lower() != "https"
+    or not _storage_endpoint.hostname
+    or _storage_endpoint.username is not None
+    or _storage_endpoint.password is not None
+):
+    raise ImproperlyConfigured("Production storage endpoint must use credential-free HTTPS.")
+
+# The deterministic adapter exists strictly for explicit local/test harnesses.
+# Keep both startup configuration and the runtime adapter boundary fail-closed.
+if PEARLIX_ALLOW_MOCK_AI:  # noqa: F405
+    raise ImproperlyConfigured("Mock AI cannot be enabled in production.")
+PEARLIX_ALLOW_MOCK_AI = False
+PEARLIX_ALLOW_DEMO_COMMANDS = False
+PEARLIX_RUNTIME_ENVIRONMENT = "production"
+TRUSTED_PROXY_CIDRS = env_list("TRUSTED_PROXY_CIDRS", [])
 
 # Supabase Storage exposes an S3-compatible API. Generated S3 credentials are
 # server-only and bypass Storage RLS, so the bucket stays private and browser
