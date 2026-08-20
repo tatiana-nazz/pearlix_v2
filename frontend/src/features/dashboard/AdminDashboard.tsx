@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { dashboardApi } from "../../api/endpoints/dashboard";
 import { useAuthStore } from "../../auth/authStore";
 import { AdminAnalyticsCharts } from "./AdminAnalyticsCharts";
+import { UpcomingClinicLoadChart } from "./UpcomingClinicLoadChart";
 import { AttentionList, DashboardAppointmentList, DashboardEmpty, DashboardError, DashboardHandoffList, DashboardHeader, DashboardLoading, DashboardMetric, DashboardMetrics, DashboardSection } from "./DashboardShared";
 import { dashboardCopy } from "./i18n";
 
@@ -17,6 +18,9 @@ export function AdminDashboard() {
   if (!dashboard.data) return <DashboardEmpty language={language} />;
   const data = dashboard.data;
   const dayPath = `/admin/appointments/day?date=${data.clinic_date}`;
+  const upcomingTitle = language === "AR" ? "ضغط المواعيد القادم" : "Upcoming clinic load";
+  const upcomingEyebrow = language === "AR" ? "الأيام الـ14 القادمة" : "Next 14 days";
+
   return <main className="dashboard-v2 dashboard-v2-admin" data-role="ADMIN">
     <DashboardHeader language={language} clinicDate={data.clinic_date} clinicTimezone={data.clinic_timezone} title={c.adminTitle} description={c.adminDescription} />
     <DashboardMetrics count={5}>
@@ -32,15 +36,22 @@ export function AdminDashboard() {
       { label: c.partiallyPaidBills, count: data.partially_paid_bills_count, to: "/admin/billing/handoffs?status=PARTIALLY_PAID", tone: "info" },
       { label: c.patientsReady, count: data.checked_in_appointments_count, to: dayPath, tone: "info" },
     ]} /></DashboardSection>
-    <AdminAnalyticsCharts
-      language={language}
-      outcomes={data.appointments_daily_last_30_days}
-      utilization={data.doctor_utilization_last_30_days}
-      billing={data.billing_activity_last_30_days}
-      patientMix={data.patient_mix_last_8_weeks}
-      problemRate={data.appointment_problem_rate_last_8_weeks}
-      aging={data.receivables_aging}
-    />
+
+    <div className="admin-analytics-shell">
+      <AdminAnalyticsCharts
+        language={language}
+        outcomes={data.appointments_daily_last_30_days}
+        utilization={data.doctor_utilization_last_30_days}
+        billing={data.billing_activity_last_30_days}
+        patientMix={data.patient_mix_last_8_weeks}
+        problemRate={data.appointment_problem_rate_last_8_weeks}
+        aging={data.receivables_aging}
+      />
+      <DashboardSection title={upcomingTitle} eyebrow={upcomingEyebrow} className="admin-analytics-upcoming">
+        <UpcomingClinicLoadChart language={language} clinicDate={data.clinic_date} clinicTimezone={data.clinic_timezone} />
+      </DashboardSection>
+    </div>
+
     <div className="dashboard-v2-lower-grid">
       <DashboardSection title={c.todaysAppointments} action={<Link to={dayPath}>{c.viewDay}</Link>}><DashboardAppointmentList language={language} clinicTimezone={data.clinic_timezone} items={data.today_appointments} empty={c.noAppointmentsToday} role="ADMIN" showDoctor limit={7} /></DashboardSection>
       <DashboardSection title={c.recentBills} action={<Link to="/admin/billing/handoffs">{c.viewHandoffHistory}</Link>}><DashboardHandoffList language={language} items={data.recent_handoffs} role="ADMIN" empty={c.noOpenBills} showTotal /></DashboardSection>
