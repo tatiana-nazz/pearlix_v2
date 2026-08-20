@@ -80,14 +80,14 @@ pg_dump "$DATABASE_URL" --file ../_local_backups/pearlix_before_13e1_patient_sch
 Phase 13E.1 migration checks:
 
 ```text
-python manage.py showmigrations patients
+python manage.py showmigrations patients --settings=config.settings.local
 patients.0001_initial applied
 patients.0002_patient_schema_upgrade pending before migrate
 
-python manage.py migrate --plan
+python manage.py migrate --plan --settings=config.settings.local
 patients.0002_patient_schema_upgrade planned
 
-python manage.py migrate
+python manage.py migrate --settings=config.settings.local
 patients.0002_patient_schema_upgrade OK
 ```
 

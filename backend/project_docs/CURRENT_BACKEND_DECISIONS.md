@@ -38,7 +38,7 @@ This document summarizes current accepted backend decisions for human developers
 - Role transitions with direct shifts, leave, appointments, or visits are blocked with `ROLE_TRANSITION_BLOCKED_BY_HISTORY`; no operational history is deleted or rewritten.
 - Profile versions protect professional edits and professional-status changes. Login deactivation/reactivation and professional active state remain separate.
 - Users report a safe linked-profile state. Legacy unlinked professional accounts are `PROFILE_SETUP_REQUIRED`, visible in Users & Access but excluded from Team.
-- `manage.py check_profile_integrity --strict` detects dual profiles, mismatches, and active Admin professional profiles without changing data.
+- `manage.py check_profile_integrity --strict --settings=config.settings.local` detects dual profiles, mismatches, and active Admin professional profiles without changing data.
 - Phase 14F.2 permits authenticated Staff to `GET` Team list/detail through a safe professional projection. Staff responses omit account/security state, optimistic-lock versions, and patient appointment detail. Team create/update/status actions remain Admin-only. Doctor and unauthenticated Team access remain denied.
 
 ## Patient Directory Dates (Phase 14F.2)

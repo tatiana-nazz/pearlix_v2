@@ -37,7 +37,7 @@ Use `127.0.0.1` consistently for the local frontend and API:
 
 ```powershell
 cd backend
-.\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+.\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000 --settings=config.settings.local
 
 cd ..\frontend
 npm run dev
@@ -100,7 +100,7 @@ Phase 13D.1 adds a local development QA account command. Local browser QA users 
 
 ```bash
 cd backend
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user
+python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user --settings=config.settings.local
 ```
 
 - Admin: `admin.qa@pearlix.local`

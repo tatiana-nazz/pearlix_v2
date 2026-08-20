@@ -4,7 +4,7 @@
 
 ```powershell
 cd backend
-python manage.py seed_demo_clinic_story --password "PearlixDemo123!" --reset-demo --include-must-change-user
+python manage.py seed_demo_clinic_story --password "PearlixDemo123!" --reset-demo --include-must-change-user --settings=config.settings.local
 ```
 
 Use the local-only accounts in `backend/project_docs/DEMO_STORY.md`. The optional must-change Doctor should be restricted to the change-password route until the password is changed.

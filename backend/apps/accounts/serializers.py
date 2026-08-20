@@ -243,14 +243,19 @@ class ChangePasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(write_only=True, trim_whitespace=False)
     new_password = serializers.CharField(write_only=True, trim_whitespace=False)
 
+    def _user(self):
+        return self.context.get("user", self.context["request"].user)
+
     def validate_current_password(self, value):
-        user = self.context["request"].user
+        user = self._user()
         if not user.check_password(value):
             raise serializers.ValidationError("Current password is incorrect.")
         return value
 
     def validate_new_password(self, value):
-        user = self.context["request"].user
+        user = self._user()
+        if user.check_password(value):
+            raise serializers.ValidationError("New password must be different from the current password.")
         try:
             validate_password(value, user=user)
         except DjangoValidationError as exc:

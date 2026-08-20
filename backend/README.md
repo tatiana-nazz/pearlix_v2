@@ -38,11 +38,13 @@ docker compose up -d db
 Then run:
 
 ```powershell
-python manage.py migrate
-python manage.py check
+python manage.py migrate --settings=config.settings.local
+python manage.py check --settings=config.settings.local
 python -m pytest -q
-python manage.py runserver
+python manage.py runserver --settings=config.settings.local
 ```
+
+The explicit `--settings=config.settings.local` argument is required for local management commands. Deployable WSGI/ASGI startup has no local fallback; its host must explicitly select `config.settings.production` through `DJANGO_SETTINGS_MODULE`.
 
 ## Local Database
 

@@ -77,9 +77,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       async changePassword(payload) {
-        const user = await authApi.changePassword(payload);
-        set({ ...deriveAuth(user, get().accessToken) });
-        return user;
+        const response = await authApi.changePassword(payload);
+        set({
+          accessToken: response.access,
+          refreshToken: response.refresh,
+          ...deriveAuth(response.user, response.access),
+        });
+        return response.user;
       },
       async updatePreferences(preferences) {
         const previous = get().user;

@@ -1,4 +1,5 @@
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -64,8 +65,8 @@ class User(AbstractBaseUser, TimeStampedModel):
     )
     must_change_password = models.BooleanField(default=False)
     password_changed_at = models.DateTimeField(null=True, blank=True)
-    # Used by explicit account-linkage transitions.  It deliberately lives on
-    # the account because a role transition can change the linked profile.
+    # Used by explicit account-linkage transitions and bound into JWTs so a
+    # completed role transition invalidates authority issued for the old role.
     version = models.PositiveIntegerField(default=1)
 
     objects = UserManager()
@@ -79,9 +80,27 @@ class User(AbstractBaseUser, TimeStampedModel):
             models.Index(fields=["role"]),
             models.Index(fields=["role", "is_active"]),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(role="ADMIN")
+                | models.Q(is_staff=False, is_superuser=False),
+                name="accounts_non_admin_no_django_privilege",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.email
+
+    def save(self, *args, **kwargs):
+        # Django-admin authority is an explicit maintenance capability reserved
+        # for ADMIN accounts.  Promoting a business role to ADMIN does not grant
+        # it automatically, while demotion must clear both flags atomically in
+        # the role-transition service.
+        if self.role != self.Role.ADMIN and (self.is_staff or self.is_superuser):
+            raise ValidationError(
+                "Django staff and superuser privileges are reserved for ADMIN accounts."
+            )
+        return super().save(*args, **kwargs)
 
     def has_perm(self, perm, obj=None) -> bool:
         return self.is_active and self.is_superuser

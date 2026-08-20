@@ -1,6 +1,7 @@
 import type {
   AuthUser,
   ChangePasswordPayload,
+  ChangePasswordResponse,
   LoginPayload,
   LoginResponse,
   PreferencesPayload,
@@ -14,6 +15,6 @@ export const authApi = {
   logout: (refresh: string) => api.post<void, { refresh: string }>("/auth/logout/", { refresh }),
   me: () => api.get<AuthUser>("/me/"),
   changePassword: (payload: ChangePasswordPayload) =>
-    api.post<AuthUser, ChangePasswordPayload>("/auth/change-password/", payload),
+    api.post<ChangePasswordResponse, ChangePasswordPayload>("/auth/change-password/", payload),
   updatePreferences: (payload: PreferencesPayload) => api.patch<AuthUser, PreferencesPayload>("/me/preferences/", payload),
 };

@@ -34,10 +34,10 @@ Optional must-change-password Doctor:
 
 ```bash
 cd backend
-python manage.py seed_dev_qa_users --password "PearlixDev123!"
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --reset-passwords
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user --show-passwords
+python manage.py seed_dev_qa_users --password "PearlixDev123!" --settings=config.settings.local
+python manage.py seed_dev_qa_users --password "PearlixDev123!" --reset-passwords --settings=config.settings.local
+python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user --settings=config.settings.local
+python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user --show-passwords --settings=config.settings.local
 ```
 
 ## Environment Variable Example
@@ -46,7 +46,7 @@ PowerShell:
 
 ```powershell
 $env:PEARLIX_DEV_QA_PASSWORD="PearlixDev123!"
-python manage.py seed_dev_qa_users --reset-passwords
+python manage.py seed_dev_qa_users --reset-passwords --settings=config.settings.local
 ```
 
 ## Browser QA Expectations
@@ -74,7 +74,7 @@ To remove local QA users safely, use the Django shell in a known local developme
 
 ```bash
 cd backend
-python manage.py shell
+python manage.py shell --settings=config.settings.local
 ```
 
 ```python

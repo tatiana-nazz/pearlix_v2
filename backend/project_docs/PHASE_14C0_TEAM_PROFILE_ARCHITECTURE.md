@@ -8,7 +8,7 @@
 
 ## Integrity enforcement
 
-The current two-table profile layout cannot express cross-table exclusivity in a database constraint. The implementation therefore uses atomic, row-locked service operations plus model validation and `manage.py check_profile_integrity --strict`.
+The current two-table profile layout cannot express cross-table exclusivity in a database constraint. The implementation therefore uses atomic, row-locked service operations plus model validation and `manage.py check_profile_integrity --strict --settings=config.settings.local`.
 
 - Team onboarding creates User and exactly one matching profile in one transaction.
 - Generic `/api/users/` creates Admin accounts only; Doctor/Staff onboarding is rejected with `PROFILE_REQUIRED` and must use Team.

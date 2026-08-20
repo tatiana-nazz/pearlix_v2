@@ -50,13 +50,13 @@ try {
     $encodedPassword = [System.Uri]::EscapeDataString($plainPassword)
     $env:DATABASE_URL = "postgresql://postgres.nhxcuormtcnnauhhjedm:$encodedPassword@aws-1-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require"
 
-    $commandArgs = @("manage.py", "seed_demo")
+    $commandArgs = @("manage.py", "seed_demo", "--settings=config.settings.production")
     if ($Reset) {
         $commandArgs += "--reset"
     }
 
     Invoke-Checked -Executable $venvPython -Arguments $commandArgs -FailureMessage "Pearlix demo seeding failed"
-    Invoke-Checked -Executable $venvPython -Arguments @("manage.py", "finalize_demo_seed") -FailureMessage "Pearlix demo finalization/audit failed"
+    Invoke-Checked -Executable $venvPython -Arguments @("manage.py", "finalize_demo_seed", "--settings=config.settings.production") -FailureMessage "Pearlix demo finalization/audit failed"
 }
 finally {
     Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue

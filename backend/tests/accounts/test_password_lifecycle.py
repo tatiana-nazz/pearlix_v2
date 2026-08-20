@@ -22,9 +22,11 @@ def test_authenticated_user_can_change_password(staff_client, staff_user, api_cl
     assert staff_user.must_change_password is False
     assert staff_user.password_changed_at is not None
     assert staff_user.check_password("NewStr0ngPass!4567")
-    assert "password" not in response.data
-    assert response.data["must_change_password"] is False
-    assert response.data["password_changed_at"] is not None
+    assert response.data["access"]
+    assert response.data["refresh"]
+    assert "password" not in response.data["user"]
+    assert response.data["user"]["must_change_password"] is False
+    assert response.data["user"]["password_changed_at"] is not None
     assert ActivityLog.objects.filter(action="user_password_changed", entity_id=str(staff_user.id)).exists()
 
     old_login = api_client.post("/api/auth/login/", {"email": staff_user.email, "password": "password123"}, format="json")

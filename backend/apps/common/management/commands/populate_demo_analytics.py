@@ -4,6 +4,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
@@ -12,6 +13,14 @@ from apps.accounts.models import User
 from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.services import create_visit_completion_handoff, issue_invoice
 from apps.patients.models import Patient
+from apps.scheduling.appointment_services import (
+    AppointmentRuleError,
+    validate_capacity,
+    validate_duration,
+    validate_doctor_conflict,
+    validate_unavailable_exception,
+    validate_working_hours,
+)
 from apps.scheduling.models import Appointment, WorkingShift
 from apps.visits.models import Visit
 
@@ -19,6 +28,11 @@ from apps.visits.models import Visit
 CLINIC_TZ = ZoneInfo("Asia/Damascus")
 MARKER = "[DEMO-ANALYTICS-2026A]"
 PATIENT_PREFIX = "DEMO-P-A26-"
+PATIENT_NOTES = f"{MARKER} Synthetic longitudinal demo patient for dashboard and workflow validation."
+EXPECTED_PATIENT_IDENTITIES = {
+    f"{PATIENT_PREFIX}{index:03d}": f"analytics.patient.{index:03d}@example.demo"
+    for index in range(1, 111)
+}
 RANGE_START = date(2026, 8, 1)
 RANGE_END = date(2026, 9, 14)
 DEMO_TODAY = date(2026, 8, 19)
@@ -49,7 +63,8 @@ class Command(BaseCommand):
         parser.add_argument("--reset", action="store_true", help="Replace only this supplemental analytics dataset.")
 
     def handle(self, *args, **options):
-        if Patient.objects.filter(national_id_or_passport__startswith=PATIENT_PREFIX).exists() and not options["reset"]:
+        generated_patient_ids = self.generated_patient_ids()
+        if generated_patient_ids and not options["reset"]:
             raise CommandError("Supplemental analytics demo data already exists. Re-run with --reset.")
 
         with transaction.atomic():
@@ -63,6 +78,10 @@ class Command(BaseCommand):
             errors = self.audit(users)
             if errors:
                 raise CommandError("Analytics demo consistency audit failed:\n- " + "\n- ".join(errors))
+            # The finalizer is the canonical cross-module demo invariant.  Keep it
+            # inside this transaction so analytics population cannot report success
+            # (or leave partial data behind) when that stronger audit rejects it.
+            call_command("finalize_demo_seed", stdout=self.stdout)
 
         counts = self.summary_counts()
         self.stdout.write(self.style.SUCCESS("Pearlix analytics demo population completed; consistency audit PASS."))
@@ -88,7 +107,7 @@ class Command(BaseCommand):
         return result
 
     def reset_generated(self):
-        patient_ids = list(Patient.objects.filter(national_id_or_passport__startswith=PATIENT_PREFIX).values_list("id", flat=True))
+        patient_ids = self.generated_patient_ids()
         if not patient_ids:
             return
         Invoice.objects.filter(billing_handoff__patient_id__in=patient_ids).delete()
@@ -96,6 +115,31 @@ class Command(BaseCommand):
         Visit.objects.filter(patient_id__in=patient_ids).delete()
         Appointment.objects.filter(patient_id__in=patient_ids).delete()
         Patient.objects.filter(id__in=patient_ids).delete()
+
+    def generated_patient_ids(self):
+        generated_ids = []
+        collisions = []
+        candidates = Patient.objects.filter(
+            national_id_or_passport__startswith=PATIENT_PREFIX
+        ).only("id", "email", "national_id_or_passport", "general_notes")
+        for patient in candidates:
+            expected_email = EXPECTED_PATIENT_IDENTITIES.get(
+                patient.national_id_or_passport
+            )
+            if (
+                expected_email is None
+                or patient.email.casefold() != expected_email.casefold()
+                or patient.general_notes != PATIENT_NOTES
+            ):
+                collisions.append(patient.id)
+            else:
+                generated_ids.append(patient.id)
+        if collisions:
+            raise CommandError(
+                "Analytics reset refused: the reserved patient prefix is used by "
+                f"unrecognized records {collisions}."
+            )
+        return generated_ids
 
     def assert_friday_closed(self, users):
         friday = WorkingShift.objects.filter(employee__in=[users["sara"], users["omar"], users["staff"]], weekday=4, is_active=True)
@@ -120,7 +164,7 @@ class Command(BaseCommand):
                 blood_group="O+" if index % 3 else "A+",
                 medical_conditions_history="No known chronic conditions or drug allergies." if index % 7 else "Controlled hypertension; routine dental precautions documented.",
                 insurance_info="Self-pay." if index % 3 else "Demo private dental plan.",
-                general_notes=f"{MARKER} Synthetic longitudinal demo patient for dashboard and workflow validation.",
+                general_notes=PATIENT_NOTES,
                 created_by=staff,
                 updated_by=staff,
             )
@@ -135,9 +179,30 @@ class Command(BaseCommand):
                 start = aware(day, at)
                 end = start + timedelta(minutes=duration)
                 conflict = Appointment.objects.filter(doctor=doctor, start_datetime__lt=end, end_datetime__gt=start).exists()
-                if not conflict:
+                if not conflict and self.slot_satisfies_clinic_rules(
+                    doctor=doctor,
+                    start=start,
+                    end=end,
+                    duration=duration,
+                ):
                     return doctor, start
         raise CommandError(f"No non-overlapping demo slot available on {day}.")
+
+    def slot_satisfies_clinic_rules(self, *, doctor, start, end, duration):
+        try:
+            validate_duration(duration)
+            validate_working_hours(doctor, start, end)
+            validate_unavailable_exception(doctor, start, end)
+            validate_capacity(start, end)
+            validate_doctor_conflict(doctor, start, end)
+        except AppointmentRuleError:
+            return False
+        return True
+
+    def is_historical_day(self, day):
+        # Never manufacture UPCOMING appointments in the past when the fixed
+        # analytics window is populated after its original snapshot date.
+        return day <= max(DEMO_TODAY, timezone.localdate())
 
     def create_appointment(self, *, patient, doctor, staff, start, duration, status, reason, sequence):
         appointment = Appointment(
@@ -179,8 +244,6 @@ class Command(BaseCommand):
         )
         visit.full_clean()
         visit.save()
-        if sequence % 5 == 4:
-            return visit
 
         currency = BillingHandoff.Currency.SYP if sequence % 5 == 0 else BillingHandoff.Currency.USD
         total = Decimal(120000 + (sequence % 6) * 25000) if currency == BillingHandoff.Currency.SYP else Decimal(55 + (sequence % 7) * 25)
@@ -247,7 +310,7 @@ class Command(BaseCommand):
                 patient = patients[(sequence * 7 + daily_index * 3) % len(patients)]
                 duration = [30, 45, 60, 30, 30, 45, 30][daily_index]
                 doctor, start = self.next_available_slot(doctors, day, duration)
-                status = self.historical_status(sequence) if day <= DEMO_TODAY else self.future_status(sequence)
+                status = self.historical_status(sequence) if self.is_historical_day(day) else self.future_status(sequence)
                 appointment = self.create_appointment(
                     patient=patient,
                     doctor=doctor,
@@ -279,13 +342,20 @@ class Command(BaseCommand):
             if day.weekday() != 4:
                 start = aware(day, time.min)
                 end = aware(day + timedelta(days=1), time.min)
-                if not Appointment.objects.filter(start_datetime__gte=start, start_datetime__lt=end).exists():
+                if not generated.filter(start_datetime__gte=start, start_datetime__lt=end).exists():
                     errors.append(f"Open clinic day {day} has no appointments.")
             day += timedelta(days=1)
         completed_ids = generated.filter(status=Appointment.Status.COMPLETED).values_list("id", flat=True)
         missing_visits = Appointment.objects.filter(id__in=completed_ids, visit__isnull=True).count()
         if missing_visits:
             errors.append(f"{missing_visits} generated completed appointments have no Visit.")
+        missing_handoffs = Visit.objects.filter(
+            appointment__in=generated,
+            status=Visit.Status.COMPLETED,
+            billing_handoffs__isnull=True,
+        ).count()
+        if missing_handoffs:
+            errors.append(f"{missing_handoffs} generated completed visits have no billing handoff.")
         invalid_visits = Visit.objects.filter(appointment__in=generated.exclude(status=Appointment.Status.COMPLETED)).count()
         if invalid_visits:
             errors.append(f"{invalid_visits} non-completed generated appointments have a Visit.")

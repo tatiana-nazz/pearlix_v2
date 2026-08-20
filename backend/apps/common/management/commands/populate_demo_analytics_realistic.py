@@ -5,7 +5,6 @@ from datetime import date, time, timedelta
 from apps.scheduling.models import Appointment
 
 from .populate_demo_analytics import (
-    DEMO_TODAY,
     RANGE_END,
     RANGE_START,
     REASONS,
@@ -49,7 +48,12 @@ class Command(BaseAnalyticsCommand):
                     start_datetime__lt=end,
                     end_datetime__gt=start,
                 ).exists()
-                if not conflict:
+                if not conflict and self.slot_satisfies_clinic_rules(
+                    doctor=doctor,
+                    start=start,
+                    end=end,
+                    duration=duration,
+                ):
                     return doctor, start
         raise RuntimeError(f"No non-overlapping demo slot available on {day}.")
 
@@ -118,7 +122,7 @@ class Command(BaseAnalyticsCommand):
                 patient = patients[(sequence * 7 + daily_index * 3 + open_day_index) % len(patients)]
                 duration = [30, 45, 30, 60, 30, 45, 30, 30, 60, 30][daily_index % 10]
                 doctor, start = self.next_available_slot(doctors, day, duration)
-                status = self.historical_status(sequence) if day <= DEMO_TODAY else self.future_status(sequence)
+                status = self.historical_status(sequence) if self.is_historical_day(day) else self.future_status(sequence)
                 appointment = self.create_appointment(
                     patient=patient,
                     doctor=doctor,

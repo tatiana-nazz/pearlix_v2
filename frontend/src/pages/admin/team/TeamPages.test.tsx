@@ -95,7 +95,7 @@ describe("Team professional directory and detail", () => {
     expect(screen.getByRole("heading", { name: "Contact" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Today's workload" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
-    expect(screen.getByText("Morning")).toBeInTheDocument();
+    expect(screen.getByRole("rowheader", { name: "Shift 1" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Leave / availability" })).toBeInTheDocument();
     expect(screen.getByText("Conference")).toBeInTheDocument();
     expect(screen.queryByLabelText("Specialty")).not.toBeInTheDocument();

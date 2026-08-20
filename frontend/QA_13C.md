@@ -24,7 +24,7 @@ Local QA users were successfully seeded in the development database. Create or r
 
 ```bash
 cd backend
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user
+python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user --settings=config.settings.local
 ```
 
 - Admin: `admin.qa@pearlix.local`

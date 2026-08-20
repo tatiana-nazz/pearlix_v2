@@ -8,7 +8,10 @@ from .base import *  # noqa: F403
 DEBUG = False
 CORS_ALLOW_ALL_ORIGINS = False
 
-if SECRET_KEY == "dev-only-insecure-secret-key-for-local-development":  # noqa: F405
+if (
+    not SECRET_KEY  # noqa: F405
+    or SECRET_KEY == "dev-only-insecure-secret-key-for-local-development"  # noqa: F405
+):
     raise ImproperlyConfigured("SECRET_KEY must be configured in production.")
 
 if not env("DATABASE_URL"):

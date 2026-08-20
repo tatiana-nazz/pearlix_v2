@@ -322,16 +322,16 @@ function BillingCurrencyChart({ language, currency, days }: { language: Language
 
   return <div className="analytics-billing-panel analytics-billing-panel-large">
     <header>
-      <div><strong>{currency}</strong><small>{c.billed}: {formatMoney(billedTotal, currency)} · {c.collected}: {formatMoney(collectedTotal, currency)}</small></div>
+      <div><strong>{currency}</strong><small>{c.billed}: {formatMoney(String(billedTotal), currency)} · {c.collected}: {formatMoney(String(collectedTotal), currency)}</small></div>
       <span>{c.collectionRate}: {billedTotal > 0 ? `${((collectedTotal / billedTotal) * 100).toFixed(1)}%` : "—"}</span>
     </header>
     <InteractiveLegend items={[{ key: "billed", label: c.billed, color: palette.blue }, { key: "collected", label: c.collected, color: palette.teal }]} active={seriesVisible} onToggle={(key) => toggleSeries(key as BillingSeriesKey)} />
     <ChartReadout>
       {hoverDay ? <>
         <strong>{shortDate(hoverDay.date, language)}</strong>
-        <span>{c.billed}: {formatMoney(hoverBilled, currency)}</span>
-        <span>{c.collected}: {formatMoney(hoverCollected, currency)}</span>
-        <span>{c.difference}: {formatMoney(hoverBilled - hoverCollected, currency)}</span>
+        <span>{c.billed}: {formatMoney(String(hoverBilled), currency)}</span>
+        <span>{c.collected}: {formatMoney(String(hoverCollected), currency)}</span>
+        <span>{c.difference}: {formatMoney(String(hoverBilled - hoverCollected), currency)}</span>
         <span>{c.collectionRate}: {hoverRate.toFixed(1)}%</span>
       </> : <span>{c.hoverHint}</span>}
     </ChartReadout>
@@ -468,7 +468,7 @@ function AgingCurrencyChart({ currency, rows, bucketName }: { currency: "USD" | 
           <text className="analytics-axis-label analytics-axis-label-strong" x={margin.left - 12} y={y + 15} textAnchor="end">{bucketName[row.bucket]}</text>
           <rect className="analytics-track" x={margin.left} y={y} width={plotWidth} height="20" rx="6" />
           <rect className="analytics-data-bar" x={margin.left} y={y} width={(value / max) * plotWidth} height="20" rx="6" fill={currency === "USD" ? palette.blue : palette.teal} />
-          <text className="analytics-value-label" x={margin.left + plotWidth + 12} y={y + 15}>{formatMoney(value, currency)}</text>
+          <text className="analytics-value-label" x={margin.left + plotWidth + 12} y={y + 15}>{formatMoney(String(value), currency)}</text>
         </g>;
       })}
     </svg>

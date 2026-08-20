@@ -27,8 +27,8 @@ Phase 13K completes the Phase 13 series. It validates the existing integrated fr
 
 ```bash
 cd backend
-.venv\\Scripts\\python.exe manage.py check
-.venv\\Scripts\\python.exe manage.py makemigrations --check --dry-run
+.venv\\Scripts\\python.exe manage.py check --settings=config.settings.local
+.venv\\Scripts\\python.exe manage.py makemigrations --check --dry-run --settings=config.settings.local
 .venv\\Scripts\\python.exe -m pytest -q
 
 cd ../frontend

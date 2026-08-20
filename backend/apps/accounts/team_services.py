@@ -243,7 +243,15 @@ def confirm_transition(*, user_id: int, actor: User, target_role: str, token: st
                 staff.is_active = False; staff.version += 1; staff.save(update_fields=["is_active", "version", "updated_at"])
         user.role = target_role
         user.version += 1
-        user.save(update_fields=["role", "version", "updated_at"])
+        update_fields = ["role", "version", "updated_at"]
+        if target_role != User.Role.ADMIN:
+            # Non-ADMIN roles cannot retain the separate Django-admin
+            # authorization plane.  This reconciliation is committed in the
+            # same transaction as the role/profile transition.
+            user.is_staff = False
+            user.is_superuser = False
+            update_fields.extend(["is_staff", "is_superuser"])
+        user.save(update_fields=update_fields)
         return User.objects.select_related("doctor_profile", "staff_profile").get(pk=user.pk)
 
 

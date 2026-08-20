@@ -5,11 +5,11 @@ Use the canonical local addresses below. Do not mix `localhost` and `127.0.0.1`.
 ```powershell
 cd backend
 Copy-Item .env.example .env
-.\.venv\Scripts\python.exe manage.py migrate
-.\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+.\.venv\Scripts\python.exe manage.py migrate --settings=config.settings.local
+.\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000 --settings=config.settings.local
 ```
 
-The backend API is `http://127.0.0.1:8000/api`. `backend/.env` must retain the documented local `127.0.0.1:5173` CORS, CSRF, and frontend URL values from `.env.example`; production origins remain explicitly configured and restricted.
+The `--settings=config.settings.local` argument is required and intentionally explicit: Django entrypoints do not default to local settings. Use it for every local management command. The backend API is `http://127.0.0.1:8000/api`. `backend/.env` must retain the documented local `127.0.0.1:5173` CORS, CSRF, and frontend URL values from `.env.example`; production origins remain explicitly configured and restricted.
 
 In a second terminal:
 

@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -9,6 +10,11 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from apps.accounts.authentication import (
+    ACCOUNT_VERSION_CLAIM,
+    AccountAuthorityChanged,
+    AccountVersionTokenRefreshSerializer,
+)
 from apps.accounts.models import User
 from apps.accounts.serializers import (
     AdminResetPasswordSerializer,
@@ -45,6 +51,7 @@ from apps.visits.models import Visit
 
 def _token_payload(user):
     refresh = RefreshToken.for_user(user)
+    refresh[ACCOUNT_VERSION_CLAIM] = user.version
     return {
         "access": str(refresh.access_token),
         "refresh": str(refresh),
@@ -83,7 +90,7 @@ def login_view(request):
 
 
 class RefreshView(TokenRefreshView):
-    pass
+    serializer_class = AccountVersionTokenRefreshSerializer
 
 
 @api_view(["POST"])
@@ -121,19 +128,42 @@ def preferences_view(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def change_password_view(request):
-    serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
-    serializer.is_valid(raise_exception=True)
-    user = request.user
-    user.set_user_password(serializer.validated_data["new_password"], must_change_password=False, mark_changed=True)
-    user.save(update_fields=["password", "must_change_password", "password_changed_at", "updated_at"])
-    log_activity(
-        request=request,
-        action="user_password_changed",
-        entity_type="user",
-        entity_id=user.id,
-        metadata={"user_id": user.id},
-    )
-    return Response(AuthUserSerializer(user).data)
+    with transaction.atomic():
+        user = User.objects.select_for_update().get(pk=request.user.pk)
+        if (
+            request.auth is not None
+            and request.auth.get(ACCOUNT_VERSION_CLAIM) != user.version
+        ):
+            raise AccountAuthorityChanged()
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={"request": request, "user": user},
+        )
+        serializer.is_valid(raise_exception=True)
+        user.set_user_password(
+            serializer.validated_data["new_password"],
+            must_change_password=False,
+            mark_changed=True,
+        )
+        user.version += 1
+        user.save(
+            update_fields=[
+                "password",
+                "must_change_password",
+                "password_changed_at",
+                "version",
+                "updated_at",
+            ]
+        )
+        log_activity(
+            request=request,
+            action="user_password_changed",
+            entity_type="user",
+            entity_id=user.id,
+            metadata={"user_id": user.id},
+        )
+        token_payload = _token_payload(user)
+    return Response(token_payload)
 
 
 class UserViewSet(viewsets.ModelViewSet):

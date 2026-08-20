@@ -6,7 +6,7 @@ Run against the deterministic Phase 14A local story:
 
 ```powershell
 cd backend
-.\.venv\Scripts\python.exe manage.py seed_demo_clinic_story --password "PearlixDemo123!" --reset-demo --include-must-change-user
+.\.venv\Scripts\python.exe manage.py seed_demo_clinic_story --password "PearlixDemo123!" --reset-demo --include-must-change-user --settings=config.settings.local
 
 cd ..\frontend
 $env:PEARLIX_E2E_PASSWORD = "PearlixDemo123!"

@@ -72,8 +72,8 @@ If the service reference/token is absent, invalid, unreachable, or returns a dif
 For an internal/local model installation, run from `backend/` with the deployment environment loaded:
 
 ```powershell
-python manage.py ai_preflight
-python manage.py ai_preflight --load-models
+python manage.py ai_preflight --settings=config.settings.production
+python manage.py ai_preflight --load-models --settings=config.settings.production
 ```
 
 The default command validates trusted-root containment, regular files, all three hashes, device support, required imports, and locked runtime versions without deserializing weights. `--load-models` additionally uses the production trusted loader to validate detector names, the FDI map, classifier checkpoint metadata, architecture, class order, and epoch. Both commands are read-only and do not analyze an X-ray.

@@ -247,9 +247,13 @@ class Command(BaseCommand):
             if handoff.status != expected:
                 errors.append(f"Bill {handoff.id} status disagrees with paid amount {paid}.")
 
-        for invoice in Invoice.objects.filter(billing_handoff__patient_id__in=demo_ids):
+        for invoice in Invoice.objects.filter(
+            billing_handoff__patient_id__in=demo_ids
+        ).select_related("billing_handoff"):
             if invoice.created_at > invoice.issued_at:
                 errors.append(f"Invoice {invoice.id} was created after its issued_at event.")
+            if invoice.issued_at < invoice.billing_handoff.created_at:
+                errors.append(f"Invoice {invoice.id} predates its billing handoff.")
             if not INVOICE_RE.match(invoice.invoice_number):
                 errors.append(f"Invoice {invoice.id} does not use Pearlix invoice-number format.")
 
