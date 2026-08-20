@@ -293,6 +293,24 @@
   padding-block-end: 10px;
   border-block-end: 1px solid var(--v2-divider);
 }
+.appointment-calendar-column.clinic-closed,
+.appointment-month-cell.clinic-closed {
+  background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--v2-muted) 7%, var(--v2-surface)), color-mix(in srgb, var(--v2-muted) 7%, var(--v2-surface)) 8px, var(--v2-surface-subtle) 8px, var(--v2-surface-subtle) 16px);
+}
+.appointment-clinic-closed-label,
+.appointment-day-closed {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--v2-border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: color-mix(in srgb, var(--v2-muted) 8%, var(--v2-surface));
+  color: var(--v2-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.appointment-clinic-closed-label { margin-block-end: var(--v2-space-2); }
+.appointment-day-closed { margin: 0 0 var(--v2-space-3); }
 .appointment-calendar-item {
   --appointment-status: var(--v2-info);
   box-sizing: border-box;

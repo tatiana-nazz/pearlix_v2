@@ -131,6 +131,7 @@ def _mark_shift_impacts(impacted, source_shift, actor, request=None):
         appointment.reschedule_previous_status = previous_status
         appointment.reschedule_source_exception = None
         appointment.reschedule_source_working_shift = source_shift
+        appointment.reschedule_source_clinic_weekday = None
         appointment.updated_by = actor
         appointment.save(
             update_fields=[
@@ -138,6 +139,7 @@ def _mark_shift_impacts(impacted, source_shift, actor, request=None):
                 "reschedule_previous_status",
                 "reschedule_source_exception",
                 "reschedule_source_working_shift",
+                "reschedule_source_clinic_weekday",
                 "updated_by",
                 "updated_at",
             ]

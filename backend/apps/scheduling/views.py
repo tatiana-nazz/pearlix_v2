@@ -282,4 +282,4 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             slots = build_availability_slots(doctor=doctor, date_value=value, duration_minutes=minutes)
         except AppointmentRuleError as exc:
             return _rule_error(exc)
-        settings = get_clinic_settings(); return Response({"doctor_id": doctor.id, "date": value.isoformat(), "duration_minutes": minutes, "capacity_per_slot": settings.capacity_per_slot, "available_slots": slots})
+        settings = get_clinic_settings(); return Response({"doctor_id": doctor.id, "date": value.isoformat(), "duration_minutes": minutes, "capacity_per_slot": settings.capacity_per_slot, "clinic_closed": settings.is_weekday_closed(value.weekday()), "available_slots": slots})

@@ -10,7 +10,9 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.billing.models import BillingHandoff, Invoice
+from apps.clinic.models import ClinicSettings
 from apps.common.management.commands import populate_demo_analytics as analytics_module
+from apps.common.management.commands.seed_demo import Command as SeedDemoCommand
 from apps.common.management.commands.populate_demo_analytics import (
     CLINIC_TZ,
     MARKER,
@@ -24,7 +26,7 @@ from apps.common.management.commands.populate_demo_analytics_realistic import (
     Command as AnalyticsCommand,
 )
 from apps.patients.models import Patient
-from apps.scheduling.models import Appointment
+from apps.scheduling.models import Appointment, WorkingShift
 from apps.visits.models import Visit
 
 
@@ -40,6 +42,11 @@ def test_demo_seed_creates_coherent_longitudinal_stories_and_is_resettable():
     assert Appointment.objects.filter(patient__national_id_or_passport__startswith="DEMO-P").count() >= 15
     assert Visit.objects.filter(patient__national_id_or_passport__startswith="DEMO-P").count() >= 8
     assert BillingHandoff.objects.filter(patient__national_id_or_passport__startswith="DEMO-P").count() >= 8
+    clinic = ClinicSettings.get_solo()
+    assert clinic.weekly_closed_days == [4]
+    assert WorkingShift.objects.filter(
+        employee__email="sara.doctor@pearlix.demo", weekday=4, is_active=True
+    ).exists()
     assert "consistency audit PASS" in output.getvalue()
 
     # A reset replaces demo records without duplicating them.
@@ -88,9 +95,11 @@ def test_realistic_analytics_population_requires_billing_provenance_and_canonica
         ).values_list("start_datetime", flat=True)
     )
     expected_days = []
+    closed_weekdays = set(ClinicSettings.get_solo().weekly_closed_days)
+    assert closed_weekdays == {4}
     day = RANGE_START
     while day <= RANGE_END:
-        if day.weekday() != 4:
+        if day.weekday() not in closed_weekdays:
             expected_days.append(day)
         day += timedelta(days=1)
     assert window_days == Counter(
@@ -99,7 +108,7 @@ def test_realistic_analytics_population_requires_billing_provenance_and_canonica
             for index, day in enumerate(expected_days)
         }
     )
-    assert all(day.weekday() != 4 for day in window_days)
+    assert all(day.weekday() not in closed_weekdays for day in window_days)
     assert len(set(window_days.values())) > 1
 
     cancelled = analytics_appointments.filter(status=Appointment.Status.CANCELLED)
@@ -126,6 +135,48 @@ def test_realistic_analytics_population_requires_billing_provenance_and_canonica
     assert supplemental_invoices
     for invoice in supplemental_invoices:
         assert invoice.issued_at >= invoice.billing_handoff.created_at
+
+
+@pytest.mark.parametrize(
+    ("closed_weekdays", "expected_populated_weekday"),
+    [
+        ([6], 4),
+        ([4, 5], 6),
+    ],
+)
+def test_analytics_population_derives_alternative_weekly_closures(
+    monkeypatch, closed_weekdays, expected_populated_weekday
+):
+    audit_now = timezone.make_aware(datetime(2026, 8, 20, 18), CLINIC_TZ)
+    monkeypatch.setattr(timezone, "now", lambda: audit_now)
+
+    # Build only the canonical demo team/schedule substrate. This keeps the
+    # alternative-policy proof independent from appointments created under the
+    # canonical [4] demo policy.
+    seed_command = SeedDemoCommand()
+    users = seed_command.create_users("StrongDemoPassword!2026")
+    seed_command.configure_clinic()
+    seed_command.create_shifts(users)
+    clinic = ClinicSettings.get_solo()
+    clinic.weekly_closed_days = closed_weekdays
+    clinic.save(update_fields=["weekly_closed_days", "updated_at"])
+
+    output = StringIO()
+    call_command("populate_demo_analytics_realistic", stdout=output)
+
+    generated_starts = list(
+        Appointment.objects.filter(notes__startswith=MARKER).values_list(
+            "start_datetime", flat=True
+        )
+    )
+    generated_weekdays = {
+        timezone.localtime(start, CLINIC_TZ).weekday()
+        for start in generated_starts
+    }
+    assert generated_starts
+    assert not (generated_weekdays & set(closed_weekdays))
+    assert expected_populated_weekday in generated_weekdays
+    assert "Pearlix demo finalization PASS" in output.getvalue()
 
 
 def test_analytics_reset_scope_preserves_unrelated_patient(patient_factory):
@@ -219,4 +270,22 @@ def test_canonical_finalizer_rejects_payment_before_billing_handoff():
     )
 
     with pytest.raises(CommandError, match="predates its billing handoff"):
+        call_command("finalize_demo_seed")
+
+
+def test_canonical_finalizer_rejects_operational_booking_on_configured_closed_weekday():
+    call_command("seed_demo", password="StrongDemoPassword!2026")
+    upcoming = Appointment.objects.filter(
+        patient__national_id_or_passport__startswith="DEMO-P",
+        status=Appointment.Status.UPCOMING,
+    ).first()
+    assert upcoming is not None
+    closed_weekday = timezone.localtime(
+        upcoming.start_datetime, CLINIC_TZ
+    ).weekday()
+    clinic = ClinicSettings.get_solo()
+    clinic.weekly_closed_days = [closed_weekday]
+    clinic.save(update_fields=["weekly_closed_days", "updated_at"])
+
+    with pytest.raises(CommandError, match="configured closed weekday"):
         call_command("finalize_demo_seed")

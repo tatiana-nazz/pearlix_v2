@@ -1,5 +1,6 @@
 import { ErrorState } from "../../../components/ErrorState";
 import { LoadingState } from "../../../components/LoadingState";
+import { useAuthStore } from "../../../auth/authStore";
 import type { AppointmentAvailability, AvailabilitySlot } from "../../../types/appointments";
 import { formatTime } from "../../../utils/dates";
 
@@ -13,9 +14,11 @@ interface AvailabilityPickerProps {
 }
 
 export function AvailabilityPicker({ availability, isLoading, error, selectedStart, onSelect, onRetry }: AvailabilityPickerProps) {
+  const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   if (isLoading) return <LoadingState title="Loading available appointment slots..." />;
   if (error) return <ErrorState error={error} onRetry={onRetry} title="Unable to load availability" />;
   if (!availability) return <p className="empty-state">Choose a doctor and date to see open slots.</p>;
+  if (availability.clinic_closed) return <p className="empty-state appointment-day-closed" role="status">{language === "AR" ? "العيادة مغلقة" : "Clinic closed"}</p>;
   if (!availability.available_slots.length) return <p className="empty-state">No available slots for this doctor and date.</p>;
 
   return (

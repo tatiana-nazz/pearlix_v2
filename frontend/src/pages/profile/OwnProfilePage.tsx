@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { clinicApi, clinicSettingsQueryKey } from "../../api/endpoints/clinic";
 import { scheduleApi } from "../../api/endpoints/schedule";
 import { useAuthStore } from "../../auth/authStore";
 import { StatePanel, StatusBadge, SurfaceCard } from "../../components/v2";
@@ -20,6 +21,7 @@ export function OwnProfilePage() {
   const language = user?.language_preference ?? "EN";
   const c = copy[language];
   const hasProfessionalProfile = user?.role === "STAFF" || user?.role === "DOCTOR";
+  const clinicSettings = useQuery({ queryKey: clinicSettingsQueryKey, queryFn: clinicApi.getSettings, enabled: hasProfessionalProfile, staleTime: 300_000 });
   const shifts = useQuery({ queryKey: ["my-working-shifts"], queryFn: () => scheduleApi.workingShifts(), enabled: hasProfessionalProfile });
   const leave = useQuery({
     queryKey: ["my-availability-exceptions"],
@@ -43,7 +45,7 @@ export function OwnProfilePage() {
           <h2>{c.workingHours}</h2>
           {shifts.isLoading ? <StatePanel state="loading" title={c.loadingShifts} /> : null}
           {shifts.isError ? <StatePanel state="error" title={c.unavailable} action={<button className="v2-button secondary" type="button" onClick={() => void shifts.refetch()}>{c.retry}</button>} /> : null}
-          {shifts.data ? <ScheduleMatrix shifts={shifts.data.results} language={language} emptyText={c.noShifts} /> : null}
+          {shifts.data ? <ScheduleMatrix shifts={shifts.data.results} language={language} emptyText={c.noShifts} weeklyClosedDays={clinicSettings.data?.weekly_closed_days} /> : null}
         </SurfaceCard>
         <SurfaceCard className="profile-leave-card">
           <h2>{c.leave}</h2>

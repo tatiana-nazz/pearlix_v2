@@ -41,11 +41,13 @@ export function buildScheduleMatrix(shifts: ScheduleShiftLike[]): ScheduleMatrix
   });
 }
 
-export function scheduleSummaryText(shifts: ScheduleShiftLike[], language: "EN" | "AR") {
+export function scheduleSummaryText(shifts: ScheduleShiftLike[], language: "EN" | "AR", weeklyClosedDays: readonly number[] = []) {
   const active = shifts.filter((shift) => shift.is_active !== false).sort((a, b) => a.weekday - b.weekday || a.start_time.localeCompare(b.start_time));
   if (!active.length) return language === "AR" ? "لا يوجد دوام" : "No active schedule";
-  const day = active[0].weekday;
+  const effective = active.filter((shift) => !weeklyClosedDays.includes(shift.weekday));
+  if (!effective.length) return language === "AR" ? "العيادة مغلقة في أيام الدوام المحفوظة" : "Clinic closed on stored shift days";
+  const day = effective[0].weekday;
   const dayLabels = language === "AR" ? ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const ranges = active.filter((shift) => shift.weekday === day).map((shift) => `${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}`).join(", ");
+  const ranges = effective.filter((shift) => shift.weekday === day).map((shift) => `${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}`).join(", ");
   return `${dayLabels[day]} · ${ranges}`;
 }

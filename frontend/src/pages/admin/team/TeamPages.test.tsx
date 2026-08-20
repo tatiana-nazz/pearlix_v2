@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { clinicApi } from "../../../api/endpoints/clinic";
 import { teamApi } from "../../../api/endpoints/team";
 import { useAuthStore } from "../../../auth/authStore";
 import type { TeamMemberDetail, TeamMemberSummary } from "../../../types/team";
@@ -64,7 +65,10 @@ function renderDetail(detail: TeamMemberDetail, role: "ADMIN" | "STAFF" = "ADMIN
 }
 
 describe("Team professional directory and detail", () => {
-  beforeEach(() => setRole("ADMIN"));
+  beforeEach(() => {
+    setRole("ADMIN");
+    vi.spyOn(clinicApi, "getSettings").mockResolvedValue({ clinic_name: "Pearlix", address: "", phone: "", email: "", timezone: "Asia/Damascus", capacity_per_slot: 1, default_appointment_duration_minutes: 30, allowed_durations_minutes: [30], default_currency: "SYP", supported_currencies: ["SYP"], default_language: "EN", weekly_closed_days: [4] });
+  });
   afterEach(() => vi.restoreAllMocks());
 
   it("opens the exact Admin Team card and maps compact list filters to the API", async () => {

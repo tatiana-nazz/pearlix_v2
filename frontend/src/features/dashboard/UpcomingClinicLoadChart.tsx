@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { getAllAppointments } from "../../api/endpoints/appointments";
+import { clinicApi, clinicSettingsQueryKey } from "../../api/endpoints/clinic";
 import type { LanguagePreference } from "../../types/auth";
+import { isClinicClosedDate } from "../../utils/clinicWeek";
 import { addDays } from "../appointments/utils/appointmentDates";
 import { dateFromAppointment } from "../appointments/utils/appointmentFilters";
 
@@ -68,10 +70,6 @@ function ticks(max: number, count = 4) {
   return Array.from({ length: count + 1 }, (_, index) => (max * index) / count);
 }
 
-function isFriday(value: string) {
-  return new Date(`${value}T12:00:00Z`).getUTCDay() === 5;
-}
-
 export function UpcomingClinicLoadChart({ language, clinicDate, clinicTimezone }: {
   language: LanguagePreference;
   clinicDate: string;
@@ -90,6 +88,11 @@ export function UpcomingClinicLoadChart({ language, clinicDate, clinicTimezone }
     staleTime: 15_000,
     refetchOnWindowFocus: "always",
     refetchInterval: 30_000,
+  });
+  const clinicSettings = useQuery({
+    queryKey: clinicSettingsQueryKey,
+    queryFn: clinicApi.getSettings,
+    staleTime: 300_000,
   });
 
   const days = useMemo<DailyLoad[]>(() => {
@@ -117,6 +120,7 @@ export function UpcomingClinicLoadChart({ language, clinicDate, clinicTimezone }
   const totalNeedsReschedule = days.reduce((sum, day) => sum + day.needsReschedule, 0);
   const busiest = days.reduce((current, day) => day.booked > current.booked ? day : current, days[0]);
   const active = activeIndex === null ? null : days[activeIndex];
+  const activeClosed = active ? isClinicClosedDate(active.date, clinicSettings.data?.weekly_closed_days ?? []) : false;
 
   const width = 820;
   const height = 390;
@@ -142,7 +146,7 @@ export function UpcomingClinicLoadChart({ language, clinicDate, clinicTimezone }
     <div className="analytics-readout" aria-live="polite">
       {schedule.isLoading ? <span>{c.loading}</span> : schedule.isError ? <span>{c.unavailable}</span> : active ? <>
         <strong>{shortDate(active.date, language)}</strong>
-        {isFriday(active.date) && active.booked === 0 && active.needsReschedule === 0 ? <span>{c.clinicClosed}</span> : <>
+        {activeClosed ? <><span>{c.clinicClosed}</span>{active.needsReschedule > 0 ? <span>{c.needsReschedule}: {active.needsReschedule}</span> : null}</> : <>
           <span>{c.booked}: {active.booked}</span>
           <span>{c.needsReschedule}: {active.needsReschedule}</span>
           <span>{c.cancelled}: {active.cancelled}</span>
@@ -170,13 +174,13 @@ export function UpcomingClinicLoadChart({ language, clinicDate, clinicTimezone }
         const bookedHeight = (day.booked / yMax) * plotHeight;
         const rescheduleHeight = (day.needsReschedule / yMax) * plotHeight;
         const bottom = margin.top + plotHeight;
-        const friday = isFriday(day.date);
+        const clinicClosed = isClinicClosedDate(day.date, clinicSettings.data?.weekly_closed_days ?? []);
         return <g
           key={day.date}
           className={`analytics-outcome-day${activeIndex === index ? " active" : ""}`}
           tabIndex={0}
           role="button"
-          aria-label={`${day.date}: ${day.booked} ${c.booked}`}
+          aria-label={`${day.date}: ${clinicClosed ? `${c.clinicClosed}; ` : ""}${day.booked} ${c.booked}`}
           onMouseEnter={() => setActiveIndex(index)}
           onMouseLeave={() => setActiveIndex(null)}
           onFocus={() => setActiveIndex(index)}
@@ -189,7 +193,7 @@ export function UpcomingClinicLoadChart({ language, clinicDate, clinicTimezone }
             }
           }}
         >
-          {friday ? <rect className="upcoming-load-closed-band" x={margin.left + index * band} y={margin.top} width={band} height={plotHeight} /> : null}
+          {clinicClosed ? <rect className="upcoming-load-closed-band" x={margin.left + index * band} y={margin.top} width={band} height={plotHeight} /> : null}
           <rect className="analytics-hit-target" x={margin.left + index * band} y={margin.top} width={band} height={plotHeight} />
           <rect className="analytics-data-bar" x={x} y={bottom - bookedHeight} width={bookedWidth} height={bookedHeight} rx="4" fill={palette.blue} />
           {day.needsReschedule > 0 ? <rect className="analytics-data-bar" x={x + bookedWidth + 3} y={bottom - rescheduleHeight} width={rescheduleWidth} height={rescheduleHeight} rx="3" fill={palette.amber} /> : null}

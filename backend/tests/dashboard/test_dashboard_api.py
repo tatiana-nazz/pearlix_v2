@@ -1,9 +1,13 @@
+from datetime import date
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.utils import timezone
 
 from apps.billing.models import BillingHandoff, Invoice
+from apps.clinic.models import ClinicSettings
+from apps.dashboard.analytics import doctor_utilization
 
 
 @pytest.mark.django_db
@@ -118,3 +122,34 @@ def test_admin_dashboard_exposes_complete_analytics_windows(admin_client):
     assert [row["bucket"] for row in data["receivables_aging"]] == ["0_7", "8_30", "31_60", "60_plus"]
     assert all({"SYP", "USD"}.issubset(row) for row in data["receivables_aging"])
     assert "doctor_utilization_last_30_days" in data
+
+
+@pytest.mark.django_db
+def test_doctor_utilization_uses_configured_sunday_closure_not_friday(
+    doctor_user, working_hour_factory
+):
+    clinic = ClinicSettings.get_solo()
+    clinic.weekly_closed_days = [6]
+    clinic.save(update_fields=["weekly_closed_days", "updated_at"])
+    working_hour_factory(
+        doctor=doctor_user,
+        weekday=4,
+        name="Stored Friday shift",
+        start_time="09:00",
+        end_time="17:00",
+    )
+    working_hour_factory(
+        doctor=doctor_user,
+        weekday=6,
+        name="Stored Sunday shift",
+        start_time="09:00",
+        end_time="17:00",
+    )
+
+    rows = doctor_utilization(
+        date(2026, 7, 19), ZoneInfo(clinic.timezone), days=7
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["available_minutes"] == 8 * 60
+    assert rows[0]["booked_minutes"] == 0

@@ -134,10 +134,11 @@ class Appointment(TimeStampedModel):
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="appointments_updated")
     reschedule_source_exception = models.ForeignKey("scheduling.AvailabilityException", null=True, blank=True, on_delete=models.SET_NULL, related_name="reschedule_appointments")
     reschedule_source_working_shift = models.ForeignKey("scheduling.WorkingShift", null=True, blank=True, on_delete=models.SET_NULL, related_name="reschedule_appointments")
+    reschedule_source_clinic_weekday = models.PositiveSmallIntegerField(choices=Weekday.choices, null=True, blank=True)
     reschedule_previous_status = models.CharField(max_length=20, choices=Status.choices, null=True, blank=True)
 
     class Meta:
-        indexes = [models.Index(fields=["doctor", "start_datetime"]), models.Index(fields=["start_datetime", "status"]), models.Index(fields=["patient", "start_datetime"]), models.Index(fields=["status"]), models.Index(fields=["reschedule_source_exception", "status"]), models.Index(fields=["reschedule_source_working_shift", "status"])]
+        indexes = [models.Index(fields=["doctor", "start_datetime"]), models.Index(fields=["start_datetime", "status"]), models.Index(fields=["patient", "start_datetime"]), models.Index(fields=["status"]), models.Index(fields=["reschedule_source_exception", "status"]), models.Index(fields=["reschedule_source_working_shift", "status"]), models.Index(fields=["reschedule_source_clinic_weekday", "status"], name="sched_appt_clday_stat_idx")]
         ordering = ["start_datetime", "id"]
 
     def clean(self):

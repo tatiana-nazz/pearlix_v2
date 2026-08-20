@@ -7,7 +7,7 @@ from rest_framework import status
 from apps.audit.services import log_activity
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
-from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
+from apps.scheduling.models import Appointment, AvailabilityException, Weekday, WorkingShift
 from apps.scheduling.time_utils import (
     calculate_end_datetime,
     clinic_localtime,
@@ -99,6 +99,22 @@ def validate_working_hours(doctor, start_datetime, end_datetime, settings=None):
         )
 
 
+def validate_clinic_open(start_datetime, settings=None):
+    settings = settings or get_clinic_settings()
+    weekday = clinic_localtime(start_datetime, settings).weekday()
+    if settings.is_weekday_closed(weekday):
+        raise AppointmentRuleError(
+            "CLINIC_CLOSED_DAY",
+            "The clinic is closed on this weekday.",
+            {
+                "weekday": weekday,
+                "weekday_label": Weekday(weekday).label,
+                "weekly_closed_days": settings.weekly_closed_days,
+            },
+            status.HTTP_409_CONFLICT,
+        )
+
+
 def validate_unavailable_exception(
     doctor,
     start_datetime,
@@ -168,6 +184,7 @@ def validate_appointment_slot(
     settings = validate_duration(duration_minutes, settings)
     validate_start_not_past(start_datetime, settings, current_time)
     end_datetime = calculate_end_datetime(start_datetime, duration_minutes)
+    validate_clinic_open(start_datetime, settings)
     validate_working_hours(doctor, start_datetime, end_datetime, settings)
     validate_unavailable_exception(
         doctor,
@@ -226,6 +243,7 @@ def update_appointment(*, appointment, serializer, user, current_time=None):
             locked.checked_in_at = None
             locked.reschedule_source_exception = None
             locked.reschedule_source_working_shift = None
+            locked.reschedule_source_clinic_weekday = None
             locked.reschedule_previous_status = None
         locked.save()
         return locked

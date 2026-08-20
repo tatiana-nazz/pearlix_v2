@@ -42,4 +42,13 @@ describe("schedule matrix", () => {
     expect(scheduleSummaryText(shifts, "EN")).toBe("Mon · 08:00–09:00, 16:00–20:00");
     expect(scheduleSummaryText([], "EN")).toBe("No active schedule");
   });
+
+  it("summarizes the first effective open shift instead of a suppressed clinic-closed shift", () => {
+    const shifts = [
+      { id: 1, name: "Friday", weekday: 4, start_time: "08:00:00", end_time: "12:00:00", is_active: true },
+      { id: 2, name: "Sunday", weekday: 6, start_time: "09:00:00", end_time: "13:00:00", is_active: true },
+    ];
+    expect(scheduleSummaryText(shifts, "EN", [4])).toBe("Sun · 09:00–13:00");
+    expect(scheduleSummaryText([shifts[0]], "EN", [4])).toBe("Clinic closed on stored shift days");
+  });
 });

@@ -13,9 +13,9 @@ from .populate_demo_analytics import (
 )
 
 
-# Deliberately non-uniform clinic load. Every open day has activity, but the
-# calendar does not look machine-generated. Friday remains closed in the base
-# command. Average load stays near seven appointments per open day.
+# Deliberately non-uniform clinic load. Every configured open day has activity,
+# but the calendar does not look machine-generated. Average load stays near
+# seven appointments per open day.
 DAILY_LOAD_PATTERN = (6, 9, 5, 8, 7, 4, 10, 6, 8, 5, 7, 9, 6, 5)
 
 # Search appointments across the day instead of consuming 09:00, 10:00, 11:00
@@ -35,7 +35,7 @@ class Command(BaseAnalyticsCommand):
     help = (
         "Populate Pearlix with a realistic, deterministic Aug-Sep 2026 clinic "
         "dataset: varied daily load, morning/afternoon distribution, traceable "
-        "history, and Friday closure."
+        "history, and configured weekly clinic closures."
     )
 
     def next_available_slot(self, doctors, day, duration):
@@ -61,9 +61,10 @@ class Command(BaseAnalyticsCommand):
         # Keep the returning-patient baseline strictly before August so the
         # Aug-Sep analytics window is not inflated by records labelled history.
         doctors = [users["sara"], users["omar"]]
+        closed_weekdays = self.configured_closed_weekdays()
         for index, patient in enumerate(patients):
             day = date(2026, 5, 10) + timedelta(days=index * 2)
-            while day.weekday() == 4:
+            while day.weekday() in closed_weekdays:
                 day += timedelta(days=1)
             duration = [30, 45, 60][index % 3]
             doctor, start = self.next_available_slot(doctors, day, duration)
@@ -107,13 +108,14 @@ class Command(BaseAnalyticsCommand):
 
     def create_main_calendar(self, users, patients):
         doctors = [users["sara"], users["omar"]]
+        closed_weekdays = self.configured_closed_weekdays()
         sequence = 0
         first_seen = set()
         open_day_index = 0
         day = RANGE_START
 
         while day <= RANGE_END:
-            if day.weekday() == 4:  # Friday is the weekly closure.
+            if day.weekday() in closed_weekdays:
                 day += timedelta(days=1)
                 continue
 

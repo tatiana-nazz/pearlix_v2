@@ -5,6 +5,12 @@ from apps.clinic.models import ClinicSettings
 
 
 class ClinicSettingsSerializer(serializers.ModelSerializer):
+    confirm_appointment_impact = serializers.BooleanField(
+        required=False,
+        default=False,
+        write_only=True,
+    )
+
     class Meta:
         model = ClinicSettings
         fields = (
@@ -16,11 +22,13 @@ class ClinicSettingsSerializer(serializers.ModelSerializer):
             "capacity_per_slot",
             "default_appointment_duration_minutes",
             "allowed_durations_minutes",
+            "weekly_closed_days",
             "default_currency",
             "supported_currencies",
             "default_language",
             "ai_mode",
             "ai_service_url",
+            "confirm_appointment_impact",
         )
 
     def validate(self, attrs):
@@ -32,6 +40,10 @@ class ClinicSettingsSerializer(serializers.ModelSerializer):
         except ValidationError as exc:
             raise serializers.ValidationError(exc.message_dict)
         return attrs
+
+    def update(self, instance, validated_data):
+        validated_data.pop("confirm_appointment_impact", None)
+        return super().update(instance, validated_data)
 
 
 class ClinicSafeSettingsSerializer(serializers.ModelSerializer):
@@ -46,6 +58,7 @@ class ClinicSafeSettingsSerializer(serializers.ModelSerializer):
             "capacity_per_slot",
             "default_appointment_duration_minutes",
             "allowed_durations_minutes",
+            "weekly_closed_days",
             "default_currency",
             "supported_currencies",
             "default_language",

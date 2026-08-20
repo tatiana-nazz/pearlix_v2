@@ -13,6 +13,8 @@ def _overlaps(row, start_datetime, end_datetime):
 
 def build_availability_slots(*, doctor, date_value, duration_minutes):
     settings = validate_duration(duration_minutes)
+    if settings.is_weekday_closed(date_value.weekday()):
+        return []
     clinic_timezone = get_clinic_timezone(settings)
     slots = []
     step = timedelta(minutes=15)

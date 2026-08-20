@@ -6,8 +6,8 @@ export type ScheduleApplyMode = "MISSING_ONLY" | "REPLACE_ALL";
 
 export interface DoctorProfileSummary { id: number; specialty: string; phone: string; bio: string; is_active: boolean; }
 export interface DoctorListItem { id: number; full_name: string; email: string; role: "DOCTOR"; is_active: boolean; doctor_profile: DoctorProfileSummary | null; }
-export interface ClinicDefaultShift extends Timestamped { id: number; name: string; weekday: number; weekday_label: string; start_time: string; end_time: string; is_active: boolean; version: number; created_by: UserSummary | null; updated_by: UserSummary | null; }
-export interface WorkingShift extends Timestamped { id: number; employee: UserSummary; name: string; weekday: number; weekday_label: string; start_time: string; end_time: string; is_active: boolean; source_default_shift: number | null; version: number; created_by: UserSummary | null; updated_by: UserSummary | null; }
+export interface ClinicDefaultShift extends Timestamped { id: number; name: string; weekday: number; weekday_label: string; start_time: string; end_time: string; is_active: boolean; clinic_closed: boolean; effective_is_active: boolean; version: number; created_by: UserSummary | null; updated_by: UserSummary | null; }
+export interface WorkingShift extends Timestamped { id: number; employee: UserSummary; name: string; weekday: number; weekday_label: string; start_time: string; end_time: string; is_active: boolean; clinic_closed: boolean; effective_is_active: boolean; source_default_shift: number | null; version: number; created_by: UserSummary | null; updated_by: UserSummary | null; }
 export interface WorkingShiftPayload { employee_id: number; name: string; weekday: number; start_time: string; end_time: string; version?: number; }
 export interface WorkingHoursResponse { working_hours: WorkingShift[]; }
 export interface WorkingHoursPayload { working_hours: Array<Pick<WorkingShift, "name" | "weekday" | "start_time" | "end_time" | "is_active">>; confirm_appointment_impact?: boolean; }

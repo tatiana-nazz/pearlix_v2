@@ -199,7 +199,11 @@ def admin_dashboard(request):
             "appointment_status_last_7_days": _appointment_status_activity(today, clinic_timezone),
             "billing_activity_last_30_days": _billing_activity(today, clinic_timezone),
             "appointments_daily_last_30_days": appointment_daily_activity(today, clinic_timezone),
-            "doctor_utilization_last_30_days": doctor_utilization(today, clinic_timezone),
+            "doctor_utilization_last_30_days": doctor_utilization(
+                today,
+                clinic_timezone,
+                weekly_closed_days=settings.weekly_closed_days,
+            ),
             "patient_mix_last_8_weeks": patient_mix(today, clinic_timezone),
             "appointment_problem_rate_last_8_weeks": appointment_problem_rate(today, clinic_timezone),
             "receivables_aging": receivables_aging(today, clinic_timezone),

@@ -22,7 +22,8 @@ export interface AppointmentList extends Timestamped {
   status: AppointmentStatus;
   reschedule_source_exception: number | null;
   reschedule_source_working_shift: number | null;
-  reschedule_source_type: "LEAVE" | "SHIFT_CHANGE" | null;
+  reschedule_source_clinic_weekday?: number | null;
+  reschedule_source_type: "LEAVE" | "SHIFT_CHANGE" | "CLINIC_WEEKLY_CLOSURE" | null;
   reschedule_source_label: string | null;
   reschedule_previous_status: AppointmentStatus | null;
 }
@@ -85,5 +86,6 @@ export interface AppointmentAvailability {
   date: string;
   duration_minutes: number;
   capacity_per_slot: number;
+  clinic_closed: boolean;
   available_slots: AvailabilitySlot[];
 }

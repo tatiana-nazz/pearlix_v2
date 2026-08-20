@@ -178,11 +178,29 @@ class Command(BaseCommand):
         errors = []
         demo_ids = list(demo.values_list("id", flat=True))
         now = timezone.now()
+        clinic = ClinicSettings.get_solo()
+        clinic_timezone = ZoneInfo(clinic.timezone)
+        closed_weekdays = set(clinic.weekly_closed_days)
+        operational_statuses = {
+            Appointment.Status.UPCOMING,
+            Appointment.Status.CHECKED_IN,
+            Appointment.Status.ACTIVE,
+        }
 
         for appointment in Appointment.objects.filter(patient_id__in=demo_ids).select_related(
             "doctor", "patient", "reschedule_source_exception"
         ):
             has_visit = Visit.objects.filter(appointment=appointment).exists()
+            local_weekday = timezone.localtime(
+                appointment.start_datetime, clinic_timezone
+            ).weekday()
+            if (
+                appointment.status in operational_statuses
+                and local_weekday in closed_weekdays
+            ):
+                errors.append(
+                    f"Operational appointment {appointment.id} falls on configured closed weekday {local_weekday}."
+                )
             if appointment.created_at > appointment.start_datetime:
                 errors.append(f"Appointment {appointment.id} was created after its scheduled start.")
             if appointment.patient.created_at > appointment.created_at:
@@ -210,7 +228,11 @@ class Command(BaseCommand):
                 except AppointmentRuleError as exc:
                     errors.append(f"Upcoming appointment {appointment.id} violates clinic rules: {exc.code}.")
             if appointment.status == Appointment.Status.NEEDS_RESCHEDULE:
-                if not appointment.reschedule_source_exception_id and not appointment.reschedule_source_working_shift_id:
+                if (
+                    not appointment.reschedule_source_exception_id
+                    and not appointment.reschedule_source_working_shift_id
+                    and appointment.reschedule_source_clinic_weekday is None
+                ):
                     errors.append(f"Needs-reschedule appointment {appointment.id} has no source.")
                 if appointment.reschedule_source_exception_id:
                     source = appointment.reschedule_source_exception

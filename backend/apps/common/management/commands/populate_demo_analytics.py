@@ -12,6 +12,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.services import create_visit_completion_handoff, issue_invoice
+from apps.clinic.models import ClinicSettings
 from apps.patients.models import Patient
 from apps.scheduling.appointment_services import (
     AppointmentRuleError,
@@ -21,7 +22,7 @@ from apps.scheduling.appointment_services import (
     validate_unavailable_exception,
     validate_working_hours,
 )
-from apps.scheduling.models import Appointment, WorkingShift
+from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
 
 
@@ -57,7 +58,7 @@ def aware(day: date, at: time) -> datetime:
 
 
 class Command(BaseCommand):
-    help = "Add a deterministic, traceable Aug-Sep 2026 analytics dataset to Pearlix demo staging. Friday remains closed."
+    help = "Add a deterministic, traceable Aug-Sep 2026 analytics dataset using the configured clinic operating week."
 
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true", help="Replace only this supplemental analytics dataset.")
@@ -71,7 +72,6 @@ class Command(BaseCommand):
             if options["reset"]:
                 self.reset_generated()
             users = self.demo_users()
-            self.assert_friday_closed(users)
             patients = self.create_patients(users["staff"])
             self.create_prior_history(users, patients[:35])
             self.create_main_calendar(users, patients)
@@ -89,7 +89,9 @@ class Command(BaseCommand):
             f"Generated patients: {counts['patients']} | Aug-Sep appointments: {counts['appointments']} | "
             f"completed visits: {counts['visits']} | bills: {counts['bills']} | payments: {counts['invoices']}"
         )
-        self.stdout.write("Friday is preserved as the weekly clinic closure; generated Friday appointments: 0.")
+        self.stdout.write(
+            "Configured weekly clinic closures were preserved; generated appointments on closed weekdays: 0."
+        )
 
     def demo_users(self):
         mapping = {
@@ -141,10 +143,8 @@ class Command(BaseCommand):
             )
         return generated_ids
 
-    def assert_friday_closed(self, users):
-        friday = WorkingShift.objects.filter(employee__in=[users["sara"], users["omar"], users["staff"]], weekday=4, is_active=True)
-        if friday.exists():
-            raise CommandError("Friday must remain closed; an active demo Friday shift exists.")
+    def configured_closed_weekdays(self):
+        return set(ClinicSettings.get_solo().weekly_closed_days)
 
     def create_patients(self, staff):
         patients = []
@@ -266,9 +266,10 @@ class Command(BaseCommand):
 
     def create_prior_history(self, users, patients):
         doctors = [users["sara"], users["omar"]]
+        closed_weekdays = self.configured_closed_weekdays()
         for index, patient in enumerate(patients):
             day = date(2026, 6, 1) + timedelta(days=index * 2)
-            while day.weekday() == 4:
+            while day.weekday() in closed_weekdays:
                 day += timedelta(days=1)
             duration = [30, 45, 60][index % 3]
             doctor, start = self.next_available_slot(doctors, day, duration)
@@ -299,11 +300,12 @@ class Command(BaseCommand):
 
     def create_main_calendar(self, users, patients):
         doctors = [users["sara"], users["omar"]]
+        closed_weekdays = self.configured_closed_weekdays()
         sequence = 0
         first_seen = set()
         day = RANGE_START
         while day <= RANGE_END:
-            if day.weekday() == 4:
+            if day.weekday() in closed_weekdays:
                 day += timedelta(days=1)
                 continue
             for daily_index in range(TARGET_PER_OPEN_DAY):
@@ -332,14 +334,19 @@ class Command(BaseCommand):
     def audit(self, users):
         errors = []
         generated = Appointment.objects.filter(notes__startswith=MARKER)
-        friday_count = sum(1 for dt in generated.values_list("start_datetime", flat=True) if timezone.localtime(dt, CLINIC_TZ).weekday() == 4)
-        if friday_count:
-            errors.append(f"{friday_count} generated appointments fall on Friday.")
-        if WorkingShift.objects.filter(employee__in=[users["sara"], users["omar"], users["staff"]], weekday=4, is_active=True).exists():
-            errors.append("An active Friday demo shift exists.")
+        closed_weekdays = self.configured_closed_weekdays()
+        closed_day_count = sum(
+            1
+            for dt in generated.values_list("start_datetime", flat=True)
+            if timezone.localtime(dt, CLINIC_TZ).weekday() in closed_weekdays
+        )
+        if closed_day_count:
+            errors.append(
+                f"{closed_day_count} generated appointments fall on configured closed weekdays."
+            )
         day = RANGE_START
         while day <= RANGE_END:
-            if day.weekday() != 4:
+            if day.weekday() not in closed_weekdays:
                 start = aware(day, time.min)
                 end = aware(day + timedelta(days=1), time.min)
                 if not generated.filter(start_datetime__gte=start, start_datetime__lt=end).exists():

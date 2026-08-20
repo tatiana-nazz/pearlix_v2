@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from apps.billing.models import BillingHandoff
 from apps.billing.selectors import annotate_handoff_financials
+from apps.clinic.models import ClinicSettings
 from apps.scheduling.models import Appointment, WorkingShift
 
 
@@ -60,8 +61,13 @@ def appointment_daily_activity(clinic_date, clinic_timezone, days=30):
     return [{"date": day, **counts} for day, counts in activity.items()]
 
 
-def doctor_utilization(clinic_date, clinic_timezone, days=30):
+def doctor_utilization(
+    clinic_date, clinic_timezone, days=30, weekly_closed_days=None
+):
     first_day, start, end = _window(clinic_date, clinic_timezone, days)
+    if weekly_closed_days is None:
+        weekly_closed_days = ClinicSettings.get_solo().weekly_closed_days
+    closed_weekdays = set(weekly_closed_days)
     shifts = list(
         WorkingShift.objects.select_related("employee")
         .filter(is_active=True, employee__role="DOCTOR")
@@ -71,6 +77,8 @@ def doctor_utilization(clinic_date, clinic_timezone, days=30):
     available = defaultdict(int)
     for offset in range(days):
         day = first_day + timedelta(days=offset)
+        if day.weekday() in closed_weekdays:
+            continue
         for shift in shifts:
             if shift.weekday == day.weekday():
                 start_dt = datetime.combine(day, shift.start_time)

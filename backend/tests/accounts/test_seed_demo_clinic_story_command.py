@@ -150,6 +150,35 @@ def test_demo_story_runs_without_preexisting_clinic_settings(tmp_path):
     assert AIResult.objects.count() == 0
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("closed_weekdays", "expected_populated_weekday"),
+    [([6], 4), ([4, 5], 6)],
+)
+@override_settings(DEBUG=True)
+def test_demo_story_appointments_follow_configured_operating_week(
+    tmp_path, closed_weekdays, expected_populated_weekday
+):
+    clinic = ClinicSettings.get_solo()
+    clinic.weekly_closed_days = closed_weekdays
+    clinic.save(update_fields=["weekly_closed_days", "updated_at"])
+
+    with override_settings(MEDIA_ROOT=tmp_path):
+        seed("--reset-demo", "--reference-date", "2026-08-08")
+
+    clinic.refresh_from_db()
+    assert clinic.weekly_closed_days == closed_weekdays
+    clinic_timezone = ZoneInfo(clinic.timezone)
+    generated_weekdays = {
+        start.astimezone(clinic_timezone).weekday()
+        for start in Appointment.objects.filter(
+            patient__national_id_or_passport__startswith=PREFIX
+        ).values_list("start_datetime", flat=True)
+    }
+    assert not (generated_weekdays & set(closed_weekdays))
+    assert expected_populated_weekday in generated_weekdays
+
+
 def runtime_png(name):
     return SimpleUploadedFile(name, b"runtime-image", content_type="image/png")
 

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { clinicApi, clinicSettingsQueryKey } from "../../../api/endpoints/clinic";
 import { teamApi, teamQueryKeys } from "../../../api/endpoints/team";
 import { useAuthStore } from "../../../auth/authStore";
 import { Button, ConfirmDialog, Field, FormSection, PageHeaderV2, Pagination, SelectField, StatePanel, StatusBadge, StickyActionBar, SurfaceCard } from "../../../components/v2";
@@ -43,6 +44,7 @@ export function TeamListPage() {
   const [role, setRole] = useState("");
   const [professionalStatus, setProfessionalStatus] = useState("");
   const [availability, setAvailability] = useState("");
+  const clinicSettings = useQuery({ queryKey: clinicSettingsQueryKey, queryFn: clinicApi.getSettings, staleTime: 300_000 });
   const query = useQuery({
     queryKey: [...teamQueryKeys.all, { page, q, role, professionalStatus, availability }],
     queryFn: () => teamApi.list({ page, ...(q ? { q } : {}), ...(role ? { role } : {}), ...(professionalStatus ? { professional_status: professionalStatus } : {}), ...(availability ? { availability } : {}) }),
@@ -74,7 +76,7 @@ export function TeamListPage() {
       return <article key={member.id} className="team-directory-card" role="link" tabIndex={0} aria-label={`${member.full_name}, ${localizedEnum(language, member.role)}`} onClick={open} onKeyDown={(event) => keyboardOpen(event, open)}>
         <div className="team-card-avatar" aria-hidden="true">{initials(member.full_name)}</div>
         <div className="team-card-identity"><h3>{member.full_name}</h3><div><span className="team-role-chip">{localizedEnum(language, member.role)}</span><span className="team-specialty-chip">{professionalLabel}</span></div></div>
-        <dl className="team-card-contact"><div><dt><Mail size={16} aria-hidden="true" /></dt><dd dir="ltr">{member.email}</dd></div><div><dt><Phone size={16} aria-hidden="true" /></dt><dd dir="ltr">{member.phone || "—"}</dd></div><div><dt><CalendarDays size={16} aria-hidden="true" /></dt><dd>{scheduleSummaryText(member.schedule_summary, language)}</dd></div></dl>
+        <dl className="team-card-contact"><div><dt><Mail size={16} aria-hidden="true" /></dt><dd dir="ltr">{member.email}</dd></div><div><dt><Phone size={16} aria-hidden="true" /></dt><dd dir="ltr">{member.phone || "—"}</dd></div><div><dt><CalendarDays size={16} aria-hidden="true" /></dt><dd>{scheduleSummaryText(member.schedule_summary, language, clinicSettings.data?.weekly_closed_days)}</dd></div></dl>
         <footer className="team-card-footer"><div><span>{c.professionalStatus}</span><StatusBadge status={member.professional_status} label={localizedEnum(language, member.professional_status)} /></div><div><span>{c.availability}</span><StatusBadge status={member.availability.availability} label={localizedEnum(language, member.availability.availability)} /></div><div><span>{c.appointments}</span><strong>{member.today_workload.appointment_count}</strong></div>{member.role === "DOCTOR" ? <div><span>{c.activeVisits}</span><strong>{member.today_workload.active_visit_count}</strong></div> : null}</footer>
       </article>;
     })}</section> : <StatePanel state="empty" title={c.noTeamMembers} /> : null}
@@ -159,6 +161,7 @@ export function TeamDetailPage() {
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
   const query = useQuery({ queryKey: teamQueryKeys.detail(id), queryFn: () => teamApi.detail(id), enabled: id > 0 });
+  const clinicSettings = useQuery({ queryKey: clinicSettingsQueryKey, queryFn: clinicApi.getSettings, staleTime: 300_000 });
   const status = useMutation({ mutationFn: (active: boolean) => teamApi.setProfessionalStatus(id, { is_active: active, version: query.data?.version ?? 0 }), onSuccess: async () => { setConfirmStatus(false); await Promise.all([client.invalidateQueries({ queryKey: teamQueryKeys.detail(id) }), invalidate(client)]); } });
 
   if (query.isLoading) return <StatePanel state="loading" title={c.loadingTeam} />;
@@ -179,7 +182,7 @@ export function TeamDetailPage() {
       <SurfaceCard className="professional-status-card"><h3>{c.professionalStatus}</h3><StatusBadge status={member.professional_status} label={localizedEnum(language, member.professional_status)} /><p>{c.professionalStatusDescription}</p>{isAdmin ? <Button type="button" variant={member.professional_status === "ACTIVE" ? "danger" : "secondary"} onClick={() => setConfirmStatus(true)}>{member.professional_status === "ACTIVE" ? c.deactivateProfessional : c.reactivateProfessional}</Button> : null}</SurfaceCard>
     </div>
     <div className="team-schedule-grid">
-      <SurfaceCard className="team-schedule-card"><h3>{c.schedule}</h3><ScheduleMatrix shifts={member.active_shifts} language={language} emptyText={c.noWorkingHours} /></SurfaceCard>
+      <SurfaceCard className="team-schedule-card"><h3>{c.schedule}</h3><ScheduleMatrix shifts={member.active_shifts} language={language} emptyText={c.noWorkingHours} weeklyClosedDays={clinicSettings.data?.weekly_closed_days} /></SurfaceCard>
       <SurfaceCard className="team-leave-card"><h3>{c.leaveAvailability}</h3><LeaveExceptionsTable items={member.current_future_leave} language={language} emptyText={c.noLeave} noReason={c.noReasonRecorded} /></SurfaceCard>
     </div>
     {isAdmin ? <ConfirmDialog open={confirmStatus} title={c.confirmProfessionalStatus} description={c.professionalStatusDescription} pending={status.isPending} onClose={() => { setConfirmStatus(false); status.reset(); }}>

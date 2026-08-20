@@ -38,6 +38,7 @@ def mark_overlapping_appointments_needs_reschedule(
         appointment.status = Appointment.Status.NEEDS_RESCHEDULE
         appointment.reschedule_source_exception = availability_exception
         appointment.reschedule_source_working_shift = None
+        appointment.reschedule_source_clinic_weekday = None
         appointment.reschedule_previous_status = previous
         appointment.updated_by = actor
         appointment.save(
@@ -45,6 +46,7 @@ def mark_overlapping_appointments_needs_reschedule(
                 "status",
                 "reschedule_source_exception",
                 "reschedule_source_working_shift",
+                "reschedule_source_clinic_weekday",
                 "reschedule_previous_status",
                 "updated_by",
                 "updated_at",

@@ -39,7 +39,7 @@ The seeded Admin, Staff, and Doctor dashboards are non-empty and their related r
 
 ## Automated verification
 
-Phase 14F.3 makes the clinical demo state explicit: Doctor One has named Morning (08:00–12:00) and Evening (14:00–18:00) shifts Monday–Friday with weekends Off; Doctor Two and Staff One have different valid split-shift examples. Exactly one Doctor One visit is started through the normal service transition, while a separate Doctor Two appointment remains checked in and eligible for Start Visit. Eligible appointments fit active shifts; explicit leave/shift-impact records remain intentionally marked Needs Reschedule.
+Phase 14F.3 makes the clinical demo state explicit: Doctor One has stored split-shift examples, while Doctor Two and Staff One have different valid schedules. Their effective days follow the authoritative Clinic Settings weekly closure policy; stored shifts on a closed weekday remain suppressed rather than deleted. Exactly one Doctor One visit is started through the normal service transition, while a separate Doctor Two appointment remains checked in and eligible for Start Visit. Eligible appointments fit active shifts and clinic-open days; explicit leave/shift-impact records remain intentionally marked Needs Reschedule.
 
 Phase 14F.4 keeps that active visit populated with two visit-owned synthetic X-rays suitable for exercising the normal authorized AI workflow. The seed creates no `AIResult`, overlay, findings, confidence, or fake AI-run audit event; inference results exist only after an authorized runtime request.
 

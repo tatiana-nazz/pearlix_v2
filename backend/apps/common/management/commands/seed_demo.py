@@ -43,10 +43,10 @@ def aware(day, hour, minute=0):
     return timezone.make_aware(datetime.combine(day, time(hour, minute)), CLINIC_TZ)
 
 
-def working_day(anchor, delta):
+def working_day(anchor, delta, closed_weekdays):
     day = anchor + timedelta(days=delta)
     direction = 1 if delta >= 0 else -1
-    while day.weekday() == 4:  # Friday is closed.
+    while day.weekday() in closed_weekdays:
         day += timedelta(days=direction)
     return day
 
@@ -191,12 +191,23 @@ class Command(BaseCommand):
         clinic.default_currency = ClinicSettings.Currency.USD
         clinic.supported_currencies = ["USD", "SYP"]
         clinic.default_language = ClinicSettings.Language.EN
+        # Friday is an explicit demo policy, not an application-level weekend
+        # assumption. Population and auditing below always read this setting.
+        clinic.weekly_closed_days = [4]
         clinic.ai_mode = ClinicSettings.AiMode.SEPARATE_SERVICE
         clinic.ai_service_url = ""
         clinic.save()
 
     def create_shifts(self, users):
-        labels = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 5: "Saturday", 6: "Sunday"}
+        labels = {
+            0: "Monday",
+            1: "Tuesday",
+            2: "Wednesday",
+            3: "Thursday",
+            4: "Friday",
+            5: "Saturday",
+            6: "Sunday",
+        }
         defaults = {}
         for weekday, label in labels.items():
             defaults[weekday] = ClinicDefaultShift.objects.create(
@@ -361,7 +372,10 @@ class Command(BaseCommand):
 
     def create_story_records(self, users, p):
         anchor = timezone.localdate()
-        at = lambda delta, hour, minute=0: aware(working_day(anchor, delta), hour, minute)
+        closed_weekdays = set(ClinicSettings.get_solo().weekly_closed_days)
+        at = lambda delta, hour, minute=0: aware(
+            working_day(anchor, delta, closed_weekdays), hour, minute
+        )
         story = {}
 
         a = self.create_appointment(patient=p["layla"], doctor=users["sara"], staff=users["staff"], start=at(-90, 10), duration=60, status=Appointment.Status.COMPLETED, reason="Pain when chewing on lower-left molar")
@@ -433,8 +447,16 @@ class Command(BaseCommand):
         errors = []
         demo = Patient.objects.filter(national_id_or_passport__startswith=DEMO_PATIENT_PREFIX)
         demo_ids = list(demo.values_list("id", flat=True))
+        closed_weekdays = set(ClinicSettings.get_solo().weekly_closed_days)
 
         for appointment in Appointment.objects.filter(patient_id__in=demo_ids).select_related("doctor", "reschedule_source_exception"):
+            local_weekday = timezone.localtime(
+                appointment.start_datetime, CLINIC_TZ
+            ).weekday()
+            if local_weekday in closed_weekdays:
+                errors.append(
+                    f"Demo appointment {appointment.id} falls on configured closed weekday {local_weekday}."
+                )
             has_visit = Visit.objects.filter(appointment=appointment).exists()
             if appointment.status == Appointment.Status.COMPLETED and not has_visit:
                 errors.append(f"Completed appointment {appointment.id} has no visit.")

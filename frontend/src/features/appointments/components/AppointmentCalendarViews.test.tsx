@@ -74,6 +74,24 @@ describe("appointment calendar views", () => {
     expect(onDaySelect).toHaveBeenCalledWith("2026-07-13");
   });
 
+  it("marks configured Sunday closures, keeps Friday open, and preserves historical appointment cards", () => {
+    const historical = { ...appointment, id: 44, status: "COMPLETED" as const, start_datetime: "2026-07-19T08:00:00Z", end_datetime: "2026-07-19T08:30:00Z" };
+    const { container, rerender } = render(<AppointmentWeekView role="STAFF" date="2026-07-13" timezone="UTC" appointments={[historical]} onDetails={vi.fn()} onDaySelect={vi.fn()} weeklyClosedDays={[6]} />);
+
+    const friday = container.querySelector<HTMLElement>('.appointment-calendar-column[data-date="2026-07-17"]')!;
+    const sunday = container.querySelector<HTMLElement>('.appointment-calendar-column[data-date="2026-07-19"]')!;
+    expect(friday).not.toHaveAttribute("data-clinic-closed");
+    expect(sunday).toHaveAttribute("data-clinic-closed", "true");
+    expect(within(sunday).getByText("Clinic closed")).toBeInTheDocument();
+    expect(within(sunday).getByText("Maya Patient")).toBeInTheDocument();
+
+    rerender(<AppointmentMonthView date="2026-07-01" timezone="UTC" appointments={[historical]} onDetails={vi.fn()} onDaySelect={vi.fn()} weeklyClosedDays={[6]} />);
+    const monthSunday = container.querySelector<HTMLElement>('.appointment-month-cell[data-date="2026-07-19"]')!;
+    expect(monthSunday).toHaveAttribute("data-clinic-closed", "true");
+    expect(within(monthSunday).getByText("Clinic closed")).toBeInTheDocument();
+    expect(within(monthSunday).getByText("Maya Patient")).toBeInTheDocument();
+  });
+
   it("uses shared semantic tones and status-inclusive accessible labels for every Month status", async () => {
     const statuses = ["UPCOMING", "CHECKED_IN", "ACTIVE", "COMPLETED", "NEEDS_RESCHEDULE", "CANCELLED", "NO_SHOW"] as const;
     const expectedTone = ["status-info", "status-teal", "status-success", "status-success", "status-warning", "status-danger", "status-danger"];
