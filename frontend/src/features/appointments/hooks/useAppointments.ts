@@ -12,9 +12,14 @@ export function appointmentKey(appointmentId: number) {
 }
 
 export function useAppointments(filters: AppointmentListFilters, fetchAllPages = false) {
+  // Day/week/month views always carry a bounded date period. Those surfaces
+  // must render the complete period; only the unbounded list/queue stays paged.
+  const boundedPeriod = Boolean(filters.date || (filters.start_from && filters.start_to));
+  const shouldFetchAllPages = fetchAllPages || boundedPeriod;
+
   return useQuery({
-    queryKey: [...appointmentListKey(filters), fetchAllPages ? "all-pages" : "page"],
-    queryFn: () => fetchAllPages ? getAllAppointments(filters) : getAppointments(filters),
+    queryKey: [...appointmentListKey(filters), shouldFetchAllPages ? "all-pages" : "page"],
+    queryFn: () => shouldFetchAllPages ? getAllAppointments(filters) : getAppointments(filters),
   });
 }
 
