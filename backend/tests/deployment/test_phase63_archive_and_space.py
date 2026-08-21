@@ -103,9 +103,12 @@ def test_space_direct_url_matches_private_space_https_origin():
     assert space_direct_url("tay164/pearlix-dentex-ai") == "https://tay164-pearlix-dentex-ai.hf.space"
 
 
-def test_local_ai_launcher_does_not_print_bearer_token():
+def test_local_ai_launcher_does_not_print_bearer_token_and_service_bounds_requests():
     repo_root = Path(__file__).resolve().parents[3]
-    script = (repo_root / "backend/deployment/start_local_ai.ps1").read_text(encoding="utf-8")
-    assert "Write-Host $serviceToken" not in script
-    assert "Set-Clipboard" in script
-    assert "intentionally NOT printed" in script
+    launcher = (repo_root / "backend/deployment/start_local_ai.ps1").read_text(encoding="utf-8")
+    service = (repo_root / "backend/deployment/local_ai_service.py").read_text(encoding="utf-8")
+
+    assert "Write-Host $serviceToken" not in launcher
+    assert "Set-Clipboard" in launcher
+    assert "intentionally NOT printed" in launcher
+    assert "app.add_middleware(BoundedASGIRequestBodyMiddleware)" in service
