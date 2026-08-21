@@ -48,7 +48,6 @@ class ClinicSettings(TimeStampedModel):
     supported_currencies = models.JSONField(default=list)
     default_language = models.CharField(max_length=2, choices=Language.choices, default=Language.EN)
     ai_mode = models.CharField(max_length=30, choices=AiMode.choices, default=AiMode.MOCK_ADAPTER)
-    ai_service_url = models.URLField(blank=True)
 
     class Meta:
         verbose_name_plural = "Clinic settings"

@@ -1,4 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { clinicApi, clinicSettingsQueryKey } from "../../api/endpoints/clinic";
 
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
@@ -15,6 +17,7 @@ export function RescheduleAppointmentPage() {
   const appointment = useAppointment(appointmentId);
   const doctors = useDoctors();
   const updateAppointment = useUpdateAppointment(appointmentId);
+  const clinicSettings = useQuery({ queryKey: clinicSettingsQueryKey, queryFn: clinicApi.getSettings, staleTime: 300_000 });
 
   return (
     <div className="appointment-page">
@@ -37,6 +40,7 @@ export function RescheduleAppointmentPage() {
           doctors={doctors.data}
           isSubmitting={updateAppointment.isPending}
           error={updateAppointment.error}
+          clinicTimezone={clinicSettings.data?.timezone}
           onSubmit={async (payload) => {
             await updateAppointment.mutateAsync(payload);
             navigate(appointmentViewPath("STAFF", "needs-reschedule"));

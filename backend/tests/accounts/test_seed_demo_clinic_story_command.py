@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from apps.accounts.management.commands.seed_demo_clinic_story import XRAY_PNG_BYTES
 from django.core.management.base import CommandError
 from django.core.management import call_command
 from django.test import override_settings
@@ -181,7 +182,7 @@ def test_demo_story_appointments_follow_configured_operating_week(
 
 
 def runtime_png(name):
-    return SimpleUploadedFile(name, b"runtime-image", content_type="image/png")
+    return SimpleUploadedFile(name, XRAY_PNG_BYTES, content_type="image/png")
 
 
 @pytest.mark.django_db

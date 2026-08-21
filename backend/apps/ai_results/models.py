@@ -43,6 +43,7 @@ class AIResult(TimeStampedModel):
     overall_confidence = models.FloatField(null=True, blank=True)
     findings_json = models.JSONField(default=list)
     overlay_file = models.FileField(upload_to=ai_overlay_upload_path, null=True, blank=True)
+    overlay_size_bytes = models.PositiveIntegerField(default=0)
     model_version = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     error_message = models.TextField(blank=True)
@@ -104,3 +105,13 @@ class AIResult(TimeStampedModel):
     def __str__(self) -> str:
         source_id = self.xray_attachment_id or self.external_xray_case_id
         return f"AI result for source {source_id}"
+
+
+class AIExecutionState(models.Model):
+    """Stable singleton row used to serialize distributed AI admission."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return "AI execution admission state"

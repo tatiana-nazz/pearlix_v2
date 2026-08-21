@@ -83,6 +83,18 @@ PEARLIX_ALLOW_DEMO_COMMANDS = False
 PEARLIX_RUNTIME_ENVIRONMENT = "production"
 TRUSTED_PROXY_CIDRS = env_list("TRUSTED_PROXY_CIDRS", [])
 
+_positive_resource_limits = {
+    "PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL": PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL,  # noqa: F405
+    "PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER": PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER,  # noqa: F405
+    "PEARLIX_XRAY_PATIENT_QUOTA_BYTES": PEARLIX_XRAY_PATIENT_QUOTA_BYTES,  # noqa: F405
+    "PEARLIX_XRAY_USER_QUOTA_BYTES": PEARLIX_XRAY_USER_QUOTA_BYTES,  # noqa: F405
+    "PEARLIX_XRAY_GLOBAL_QUOTA_BYTES": PEARLIX_XRAY_GLOBAL_QUOTA_BYTES,  # noqa: F405
+}
+if any(value <= 0 for value in _positive_resource_limits.values()):
+    raise ImproperlyConfigured(
+        "Production imaging and AI resource limits must all be positive."
+    )
+
 # Supabase Storage exposes an S3-compatible API. Generated S3 credentials are
 # server-only and bypass Storage RLS, so the bucket stays private and browser
 # access continues through Pearlix's authenticated protected-media endpoints.

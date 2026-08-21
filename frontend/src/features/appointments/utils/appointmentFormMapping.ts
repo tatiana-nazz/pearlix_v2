@@ -24,14 +24,20 @@ export const defaultAppointmentFormValues: AppointmentFormValues = {
   notes: "",
 };
 
-export function appointmentToFormValues(appointment?: AppointmentDetail | AppointmentListItem | null): AppointmentFormValues {
+export function appointmentToFormValues(appointment?: AppointmentDetail | AppointmentListItem | null, clinicTimezone?: string): AppointmentFormValues {
   if (!appointment) return defaultAppointmentFormValues;
-  const startsAt = new Date(appointment.start_datetime);
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: clinicTimezone || "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(appointment.start_datetime));
+  const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
   return {
     patientId: String(appointment.patient.id),
     doctorId: String(appointment.doctor.id),
-    date: dateFromAppointment(appointment.start_datetime),
-    time: `${String(startsAt.getHours()).padStart(2, "0")}:${String(startsAt.getMinutes()).padStart(2, "0")}`,
+    date: dateFromAppointment(appointment.start_datetime, clinicTimezone),
+    time: `${values.hour}:${values.minute}`,
     durationMinutes: String(appointment.duration_minutes),
     reason: appointment.reason ?? "",
     notes: "notes" in appointment ? appointment.notes : "",

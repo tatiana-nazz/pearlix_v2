@@ -200,7 +200,6 @@ class Command(BaseCommand):
         # assumption. Population and auditing below always read this setting.
         clinic.weekly_closed_days = [4]
         clinic.ai_mode = ClinicSettings.AiMode.SEPARATE_SERVICE
-        clinic.ai_service_url = ""
         clinic.save()
 
     def create_shifts(self, users):

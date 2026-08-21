@@ -4,8 +4,8 @@ import {
   getAllPatientAppointments,
   getAllPatientVisits,
   getPatient,
-  getPatientAiResults,
-  getPatientXrays,
+  getAllPatientAiResults,
+  getAllPatientXrays,
 } from "../../../api/endpoints/patients";
 
 export function patientKey(patientId: number) {
@@ -39,7 +39,7 @@ export function usePatientAppointments(patientId: number, enabled = true) {
 export function usePatientXrays(patientId: number, enabled = true) {
   return useQuery({
     queryKey: ["patient", patientId, "xrays"],
-    queryFn: () => getPatientXrays(patientId),
+    queryFn: () => getAllPatientXrays(patientId),
     enabled,
   });
 }
@@ -47,7 +47,7 @@ export function usePatientXrays(patientId: number, enabled = true) {
 export function usePatientAiResults(patientId: number, enabled = true) {
   return useQuery({
     queryKey: ["patient", patientId, "ai-results"],
-    queryFn: () => getPatientAiResults(patientId),
+    queryFn: () => getAllPatientAiResults(patientId),
     enabled,
   });
 }

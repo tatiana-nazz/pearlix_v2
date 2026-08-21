@@ -99,9 +99,9 @@ User ID is the Team identifier. Team excludes Admin accounts and legacy unlinked
 - `GET /api/clinic/settings/` - Admin gets full settings; Staff/Doctor get safe settings.
 - `PATCH /api/clinic/settings/` - Admin only. Body can include full settings fields.
 
-Full settings fields: `clinic_name`, `address`, `phone`, `email`, `timezone`, `capacity_per_slot`, `default_appointment_duration_minutes`, `allowed_durations_minutes`, `default_currency`, `supported_currencies`, `default_language`, `ai_mode`, `ai_service_url`.
+Full settings fields: `clinic_name`, `address`, `phone`, `email`, `timezone`, `capacity_per_slot`, `default_appointment_duration_minutes`, `allowed_durations_minutes`, `default_currency`, `supported_currencies`, `default_language`, `ai_mode`. The separate AI endpoint and token are environment-owned (`AI_SERVICE_URL`, `AI_SERVICE_TOKEN`) and are never exposed through this API.
 
-Safe settings omit `ai_mode` and `ai_service_url`.
+Safe settings omit `ai_mode`; operational AI endpoint configuration is not stored in Clinic Settings.
 
 ### Team / Users / Doctors / Staff
 
@@ -609,7 +609,7 @@ Hidden actions:
 ### Clinic Settings
 
 - Endpoint: `GET/PATCH /api/clinic/settings/`
-- Patch payload: full settings fields. Staff/Doctor must not see or patch `ai_mode` or `ai_service_url`.
+- Patch payload: full settings fields. Staff/Doctor must not see or patch `ai_mode`; no role can patch the environment-owned AI endpoint through this API.
 - Important values: currencies `SYP`, `USD`; languages `EN`, `AR`; AI modes `MOCK_ADAPTER`, `DJANGO_INTERNAL`, `SEPARATE_SERVICE`.
 - Errors: invalid capacity, unsupported durations, default duration not allowed, unsupported currencies, default currency not supported.
 

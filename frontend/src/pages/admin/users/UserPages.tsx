@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -56,11 +56,17 @@ export function AdminUserListPage() {
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
-  const users = useQuery({ queryKey: ["users", page], queryFn: () => usersApi.list({ page }) });
-  const filtered = (users.data?.results ?? []).filter((user) => {
-    const matchesSearch = !search || `${user.full_name} ${user.email}`.toLowerCase().includes(search.toLowerCase());
-    return matchesSearch && (!role || user.role === role) && (!status || (status === "ACTIVE") === user.is_active);
+  const users = useQuery({
+    queryKey: ["users", page, search, role, status],
+    queryFn: () => usersApi.list({
+      page,
+      search: search || undefined,
+      role: role || undefined,
+      is_active: status ? String(status === "ACTIVE") : undefined,
+    }),
   });
+  const filtered = users.data?.results ?? [];
+  useEffect(() => setPage(1), [search, role, status]);
   const clear = () => { setSearch(""); setRole(""); setStatus(""); };
 
   return <div className="admin-page users-access-page">

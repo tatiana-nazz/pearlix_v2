@@ -12,7 +12,7 @@ import { displayText } from "../../utils/formatters";
 export function OwnLeavePage() {
   const leave = useQuery({
     queryKey: ["my-availability-exceptions"],
-    queryFn: () => scheduleApi.availabilityExceptions({ page: 1 }),
+    queryFn: () => scheduleApi.allAvailabilityExceptions(),
   });
 
   if (leave.isLoading) return <LoadingState title="Loading your leave..." />;

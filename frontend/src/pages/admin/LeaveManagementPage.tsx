@@ -20,8 +20,9 @@ export function LeaveManagementPage() {
   const [end, setEnd] = useState("");
   const [reason, setReason] = useState("");
   const [selectedLeave, setSelectedLeave] = useState<AvailabilityException | null>(null);
-  const users = useQuery({ queryKey: ["schedule-employees"], queryFn: () => usersApi.list({ page: 1 }) });
-  const leave = useQuery({ queryKey: ["availability-exceptions", "admin"], queryFn: () => scheduleApi.availabilityExceptions({ page: 1 }) });
+  const [actionError, setActionError] = useState<unknown>(null);
+  const users = useQuery({ queryKey: ["schedule-employees"], queryFn: usersApi.listScheduleEmployees });
+  const leave = useQuery({ queryKey: ["availability-exceptions", "admin"], queryFn: () => scheduleApi.allAvailabilityExceptions() });
   const employees = useMemo(() => (users.data?.results ?? []).filter((user) => user.role === "DOCTOR" || user.role === "STAFF"), [users.data]);
   const selected = employees.find((user) => user.id === employeeId);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["availability-exceptions"] });
@@ -29,8 +30,10 @@ export function LeaveManagementPage() {
     mutationFn: () => scheduleApi.createAvailabilityException({
       doctor_id: selected?.role === "DOCTOR" ? selected.id : null,
       staff_id: selected?.role === "STAFF" ? selected.id : null,
-      start_datetime: new Date(start).toISOString(),
-      end_datetime: new Date(end).toISOString(),
+      // A datetime-local input is clinic wall time. Send it without browser
+      // timezone conversion; the backend interprets it in ClinicSettings.timezone.
+      start_datetime: `${start}:00`,
+      end_datetime: `${end}:00`,
       type: "UNAVAILABLE",
       reason,
     }),
@@ -40,8 +43,13 @@ export function LeaveManagementPage() {
   const editReason = async (id: number, version: number, currentReason: string) => {
     const nextReason = window.prompt("Leave reason", currentReason);
     if (nextReason !== null && nextReason !== currentReason) {
-      await scheduleApi.updateAvailabilityException(id, { reason: nextReason, version });
-      refresh();
+      try {
+        setActionError(null);
+        await scheduleApi.updateAvailabilityException(id, { reason: nextReason, version });
+        refresh();
+      } catch (error) {
+        setActionError(error);
+      }
     }
   };
 
@@ -57,6 +65,7 @@ export function LeaveManagementPage() {
           <button className="button primary" disabled={create.isPending || !selected}>Create unavailable period</button>
         </form>
       </Card>
+      {create.error || cancel.error || actionError ? <ErrorState title="Unable to update leave" error={create.error || cancel.error || actionError} onRetry={() => { create.reset(); cancel.reset(); setActionError(null); }} /> : null}
       {leave.isLoading ? <LoadingState title="Loading leave records..." /> : leave.isError ? <ErrorState error={leave.error} onRetry={() => void leave.refetch()} /> : !leave.data?.results.length ? <EmptyState title="No leave or availability exceptions were returned." /> : <ul className="schedule-list">{leave.data.results.map((item) => <li key={item.id} className="clickable-row" tabIndex={0} onClick={() => setSelectedLeave(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedLeave(item); } }}><div><strong>{item.doctor?.full_name ?? item.staff?.full_name}</strong><span>{formatDateRange(item.start_datetime, item.end_datetime)}</span><span>{displayText(item.reason, "No reason recorded")}</span></div><StatusPill status={item.is_cancelled ? "CANCELLED" : item.type} /></li>)}</ul>}
       {selectedLeave ? <div className="dialog-backdrop" role="presentation"><section className="dialog-panel" role="dialog" aria-modal="true" aria-label="Leave details"><h3>{selectedLeave.doctor?.full_name ?? selectedLeave.staff?.full_name}</h3><p>{formatDateRange(selectedLeave.start_datetime, selectedLeave.end_datetime)}</p><p>{displayText(selectedLeave.reason, "No reason recorded")}</p><StatusPill status={selectedLeave.is_cancelled ? "CANCELLED" : selectedLeave.type} /><div className="form-actions">{!selectedLeave.is_cancelled ? <><button className="button secondary" onClick={() => void editReason(selectedLeave.id, selectedLeave.version, selectedLeave.reason)}>Edit</button><button className="button danger" disabled={cancel.isPending} onClick={() => cancel.mutate({ id: selectedLeave.id, version: selectedLeave.version }, { onSuccess: () => setSelectedLeave(null) })}>Cancel leave</button></> : null}<button className="button ghost" onClick={() => setSelectedLeave(null)}>Close</button></div></section></div> : null}
     </div>

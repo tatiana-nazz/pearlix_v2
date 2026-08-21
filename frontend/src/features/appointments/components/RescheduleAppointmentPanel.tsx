@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Card } from "../../../components/Card";
 import type { AppointmentDetail, UpdateAppointmentPayload, AvailabilitySlot } from "../../../types/appointments";
@@ -13,11 +13,12 @@ interface RescheduleAppointmentPanelProps {
   doctors: DoctorListItem[];
   isSubmitting?: boolean;
   error?: unknown;
+  clinicTimezone?: string;
   onSubmit: (payload: UpdateAppointmentPayload) => void | Promise<void>;
 }
 
-export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting, error, onSubmit }: RescheduleAppointmentPanelProps) {
-  const initial = appointmentToFormValues(appointment);
+export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting, error, clinicTimezone, onSubmit }: RescheduleAppointmentPanelProps) {
+  const initial = appointmentToFormValues(appointment, clinicTimezone);
   const [doctorId, setDoctorId] = useState(initial.doctorId);
   const [date, setDate] = useState(initial.date);
   const [durationMinutes, setDurationMinutes] = useState(initial.durationMinutes);
@@ -30,9 +31,11 @@ export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting,
     [date, doctorId, durationMinutes, appointment.duration_minutes],
   );
   const availability = useAppointmentAvailability(filters);
+  useEffect(() => setSelectedSlot(null), [doctorId, date, durationMinutes]);
 
   async function submit() {
-    const slot = selectedSlot?.start_datetime ?? appointment.start_datetime;
+    if (!selectedSlot) return;
+    const slot = selectedSlot.start_datetime;
     await onSubmit({
       patient_id: appointment.patient.id,
       doctor_id: Number(doctorId),

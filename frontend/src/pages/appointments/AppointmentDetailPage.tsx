@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
 import { ApiClientError } from "../../api/errors";
+import { clinicApi, clinicSettingsQueryKey } from "../../api/endpoints/clinic";
 import { useAuthStore } from "../../auth/authStore";
 import { Button, DetailHeader, Modal, StatePanel, SurfaceCard } from "../../components/v2";
 import { AppointmentConfirmDialog } from "../../features/appointments/components/AppointmentConfirmDialog";
@@ -40,6 +42,7 @@ function AppointmentEditModal({ appointment, onClose }: AppointmentEditModalProp
   const c = appointmentCopy(language);
   const doctors = useDoctors();
   const update = useUpdateAppointment(appointment.id);
+  const clinicSettings = useQuery({ queryKey: clinicSettingsQueryKey, queryFn: clinicApi.getSettings, staleTime: 300_000 });
 
   async function submit(payload: UpdateAppointmentPayload) {
     await update.mutateAsync(payload);
@@ -50,7 +53,7 @@ function AppointmentEditModal({ appointment, onClose }: AppointmentEditModalProp
     <Modal open title={c.edit} onClose={onClose} wide>
       {doctors.isLoading ? <StatePanel state="loading" title={c.loading} /> : null}
       {doctors.isError ? <StatePanel state="error" title={c.unavailable} action={<Button type="button" variant="secondary" onClick={() => void doctors.refetch()}>{c.retry}</Button>} /> : null}
-      {doctors.data ? <AppointmentForm mode="edit" doctors={doctors.data} appointment={appointment} isSubmitting={update.isPending} error={update.error} onCancel={onClose} onSubmit={(payload) => submit(payload as UpdateAppointmentPayload)} /> : null}
+      {doctors.data ? <AppointmentForm mode="edit" doctors={doctors.data} appointment={appointment} clinicTimezone={clinicSettings.data?.timezone} isSubmitting={update.isPending} error={update.error} onCancel={onClose} onSubmit={(payload) => submit(payload as UpdateAppointmentPayload)} /> : null}
     </Modal>
   );
 }

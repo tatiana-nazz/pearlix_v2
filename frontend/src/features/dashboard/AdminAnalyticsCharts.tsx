@@ -23,6 +23,12 @@ const palette = {
   violet: "#9270CA",
 } as const;
 
+const finiteNumber = (value: unknown) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
+const safePercent = (value: unknown) => Math.min(100, Math.max(0, finiteNumber(value)));
+
 const labels = {
   EN: {
     outcomes: "Appointments & outcomes",
@@ -246,7 +252,7 @@ function UtilizationChart({ language, rows }: { language: LanguagePreference; ro
     <ChartReadout>
       {active ? <>
         <strong>{active.doctor.full_name}</strong>
-        <span>{active.utilization_percent.toFixed(1)}%</span>
+        <span>{safePercent(active.utilization_percent).toFixed(1)}%</span>
         <span>{active.booked_minutes} min {c.booked}</span>
         <span>{active.available_minutes} min {c.available}</span>
       </> : <span>{c.hoverHint}</span>}
@@ -262,12 +268,12 @@ function UtilizationChart({ language, rows }: { language: LanguagePreference; ro
       {visible.map((row, index) => {
         const y = margin.top + index * rowHeight + 9;
         const barHeight = 20;
-        const value = Math.min(100, Math.max(0, row.utilization_percent));
+        const value = safePercent(row.utilization_percent);
         return <g key={row.doctor.id} className={`analytics-hover-row${activeIndex === index ? " active" : ""}`} tabIndex={0} onMouseEnter={() => setActiveIndex(index)} onMouseLeave={() => setActiveIndex(null)} onFocus={() => setActiveIndex(index)} onBlur={() => setActiveIndex(null)}>
           <text className="analytics-doctor-label" x={margin.left - 14} y={y + 15} textAnchor="end">{row.doctor.full_name}</text>
           <rect className="analytics-track" x={margin.left} y={y} width={plotWidth} height={barHeight} rx="6" />
           <rect className="analytics-data-bar" x={margin.left} y={y} width={(value / 100) * plotWidth} height={barHeight} rx="6" fill={palette.teal} />
-          <text className="analytics-value-label" x={margin.left + plotWidth + 12} y={y + 15}>{row.utilization_percent.toFixed(1)}%</text>
+          <text className="analytics-value-label" x={margin.left + plotWidth + 12} y={y + 15}>{value.toFixed(1)}%</text>
         </g>;
       })}
     </svg>
@@ -286,8 +292,8 @@ function BillingCurrencyChart({ language, currency, days }: { language: Language
   const margin = { top: 22, right: 24, bottom: 52, left: 76 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
-  const billed = days.map((day) => Number(day[currency].billed));
-  const collected = days.map((day) => Number(day[currency].collected));
+  const billed = days.map((day) => Math.max(0, finiteNumber(day[currency].billed)));
+  const collected = days.map((day) => Math.max(0, finiteNumber(day[currency].collected)));
   const activeValues = [...(seriesVisible.billed ? billed : []), ...(seriesVisible.collected ? collected : [])];
   const yMax = niceMax(Math.max(1, ...activeValues));
   const point = (value: number, index: number) => {
@@ -302,7 +308,7 @@ function BillingCurrencyChart({ language, currency, days }: { language: Language
   const hoverDay = hoverIndex === null ? null : days[hoverIndex];
   const hoverBilled = hoverIndex === null ? 0 : billed[hoverIndex];
   const hoverCollected = hoverIndex === null ? 0 : collected[hoverIndex];
-  const hoverRate = hoverBilled > 0 ? (hoverCollected / hoverBilled) * 100 : hoverCollected > 0 ? 100 : 0;
+  const hoverRate = safePercent(hoverBilled > 0 ? (hoverCollected / hoverBilled) * 100 : hoverCollected > 0 ? 100 : 0);
 
   function toggleSeries(key: BillingSeriesKey) {
     setSeriesVisible((current) => {
@@ -323,7 +329,7 @@ function BillingCurrencyChart({ language, currency, days }: { language: Language
   return <div className="analytics-billing-panel analytics-billing-panel-large">
     <header>
       <div><strong>{currency}</strong><small>{c.billed}: {formatMoney(String(billedTotal), currency)} · {c.collected}: {formatMoney(String(collectedTotal), currency)}</small></div>
-      <span>{c.collectionRate}: {billedTotal > 0 ? `${((collectedTotal / billedTotal) * 100).toFixed(1)}%` : "—"}</span>
+      <span>{c.collectionRate}: {billedTotal > 0 ? `${safePercent((collectedTotal / billedTotal) * 100).toFixed(1)}%` : "—"}</span>
     </header>
     <InteractiveLegend items={[{ key: "billed", label: c.billed, color: palette.blue }, { key: "collected", label: c.collected, color: palette.teal }]} active={seriesVisible} onToggle={(key) => toggleSeries(key as BillingSeriesKey)} />
     <ChartReadout>
@@ -418,10 +424,10 @@ function ProblemRateChart({ language, weeks }: { language: LanguagePreference; w
   const margin = { top: 24, right: 22, bottom: 52, left: 58 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
-  const yMax = Math.max(20, niceMax(Math.max(1, ...weeks.map((week) => week.rate_percent))));
+  const yMax = 100;
   const coords = weeks.map((week, index) => {
     const x = margin.left + (index / Math.max(1, weeks.length - 1)) * plotWidth;
-    const y = margin.top + plotHeight - (week.rate_percent / yMax) * plotHeight;
+    const y = margin.top + plotHeight - (safePercent(week.rate_percent) / yMax) * plotHeight;
     return { x, y, week };
   });
   const linePoints = coords.map(({ x, y }) => `${x},${y}`).join(" ");
@@ -430,7 +436,7 @@ function ProblemRateChart({ language, weeks }: { language: LanguagePreference; w
 
   return <div className="analytics-chart-block analytics-interactive-chart">
     <ChartReadout>
-      {active ? <><strong>{shortDate(active.week_start, language)}</strong><span>{active.rate_percent.toFixed(1)}%</span><span>{c.cancelled}: {active.cancelled}</span><span>{c.noShow}: {active.no_show}</span><span>{c.scheduled}: {active.scheduled}</span></> : <span>{c.hoverHint}</span>}
+      {active ? <><strong>{shortDate(active.week_start, language)}</strong><span>{safePercent(active.rate_percent).toFixed(1)}%</span><span>{c.cancelled}: {active.cancelled}</span><span>{c.noShow}: {active.no_show}</span><span>{c.scheduled}: {active.scheduled}</span></> : <span>{c.hoverHint}</span>}
     </ChartReadout>
     <svg className="analytics-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={c.problemRate}>
       {ticks(yMax).map((tick) => {
@@ -441,7 +447,7 @@ function ProblemRateChart({ language, weeks }: { language: LanguagePreference; w
       <polyline className="analytics-line analytics-line-violet" points={linePoints} />
       {coords.map(({ x, y, week }, index) => <g key={week.week_start} className={`analytics-hover-row${activeIndex === index ? " active" : ""}`} tabIndex={0} onMouseEnter={() => setActiveIndex(index)} onMouseLeave={() => setActiveIndex(null)} onFocus={() => setActiveIndex(index)} onBlur={() => setActiveIndex(null)}>
         <circle className="analytics-point" cx={x} cy={y} r={activeIndex === index ? 7 : 5} />
-        <text className="analytics-value-label" x={x} y={Math.max(18, y - 12)} textAnchor="middle">{week.rate_percent.toFixed(1)}%</text>
+        <text className="analytics-value-label" x={x} y={Math.max(18, y - 12)} textAnchor="middle">{safePercent(week.rate_percent).toFixed(1)}%</text>
         <text className="analytics-axis-label" x={x} y={height - 16} textAnchor="middle">{shortDate(week.week_start, language)}</text>
       </g>)}
     </svg>

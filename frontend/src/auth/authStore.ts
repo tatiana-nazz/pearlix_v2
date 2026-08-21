@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import { authApi } from "../api/endpoints/auth";
 import { configureAuthAccessors } from "../api/http";
 import { rotateAuthenticatedQueryClient } from "../app/queryClient";
+import { toApiClientError } from "../api/errors";
 import type { AuthStatus, AuthUser, ChangePasswordPayload, LanguagePreference, LoginPayload, ThemePreference, UserRole } from "../types/auth";
 import {
   getAuthSessionId,
@@ -31,6 +32,7 @@ interface AuthState {
   mustChangePassword: boolean;
   isAuthenticated: boolean;
   authStatus: AuthStatus;
+  restorationError: string | null;
   login: (payload: LoginPayload) => Promise<AuthUser>;
   logout: () => Promise<void>;
   loadMe: () => Promise<AuthUser | null>;
@@ -60,6 +62,7 @@ export const useAuthStore = create<AuthState>()(
       mustChangePassword: false,
       isAuthenticated: false,
       authStatus: "unknown",
+      restorationError: null,
       async login(payload) {
         const loginRequest = ++latestLoginRequest;
         const startingRevision = authSessionRevision;
@@ -78,6 +81,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken: response.access,
           refreshToken: response.refresh,
           ...deriveAuth(response.user, response.access),
+          restorationError: null,
         });
         if (previousUser && (
           previousUser.id !== response.user.id
@@ -128,12 +132,17 @@ export const useAuthStore = create<AuthState>()(
           }
           set({ ...deriveAuth(user, get().accessToken) });
           return user;
-        } catch {
+        } catch (error) {
           if (
             startingRevision === authSessionRevision
             && startingRefreshToken === get().refreshToken
           ) {
-            get().clearAuth();
+            const apiError = toApiClientError(error);
+            if (apiError.status === 401 || apiError.status === 403) {
+              get().clearAuth();
+            } else {
+              set({ authStatus: "restoration_error", restorationError: apiError.message });
+            }
             return null;
           }
           return get().user;
@@ -209,6 +218,7 @@ export const useAuthStore = create<AuthState>()(
           mustChangePassword: false,
           isAuthenticated: false,
           authStatus: "anonymous",
+          restorationError: null,
         });
       },
     }),

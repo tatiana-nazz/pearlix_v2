@@ -132,7 +132,7 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
         {["day", "week", "month"].includes(view) && appointments.data ? <AppointmentPeriodSummary rows={rows} total={appointments.data.count} language={language} periodLabel={view === "day" ? c.daySummary : view === "month" ? c.monthSummary : c.weekSummary} totalLabel={c.periodTotal} loadedLabel={c.loadedStatusSummary} /> : null}
       </div>
 
-      {isCreateOpen ? <Modal open title={c.newAppointment} onClose={() => setCreateOpen(false)} wide><AppointmentForm mode="create" doctors={doctors.data ?? []} initialDate={date} initialDoctorId={Number(doctorId) || undefined} isSubmitting={createAppointment.isPending} error={createAppointment.error} onCancel={() => setCreateOpen(false)} onSubmit={submitCreate} /></Modal> : null}
+      {isCreateOpen ? <Modal open title={c.newAppointment} onClose={() => setCreateOpen(false)} wide><AppointmentForm mode="create" doctors={doctors.data ?? []} clinicTimezone={clinicTimezone} initialDate={date} initialDoctorId={Number(doctorId) || undefined} isSubmitting={createAppointment.isPending} error={createAppointment.error} onCancel={() => setCreateOpen(false)} onSubmit={submitCreate} /></Modal> : null}
     </main>
   );
 }

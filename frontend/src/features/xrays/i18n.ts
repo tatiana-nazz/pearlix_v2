@@ -176,7 +176,7 @@ const en: XrayCopy = {
   deleteSavedXray: "Delete saved X-ray",
   deleteSavedXrayDescription: "The saved X-ray, its AI result, and its overlay will be permanently removed.",
   keepSavedXray: "Keep X-ray",
-  deletingSavedXray: "Deletingâ€¦",
+    deletingSavedXray: "Deleting…",
   deleteSavedXrayFailed: "Unable to delete saved X-ray",
   overlayLegend: "Overlay colors",
   quadrantUpperRight: "Q1 upper right",

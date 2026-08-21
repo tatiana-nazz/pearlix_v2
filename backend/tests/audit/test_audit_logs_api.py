@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, override_settings
 from django.utils import timezone
+from apps.accounts.management.commands.seed_demo_clinic_story import XRAY_PNG_BYTES
 
 from apps.accounts.models import User
 from apps.audit.admin import ActivityLogAdmin
@@ -17,7 +18,7 @@ from apps.visits.models import Visit
 
 
 def upload_file(name="audit-xray.png", content_type="image/png"):
-    return SimpleUploadedFile(name, b"fake-image", content_type=content_type)
+    return SimpleUploadedFile(name, XRAY_PNG_BYTES, content_type=content_type)
 
 
 def future_at(hour):

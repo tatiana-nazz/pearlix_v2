@@ -19,6 +19,7 @@ vi.mock("../api/endpoints/auth", () => ({
 }));
 
 import { queryClient } from "../app/queryClient";
+import { ApiClientError } from "../api/errors";
 import type { AuthUser, UserRole } from "../types/auth";
 import { useAuthStore } from "./authStore";
 
@@ -217,6 +218,37 @@ describe("authenticated React Query cache isolation", () => {
 
     expect(useAuthStore.getState().user).toEqual(second);
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+  });
+
+  it.each([0, 500, 503])("preserves a potentially valid session on transient /me status %s", async (status) => {
+    const user = authUser(43, "DOCTOR");
+    setAuthenticated(user);
+    me.mockRejectedValue(new ApiClientError({ code: "TEMPORARY", message: "Temporarily unavailable.", details: {}, status }));
+    await useAuthStore.getState().loadMe();
+    expect(useAuthStore.getState()).toMatchObject({
+      accessToken: "access-43",
+      refreshToken: "refresh-43",
+      user,
+      authStatus: "restoration_error",
+    });
+  });
+
+  it.each([401, 403])("clears an invalid session on authoritative /me status %s", async (status) => {
+    const user = authUser(44, "DOCTOR");
+    setAuthenticated(user);
+    me.mockRejectedValue(new ApiClientError({ code: "AUTH_REQUIRED", message: "Authentication required.", details: {}, status }));
+    await useAuthStore.getState().loadMe();
+    expect(useAuthStore.getState()).toMatchObject({ accessToken: null, refreshToken: null, user: null, authStatus: "anonymous" });
+  });
+
+  it("recovers from a transient restoration failure on one explicit retry", async () => {
+    const user = authUser(54, "STAFF");
+    setAuthenticated(user);
+    me.mockRejectedValueOnce(new ApiClientError({ code: "NETWORK_ERROR", message: "Network request failed.", details: {}, status: 0 }));
+    await useAuthStore.getState().loadMe();
+    me.mockResolvedValueOnce(user);
+    await useAuthStore.getState().loadMe();
+    expect(useAuthStore.getState()).toMatchObject({ user, authStatus: "authenticated", isAuthenticated: true });
   });
 
   it("clears Admin cache if the same account is observed after a role demotion", async () => {

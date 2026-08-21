@@ -193,6 +193,19 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminRole]
     http_method_names = ["get", "post", "patch", "head", "options"]
 
+    def get_queryset(self):
+        queryset = self.queryset
+        search = str(self.request.query_params.get("search", "") or "").strip()
+        if search:
+            queryset = queryset.filter(Q(full_name__icontains=search) | Q(email__icontains=search))
+        role = str(self.request.query_params.get("role", "") or "").upper()
+        if role in {User.Role.ADMIN, User.Role.DOCTOR, User.Role.STAFF}:
+            queryset = queryset.filter(role=role)
+        active = str(self.request.query_params.get("is_active", "") or "").lower()
+        if active in {"true", "false"}:
+            queryset = queryset.filter(is_active=active == "true")
+        return queryset
+
     def create(self, request, *args, **kwargs):
         if request.data.get("role") in {User.Role.DOCTOR, User.Role.STAFF}:
             return error_response("PROFILE_REQUIRED", "Use /api/team-members/ to create Doctor or Staff accounts with a professional profile.", {"role": ["Professional accounts must be onboarded through Team."]})

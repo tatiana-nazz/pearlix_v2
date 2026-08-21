@@ -27,7 +27,6 @@ class ClinicSettingsSerializer(serializers.ModelSerializer):
             "supported_currencies",
             "default_language",
             "ai_mode",
-            "ai_service_url",
             "confirm_appointment_impact",
         )
 

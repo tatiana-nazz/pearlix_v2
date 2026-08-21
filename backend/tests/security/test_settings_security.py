@@ -204,6 +204,34 @@ def test_configured_production_entrypoint_uses_hardened_settings(tmp_path):
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.parametrize(
+    "setting_name",
+    [
+        "PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL",
+        "PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER",
+        "PEARLIX_XRAY_PATIENT_QUOTA_BYTES",
+        "PEARLIX_XRAY_USER_QUOTA_BYTES",
+        "PEARLIX_XRAY_GLOBAL_QUOTA_BYTES",
+    ],
+)
+def test_production_rejects_nonpositive_imaging_resource_limits(setting_name):
+    environment = _configured_production_environment(
+        "postgresql://deployment:placeholder@db.example.test/pearlix"
+    )
+    environment[setting_name] = "0"
+
+    result = _run_backend_python(
+        "-c",
+        "import config.wsgi",
+        environment=environment,
+    )
+
+    assert result.returncode != 0
+    assert "Production imaging and AI resource limits must all be positive" in (
+        f"{result.stdout}\n{result.stderr}"
+    )
+
+
 def test_vercel_manifest_pins_production_settings():
     manifest_path = settings.BASE_DIR / "vercel.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))

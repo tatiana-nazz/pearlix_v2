@@ -18,7 +18,14 @@ export function aiResultRefetchInterval(result?: Pick<AIResult, "status">): numb
 }
 
 export function useXrays(query?: Record<string, string | number | undefined>) {
-  return useQuery({ queryKey: ["xrays", query], queryFn: () => xraysApi.list(query) });
+  return useQuery({
+    queryKey: ["xrays", query],
+    queryFn: () => query?.visit_id ? xraysApi.listAll(query) : xraysApi.list(query),
+  });
+}
+
+export function useAllXrays(query?: Record<string, string | number | undefined>) {
+  return useQuery({ queryKey: ["xrays", "all", query], queryFn: () => xraysApi.listAll(query) });
 }
 
 export function useXray(xrayId: number) {

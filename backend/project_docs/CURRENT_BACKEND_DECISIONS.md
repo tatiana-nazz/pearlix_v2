@@ -101,7 +101,7 @@ This document summarizes current accepted backend decisions for human developers
 - Admin sees full clinic settings.
 - Staff and Doctor see safe clinic settings only.
 - Safe fields include clinic name, timezone, appointment durations, capacity, and currencies.
-- Internal or technical fields such as `ai_mode` and `ai_service_url` are Admin-only.
+- `ai_mode` is Admin-only. `AI_SERVICE_URL` and `AI_SERVICE_TOKEN` are the sole runtime endpoint/secret source and remain environment-owned; no database or frontend setting can override them.
 
 ## AI Mode
 

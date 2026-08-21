@@ -8,6 +8,7 @@ from uuid import uuid4
 import gradio as gr
 import spaces
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 
 MODEL_ROOT = Path("/models")
@@ -33,6 +34,10 @@ from apps.ai_results.adapters.dentex import (  # noqa: E402
 )
 from apps.ai_results.model_contract import MAX_IMAGE_INPUT_BYTES, PIPELINE_VERSION  # noqa: E402
 from apps.ai_results.result_types import ImageInput  # noqa: E402
+from apps.xrays.image_validation import ImageValidationError, validate_image_upload  # noqa: E402
+
+MAX_REMOTE_OVERLAY_BYTES = 20 * 1024 * 1024
+MAX_REMOTE_TOOTH_ROWS = 32
 
 
 def _content_type(path: Path) -> str:
@@ -45,6 +50,8 @@ def _content_type(path: Path) -> str:
 
 
 def _serialize_result(result) -> dict:
+    if len(result.teeth) > MAX_REMOTE_TOOTH_ROWS:
+        raise RuntimeError("Inference returned too many tooth rows.")
     return {
         "contract_version": REMOTE_CONTRACT_VERSION,
         "model_version": result.model_version,
@@ -71,7 +78,13 @@ def _analyze_on_gpu(image_path: str):
         raise gr.Error("Image must be between 1 byte and 10 MiB.")
 
     content_type = _content_type(path)
-    content = path.read_bytes()
+    try:
+        validated = validate_image_upload(
+            SimpleUploadedFile(path.name, path.read_bytes(), content_type=content_type)
+        )
+    except ImageValidationError as exc:
+        raise gr.Error("The uploaded image is malformed or exceeds safe decoded-image limits.") from exc
+    content = validated.content
     adapter = DentexInferenceAdapter(DentexConfig.from_settings())
     overlay_path = None
     try:
@@ -81,8 +94,16 @@ def _analyze_on_gpu(image_path: str):
         payload = _serialize_result(result)
         payload.setdefault("runtime", {})["remote_wall_seconds"] = round(time.perf_counter() - started, 4)
         if result.overlay_png is not None:
+            try:
+                validated_overlay = validate_image_upload(
+                    SimpleUploadedFile("overlay.png", result.overlay_png, content_type="image/png"),
+                    require_png=True,
+                    maximum_bytes=MAX_REMOTE_OVERLAY_BYTES,
+                )
+            except ImageValidationError as exc:
+                raise RuntimeError("Inference overlay failed validation.") from exc
             overlay_path = Path(tempfile.gettempdir()) / f"pearlix-overlay-{uuid4().hex}.png"
-            overlay_path.write_bytes(result.overlay_png)
+            overlay_path.write_bytes(validated_overlay.content)
         return payload, str(overlay_path) if overlay_path else None
     finally:
         # ZeroGPU leases are short-lived. Do not retain CUDA model references
@@ -103,7 +124,7 @@ def analyze(image):
     return _analyze_on_gpu(str(image))
 
 
-with gr.Blocks(title="Pearlix DENTEX AI") as demo:
+with gr.Blocks(title="Pearlix DENTEX AI", delete_cache=(3600, 3600)) as demo:
     gr.Markdown(
         "# Pearlix DENTEX AI\n"
         "Research/demo inference service. **Not a clinical diagnosis.** "

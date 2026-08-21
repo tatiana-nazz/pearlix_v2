@@ -304,3 +304,13 @@ def test_admin_can_deactivate_doctor(admin_client, doctor_user):
     assert response.status_code == 200
     doctor_user.refresh_from_db()
     assert doctor_user.is_active is False
+@pytest.mark.django_db
+def test_admin_user_search_finds_match_beyond_first_unfiltered_page(admin_client):
+    for index in range(25):
+        User.objects.create_user(email=f"directory-{index:02d}@example.test", full_name=f"Directory User {index:02d}", password="ValidPassword!2026", role=User.Role.STAFF)
+    target = User.objects.create_user(email="maya.page.two@example.test", full_name="Maya Page Two", password="ValidPassword!2026", role=User.Role.STAFF)
+
+    response = admin_client.get("/api/users/", {"search": "maya.page.two"})
+
+    assert response.status_code == 200
+    assert [row["id"] for row in response.data["results"]] == [target.id]

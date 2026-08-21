@@ -42,7 +42,6 @@ const clinicSettings: ClinicSettings = {
   default_language: "EN",
   weekly_closed_days: [4],
   ai_mode: "MOCK_ADAPTER",
-  ai_service_url: "http://127.0.0.1:9000",
 };
 
 const auditRecord: AuditLog = {

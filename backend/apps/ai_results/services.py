@@ -6,18 +6,22 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 
 from apps.ai_results.adapters import InferenceAdapter, MOCK_MODEL_VERSION, MockInferenceAdapter
 from apps.ai_results.adapters.base import InferenceConfigurationError, InferenceImageInvalidError
-from apps.ai_results.models import AIResult
+from apps.ai_results.models import AIExecutionState, AIResult
 from apps.ai_results.model_contract import FINDINGS_SCHEMA_VERSION, MAX_IMAGE_INPUT_BYTES
 from apps.ai_results.result_types import ImageInput, PipelineResult
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
 from apps.xrays.models import ExternalXrayCase, XrayAttachment
+from apps.xrays.image_validation import ImageValidationError, validate_image_upload
+from apps.xrays.quota import StorageQuotaExceeded, enforce_storage_quota, lock_storage_admission
 
 
 DEFAULT_PROCESSING_STALE_SECONDS = 15 * 60
@@ -51,6 +55,13 @@ class AIAnalysisInProgress(AIServiceError):
     code = "AI_ANALYSIS_IN_PROGRESS"
     public_message = "AI analysis is already in progress."
     status_code = status.HTTP_409_CONFLICT
+    audit_outcome = "rejected"
+
+
+class AICapacityBusy(AIServiceError):
+    code = "AI_CAPACITY_BUSY"
+    public_message = "AI capacity is busy. Try again shortly."
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
     audit_outcome = "rejected"
 
 
@@ -143,9 +154,13 @@ def _is_active_processing(result: AIResult) -> bool:
 def _safe_delete_storage_file(storage, name: str) -> None:
     try:
         storage.delete(name)
-    except Exception:
-        # Storage cleanup is best effort and must not change the persisted AI
-        # lifecycle or disclose storage details to an API caller.
+    except Exception as exc:
+        from apps.xrays.models import ImagingDeletionTask
+
+        ImagingDeletionTask.objects.update_or_create(
+            storage_name=name,
+            defaults={"last_error": str(exc)[:255]},
+        )
         return
 
 
@@ -154,8 +169,10 @@ def _validate_locked_source(source) -> None:
         raise AISourceStateInvalid
 
 
-def _claim_processing(*, source_model, source_id: int, source_field: str) -> tuple[_ProcessingClaim, object]:
+def _claim_processing(*, source_model, source_id: int, source_field: str, user) -> tuple[_ProcessingClaim, object]:
     with transaction.atomic():
+        AIExecutionState.objects.get_or_create(pk=1)
+        AIExecutionState.objects.select_for_update().get(pk=1)
         source = source_model.objects.select_for_update().get(pk=source_id)
         _validate_locked_source(source)
         result = (
@@ -165,6 +182,16 @@ def _claim_processing(*, source_model, source_id: int, source_field: str) -> tup
         )
         if result is not None and _is_active_processing(result):
             raise AIAnalysisInProgress(result_id=result.id)
+
+        cutoff = timezone.now() - timedelta(seconds=_processing_stale_seconds())
+        active = AIResult.objects.filter(status=AIResult.Status.PROCESSING, updated_at__gt=cutoff)
+        if active.count() >= max(1, int(settings.PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL)):
+            raise AICapacityBusy
+        user_active = active.filter(
+            Q(xray_attachment__uploaded_by_id=user.id) | Q(external_xray_case__uploaded_by_id=user.id)
+        ).count()
+        if user_active >= max(1, int(settings.PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER)):
+            raise AICapacityBusy
 
         old_overlay = None
         if result is None:
@@ -182,6 +209,7 @@ def _claim_processing(*, source_model, source_id: int, source_field: str) -> tup
             "display_findings": [],
         }
         result.overlay_file = None
+        result.overlay_size_bytes = 0
         result.model_version = ""
         result.error_message = ""
         result.full_clean()
@@ -213,6 +241,7 @@ def _complete_result(claim: _ProcessingClaim, pipeline_result: PipelineResult) -
     created_overlay = None
     try:
         with transaction.atomic():
+            lock_storage_admission()
             result = AIResult.objects.select_for_update().get(pk=claim.result_id)
             if not _claim_is_current(result, claim):
                 raise AIAnalysisInProgress(result_id=result.id, model_version=pipeline_result.model_version)
@@ -225,7 +254,22 @@ def _complete_result(claim: _ProcessingClaim, pipeline_result: PipelineResult) -
             result.model_version = payload["model_version"]
             result.error_message = payload["error_message"]
             if pipeline_result.overlay_png is not None:
-                result.overlay_file.save(f"{uuid4().hex}.png", ContentFile(pipeline_result.overlay_png), save=False)
+                overlay_upload = SimpleUploadedFile("overlay.png", pipeline_result.overlay_png, content_type="image/png")
+                try:
+                    validated_overlay = validate_image_upload(
+                        overlay_upload, require_png=True, maximum_bytes=20 * 1024 * 1024
+                    )
+                except ImageValidationError as exc:
+                    raise ValueError("Inference overlay failed validation.") from exc
+                source = result.xray_attachment or result.external_xray_case
+                patient_id = result.xray_attachment.patient_id if result.xray_attachment_id else None
+                enforce_storage_quota(
+                    additional_bytes=validated_overlay.size_bytes,
+                    uploader_id=source.uploaded_by_id,
+                    patient_id=patient_id,
+                )
+                result.overlay_file.save(f"{uuid4().hex}.png", ContentFile(validated_overlay.content), save=False)
+                result.overlay_size_bytes = validated_overlay.size_bytes
                 created_overlay = (result.overlay_file.storage, result.overlay_file.name)
             result.full_clean()
             result.save()
@@ -236,7 +280,7 @@ def _complete_result(claim: _ProcessingClaim, pipeline_result: PipelineResult) -
         raise
 
 
-def _execute_analysis(*, source_model, source_id: int, source_field: str, content_type: str) -> AIResult:
+def _execute_analysis(*, source_model, source_id: int, source_field: str, content_type: str, user) -> AIResult:
     clinic_settings = ClinicSettings.get_solo()
     adapter = select_inference_adapter(clinic_settings.ai_mode)
     if not isinstance(adapter, InferenceAdapter):
@@ -246,6 +290,7 @@ def _execute_analysis(*, source_model, source_id: int, source_field: str, conten
         source_model=source_model,
         source_id=source_id,
         source_field=source_field,
+        user=user,
     )
     try:
         image = load_image_input(locked_source.original_file, content_type=content_type)
@@ -281,6 +326,7 @@ def run_ai_for_xray(*, xray_attachment, user):
         source_id=xray_attachment.id,
         source_field="xray_attachment",
         content_type=xray_attachment.content_type,
+        user=user,
     )
 
 
@@ -290,4 +336,5 @@ def run_ai_for_external_case(*, external_xray_case, user):
         source_id=external_xray_case.id,
         source_field="external_xray_case",
         content_type=external_xray_case.content_type,
+        user=user,
     )

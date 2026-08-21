@@ -7,6 +7,7 @@ import { getPatients } from "../../../api/endpoints/patients";
 import type { AppointmentDetail } from "../../../types/appointments";
 import type { PatientListItem } from "../../../types/patients";
 import { AppointmentForm } from "./AppointmentForm";
+import { appointmentToFormValues } from "../utils/appointmentFormMapping";
 
 vi.mock("../../../api/endpoints/patients", () => ({ getPatients: vi.fn() }));
 
@@ -148,5 +149,11 @@ describe("AppointmentForm", () => {
     await user.click(screen.getByRole("button", { name: "Save appointment" }));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ version: 7 }));
+  });
+
+  it("maps API instants through clinic timezone instead of browser-local time", () => {
+    const appointment = { ...existingAppointment, start_datetime: "2026-07-10T09:00:00Z" };
+    expect(appointmentToFormValues(appointment, "UTC")).toMatchObject({ date: "2026-07-10", time: "09:00" });
+    expect(appointmentToFormValues(appointment, "Asia/Damascus")).toMatchObject({ date: "2026-07-10", time: "12:00" });
   });
 });

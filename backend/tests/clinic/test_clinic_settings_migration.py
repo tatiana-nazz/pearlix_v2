@@ -33,3 +33,6 @@ def test_weekly_closed_days_migration_defaults_existing_settings_to_friday():
     ClinicSettings = apps.get_model("clinic", "ClinicSettings")
 
     assert ClinicSettings.objects.get(pk=settings.pk).weekly_closed_days == [4]
+    # Leave the shared migration database at the current clinic leaf so later
+    # historical migration tests never receive a mixed forward/backward plan.
+    migrate(targets(("clinic", "0003_remove_clinicsettings_ai_service_url")))

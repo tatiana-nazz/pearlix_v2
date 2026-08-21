@@ -1,6 +1,7 @@
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
+from apps.accounts.management.commands.seed_demo_clinic_story import XRAY_PNG_BYTES
 
 from apps.billing.models import BillingHandoff, Invoice
 from apps.patients.models import Patient
@@ -10,7 +11,7 @@ from apps.xrays.models import ExternalXrayCase, XrayAttachment
 
 
 def upload_file(name="security-xray.png", content_type="image/png"):
-    return SimpleUploadedFile(name, b"fake-image", content_type=content_type)
+    return SimpleUploadedFile(name, XRAY_PNG_BYTES, content_type=content_type)
 
 
 @pytest.mark.django_db

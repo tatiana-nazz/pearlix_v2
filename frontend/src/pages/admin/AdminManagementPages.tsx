@@ -138,10 +138,9 @@ export function AdminClinicSettingsPage() {
             </div>
           </Card>
           <Card className="clinic-settings-card">
-            <h2>AI operations</h2><p>Admin-only service mode and integration endpoint.</p>
+            <h2>AI operations</h2><p>Admin-only service mode. The service endpoint and token are environment-managed.</p>
             <div className="settings-field-grid">
               <label>AI mode<select value={data.ai_mode} onChange={(event) => update("ai_mode", event.target.value as AiMode)}><option value="MOCK_ADAPTER">Mock adapter</option><option value="DJANGO_INTERNAL">Django internal</option><option value="SEPARATE_SERVICE">Separate service</option></select></label>
-              <label className="settings-field-wide">Service URL<input dir="ltr" type="url" value={data.ai_service_url} onChange={(event) => update("ai_service_url", event.target.value)} /></label>
             </div>
           </Card>
         </div>

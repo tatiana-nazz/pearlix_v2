@@ -20,7 +20,6 @@ export interface ClinicSafeSettings {
 
 export interface ClinicSettings extends ClinicSafeSettings {
   ai_mode: AiMode;
-  ai_service_url: string;
 }
 
 export interface ClinicSettingsUpdatePayload extends Partial<ClinicSettings> {

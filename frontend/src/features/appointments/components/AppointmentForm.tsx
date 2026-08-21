@@ -23,6 +23,7 @@ interface AppointmentFormBaseProps {
   initialDoctorId?: number;
   isSubmitting?: boolean;
   error?: unknown;
+  clinicTimezone?: string;
   onCancel?: () => void;
   onSubmit: (payload: CreateAppointmentPayload | UpdateAppointmentPayload) => void | Promise<void>;
 }
@@ -37,7 +38,7 @@ type AppointmentFormProps = AppointmentFormBaseProps &
   );
 
 function initialValues(props: AppointmentFormProps): AppointmentFormValues {
-  const fromAppointment = appointmentToFormValues(props.appointment);
+  const fromAppointment = appointmentToFormValues(props.appointment, props.clinicTimezone);
   if (props.appointment) return fromAppointment;
   return {
     ...defaultAppointmentFormValues,
@@ -57,7 +58,7 @@ export function AppointmentForm(props: AppointmentFormProps) {
   useEffect(() => {
     setValues(initialValues(props));
     setSelectedPatient(props.appointment?.patient ?? null);
-  }, [props.appointment, props.initialDate, props.initialDoctorId]);
+  }, [props.appointment, props.initialDate, props.initialDoctorId, props.clinicTimezone]);
 
   function setField(field: keyof AppointmentFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
