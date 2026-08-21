@@ -33,6 +33,7 @@ CORE_FILES = (
     "backend/apps/ai_results/adapters/dentex.py",
     "backend/apps/xrays/__init__.py",
     "backend/apps/xrays/image_validation.py",
+    "backend/apps/xrays/request_limits.py",
 )
 
 
@@ -93,6 +94,7 @@ def validate_space_build(output: Path) -> None:
         "requirements.txt",
         "apps/ai_results/adapters/dentex.py",
         "apps/xrays/image_validation.py",
+        "apps/xrays/request_limits.py",
     )
     missing = [relative for relative in required if not (output / relative).is_file()]
     if missing:
@@ -130,6 +132,7 @@ class HTTPException(Exception):
 class UploadFile: pass
 class FastAPI:
     def __init__(self, *args, **kwargs): pass
+    def add_middleware(self, *args, **kwargs): pass
     def get(self, *args, **kwargs): return lambda fn: fn
     def post(self, *args, **kwargs): return lambda fn: fn
 fastapi = types.ModuleType("fastapi")
@@ -145,10 +148,12 @@ assert "app" in module and "analyze_api" in module and "health" in module
 from PIL import Image
 from django.core.files.uploadedfile import SimpleUploadedFile
 from apps.xrays.image_validation import validate_image_upload
+from apps.xrays.request_limits import BoundedASGIRequestBodyMiddleware
 buffer = BytesIO()
 Image.new("L", (32, 16), 100).save(buffer, format="PNG")
 validated = validate_image_upload(SimpleUploadedFile("probe.png", buffer.getvalue(), content_type="image/png"))
 assert validated.width == 32 and validated.height == 16
+assert BoundedASGIRequestBodyMiddleware is not None
 '''
     completed = subprocess.run(
         [sys.executable, "-I", "-c", clean_import, str(output)],
