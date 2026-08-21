@@ -1,0 +1,62 @@
+/* Active X-ray review presentation: keep the panoramic image natural-sized while
+   long AI findings scroll independently beside it. */
+.active-xray-main-row {
+  min-height: 0;
+  min-block-size: 0;
+  align-items: start;
+}
+
+.active-xray-canvas-panel {
+  align-self: start;
+}
+
+.active-xray-canvas-panel .protected-xray-viewer {
+  height: auto;
+  grid-template-rows: auto auto auto;
+}
+
+.active-xray-canvas-panel .protected-xray-canvas {
+  min-block-size: 0;
+  block-size: auto;
+  overflow: auto;
+  overscroll-behavior: auto;
+}
+
+.active-xray-canvas-panel .protected-xray-media {
+  display: grid;
+  min-inline-size: 0;
+  block-size: auto;
+}
+
+.active-xray-canvas-panel .protected-xray-media img {
+  inline-size: 100%;
+  block-size: auto;
+  max-inline-size: none;
+  max-block-size: none;
+}
+
+.active-xray-ai-result {
+  align-self: start;
+  inline-size: 100%;
+}
+
+.active-xray-ai-result > .card {
+  inline-size: 100%;
+  max-block-size: clamp(380px, 52dvh, 520px);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
+.active-xray-workspace .xray-findings-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+@media (max-width: 1024px) {
+  .active-xray-ai-result > .card {
+    max-block-size: none;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+}

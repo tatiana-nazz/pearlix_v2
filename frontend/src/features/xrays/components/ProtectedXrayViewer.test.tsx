@@ -76,14 +76,14 @@ describe("ProtectedXrayViewer", () => {
     expect(screen.queryByRole("dialog", { name: "Protected original image" })).not.toBeInTheDocument();
   });
 
-  it("uses a scrollable scaled surface so every corner remains reachable at 300 percent", () => {
+  it("uses a width-scaled scrollable surface so zoom preserves the panoramic aspect ratio", () => {
     const { container } = render(<ProtectedXrayViewer originalEndpoint="/original/" overlayEndpoint="/overlay/" overlayAvailable originalLabel="Protected original image" originalAlt="Dental X-ray" />);
     const zoom = screen.getByRole("button", { name: "Zoom In" });
     for (let step = 0; step < 8; step += 1) fireEvent.click(zoom);
     const mediaLayer = container.querySelector<HTMLElement>(".protected-xray-media")!;
     expect(mediaLayer).toHaveAttribute("data-scale", "3.00");
     expect(mediaLayer.style.inlineSize).toBe("300%");
-    expect(mediaLayer.style.blockSize).toBe("300%");
+    expect(mediaLayer.style.blockSize).toBe("");
     expect(screen.getByTestId("xray-pan-viewport")).toHaveClass("protected-xray-canvas");
   });
 

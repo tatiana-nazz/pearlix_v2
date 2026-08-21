@@ -158,7 +158,7 @@ export function ProtectedXrayViewer({
         <div
           className="protected-xray-media"
           data-scale={scale.toFixed(2)}
-          style={{ inlineSize: `${scale * 100}%`, blockSize: `${scale * 100}%` }}
+          style={{ inlineSize: `${scale * 100}%` }}
         >
           <img className="protected-xray-original" src={original.url} alt={originalAlt} />
           {overlayVisible && overlay.url ? <img className="protected-xray-overlay" src={overlay.url} alt="" aria-hidden="true" /> : null}
