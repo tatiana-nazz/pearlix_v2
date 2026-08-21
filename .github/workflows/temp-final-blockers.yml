@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - fix/final-release-blockers
+  pull_request:
+    branches:
+      - feat-admin-analytics-demo-data
 
 permissions:
   contents: read
