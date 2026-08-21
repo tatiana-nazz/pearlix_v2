@@ -83,6 +83,20 @@ PEARLIX_ALLOW_DEMO_COMMANDS = False
 PEARLIX_RUNTIME_ENVIRONMENT = "production"
 TRUSTED_PROXY_CIDRS = env_list("TRUSTED_PROXY_CIDRS", [])
 
+if AI_SERVICE_URL:  # noqa: F405
+    _ai_service_endpoint = urlparse(AI_SERVICE_URL)  # noqa: F405
+    if (
+        _ai_service_endpoint.scheme.lower() != "https"
+        or not _ai_service_endpoint.hostname
+        or _ai_service_endpoint.username is not None
+        or _ai_service_endpoint.password is not None
+        or _ai_service_endpoint.query
+        or _ai_service_endpoint.fragment
+    ):
+        raise ImproperlyConfigured(
+            "Production AI_SERVICE_URL must be a credential-free direct HTTPS endpoint."
+        )
+
 _positive_resource_limits = {
     "PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL": PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL,  # noqa: F405
     "PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER": PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER,  # noqa: F405

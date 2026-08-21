@@ -449,6 +449,28 @@ def test_doctor_can_attach_own_external_case_to_active_patient_without_prior_vis
 
 
 @pytest.mark.django_db
+def test_attach_reserves_patient_quota_for_retained_external_and_saved_copy(
+    doctor_client, patient_factory, external_xray_case_factory, settings
+):
+    patient = patient_factory(full_name="Quota Patient")
+    external = external_xray_case_factory()
+    settings.PEARLIX_XRAY_PATIENT_QUOTA_BYTES = 2 * external.size_bytes - 1
+    settings.PEARLIX_XRAY_USER_QUOTA_BYTES = 10_000_000
+    settings.PEARLIX_XRAY_GLOBAL_QUOTA_BYTES = 10_000_000
+
+    response = doctor_client.post(
+        f"/api/external-xrays/{external.id}/attach-to-patient/",
+        {"patient_id": patient.id},
+        format="json",
+    )
+    assert response.status_code == 409
+    assert response.data["code"] == "STORAGE_QUOTA_EXCEEDED"
+    external.refresh_from_db()
+    assert external.status == ExternalXrayCase.Status.TEMPORARY
+    assert not XrayAttachment.objects.filter(patient=patient).exists()
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("client_fixture", ["admin_client", "staff_client"])
 def test_admin_and_staff_cannot_attach_external_case(request, client_fixture, active_visit, external_xray_case_factory):
     client = request.getfixturevalue(client_fixture)

@@ -95,6 +95,10 @@ class ExternalXrayCase(TimeStampedModel):
     discarded_at = models.DateTimeField(null=True, blank=True)
     attached_at = models.DateTimeField(null=True, blank=True)
     purge_after = models.DateTimeField(null=True, blank=True)
+    purge_attempts = models.PositiveIntegerField(default=0)
+    purge_last_error = models.CharField(max_length=255, blank=True)
+    purge_last_attempt_at = models.DateTimeField(null=True, blank=True)
+    purge_next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
     artifacts_purged_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -139,6 +143,8 @@ class ImagingDeletionTask(TimeStampedModel):
     patient_id = models.PositiveBigIntegerField(null=True, blank=True, db_index=True)
     attempts = models.PositiveIntegerField(default=0)
     last_error = models.CharField(max_length=255, blank=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     class Meta:
         ordering = ["created_at", "id"]

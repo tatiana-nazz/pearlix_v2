@@ -60,6 +60,11 @@ class UserAdmin(DjangoUserAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+    def has_change_permission(self, request, obj=None):
+        # User rows are lifecycle-owned.  Even apparently benign ModelAdmin
+        # edits issue a full-row save from a stale form instance.
+        return False
+
     def user_change_password(self, request, id, form_url=""):
         raise PermissionDenied(
             "Credentials must be changed through the audited account-lifecycle API."

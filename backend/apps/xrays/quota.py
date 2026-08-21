@@ -68,8 +68,15 @@ def register_pending_imaging_deletion(
         return task
 
 
-def enforce_storage_quota(*, additional_bytes: int, uploader_id: int, patient_id: int | None = None) -> None:
+def enforce_storage_quota(
+    *,
+    additional_bytes: int,
+    uploader_id: int,
+    patient_id: int | None = None,
+    additional_patient_bytes: int | None = None,
+) -> None:
     additional_bytes = max(0, int(additional_bytes))
+    patient_addition = additional_bytes if additional_patient_bytes is None else max(0, int(additional_patient_bytes))
     patient_limit = int(settings.PEARLIX_XRAY_PATIENT_QUOTA_BYTES)
     user_limit = int(settings.PEARLIX_XRAY_USER_QUOTA_BYTES)
     global_limit = int(settings.PEARLIX_XRAY_GLOBAL_QUOTA_BYTES)
@@ -85,8 +92,24 @@ def enforce_storage_quota(*, additional_bytes: int, uploader_id: int, patient_id
             AIResult.objects.filter(xray_attachment__patient_id=patient_id),
             "overlay_size_bytes",
         )
+        # Attached external artifacts remain physical duplicates until their
+        # retention purge succeeds, so both originals and overlays belong to
+        # the patient's cumulative quota during that interval.
+        patient_total += _sum(
+            ExternalXrayCase.objects.filter(
+                attached_patient_id=patient_id,
+                artifacts_purged_at__isnull=True,
+            ).exclude(original_file="")
+        )
+        patient_total += _sum(
+            AIResult.objects.filter(
+                external_xray_case__attached_patient_id=patient_id,
+                external_xray_case__artifacts_purged_at__isnull=True,
+            ),
+            "overlay_size_bytes",
+        )
         patient_total += _sum(ImagingDeletionTask.objects.filter(patient_id=patient_id))
-        if patient_total + additional_bytes > patient_limit:
+        if patient_total + patient_addition > patient_limit:
             raise StorageQuotaExceeded("patient", patient_limit)
 
     user_total = _sum(XrayAttachment.objects.filter(uploaded_by_id=uploader_id)) + _sum(

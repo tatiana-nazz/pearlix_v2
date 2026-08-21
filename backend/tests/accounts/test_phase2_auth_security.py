@@ -569,9 +569,9 @@ def test_django_user_admin_routes_authority_and_credentials_to_audited_api():
             "_save": "Save",
         },
     )
-    assert response.status_code == 302
+    assert response.status_code == 403
     target.refresh_from_db()
-    assert target.full_name == "Safely Edited Name"
+    assert target.full_name != "Safely Edited Name"
     assert target.role == User.Role.ADMIN
     assert target.is_active is True
     assert target.version == initial_version

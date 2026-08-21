@@ -81,6 +81,14 @@ def test_remote_config_accepts_private_hf_space_id(settings):
     assert config.api_name == "/analyze"
 
 
+def test_remote_config_rejects_gradio_space_id_in_production(settings):
+    settings.AI_SERVICE_URL = "example-user/pearlix-dentex-ai"
+    settings.AI_SERVICE_TOKEN = "hf_read_only_demo_token"
+    settings.PEARLIX_RUNTIME_ENVIRONMENT = "production"
+    with pytest.raises(InferenceConfigurationError, match="direct HTTPS"):
+        RemoteInferenceConfig.from_settings()
+
+
 def test_remote_config_fails_closed_when_incomplete(settings):
     settings.AI_SERVICE_URL = ""
     settings.AI_SERVICE_TOKEN = ""
@@ -302,3 +310,37 @@ def test_https_adapter_rejects_redirects_and_oversized_streams(monkeypatch):
         adapter.analyze(image)
     with pytest.raises(InferenceRuntimeError, match="size limit"):
         adapter.analyze(image)
+
+
+def test_https_adapter_total_deadline_closes_synchronous_stream(monkeypatch):
+    import apps.ai_results.adapters.remote as remote
+
+    closed = {"response": False, "client": False}
+
+    class Response:
+        status_code = 200
+        headers = {}
+        def __enter__(self): return self
+        def __exit__(self, *_args):
+            closed["response"] = True
+        def iter_bytes(self):
+            yield b"{}"
+
+    class Client:
+        def __init__(self, **_kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *_args):
+            closed["client"] = True
+        def stream(self, *_args, **_kwargs): return Response()
+
+    values = iter([0.0, 151.0])
+    monkeypatch.setattr(remote.time, "monotonic", lambda: next(values))
+    monkeypatch.setitem(
+        sys.modules,
+        "httpx",
+        SimpleNamespace(Client=Client, Timeout=lambda default, **kwargs: object()),
+    )
+    adapter = RemoteInferenceAdapter(RemoteInferenceConfig("https://ai.example.test", "secret"))
+    with pytest.raises(InferenceRuntimeError, match="timed out"):
+        adapter.analyze(ImageInput(content=b"valid-input", content_type="image/png"))
+    assert closed == {"response": True, "client": True}

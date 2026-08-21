@@ -137,4 +137,5 @@ with gr.Blocks(title="Pearlix DENTEX AI", delete_cache=(3600, 3600)) as demo:
     run.click(analyze, inputs=[image], outputs=[payload, overlay], api_name="analyze")
 
 
-demo.queue(default_concurrency_limit=1).launch()
+if __name__ == "__main__":
+    demo.queue(default_concurrency_limit=1).launch()

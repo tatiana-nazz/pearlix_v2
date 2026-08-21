@@ -6,7 +6,7 @@ import ipaddress
 import json
 import re
 import tempfile
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -68,6 +68,11 @@ class RemoteInferenceConfig:
                 address = None
             if address is not None and not address.is_global:
                 is_https = False
+        is_production = getattr(settings, "PEARLIX_RUNTIME_ENVIRONMENT", "") == "production"
+        if is_production and not is_https:
+            raise InferenceConfigurationError(
+                "Production AI service configuration requires a direct HTTPS endpoint."
+            )
         if not (is_https or is_space_id):
             raise InferenceConfigurationError(
                 "The separate AI service reference must be an HTTPS URL or Hugging Face Space ID."
@@ -202,18 +207,6 @@ def pipeline_result_from_remote(payload: dict, overlay_png: bytes | None, *, tra
         raise InferenceRuntimeError("The AI service response violated the locked result contract.") from exc
 
 
-def _run_with_total_timeout(callable_):
-    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pearlix-remote-ai")
-    future = executor.submit(callable_)
-    try:
-        return future.result(timeout=REMOTE_TOTAL_TIMEOUT_SECONDS)
-    except FutureTimeoutError as exc:
-        future.cancel()
-        raise InferenceRuntimeError("The separate AI service request timed out.") from exc
-    finally:
-        executor.shutdown(wait=False, cancel_futures=True)
-
-
 class RemoteInferenceAdapter:
     model_version = PIPELINE_VERSION
 
@@ -227,6 +220,7 @@ class RemoteInferenceAdapter:
             raise InferenceConfigurationError("The HTTP client dependency is unavailable.") from exc
 
         def request_bytes() -> bytes:
+            deadline = time.monotonic() + REMOTE_TOTAL_TIMEOUT_SECONDS
             timeout = httpx.Timeout(
                 REMOTE_READ_TIMEOUT_SECONDS,
                 connect=REMOTE_CONNECT_TIMEOUT_SECONDS,
@@ -256,14 +250,21 @@ class RemoteInferenceAdapter:
                     chunks = []
                     received = 0
                     for chunk in response.iter_bytes():
+                        if time.monotonic() > deadline:
+                            raise InferenceRuntimeError("The separate AI service request timed out.")
                         received += len(chunk)
                         if received > MAX_REMOTE_HTTPS_RESPONSE_BYTES:
                             raise InferenceRuntimeError("The AI service response exceeded the size limit.")
                         chunks.append(chunk)
+                    if time.monotonic() > deadline:
+                        raise InferenceRuntimeError("The separate AI service request timed out.")
                     return b"".join(chunks)
 
         try:
-            raw_response = _run_with_total_timeout(request_bytes)
+            # The synchronous transport owns the connection in this thread;
+            # leaving either context closes it.  No timed-out background worker
+            # can continue consuming resources after this call returns.
+            raw_response = request_bytes()
         except (InferenceConfigurationError, InferenceRuntimeError):
             raise
         except Exception as exc:
@@ -305,11 +306,12 @@ class RemoteInferenceAdapter:
                     )
                 },
             )
-            result = _run_with_total_timeout(
-                lambda: client.predict(
-                    image=handle_file(str(temporary_path)),
-                    api_name=self.config.api_name,
-                )
+            # Space-ID transport is retained for local development only.  It is
+            # rejected in production because gradio_client cannot provide a
+            # cancellable total request boundary.
+            result = client.predict(
+                image=handle_file(str(temporary_path)),
+                api_name=self.config.api_name,
             )
             if not isinstance(result, (tuple, list)) or len(result) != 2:
                 raise InferenceRuntimeError("The AI service returned the wrong output shape.")
@@ -318,6 +320,8 @@ class RemoteInferenceAdapter:
             return pipeline_result_from_remote(payload, overlay_png, transport="hugging-face-gradio")
         except (InferenceConfigurationError, InferenceImageInvalidError, InferenceRuntimeError):
             raise
+        except TimeoutError as exc:
+            raise InferenceRuntimeError("The separate AI service request timed out.") from exc
         except Exception as exc:
             raise InferenceRuntimeError("The separate AI service request failed.") from exc
         finally:

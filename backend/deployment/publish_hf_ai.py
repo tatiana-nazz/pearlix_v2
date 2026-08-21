@@ -3,9 +3,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import shutil
+import subprocess
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
+
+try:
+    from deployment.archive_safety import extract_zip_safely
+except ModuleNotFoundError:  # direct `python deployment/publish_hf_ai.py`
+    from archive_safety import extract_zip_safely
 
 
 EXPECTED = {
@@ -21,7 +28,10 @@ CORE_FILES = (
     "backend/apps/ai_results/overlay.py",
     "backend/apps/ai_results/adapters/__init__.py",
     "backend/apps/ai_results/adapters/base.py",
+    "backend/apps/ai_results/adapters/mock.py",
     "backend/apps/ai_results/adapters/dentex.py",
+    "backend/apps/xrays/__init__.py",
+    "backend/apps/xrays/image_validation.py",
 )
 
 
@@ -59,6 +69,66 @@ def build_space(repo_root: Path, output: Path) -> None:
         target = output / Path(rel).relative_to("backend")
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
+
+
+def validate_space_build(output: Path) -> None:
+    required = (
+        "app.py",
+        "requirements.txt",
+        "apps/ai_results/adapters/dentex.py",
+        "apps/xrays/image_validation.py",
+    )
+    missing = [relative for relative in required if not (output / relative).is_file()]
+    if missing:
+        raise SystemExit("Generated Space is incomplete: " + ", ".join(missing))
+    for source in output.rglob("*.py"):
+        try:
+            compile(source.read_text(encoding="utf-8"), str(source), "exec")
+        except (OSError, SyntaxError, UnicodeError) as exc:
+            raise SystemExit(f"Generated Space contains invalid Python: {source}") from exc
+    clean_import = r'''
+import runpy, sys, types
+from io import BytesIO
+root = sys.argv[1]
+sys.path.insert(0, root)
+class Context:
+    def __enter__(self): return self
+    def __exit__(self, *args): return False
+    def queue(self, **kwargs): return self
+    def launch(self): raise AssertionError("packaging validation must not launch")
+class Component:
+    def __init__(self, *args, **kwargs): pass
+    def click(self, *args, **kwargs): pass
+gr = types.ModuleType("gradio")
+gr.Blocks = lambda *args, **kwargs: Context()
+gr.Markdown = gr.File = gr.Button = gr.JSON = Component
+gr.Error = RuntimeError
+spaces = types.ModuleType("spaces")
+spaces.GPU = lambda **kwargs: (lambda fn: fn)
+sys.modules["gradio"] = gr
+sys.modules["spaces"] = spaces
+runpy.run_path(root + "/app.py", run_name="pearlix_space_package_validation")
+from PIL import Image
+from django.core.files.uploadedfile import SimpleUploadedFile
+from apps.xrays.image_validation import validate_image_upload
+buffer = BytesIO()
+Image.new("L", (32, 16), 100).save(buffer, format="PNG")
+validated = validate_image_upload(SimpleUploadedFile("probe.png", buffer.getvalue(), content_type="image/png"))
+assert validated.width == 32 and validated.height == 16
+'''
+    completed = subprocess.run(
+        [sys.executable, "-I", "-c", clean_import, str(output)],
+        cwd=output.parent,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise SystemExit(
+            "Generated Space failed clean-room import validation: "
+            + (completed.stderr.strip() or completed.stdout.strip())
+        )
 
 
 def upload_model_bundle(api, *, bundle_root: Path, model_repo: str, legacy_upload: bool) -> None:
@@ -124,7 +194,7 @@ def main() -> None:
             extracted = temp / "bundle"
             extracted.mkdir()
             with zipfile.ZipFile(bundle_arg) as archive:
-                archive.extractall(extracted)
+                extract_zip_safely(archive, extracted)
             bundle_root = find_bundle_root(extracted)
         else:
             bundle_root = find_bundle_root(bundle_arg)
@@ -132,6 +202,10 @@ def main() -> None:
         print("Verifying all three locked SHA-256 identities...")
         verify_bundle(bundle_root)
         print("Model bundle verification PASS.")
+
+        space_build = temp / "space"
+        build_space(repo_root, space_build)
+        validate_space_build(space_build)
 
         api = HfApi()
         who = api.whoami()
@@ -152,9 +226,6 @@ def main() -> None:
             model_repo=model_repo,
             legacy_upload=args.legacy_upload,
         )
-
-        space_build = temp / "space"
-        build_space(repo_root, space_build)
 
         print(f"Creating/updating private ZeroGPU Space: {space_repo}")
         try:

@@ -3,10 +3,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import shutil
-import stat
 import tempfile
 import zipfile
 from pathlib import Path
+
+try:
+    from deployment.archive_safety import extract_zip_safely
+except ModuleNotFoundError:  # direct `python deployment/prepare_local_ai.py`
+    from archive_safety import extract_zip_safely
 
 EXPECTED = {
     "weights/detector_yolo_fdi_seg_v1-3_best.pt": "29290c70b2a53e1485f90e79e78a30566be739b2366d545c8ac4db1c671b219b",
@@ -40,22 +44,6 @@ def verify(root: Path) -> None:
         actual = sha256(root / rel)
         if actual != expected:
             raise SystemExit(f"Hash verification failed for {rel}: {actual}")
-
-
-def extract_zip_safely(archive: zipfile.ZipFile, destination: Path) -> None:
-    destination = destination.resolve()
-    for member in archive.infolist():
-        normalized_name = member.filename.replace("\\", "/")
-        target = (destination / normalized_name).resolve()
-        if (
-            not normalized_name
-            or normalized_name.startswith("/")
-            or ".." in Path(normalized_name).parts
-            or not target.is_relative_to(destination)
-            or stat.S_ISLNK(member.external_attr >> 16)
-        ):
-            raise SystemExit("Bundle ZIP contains an unsafe member path.")
-    archive.extractall(destination)
 
 
 def main() -> None:

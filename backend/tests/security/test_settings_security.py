@@ -334,6 +334,21 @@ def test_production_rejects_runtime_mock_ai_enablement():
     assert "Mock AI cannot be enabled in production" in f"{result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.parametrize(
+    "endpoint",
+    ["owner/private-space", "http://ai.example.test", "https://user:pass@ai.example.test"],
+)
+def test_production_rejects_non_direct_ai_transport(endpoint):
+    environment = _configured_production_environment(
+        "postgresql://deployment:placeholder@db.example.test/pearlix?sslmode=require"
+    )
+    environment["AI_SERVICE_URL"] = endpoint
+    environment["AI_SERVICE_TOKEN"] = "deployment-test-token"
+    result = _run_backend_python("-c", "import config.wsgi", environment=environment)
+    assert result.returncode != 0
+    assert "direct HTTPS endpoint" in f"{result.stdout}\n{result.stderr}"
+
+
 def test_production_demo_command_fails_before_database_access_and_hides_password():
     supplied_password = "NeverEchoThisDemoCredential!2026"
     environment = _configured_production_environment(

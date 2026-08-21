@@ -9,6 +9,7 @@ from django.core.files.storage import default_storage
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import close_old_connections, connection, transaction
+from django.utils import timezone
 
 from apps.ai_results.models import AIResult
 from apps.ai_results.services import _claim_processing
@@ -194,6 +195,60 @@ def test_failed_external_purge_counts_live_row_once_until_success(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_attached_external_original_and_overlay_count_for_own_patient_until_purged(
+    monkeypatch, settings, doctor_user, patient_factory
+):
+    patient = patient_factory()
+    other_patient = patient_factory()
+    external = create_external_xray_case(uploaded_by=doctor_user, uploaded_file=upload())
+    ExternalXrayCase.objects.filter(pk=external.pk).update(
+        status=ExternalXrayCase.Status.ATTACHED_TO_PATIENT,
+        attached_patient=patient,
+        attached_at=external.created_at,
+        purge_after=external.created_at,
+    )
+    AIResult.objects.create(
+        external_xray_case=external,
+        requested_by=doctor_user,
+        status=AIResult.Status.COMPLETED,
+        model_version="phase63-test",
+        overlay_file="ai-overlays/phase63.png",
+        overlay_size_bytes=30,
+    )
+    _set_quota_dimension(settings, "patient", external.size_bytes + 30)
+
+    enforce_storage_quota(additional_bytes=0, uploader_id=doctor_user.id, patient_id=patient.id)
+    with pytest.raises(StorageQuotaExceeded, match="patient"):
+        enforce_storage_quota(additional_bytes=1, uploader_id=doctor_user.id, patient_id=patient.id)
+    enforce_storage_quota(additional_bytes=1, uploader_id=doctor_user.id, patient_id=other_patient.id)
+
+    monkeypatch.setattr(default_storage, "delete", lambda _name: None)
+    assert purge_external_artifacts(external.id) is True
+    enforce_storage_quota(
+        additional_bytes=external.size_bytes + 30,
+        uploader_id=doctor_user.id,
+        patient_id=patient.id,
+    )
+
+
+@pytest.mark.django_db
+def test_attach_admission_reserves_external_and_saved_patient_duplicates(
+    settings, doctor_user, patient_factory
+):
+    patient = patient_factory()
+    external = create_external_xray_case(uploaded_by=doctor_user, uploaded_file=upload())
+    overlay_bytes = 30
+    _set_quota_dimension(settings, "patient", 2 * (external.size_bytes + overlay_bytes) - 1)
+    with pytest.raises(StorageQuotaExceeded, match="patient"):
+        enforce_storage_quota(
+            additional_bytes=external.size_bytes + overlay_bytes,
+            additional_patient_bytes=2 * (external.size_bytes + overlay_bytes),
+            uploader_id=doctor_user.id,
+            patient_id=patient.id,
+        )
+
+
+@pytest.mark.django_db(transaction=True)
 def test_cleanup_command_is_bounded_retryable_idempotent_and_monitorable(
     monkeypatch,
     doctor_user,
@@ -230,7 +285,9 @@ def test_cleanup_command_is_bounded_retryable_idempotent_and_monitorable(
             stdout=StringIO(),
         )
     tasks[0].refresh_from_db()
-    assert tasks[0].attempts == 2
+    tasks[1].refresh_from_db()
+    assert tasks[0].attempts == 1
+    assert tasks[1].attempts == 1
 
     call_command(
         "purge_expired_imaging_artifacts",
@@ -239,11 +296,43 @@ def test_cleanup_command_is_bounded_retryable_idempotent_and_monitorable(
         stdout=StringIO(),
     )
     assert ImagingDeletionTask.objects.count() == 2
+    ImagingDeletionTask.objects.update(next_attempt_at=timezone.now())
     call_command("purge_expired_imaging_artifacts", batch_size=2, stdout=StringIO())
     assert ImagingDeletionTask.objects.count() == 0
     final_output = StringIO()
     call_command("purge_expired_imaging_artifacts", batch_size=2, stdout=final_output)
     assert "attempted 0 expired artifact set(s) and 0 deletion task(s)" in final_output.getvalue()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_cleanup_backoff_prevents_poisoned_oldest_task_from_starving_newer_work(
+    monkeypatch, doctor_user
+):
+    oldest = ImagingDeletionTask.objects.create(
+        storage_name="phase63/poisoned.png", size_bytes=10, uploader_id=doctor_user.id
+    )
+    newer = ImagingDeletionTask.objects.create(
+        storage_name="phase63/healthy.png", size_bytes=10, uploader_id=doctor_user.id
+    )
+
+    def provider_delete(name):
+        if name == oldest.storage_name:
+            raise OSError("provider outage for one object")
+
+    monkeypatch.setattr(default_storage, "delete", provider_delete)
+    call_command("purge_expired_imaging_artifacts", batch_size=1, stdout=StringIO())
+    oldest.refresh_from_db()
+    assert oldest.attempts == 1 and oldest.next_attempt_at is not None
+
+    call_command("purge_expired_imaging_artifacts", batch_size=1, stdout=StringIO())
+    assert not ImagingDeletionTask.objects.filter(pk=newer.pk).exists()
+    oldest.refresh_from_db()
+    assert oldest.attempts == 1
+
+    ImagingDeletionTask.objects.filter(pk=oldest.pk).update(next_attempt_at=timezone.now())
+    call_command("purge_expired_imaging_artifacts", batch_size=1, stdout=StringIO())
+    oldest.refresh_from_db()
+    assert oldest.attempts == 2
 
 
 @pytest.mark.django_db(transaction=True)

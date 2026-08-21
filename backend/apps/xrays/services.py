@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -28,6 +29,11 @@ ALLOWED_CONTENT_TYPES = {
     ".jpg": {"image/jpeg"},
     ".jpeg": {"image/jpeg"},
 }
+
+
+def _cleanup_retry_at(attempts: int):
+    delay_seconds = min(3600, 60 * (2 ** min(max(0, attempts - 1), 6)))
+    return timezone.now() + timedelta(seconds=delay_seconds)
 REJECTED_EXTENSIONS = {
     ".exe",
     ".bat",
@@ -237,14 +243,19 @@ def discard_external_case(*, external_case, user):
         external_case.status = ExternalXrayCase.Status.DISCARDED
         external_case.discarded_at = timezone.now()
         external_case.purge_after = _external_purge_deadline()
-        external_case.save(update_fields=["status", "discarded_at", "purge_after", "updated_at"])
+        external_case.purge_attempts = 0
+        external_case.purge_last_error = ""
+        external_case.purge_last_attempt_at = None
+        external_case.purge_next_attempt_at = external_case.purge_after
+        external_case.save(update_fields=[
+            "status", "discarded_at", "purge_after", "purge_attempts",
+            "purge_last_error", "purge_last_attempt_at", "purge_next_attempt_at", "updated_at",
+        ])
         transaction.on_commit(lambda external_id=external_case.id: purge_external_artifacts(external_id))
         return external_case
 
 
 def _external_purge_deadline():
-    from datetime import timedelta
-
     hours = max(0, int(getattr(settings, "PEARLIX_EXTERNAL_XRAY_RETENTION_HOURS", 0)))
     return timezone.now() + timedelta(hours=hours)
 
@@ -274,7 +285,16 @@ def purge_external_artifacts(external_id: int) -> bool:
         try:
             for storage, name in files:
                 storage.delete(name)
-        except Exception:
+        except Exception as exc:
+            attempted_at = timezone.now()
+            locked.purge_attempts += 1
+            locked.purge_last_error = str(exc)[:255]
+            locked.purge_last_attempt_at = attempted_at
+            locked.purge_next_attempt_at = _cleanup_retry_at(locked.purge_attempts)
+            locked.save(update_fields=[
+                "purge_attempts", "purge_last_error", "purge_last_attempt_at",
+                "purge_next_attempt_at", "updated_at",
+            ])
             return False
         locked.original_file = ""
         locked.artifacts_purged_at = timezone.now()
@@ -378,9 +398,14 @@ def process_imaging_deletion_task(task_id: int) -> bool:
         try:
             default_storage.delete(task.storage_name)
         except Exception as exc:
+            attempted_at = timezone.now()
             task.attempts += 1
             task.last_error = str(exc)[:255]
-            task.save(update_fields=["attempts", "last_error", "updated_at"])
+            task.last_attempt_at = attempted_at
+            task.next_attempt_at = _cleanup_retry_at(task.attempts)
+            task.save(update_fields=[
+                "attempts", "last_error", "last_attempt_at", "next_attempt_at", "updated_at",
+            ])
             return False
         task.delete()
         return True
@@ -509,6 +534,7 @@ def attach_external_case_to_patient(*, external_case, patient, visit, user, titl
             try:
                 enforce_storage_quota(
                     additional_bytes=external_case.size_bytes + external_overlay_bytes,
+                    additional_patient_bytes=2 * (external_case.size_bytes + external_overlay_bytes),
                     uploader_id=user.id,
                     patient_id=patient.id,
                 )
@@ -541,6 +567,10 @@ def attach_external_case_to_patient(*, external_case, patient, visit, user, titl
             external_case.attached_xray = xray
             external_case.attached_at = timezone.now()
             external_case.purge_after = _external_purge_deadline()
+            external_case.purge_attempts = 0
+            external_case.purge_last_error = ""
+            external_case.purge_last_attempt_at = None
+            external_case.purge_next_attempt_at = external_case.purge_after
             external_case.save(
                 update_fields=[
                     "status",
@@ -549,6 +579,10 @@ def attach_external_case_to_patient(*, external_case, patient, visit, user, titl
                     "attached_xray",
                     "attached_at",
                     "purge_after",
+                    "purge_attempts",
+                    "purge_last_error",
+                    "purge_last_attempt_at",
+                    "purge_next_attempt_at",
                     "updated_at",
                 ]
             )

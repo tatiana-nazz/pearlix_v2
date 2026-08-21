@@ -61,6 +61,15 @@ class PreferencesSerializer(serializers.ModelSerializer):
         model = User
         fields = ("theme_preference", "language_preference")
 
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        # Never let a request-scoped User snapshot rewrite credentials,
+        # authority, activity, or version changed by a concurrent lifecycle
+        # transaction.
+        instance.save(update_fields=[*validated_data.keys(), "updated_at"])
+        return instance
+
 
 class UserManagementSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, trim_whitespace=False)
@@ -100,10 +109,9 @@ class UserManagementSerializer(serializers.ModelSerializer):
         if self.instance is None and attrs.get("role") in {User.Role.DOCTOR, User.Role.STAFF}:
             raise serializers.ValidationError({"role": ["Use /api/team-members/ to create Doctor or Staff accounts with a professional profile."]})
         if self.instance is not None:
-            requested_role = attrs.get("role", self.instance.role)
-            if requested_role != self.instance.role:
+            if "role" in attrs:
                 raise serializers.ValidationError({"role": ["Use the transition-role action for professional role changes."]})
-            if "is_active" in attrs and attrs["is_active"] != self.instance.is_active:
+            if "is_active" in attrs:
                 raise serializers.ValidationError({"is_active": ["Use the deactivate or reactivate action."]})
             password_fields = {
                 field: ["Use the reset-password action."]
@@ -141,7 +149,10 @@ class UserManagementSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         for field, value in validated_data.items():
             setattr(instance, field, value)
-        instance.save()
+        # Benign management writes are deliberately column-limited.  The
+        # request's User instance can predate a concurrent lifecycle mutation
+        # and must never write stale authority columns back.
+        instance.save(update_fields=[*validated_data.keys(), "updated_at"])
         return instance
 
 
