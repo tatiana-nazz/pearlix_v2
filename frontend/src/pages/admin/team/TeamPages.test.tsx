@@ -94,6 +94,7 @@ describe("Team professional directory and detail", () => {
   it("defaults Admin Team detail to readable professional, contact, workload, schedule, and leave sections", async () => {
     renderDetail(doctorDetail);
     expect(await screen.findByRole("heading", { name: "Dr Noor" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to Team" })).toHaveAttribute("href", "/admin/team");
     expect(screen.getByRole("heading", { name: "Professional information" })).toBeInTheDocument();
     expect(screen.getByText("Calm clinician")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Contact" })).toBeInTheDocument();
@@ -111,6 +112,7 @@ describe("Team professional directory and detail", () => {
   it("keeps Staff Team detail read-only with no edit, status mutation, or Users & Access controls", async () => {
     renderDetail({ ...doctorDetail, account: undefined, version: undefined }, "STAFF");
     expect(await screen.findByRole("heading", { name: "Dr Noor" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to Team" })).toHaveAttribute("href", "/staff/team");
     expect(screen.getByRole("heading", { name: "Professional information" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit professional profile" })).not.toBeInTheDocument();

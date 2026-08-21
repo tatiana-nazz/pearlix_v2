@@ -6,6 +6,7 @@ import { clinicApi, clinicSettingsQueryKey } from "../../api/endpoints/clinic";
 import { ApiClientError } from "../../api/errors";
 import { useAuthStore } from "../../auth/authStore";
 import { Card } from "../../components/Card";
+import { BackLink } from "../../components/BackLink";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
@@ -306,6 +307,7 @@ export function AdminAuditLogDetailPage() {
 
   return (
     <div className="admin-page audit-detail-page">
+      <BackLink to="/admin/audit-logs">Back to Audit logs</BackLink>
       <PageHeader eyebrow="admin workspace" title="Audit Record" description="Read-only sanitized operational metadata." />
       <Card className="audit-record-card">
         <dl className="detail-grid audit-facts">

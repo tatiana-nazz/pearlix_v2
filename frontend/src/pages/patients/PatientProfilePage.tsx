@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
+import { BackLink } from "../../components/BackLink";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
@@ -150,15 +151,14 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
 
   return (
     <div className="patient-page">
-      <Link
-        className="inline-back-link"
+      <BackLink
         to={patientListPath(role)}
         onClick={(event) => {
           if (isEditing && editDirty && !window.confirm(c.discardChanges)) event.preventDefault();
         }}
       >
         {c.backToPatients}
-      </Link>
+      </BackLink>
       <div className={`patient-detail-surface${isEditing ? " is-editing" : ""}`}>
         {!isEditing ? <aside className="patient-identity-rail" aria-label={patient.data.full_name}>
           <span className="profile-initials" aria-hidden="true">

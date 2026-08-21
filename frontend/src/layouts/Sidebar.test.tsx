@@ -26,10 +26,12 @@ describe("Sidebar", () => {
     expect(navigationByRole.ADMIN.filter((item) => item.path.includes("profile"))).toHaveLength(1);
     for (const role of ["STAFF", "DOCTOR"] as const) {
       expect(navigationByRole[role].filter((item) => item.label === "My Profile")).toHaveLength(1);
-      expect(navigationByRole[role].some((item) => item.label === "My schedule")).toBe(true);
-      expect(navigationByRole[role].some((item) => item.label === "My leave")).toBe(true);
+      expect(navigationByRole[role].some((item) => item.label === "My schedule")).toBe(false);
+      expect(navigationByRole[role].some((item) => item.label === "My leave")).toBe(false);
       expect(navigationByRole[role].some((item) => item.label === "Needs reschedule")).toBe(false);
     }
+    expect(navigationByRole.ADMIN.some((item) => item.label === "Schedules")).toBe(true);
+    expect(navigationByRole.ADMIN.some((item) => item.label === "Leave")).toBe(true);
   });
 
   it("renders accessible links for the current workspace", () => {
@@ -42,8 +44,8 @@ describe("Sidebar", () => {
     expect(screen.getByRole("navigation", { name: "Doctor navigation" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "External X-ray Workspace" })).toHaveAttribute("href", "/doctor/external-xrays");
     expect(screen.getByRole("link", { name: "My billing handoffs" })).toHaveAttribute("href", "/doctor/billing/handoffs");
-    expect(screen.getByRole("link", { name: "My schedule" })).toHaveAttribute("href", "/doctor/profile/schedule");
-    expect(screen.getByRole("link", { name: "My leave" })).toHaveAttribute("href", "/doctor/profile/leave");
+    expect(screen.queryByRole("link", { name: "My schedule" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "My leave" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Invoices" })).not.toBeInTheDocument();
   });
 });

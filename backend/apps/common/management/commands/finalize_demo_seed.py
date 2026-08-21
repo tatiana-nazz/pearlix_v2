@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.utils import timezone
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
@@ -58,7 +58,26 @@ class Command(BaseCommand):
             if errors:
                 raise CommandError("Final demo consistency audit failed:\n- " + "\n- ".join(errors))
 
+        historical_counts = self.historical_appointment_status_counts(demo)
+        self.stdout.write(
+            "Past appointment states: "
+            + ", ".join(
+                f"{status}={historical_counts[status]}"
+                for status, _label in Appointment.Status.choices
+            )
+        )
         self.stdout.write(self.style.SUCCESS("Pearlix demo finalization PASS: chronology, invoices, scheduling, visits, billing, and patient summaries are coherent."))
+
+    def historical_appointment_status_counts(self, demo, *, now=None):
+        cutoff = now or timezone.now()
+        counts = {status: 0 for status, _label in Appointment.Status.choices}
+        for row in (
+            Appointment.objects.filter(patient__in=demo, end_datetime__lt=cutoff)
+            .values("status")
+            .annotate(total=Count("id"))
+        ):
+            counts[row["status"]] = row["total"]
+        return counts
 
     def normalize_timestamps(self, demo):
         now = timezone.now()
@@ -188,6 +207,19 @@ class Command(BaseCommand):
             Appointment.Status.CHECKED_IN,
             Appointment.Status.ACTIVE,
         }
+        historical_counts = self.historical_appointment_status_counts(demo, now=now)
+        if any(historical_counts[status] for status in operational_statuses):
+            errors.append(
+                "Past operational appointments remain: "
+                + ", ".join(
+                    f"{status}={historical_counts[status]}"
+                    for status in (
+                        Appointment.Status.UPCOMING,
+                        Appointment.Status.CHECKED_IN,
+                        Appointment.Status.ACTIVE,
+                    )
+                )
+            )
 
         for appointment in Appointment.objects.filter(patient_id__in=demo_ids).select_related(
             "doctor", "patient", "reschedule_source_exception"

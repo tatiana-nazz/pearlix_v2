@@ -32,9 +32,29 @@ describe("AI lifecycle helpers", () => {
   it("maps stable AI error codes to calm localized messages", () => {
     const copy = xrayCopy("EN");
     expect(aiRunErrorMessage(apiError("AI_ANALYSIS_IN_PROGRESS", 409), copy)).toBe("AI analysis is already running.");
-    expect(aiRunErrorMessage(apiError("AI_SERVICE_NOT_CONFIGURED", 503), copy)).toBe("AI service is currently unavailable.");
+    expect(aiRunErrorMessage(apiError("AI_SERVICE_NOT_CONFIGURED", 503), copy)).toBe("AI analysis is not configured for this environment.");
+    expect(aiRunErrorMessage(apiError("AI_CAPACITY_BUSY", 429), copy)).toBe("AI analysis is busy. Try again shortly.");
+    expect(aiRunErrorMessage(apiError("AI_RATE_LIMITED", 429), copy)).toBe("AI analysis limit reached. Try again later.");
     expect(aiRunErrorMessage(apiError("AI_IMAGE_INVALID", 400), copy)).toBe("This X-ray image could not be analyzed.");
     expect(aiRunErrorMessage(apiError("AI_ANALYSIS_FAILED", 500), copy)).toBe(copy.aiRequestFailed);
     expect(aiRunErrorMessage(null, copy)).toBeNull();
+  });
+
+  it("prefers the stable API payload over Axios transport codes", () => {
+    const transportError = {
+      isAxiosError: true,
+      code: "ERR_BAD_RESPONSE",
+      message: "Request failed with status code 503",
+      response: {
+        status: 503,
+        data: {
+          code: "AI_SERVICE_NOT_CONFIGURED",
+          message: "Private backend configuration detail",
+          details: {},
+        },
+      },
+    };
+
+    expect(aiRunErrorMessage(transportError, xrayCopy("EN"))).toBe("AI analysis is not configured for this environment.");
   });
 });

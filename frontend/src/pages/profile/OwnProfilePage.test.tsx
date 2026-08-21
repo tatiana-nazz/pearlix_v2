@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { clinicApi } from "../../api/endpoints/clinic";
 import { scheduleApi } from "../../api/endpoints/schedule";
@@ -56,5 +58,18 @@ describe("OwnProfilePage", () => {
     expect(screen.getByText("Profile information")).toBeInTheDocument();
     expect(scheduleApi.workingShifts).not.toHaveBeenCalled();
     expect(scheduleApi.availabilityExceptions).not.toHaveBeenCalled();
+  });
+
+  it("keeps long profile metadata contained and fully copyable", () => {
+    const longEmail = "doctor.with.a.deliberately.long.unbroken.profile.identifier.2026@subdomain.pearlix.example.test";
+    useAuthStore.setState({ user: { ...baseUser, role: "DOCTOR", email: longEmail }, role: "DOCTOR" });
+    renderPage();
+
+    const value = screen.getByText(longEmail);
+    expect(value).toHaveTextContent(longEmail);
+    expect(value.closest(".detail-grid")).toBeInTheDocument();
+    const css = readFileSync(resolve(__dirname, "../../styles/globals.css"), "utf8");
+    expect(css).toMatch(/\.detail-grid dd\s*{[^}]*min-width:\s*0;[^}]*max-width:\s*100%;[^}]*overflow-wrap:\s*anywhere;/s);
+    expect(css).toMatch(/\.detail-grid div\s*{[^}]*min-width:\s*0;[^}]*max-width:\s*100%;/s);
   });
 });

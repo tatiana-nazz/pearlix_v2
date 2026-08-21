@@ -90,6 +90,7 @@ describe("Admin audit logs", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Audit Record" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to Audit logs" })).toHaveAttribute("href", "/admin/audit-logs");
     await waitFor(() => expect(auditApi.detail).toHaveBeenCalledWith(42));
     expect(screen.getByText("USER_UPDATED")).toBeInTheDocument();
     expect(screen.getByLabelText("Audit metadata")).toHaveTextContent("[redacted]");

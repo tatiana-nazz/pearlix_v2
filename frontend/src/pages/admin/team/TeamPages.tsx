@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clinicApi, clinicSettingsQueryKey } from "../../../api/endpoints/clinic";
 import { teamApi, teamQueryKeys } from "../../../api/endpoints/team";
 import { useAuthStore } from "../../../auth/authStore";
+import { BackLink } from "../../../components/BackLink";
 import { Button, ConfirmDialog, Field, FormSection, PageHeaderV2, Pagination, SelectField, StatePanel, StatusBadge, StickyActionBar, SurfaceCard } from "../../../components/v2";
 import { LeaveExceptionsTable } from "../../../features/schedule/components/LeaveExceptionsTable";
 import { ScheduleMatrix } from "../../../features/schedule/components/ScheduleMatrix";
@@ -170,6 +171,7 @@ export function TeamDetailPage() {
   const professionalLabel = member.role === "DOCTOR" ? member.specialty || c.noSpecialty : member.position || c.noPosition;
 
   return <div className="admin-page team-detail-page">
+    <BackLink to={basePath}>{c.backToTeam}</BackLink>
     <header className="team-profile-header">
       <div><h2>{member.full_name}</h2><p>{localizedEnum(language, member.role)} · {professionalLabel}</p></div>
       <div className="team-profile-header-actions"><div><StatusBadge status={member.professional_status} label={localizedEnum(language, member.professional_status)} /><StatusBadge status={member.availability.availability} label={localizedEnum(language, member.availability.availability)} /></div>{isAdmin && member.account ? <Link className="v2-button secondary" to={`/admin/users/${member.account.id}`}>{c.openUsers}</Link> : null}{isAdmin && !editing ? <Button type="button" onClick={() => { setSaved(false); setEditing(true); }}>{c.editProfessionalProfile}</Button> : null}</div>

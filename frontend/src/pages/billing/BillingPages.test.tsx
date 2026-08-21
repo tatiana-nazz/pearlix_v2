@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { UserRole } from "../../types/auth";
 import type { BillingHandoff } from "../../types/billing";
-import { BillingHandoffDetailPage } from "./BillingPages";
+import { useInvoice } from "../../features/billing/hooks/useBilling";
+import { BillingHandoffDetailPage, InvoiceDetailPage } from "./BillingPages";
 
 const handoff = {
   id: 41,
@@ -74,6 +75,7 @@ describe("immutable Handoff detail authority", () => {
 
   it("lets Staff record a payment but never edit or cancel the bill", async () => {
     renderDetail("STAFF");
+    expect(screen.getByRole("link", { name: "Back to Handoffs" })).toHaveAttribute("href", "/staff/billing/handoffs");
     expect(screen.queryByRole("button", { name: /Edit bill/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Cancel bill/i })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Record payment" }));
@@ -92,5 +94,30 @@ describe("immutable Handoff detail authority", () => {
     expect(screen.queryByRole("button", { name: /Record payment/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Edit bill/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Cancel bill/i })).not.toBeInTheDocument();
+  });
+
+  it("returns an invoice detail to the invoice list", () => {
+    vi.mocked(useInvoice).mockReturnValue({
+      data: {
+        id: 61,
+        billing_handoff_id: handoff.id,
+        invoice_number: "INV-61",
+        patient: handoff.patient,
+        amount: "25.00",
+        currency: "USD",
+        description: handoff.description,
+        notes: "",
+        created_by: handoff.created_by,
+        issued_at: "2026-08-08T09:00:00Z",
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useInvoice>);
+
+    render(<MemoryRouter initialEntries={["/staff/billing/invoices/61"]}><Routes><Route path="/staff/billing/invoices/:invoiceId" element={<InvoiceDetailPage role="STAFF" />} /></Routes></MemoryRouter>);
+
+    expect(screen.getByRole("link", { name: "Back to Invoices" })).toHaveAttribute("href", "/staff/billing/invoices");
   });
 });

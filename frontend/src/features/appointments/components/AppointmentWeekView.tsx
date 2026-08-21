@@ -6,7 +6,7 @@ import { addDays, formatAppointmentDate, formatAppointmentTime, getWeekRange } f
 import { dateFromAppointment } from "../utils/appointmentFilters";
 import { appointmentStatusClass } from "../utils/appointmentStatusPresentation";
 import { AppointmentStatusBadge } from "./AppointmentStatusBadge";
-import { isClinicClosedDate } from "../../../utils/clinicWeek";
+import { isCurrentPolicyClinicClosedDate } from "../../../utils/clinicWeek";
 
 interface AppointmentWeekViewProps {
   role: UserRole;
@@ -16,17 +16,19 @@ interface AppointmentWeekViewProps {
   onDetails: (appointment: AppointmentListItem) => void;
   onDaySelect: (date: string) => void;
   weeklyClosedDays?: readonly number[];
+  currentDate?: string;
 }
 
-export function AppointmentWeekView({ date, timezone, appointments, onDetails, onDaySelect, weeklyClosedDays = [] }: AppointmentWeekViewProps) {
+export function AppointmentWeekView({ date, timezone, appointments, onDetails, onDaySelect, weeklyClosedDays = [], currentDate }: AppointmentWeekViewProps) {
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = appointmentCopy(language);
   const range = getWeekRange(date);
   const days = Array.from({ length: 7 }, (_, index) => addDays(range.start, index));
+  const today = currentDate ?? dateFromAppointment(new Date().toISOString(), timezone);
   return (
     <div className="appointment-week-grid">
       {days.map((day) => {
-        const clinicClosed = isClinicClosedDate(day, weeklyClosedDays);
+        const clinicClosed = isCurrentPolicyClinicClosedDate(day, today, weeklyClosedDays);
         return (
         <section key={day} className={`appointment-calendar-column${clinicClosed ? " clinic-closed" : ""}`} data-date={day} data-clinic-closed={clinicClosed || undefined} onDoubleClick={(event) => { if (event.target === event.currentTarget) onDaySelect(day); }}>
           <h3><button type="button" onClick={() => onDaySelect(day)} onDoubleClick={(event) => event.stopPropagation()} aria-label={`${c.openDay} ${day}`}>{formatAppointmentDate(day, language, timezone)}</button></h3>

@@ -16,6 +16,14 @@ export function isClinicClosedDate(date: string, weeklyClosedDays: readonly numb
   return weeklyClosedDays.includes(clinicWeekdayFromDate(date));
 }
 
+export function isCurrentPolicyClinicClosedDate(
+  date: string,
+  currentDate: string,
+  weeklyClosedDays: readonly number[],
+): boolean {
+  return date >= currentDate && isClinicClosedDate(date, weeklyClosedDays);
+}
+
 export function normalizeWeeklyClosedDays(days: readonly number[]): ClinicWeekday[] {
   return [...new Set(days)]
     .filter((day): day is ClinicWeekday => Number.isInteger(day) && day >= 0 && day <= 6)

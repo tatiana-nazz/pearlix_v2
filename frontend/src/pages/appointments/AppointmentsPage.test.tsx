@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -86,14 +86,25 @@ describe("AppointmentsPage navigation", () => {
     expect(screen.getByLabelText("location")).toHaveTextContent("/staff/appointments/day?doctor=9&status=UPCOMING&search=Maya&date=2026-07-14&page=1");
   });
 
-  it("labels a configured closed Day without hiding historical rows", async () => {
+  it("keeps a historical closed-weekday Day undecorated without hiding its rows", async () => {
     mocks.useAppointments.mockReturnValue({
-      data: { count: 1, next: null, previous: null, results: [{ ...item, status: "COMPLETED", start_datetime: "2026-07-19T09:00:00Z" }], clinic_date: "2026-07-19", clinic_timezone: "UTC" },
+      data: { count: 1, next: null, previous: null, results: [{ ...item, status: "COMPLETED", start_datetime: "2026-07-19T09:00:00Z" }], clinic_date: "2026-07-20", clinic_timezone: "UTC" },
       isLoading: false, isError: false, isFetching: false, error: null, refetch: vi.fn(),
     });
     renderPage("day", "/staff/appointments/day?date=2026-07-19");
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Clinic closed");
     expect(screen.getByText("Maya Patient")).toBeInTheDocument();
+    await waitFor(() => expect(clinicApi.getSettings).toHaveBeenCalled());
+    expect(screen.queryByText("Clinic closed")).not.toBeInTheDocument();
+  });
+
+  it("labels a future configured closed Day", async () => {
+    mocks.useAppointments.mockReturnValue({
+      data: { count: 0, next: null, previous: null, results: [], clinic_date: "2026-07-20", clinic_timezone: "UTC" },
+      isLoading: false, isError: false, isFetching: false, error: null, refetch: vi.fn(),
+    });
+    renderPage("day", "/staff/appointments/day?date=2026-07-26");
+
+    expect(await screen.findByText("Clinic closed")).toHaveAttribute("role", "status");
   });
 });

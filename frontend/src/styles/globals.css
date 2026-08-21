@@ -1120,6 +1120,8 @@ p {
 }
 
 .detail-grid div {
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: var(--space-3);
@@ -1139,7 +1141,10 @@ p {
 }
 
 .detail-grid dd {
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .medical-summary-grid {
@@ -1168,9 +1173,21 @@ p {
 
 .inline-back-link {
   width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   color: var(--color-primary);
   font-weight: 750;
   text-decoration: none;
+}
+
+.inline-back-link-arrow {
+  display: inline-block;
+  line-height: 1;
+}
+
+[dir="rtl"] .inline-back-link-arrow {
+  transform: scaleX(-1);
 }
 
 @media (max-width: 1439px) {
@@ -2090,7 +2107,8 @@ body {
 /* Stage 4 — compact Users & Access and Team management workspaces. */
 .user-management-page { display: grid; gap: 18px; }
 .user-management-header,.team-profile-header { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 20px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-surface); padding: 20px 24px; box-shadow: var(--shadow-card); }
-.user-management-header h2,.user-management-header p,.team-profile-header h2,.team-profile-header p { margin: 0; }
+.user-management-header > div,.team-profile-header > div { min-width: 0; max-width: 100%; }
+.user-management-header h2,.user-management-header p,.team-profile-header h2,.team-profile-header p { min-width: 0; max-width: 100%; margin: 0; overflow-wrap: anywhere; }
 .user-management-header h2,.team-profile-header h2 { font-size: clamp(1.45rem,2vw,1.9rem); }
 .user-management-header p,.team-profile-header p { margin-block-start: 3px; color: var(--color-muted); }
 .user-header-status,.team-profile-header-actions,.team-profile-header-actions > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 9px; }
@@ -2114,7 +2132,7 @@ body {
 .access-level.read_only,.access-level.own_records,.access-level.operational { background: color-mix(in srgb,var(--color-primary) 10%,var(--color-surface)); color: var(--color-primary); }
 .access-level.no_access { opacity: .72; }
 .security-login-summary,.detail-list { display: grid; gap: 0; margin: 0 0 16px; }
-.security-login-summary > div,.detail-list > div { display: grid; grid-template-columns: minmax(110px,.45fr) minmax(0,1fr); gap: 12px; border-block-start: 1px solid var(--color-divider); padding-block: 10px; }
+.security-login-summary > div,.detail-list > div { display: grid; min-width: 0; max-width: 100%; grid-template-columns: minmax(110px,.45fr) minmax(0,1fr); gap: 12px; border-block-start: 1px solid var(--color-divider); padding-block: 10px; }
 .security-login-summary dt,.detail-list dt { color: var(--color-muted); font-size: 12px; font-weight: 800; }
 .security-login-summary dd,.detail-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-weight: 700; }
 .security-actions,.dialog-actions,.role-review-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
@@ -2138,7 +2156,7 @@ body {
 .role-review-actions { justify-content: flex-end; }
 .account-metadata-card { display: flex; align-items: center; gap: 22px; padding-block: 14px; }
 .account-metadata-card h3 { flex: 0 0 auto; margin: 0; font-size: 14px; }
-.account-metadata-card dl { display: grid; flex: 1; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }.account-metadata-card dl > div { display: flex; align-items: baseline; gap: 8px; }.account-metadata-card dt { color: var(--color-muted); font-size: 11px; font-weight: 800; }.account-metadata-card dd { margin: 0; font-size: 12px; font-weight: 700; }
+.account-metadata-card dl { display: grid; min-width: 0; max-width: 100%; flex: 1; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }.account-metadata-card dl > div { display: flex; min-width: 0; max-width: 100%; align-items: baseline; gap: 8px; }.account-metadata-card dt { color: var(--color-muted); font-size: 11px; font-weight: 800; }.account-metadata-card dd { min-width: 0; max-width: 100%; margin: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 700; }
 
 .team-profile-header-actions { max-width: 62%; }.team-profile-header-actions > div { margin-inline-end: 3px; }
 .profile-save-success { margin: -6px 0 0; }
@@ -2490,6 +2508,8 @@ body {
 
 .identity-details div {
   display: grid;
+  min-width: 0;
+  max-width: 100%;
   gap: 3px;
 }
 
@@ -2500,6 +2520,8 @@ body {
 }
 
 .identity-details dd {
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--color-text);

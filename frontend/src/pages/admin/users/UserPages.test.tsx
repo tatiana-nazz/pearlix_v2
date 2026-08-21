@@ -107,6 +107,7 @@ describe("Users & Access pages", () => {
     const preview = vi.spyOn(teamApi, "previewRoleTransition");
     renderDetail(doctorAccount);
     expect(await screen.findByRole("heading", { name: "Dr Noor" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to Users & Access" })).toHaveAttribute("href", "/admin/users");
     expect(screen.getByText("noor@example.test").closest("p")).toHaveAttribute("dir", "ltr");
     expect(screen.getAllByLabelText("Status: Active").length).toBeGreaterThan(0);
     const access = screen.getByRole("heading", { name: "Effective Access" }).closest("section")!;

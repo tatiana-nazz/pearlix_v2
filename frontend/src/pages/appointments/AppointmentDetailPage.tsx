@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ApiClientError } from "../../api/errors";
 import { clinicApi, clinicSettingsQueryKey } from "../../api/endpoints/clinic";
 import { useAuthStore } from "../../auth/authStore";
+import { BackLink } from "../../components/BackLink";
 import { Button, DetailHeader, Modal, StatePanel, SurfaceCard } from "../../components/v2";
 import { AppointmentConfirmDialog } from "../../features/appointments/components/AppointmentConfirmDialog";
 import { AppointmentForm } from "../../features/appointments/components/AppointmentForm";
@@ -98,7 +99,7 @@ export function AppointmentDetailPage({ role }: AppointmentDetailPageProps) {
     setAction(null);
   }
 
-  const backAction = <Link className="v2-button secondary" to={appointmentViewPath(role, "list")}>{c.backToAppointments}</Link>;
+  const backAction = <BackLink to={appointmentViewPath(role, "list")}>{c.backToAppointments}</BackLink>;
   if (!Number.isFinite(appointmentId) || appointmentId <= 0) {
     return <div className="appointment-detail-page"><StatePanel state="notFound" title={c.appointmentNotFound} description={c.appointmentNotFoundDescription} action={backAction} /></div>;
   }

@@ -301,3 +301,35 @@ def test_canonical_finalizer_rejects_operational_booking_on_configured_closed_we
 
     with pytest.raises(CommandError, match="configured closed weekday"):
         call_command("finalize_demo_seed")
+
+
+def test_canonical_finalizer_rejects_every_past_operational_status_with_exact_counts():
+    call_command("seed_demo", password="StrongDemoPassword!2026")
+    appointments = list(
+        Appointment.objects.filter(
+            patient__national_id_or_passport__startswith="DEMO-P"
+        ).order_by("id")[:3]
+    )
+    assert len(appointments) == 3
+    past_start = timezone.now() - timedelta(hours=4)
+    for index, (appointment, status) in enumerate(zip(
+        appointments,
+        (
+            Appointment.Status.UPCOMING,
+            Appointment.Status.CHECKED_IN,
+            Appointment.Status.ACTIVE,
+        ),
+        strict=True,
+    )):
+        start = past_start + timedelta(minutes=index * 45)
+        Appointment.objects.filter(pk=appointment.pk).update(
+            status=status,
+            start_datetime=start,
+            end_datetime=start + timedelta(minutes=30),
+        )
+
+    with pytest.raises(
+        CommandError,
+        match="Past operational appointments remain: UPCOMING=1, CHECKED_IN=1, ACTIVE=1",
+    ):
+        call_command("finalize_demo_seed")

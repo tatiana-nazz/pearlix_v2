@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { teamApi, teamQueryKeys } from "../../../api/endpoints/team";
 import { usersApi } from "../../../api/endpoints/users";
 import { useAuthStore } from "../../../auth/authStore";
+import { BackLink } from "../../../components/BackLink";
 import {
   Button,
   ClickableRow,
@@ -302,6 +303,7 @@ export function AdminUserDetailPage() {
   const user = query.data;
 
   return <div className="admin-page user-management-page">
+    <BackLink to="/admin/users">{c.backToUsers}</BackLink>
     <header className="user-management-header">
       <div><h2>{user.full_name}</h2><p dir="ltr">{user.email}</p></div>
       <div className="user-header-status"><span className="role-chip">{localizedEnum(language, user.role)}</span><StatusBadge status={user.is_active ? "ACTIVE" : "INACTIVE"} label={user.is_active ? c.active : c.inactive} /></div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { BackLink } from "../../components/BackLink";
 import { Card } from "../../components/Card";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorState } from "../../components/ErrorState";
@@ -29,5 +30,5 @@ export function ExternalXrayListPage({ role }: { role: UserRole }) {
 
 export function ExternalXrayDetailPage({ role }: { role: UserRole }) {
   const external = useExternalXray(Number(useParams().caseId));
-  return <div className="xray-page"><PageHeader eyebrow={`${role.toLowerCase()} workspace`} title="External X-ray Case" description="Temporary cases use protected media and explicit lifecycle actions." />{external.isLoading ? <LoadingState title="Loading external X-ray..." /> : null}{external.isError ? <ErrorState error={external.error} title="External X-ray unavailable" onRetry={() => void external.refetch()} /> : null}{external.data ? <ExternalXrayDetail role={role} external={external.data} /> : null}</div>;
+  return <div className="xray-page"><BackLink to={`/${role.toLowerCase()}/external-xrays`}>Back to External X-rays</BackLink><PageHeader eyebrow={`${role.toLowerCase()} workspace`} title="External X-ray Case" description="Temporary cases use protected media and explicit lifecycle actions." />{external.isLoading ? <LoadingState title="Loading external X-ray..." /> : null}{external.isError ? <ErrorState error={external.error} title="External X-ray unavailable" onRetry={() => void external.refetch()} /> : null}{external.data ? <ExternalXrayDetail role={role} external={external.data} /> : null}</div>;
 }

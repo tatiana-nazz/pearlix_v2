@@ -26,7 +26,7 @@ import { appointmentCopy } from "../../features/appointments/i18n";
 import { useAuthStore } from "../../auth/authStore";
 import type { AppointmentListItem, AppointmentViewMode, CreateAppointmentPayload, UpdateAppointmentPayload } from "../../types/appointments";
 import type { UserRole } from "../../types/auth";
-import { isClinicClosedDate } from "../../utils/clinicWeek";
+import { isCurrentPolicyClinicClosedDate } from "../../utils/clinicWeek";
 
 interface AppointmentsPageProps { role: UserRole; view: AppointmentViewMode; }
 const calendarViews: AppointmentViewMode[] = ["day", "week", "month", "list"];
@@ -126,10 +126,10 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
           {appointments.isError ? <ErrorState error={appointments.error} onRetry={() => void appointments.refetch()} title={c.unavailable} /> : null}
           {appointments.data ? <>
             {appointments.isFetching ? <p className="panel-note" aria-live="polite">{c.refreshing}</p> : null}
-            {view === "day" && isClinicClosedDate(date, weeklyClosedDays) ? <p className="appointment-day-closed" role="status">{c.clinicClosed}</p> : null}
+            {view === "day" && isCurrentPolicyClinicClosedDate(date, clinicDate, weeklyClosedDays) ? <p className="appointment-day-closed" role="status">{c.clinicClosed}</p> : null}
             {view === "day" ? <AppointmentDayView appointments={rows} timezone={clinicTimezone} onDetails={openAppointment} /> : null}
-            {view === "week" ? <AppointmentWeekView role={role} date={date} timezone={clinicTimezone} appointments={rows} onDetails={openAppointment} onDaySelect={openDay} weeklyClosedDays={weeklyClosedDays} /> : null}
-            {view === "month" ? <AppointmentMonthView date={date} timezone={clinicTimezone} appointments={rows} onDetails={openAppointment} onDaySelect={openDay} weeklyClosedDays={weeklyClosedDays} /> : null}
+            {view === "week" ? <AppointmentWeekView role={role} date={date} timezone={clinicTimezone} appointments={rows} onDetails={openAppointment} onDaySelect={openDay} weeklyClosedDays={weeklyClosedDays} currentDate={clinicDate} /> : null}
+            {view === "month" ? <AppointmentMonthView date={date} timezone={clinicTimezone} appointments={rows} onDetails={openAppointment} onDaySelect={openDay} weeklyClosedDays={weeklyClosedDays} currentDate={clinicDate} /> : null}
             {view === "list" ? <AppointmentTable appointments={rows} timezone={clinicTimezone} onDetails={openAppointment} /> : null}
             {view === "needs-reschedule" ? <NeedsRescheduleView appointments={rows} timezone={clinicTimezone} onDetails={openAppointment} /> : null}
             <div className="pagination-bar"><span>{appointments.data.count} {c.records}</span><div><button className="button secondary" type="button" disabled={!appointments.data.previous || page <= 1} onClick={() => setParam("page", String(page - 1))}>{c.previousPage}</button><span>{c.page} {page}</span><button className="button secondary" type="button" disabled={!appointments.data.next} onClick={() => setParam("page", String(page + 1))}>{c.nextPage}</button></div></div>

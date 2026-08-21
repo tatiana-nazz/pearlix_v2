@@ -53,7 +53,9 @@ export type XrayCopy = {
   retryAi: string;
   runningAi: string;
   analysisAlreadyRunning: string;
-  aiServiceUnavailable: string;
+  aiNotConfigured: string;
+  aiCapacityBusy: string;
+  aiRateLimited: string;
   aiImageInvalid: string;
   aiRequestFailed: string;
   loadingAiResult: string;
@@ -147,7 +149,9 @@ const en: XrayCopy = {
   retryAi: "Retry AI",
   runningAi: "Running AI Analysis…",
   analysisAlreadyRunning: "AI analysis is already running.",
-  aiServiceUnavailable: "AI service is currently unavailable.",
+  aiNotConfigured: "AI analysis is not configured for this environment.",
+  aiCapacityBusy: "AI analysis is busy. Try again shortly.",
+  aiRateLimited: "AI analysis limit reached. Try again later.",
   aiImageInvalid: "This X-ray image could not be analyzed.",
   aiRequestFailed: "Unable to run AI analysis. Review the message and try again.",
   loadingAiResult: "Loading AI result…",
@@ -252,7 +256,9 @@ const ar: XrayCopy = {
   retryAi: "إعادة تشغيل التحليل",
   runningAi: "جارٍ تشغيل تحليل الذكاء الاصطناعي…",
   analysisAlreadyRunning: "تحليل الذكاء الاصطناعي قيد التشغيل بالفعل.",
-  aiServiceUnavailable: "خدمة الذكاء الاصطناعي غير متاحة حالياً.",
+  aiNotConfigured: "تحليل الذكاء الاصطناعي غير مهيأ لهذه البيئة.",
+  aiCapacityBusy: "تحليل الذكاء الاصطناعي مشغول. حاول مجدداً بعد قليل.",
+  aiRateLimited: "تم بلوغ حد تحليل الذكاء الاصطناعي. حاول مجدداً لاحقاً.",
   aiImageInvalid: "تعذر تحليل صورة الأشعة هذه.",
   aiRequestFailed: "تعذر تشغيل تحليل الذكاء الاصطناعي. راجع الرسالة وحاول مجدداً.",
   loadingAiResult: "جارٍ تحميل نتيجة الذكاء الاصطناعي…",

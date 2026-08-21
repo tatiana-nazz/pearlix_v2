@@ -79,6 +79,7 @@ describe("PatientProfilePage", () => {
 
   it("keeps Admin patient detail read-only", () => {
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={["/admin/patients/12"]}><Routes><Route path="/admin/patients/:patientId" element={<PatientProfilePage role="ADMIN" />} /></Routes></MemoryRouter>);
+    expect(screen.getByRole("link", { name: "Back to Patients" })).toHaveAttribute("href", "/admin/patients");
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Archive|Reactivate/ })).not.toBeInTheDocument();
   });

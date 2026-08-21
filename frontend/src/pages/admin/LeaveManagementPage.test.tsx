@@ -23,5 +23,6 @@ describe("LeaveManagementPage parameter route", () => {
     expect(dialog).toHaveTextContent("Doctor Five");
     expect(dialog).toHaveTextContent("Requested record");
     expect(dialog).not.toHaveTextContent("First");
+    expect(screen.getByRole("link", { name: "Back to Leave" })).toHaveAttribute("href", "/admin/leave");
   });
 });
