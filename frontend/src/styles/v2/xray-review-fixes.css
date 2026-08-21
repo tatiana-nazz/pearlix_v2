@@ -1,6 +1,8 @@
 /* Active X-ray review presentation: keep the panoramic image natural-sized while
    long AI findings scroll independently beside it. */
 .active-xray-main-row {
+  min-height: 0;
+  min-block-size: 0;
   align-items: start;
 }
 
