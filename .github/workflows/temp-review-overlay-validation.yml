@@ -1,0 +1,70 @@
+name: Temporary review overlay validation
+
+on:
+  pull_request:
+    branches:
+      - feat-admin-analytics-demo-data
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Focused overlay and contract tests
+        run: python -m pytest -q tests/ai_results/test_dentex_overlay.py tests/ai_results/test_model_contract.py tests/ai_results/test_dentex_adapter.py
+      - name: Full backend suite
+        run: python -m pytest -q
+      - name: Django check
+        run: python manage.py check --settings=config.settings.test
+      - name: Migration dry-run
+        run: python manage.py makemigrations --check --dry-run --settings=config.settings.test
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Focused X-ray tests
+        run: npm run test:run -- src/features/xrays/components/AiResultPanel.test.tsx src/features/xrays/components/ProtectedXrayViewer.test.tsx
+      - name: Full frontend suite
+        run: npm run test:run
+      - name: Production build
+        run: npm run build
+
+  diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch base branch
+        run: git fetch origin feat-admin-analytics-demo-data:refs/remotes/origin/feat-admin-analytics-demo-data
+      - name: Diff whitespace check
+        run: git diff --check origin/feat-admin-analytics-demo-data...HEAD
