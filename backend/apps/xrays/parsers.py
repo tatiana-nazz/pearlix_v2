@@ -3,13 +3,7 @@ from __future__ import annotations
 from rest_framework.exceptions import APIException
 from rest_framework.parsers import MultiPartParser
 
-from apps.xrays.image_validation import MAX_UPLOAD_BYTES
-
-
-# The encoded image itself is limited to 10 MiB. Allow a small, fixed amount
-# of multipart/form metadata while still bounding the complete request body
-# before Django/DRF materializes it.
-MAX_XRAY_MULTIPART_BODY_BYTES = MAX_UPLOAD_BYTES + (512 * 1024)
+from apps.xrays.request_limits import MAX_XRAY_MULTIPART_BODY_BYTES, RequestBodyTooLarge, declared_content_length
 
 
 class XrayRequestTooLarge(APIException):
@@ -72,14 +66,12 @@ class BoundedXrayMultiPartParser(MultiPartParser):
         parser_context = parser_context or {}
         request = parser_context.get("request")
         if request is not None:
-            raw_length = request.META.get("CONTENT_LENGTH")
-            if raw_length not in (None, ""):
-                try:
-                    declared_length = int(raw_length)
-                except (TypeError, ValueError) as exc:
-                    raise XrayRequestTooLarge() from exc
-                if declared_length < 0 or declared_length > self.body_limit:
-                    raise XrayRequestTooLarge()
+            try:
+                declared_length = declared_content_length(request.META)
+            except RequestBodyTooLarge as exc:
+                raise XrayRequestTooLarge() from exc
+            if declared_length is not None and declared_length > self.body_limit:
+                raise XrayRequestTooLarge()
 
         bounded_stream = _BoundedStream(stream, self.body_limit)
         return super().parse(
