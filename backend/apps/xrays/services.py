@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from django.core.files.base import ContentFile
 from django.conf import settings
-from django.db import transaction
+from django.db import connection, transaction
 from django.utils import timezone
 from rest_framework import status
 
@@ -226,22 +226,31 @@ def _external_purge_deadline():
 
 def purge_external_artifacts(external_id: int) -> bool:
     """Idempotently remove non-clinical duplicate blobs; failures remain retryable."""
-    external = ExternalXrayCase.objects.select_related("ai_result").filter(pk=external_id).first()
-    if external is None or external.artifacts_purged_at or not external.purge_after or external.purge_after > timezone.now():
-        return False
-    files = []
-    if external.original_file and external.original_file.name:
-        files.append((external.original_file.storage, external.original_file.name))
-    ai_result = getattr(external, "ai_result", None)
-    if ai_result is not None and ai_result.overlay_file and ai_result.overlay_file.name:
-        files.append((ai_result.overlay_file.storage, ai_result.overlay_file.name))
-    try:
-        for storage, name in files:
-            storage.delete(name)
-    except Exception:
-        return False
     with transaction.atomic():
-        locked = ExternalXrayCase.objects.select_for_update().get(pk=external_id)
+        external_cases = ExternalXrayCase.objects.select_related("ai_result")
+        if connection.features.has_select_for_update_skip_locked:
+            external_cases = external_cases.select_for_update(of=("self",), skip_locked=True)
+        else:
+            external_cases = external_cases.select_for_update(of=("self",))
+        locked = external_cases.filter(pk=external_id).first()
+        if (
+            locked is None
+            or locked.artifacts_purged_at
+            or not locked.purge_after
+            or locked.purge_after > timezone.now()
+        ):
+            return False
+        files = []
+        if locked.original_file and locked.original_file.name:
+            files.append((locked.original_file.storage, locked.original_file.name))
+        ai_result = getattr(locked, "ai_result", None)
+        if ai_result is not None and ai_result.overlay_file and ai_result.overlay_file.name:
+            files.append((ai_result.overlay_file.storage, ai_result.overlay_file.name))
+        try:
+            for storage, name in files:
+                storage.delete(name)
+        except Exception:
+            return False
         locked.original_file = ""
         locked.artifacts_purged_at = timezone.now()
         locked.save(update_fields=["original_file", "artifacts_purged_at", "updated_at"])
@@ -313,19 +322,24 @@ def _delete_storage_files(files):
 def process_imaging_deletion_task(task_id: int) -> bool:
     from django.core.files.storage import default_storage
 
-    task = ImagingDeletionTask.objects.filter(pk=task_id).first()
-    if task is None:
-        return False
-    try:
-        default_storage.delete(task.storage_name)
-    except Exception as exc:
-        ImagingDeletionTask.objects.filter(pk=task.id).update(
-            attempts=task.attempts + 1,
-            last_error=str(exc)[:255],
-        )
-        return False
-    ImagingDeletionTask.objects.filter(pk=task.id).delete()
-    return True
+    with transaction.atomic():
+        tasks = ImagingDeletionTask.objects
+        if connection.features.has_select_for_update_skip_locked:
+            tasks = tasks.select_for_update(skip_locked=True)
+        else:
+            tasks = tasks.select_for_update()
+        task = tasks.filter(pk=task_id).first()
+        if task is None:
+            return False
+        try:
+            default_storage.delete(task.storage_name)
+        except Exception as exc:
+            task.attempts += 1
+            task.last_error = str(exc)[:255]
+            task.save(update_fields=["attempts", "last_error", "updated_at"])
+            return False
+        task.delete()
+        return True
 
 
 def delete_xray_attachment(*, xray):
