@@ -87,10 +87,12 @@ def test_generated_space_packages_xray_validator_and_direct_https_contract(tmp_p
     build_space(repo_root, output)
     validate_space_build(output)
     assert (output / "apps/xrays/image_validation.py").is_file()
+    assert (output / "apps/xrays/request_limits.py").is_file()
 
     app_source = (output / "app.py").read_text(encoding="utf-8")
     assert '@api.post("/analyze")' in app_source
     assert '"overlay_png_base64"' in app_source
+    assert "api.add_middleware(BoundedASGIRequestBodyMiddleware)" in app_source
     assert 'gr.mount_gradio_app(api, demo, path="/ui")' in app_source
     requirements = (output / "requirements.txt").read_text(encoding="utf-8")
     assert "fastapi" in requirements
