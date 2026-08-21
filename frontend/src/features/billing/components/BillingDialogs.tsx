@@ -35,7 +35,9 @@ export function RecordPaymentDialog({
         return;
       }
       setValidation("");
-      onSubmit({ amount, issued_at: paymentDate ? new Date(paymentDate).toISOString() : undefined, notes });
+      // Send datetime-local unchanged. The backend interprets an offset-less
+      // value in the authoritative ClinicSettings IANA timezone.
+      onSubmit({ amount, issued_at: paymentDate || undefined, notes });
     }}>
       <dl className="payment-context payment-context-grid">
         <div><dt>Patient</dt><dd>{handoff.patient.full_name}</dd></div>
@@ -47,7 +49,7 @@ export function RecordPaymentDialog({
       </dl>
       <button className="button secondary pay-remaining-button" type="button" disabled={pending} onClick={() => { setAmount(handoff.remaining_amount); setValidation(""); }}>Pay remaining balance</button>
       <label>Payment amount<input required inputMode="decimal" aria-invalid={Boolean(validation)} value={amount} onChange={(event) => { setAmount(event.target.value); setValidation(""); }} /></label>
-      <label>Payment date <span>(optional)</span><input type="datetime-local" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label>
+      <label>Payment date (clinic time) <span>(optional)</span><input type="datetime-local" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label>
       <label>Notes <span>(optional)</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
       {validation ? <p className="field-error" role="alert">{validation}</p> : null}
       {error ? <ErrorState error={error} title="Payment was not recorded" /> : null}

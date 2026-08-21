@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import UTC, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from django.db import IntegrityError, transaction
 from django.db.models import Sum
@@ -10,11 +12,13 @@ from rest_framework import status
 from apps.audit.services import log_activity
 from apps.billing.models import BillingHandoff, Invoice, InvoiceSequence
 from apps.billing.selectors import annotate_handoff_financials
+from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
 from apps.visits.models import Visit
 
 
 ZERO = Decimal("0.00")
+INVOICE_FUTURE_CLOCK_SKEW = timedelta(minutes=5)
 
 
 class BillingRuleError(Exception):
@@ -140,6 +144,66 @@ def _create_invoice_with_sequence(**kwargs) -> Invoice:
     )
 
 
+def validate_invoice_chronology(
+    *,
+    handoff: BillingHandoff,
+    issued_at,
+    current_time=None,
+):
+    """Validate an immutable payment instant against its billing origin.
+
+    Staff may record a historical payment because the current product exposes
+    an optional payment datetime. The instant must be no earlier than the
+    Handoff and, for Visit-completion bills, no earlier than Visit completion.
+    Five minutes of positive clock skew is accepted; materially future-dated
+    receipts are rejected rather than normalized.
+    """
+    clinic_timezone = ZoneInfo(ClinicSettings.get_solo().timezone)
+    now = current_time or timezone.now()
+    if timezone.is_naive(now):
+        now = timezone.make_aware(now, clinic_timezone)
+    if timezone.is_naive(issued_at):
+        issued_at = timezone.make_aware(issued_at, clinic_timezone)
+    else:
+        issued_at = timezone.localtime(issued_at, clinic_timezone)
+
+    # Interpret offset-less input in clinic time, but compare absolute instants
+    # in UTC. Same-ZoneInfo wall-clock comparisons are not chronology-safe
+    # across a repeated DST hour because fold/offset can otherwise be ignored.
+    issued_at_utc = issued_at.astimezone(UTC)
+    now_utc = now.astimezone(UTC)
+    origin_at_utc = handoff.created_at.astimezone(UTC)
+    if handoff.origin == BillingHandoff.Origin.VISIT_COMPLETION:
+        if not handoff.visit_id or not handoff.visit.completed_at:
+            raise BillingRuleError(
+                "INVALID_BILLING_CHRONOLOGY",
+                "This bill does not have a valid completed Visit billing origin.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        origin_at_utc = max(
+            origin_at_utc,
+            handoff.visit.completed_at.astimezone(UTC),
+        )
+
+    if issued_at_utc < origin_at_utc:
+        raise _validation(
+            {
+                "issued_at": [
+                    "Payment datetime cannot be before the bill's billing origin."
+                ]
+            }
+        )
+    if issued_at_utc > now_utc + INVOICE_FUTURE_CLOCK_SKEW:
+        raise _validation(
+            {
+                "issued_at": [
+                    "Payment datetime cannot be more than five minutes in the future."
+                ]
+            }
+        )
+    return issued_at
+
+
 def create_visit_completion_handoff(*, visit: Visit, user, data: dict) -> BillingHandoff:
     if user.role != "DOCTOR":
         raise BillingRuleError(
@@ -184,7 +248,14 @@ def create_visit_completion_handoff(*, visit: Visit, user, data: dict) -> Billin
         ) from exc
 
 
-def issue_invoice(*, handoff: BillingHandoff, user, data: dict, request=None) -> tuple[Invoice, BillingHandoff]:
+def issue_invoice(
+    *,
+    handoff: BillingHandoff,
+    user,
+    data: dict,
+    request=None,
+    current_time=None,
+) -> tuple[Invoice, BillingHandoff]:
     if user.role != "STAFF":
         raise BillingRuleError(
             "PERMISSION_DENIED",
@@ -208,10 +279,15 @@ def issue_invoice(*, handoff: BillingHandoff, user, data: dict, request=None) ->
                 "Payment amount exceeds the bill remaining amount.",
                 {"amount": ["Payment amount exceeds the bill remaining amount."]},
             )
+        issued_at = validate_invoice_chronology(
+            handoff=handoff,
+            issued_at=data.get("issued_at") or timezone.now(),
+            current_time=current_time,
+        )
         invoice = _create_invoice_with_sequence(
             billing_handoff=handoff,
             amount=amount,
-            issued_at=data.get("issued_at") or timezone.now(),
+            issued_at=issued_at,
             notes=data.get("notes", ""),
             created_by=user,
         )

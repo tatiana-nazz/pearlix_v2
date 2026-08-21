@@ -234,8 +234,19 @@ class Command(BaseCommand):
                     not appointment.reschedule_source_exception_id
                     and not appointment.reschedule_source_working_shift_id
                     and appointment.reschedule_source_clinic_weekday is None
+                    and not appointment.reschedule_source_kind
                 ):
                     errors.append(f"Needs-reschedule appointment {appointment.id} has no source.")
+                if (
+                    appointment.reschedule_source_kind == Appointment.RescheduleSourceKind.LEAVE
+                    and not appointment.reschedule_source_exception_id
+                ):
+                    errors.append(f"Needs-reschedule appointment {appointment.id} has leave provenance without a leave source.")
+                if (
+                    appointment.reschedule_source_kind == Appointment.RescheduleSourceKind.CLINIC_WEEKLY_CLOSURE
+                    and appointment.reschedule_source_clinic_weekday is None
+                ):
+                    errors.append(f"Needs-reschedule appointment {appointment.id} has closure provenance without a weekday source.")
                 if appointment.reschedule_source_exception_id:
                     source = appointment.reschedule_source_exception
                     if source.is_cancelled or source.start_datetime >= appointment.end_datetime or source.end_datetime <= appointment.start_datetime:

@@ -9,3 +9,12 @@ class PatientAdmin(admin.ModelAdmin):
     list_filter = ("gender", "is_archived")
     search_fields = ("first_name", "last_name", "phone_number", "email", "national_id_or_passport")
     readonly_fields = ("full_name", "created_at", "updated_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

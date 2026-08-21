@@ -262,6 +262,13 @@ class Command(BaseCommand):
             handoff=handoff,
             user=users["staff"],
             data={"amount": amount, "issued_at": appointment.end_datetime + timedelta(minutes=12), "notes": f"{MARKER} Synthetic payment."},
+            # The deterministic dataset treats the latest historical calendar
+            # date as complete, so validate receipts against that same synthetic
+            # end-of-day boundary rather than the machine's wall-clock instant.
+            current_time=aware(
+                max(DEMO_TODAY, timezone.localdate()),
+                time(23, 59),
+            ),
         )
         Invoice.objects.filter(pk=invoice.pk).update(created_at=appointment.end_datetime + timedelta(minutes=12), updated_at=appointment.end_datetime + timedelta(minutes=12))
         return visit

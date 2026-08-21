@@ -39,6 +39,7 @@ const item: AppointmentDetail = {
   reason: "Cleaning",
   notes: "Bring prior images",
   status: "UPCOMING",
+  version: 1,
   reschedule_source_exception: null,
   reschedule_source_working_shift: null,
   reschedule_source_type: null,

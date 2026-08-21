@@ -3,6 +3,7 @@ from datetime import datetime, time, timedelta
 from django.utils import timezone
 
 from apps.scheduling.appointment_services import ACTIVE_COUNTING_STATUSES, validate_duration
+from apps.scheduling.capacity import assess_candidate_capacity
 from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
 from apps.scheduling.time_utils import clinic_now, get_clinic_timezone
 
@@ -65,16 +66,22 @@ def build_availability_slots(*, doctor, date_value, duration_minutes):
         cursor = block_start
         while cursor + duration <= block_end:
             end = cursor + duration
-            overlapping_appointments = [
-                row for row in appointment_rows if _overlaps(row, cursor, end)
-            ]
-            count = len(overlapping_appointments)
+            overlapping_appointments = [row for row in appointment_rows if _overlaps(row, cursor, end)]
+            capacity = assess_candidate_capacity(
+                (
+                    (row["start_datetime"], row["end_datetime"])
+                    for row in overlapping_appointments
+                ),
+                start_datetime=cursor,
+                end_datetime=end,
+                capacity=settings.capacity_per_slot,
+            )
             doctor_conflict = any(row["doctor_id"] == doctor.id for row in overlapping_appointments)
             unavailable = any(_overlaps(row, cursor, end) for row in unavailable_rows)
             if (
                 cursor not in seen
                 and (date_value != clinic_now(settings).date() or cursor > clinic_now(settings))
-                and count < settings.capacity_per_slot
+                and capacity.available
                 and not doctor_conflict
                 and not unavailable
             ):
@@ -82,7 +89,7 @@ def build_availability_slots(*, doctor, date_value, duration_minutes):
                     {
                         "start_datetime": cursor.isoformat(),
                         "end_datetime": end.isoformat(),
-                        "current_count": count,
+                        "current_count": capacity.existing_peak,
                         "capacity": settings.capacity_per_slot,
                     }
                 )

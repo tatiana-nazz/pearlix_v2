@@ -404,10 +404,11 @@ def test_cancel_leave_after_staff_reschedule_does_not_move_appointment_back(
         ),
         format="json",
     )
+    appointment.refresh_from_db()
 
     reschedule_response = staff_client.patch(
         f"/api/appointments/{appointment.id}/",
-        {"start_datetime": "2026-07-21T09:00:00+03:00", "duration_minutes": 30},
+        {"start_datetime": "2026-07-21T09:00:00+03:00", "duration_minutes": 30, "version": appointment.version},
         format="json",
     )
     cancel_response = admin_client.post(f"/api/availability-exceptions/{create_response.data['id']}/cancel/", {"version": create_response.data["version"]}, format="json")
@@ -443,7 +444,7 @@ def test_cancel_leave_keeps_needs_reschedule_when_another_active_leave_blocks_sl
         ),
         format="json",
     )
-    availability_exception_factory(
+    other_leave = availability_exception_factory(
         doctor=doctor_user,
         start_datetime="2026-07-20T09:00:00+03:00",
         end_datetime="2026-07-20T10:00:00+03:00",
@@ -456,7 +457,8 @@ def test_cancel_leave_keeps_needs_reschedule_when_another_active_leave_blocks_sl
     assert cancel_response.data["still_blocked_appointments_count"] == 1
     appointment.refresh_from_db()
     assert appointment.status == Appointment.Status.NEEDS_RESCHEDULE
-    assert appointment.reschedule_source_exception_id == create_response.data["id"]
+    assert appointment.reschedule_source_exception_id == other_leave.id
+    assert appointment.reschedule_source_kind == Appointment.RescheduleSourceKind.LEAVE
 
 
 @pytest.mark.django_db

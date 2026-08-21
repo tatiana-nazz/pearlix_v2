@@ -32,6 +32,7 @@ const adminData: AdminDashboardResponse = {
   billing_activity_last_30_days: activity,
   appointments_daily_last_30_days: [{ date: "2026-08-08", ...counts }],
   doctor_utilization_last_30_days: [{ doctor: { id: 3, full_name: "Dr Sami" }, booked_minutes: 180, available_minutes: 360, utilization_percent: 50 }],
+  doctor_utilization_schedule_accuracy: "CURRENT_TEMPLATE_APPROXIMATION",
   patient_mix_last_8_weeks: [{ week_start: "2026-08-03", new: 3, returning: 5 }],
   appointment_problem_rate_last_8_weeks: [{ week_start: "2026-08-03", scheduled: 10, cancelled: 1, no_show: 1, rate_percent: 20 }],
   receivables_aging: [{ bucket: "0_7", SYP: "100000.00", USD: "25.00" }],

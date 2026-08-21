@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getPatients } from "../../../api/endpoints/patients";
+import type { AppointmentDetail } from "../../../types/appointments";
 import type { PatientListItem } from "../../../types/patients";
 import { AppointmentForm } from "./AppointmentForm";
 
@@ -26,6 +27,28 @@ const maya: PatientListItem = {
   version: 1,
   created_at: "2026-07-01T00:00:00Z",
   updated_at: "2026-07-01T00:00:00Z",
+};
+
+const existingAppointment: AppointmentDetail = {
+  id: 91,
+  patient: maya,
+  doctor: { id: 7, full_name: "Dr. Lin", email: "lin@example.com", role: "DOCTOR", is_active: true, theme_preference: "SYSTEM", language_preference: "EN" },
+  start_datetime: "2026-07-10T09:00:00",
+  end_datetime: "2026-07-10T09:30:00",
+  duration_minutes: 30,
+  reason: "Review",
+  notes: "Existing note",
+  status: "UPCOMING",
+  version: 7,
+  reschedule_source_exception: null,
+  reschedule_source_working_shift: null,
+  reschedule_source_type: null,
+  reschedule_source_label: null,
+  reschedule_previous_status: null,
+  created_by: null,
+  updated_by: null,
+  created_at: "2026-07-01T00:00:00Z",
+  updated_at: "2026-07-02T00:00:00Z",
 };
 
 function renderForm(onSubmit = vi.fn()) {
@@ -110,5 +133,20 @@ describe("AppointmentForm", () => {
 
     await user.click(screen.getByRole("button", { name: "Clear selected patient" }));
     expect(screen.queryByText("Selected patient: Maya Patient")).not.toBeInTheDocument();
+  });
+
+  it("submits the server-issued appointment version for optimistic edit protection", async () => {
+    const onSubmit = vi.fn();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AppointmentForm mode="edit" doctors={[...doctors]} appointment={existingAppointment} onSubmit={onSubmit} />
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Save appointment" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ version: 7 }));
   });
 });

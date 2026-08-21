@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -8,6 +8,7 @@ from django.utils import timezone
 from apps.billing.models import BillingHandoff, Invoice
 from apps.clinic.models import ClinicSettings
 from apps.dashboard.analytics import doctor_utilization
+from apps.scheduling.models import Appointment
 
 
 @pytest.mark.django_db
@@ -122,6 +123,86 @@ def test_admin_dashboard_exposes_complete_analytics_windows(admin_client):
     assert [row["bucket"] for row in data["receivables_aging"]] == ["0_7", "8_30", "31_60", "60_plus"]
     assert all({"SYP", "USD"}.issubset(row) for row in data["receivables_aging"])
     assert "doctor_utilization_last_30_days" in data
+    assert data["doctor_utilization_schedule_accuracy"] == "CURRENT_TEMPLATE_APPROXIMATION"
+
+
+@pytest.mark.django_db
+def test_admin_dashboard_numerically_reconciles_utilization_and_current_problem_rate(
+    admin_client,
+    doctor_user,
+    working_hour_factory,
+    availability_exception_factory,
+    appointment_factory,
+):
+    clinic = ClinicSettings.get_solo()
+    clinic.weekly_closed_days = []
+    clinic.save(update_fields=["weekly_closed_days", "updated_at"])
+    clinic_timezone = ZoneInfo(clinic.timezone)
+    day = date(2026, 7, 15)  # deterministic test clock: Wednesday 12:00 clinic time
+
+    def local(hour, minute=0):
+        return datetime(day.year, day.month, day.day, hour, minute, tzinfo=clinic_timezone)
+
+    working_hour_factory(
+        doctor=doctor_user,
+        weekday=day.weekday(),
+        start_time="09:00",
+        end_time="13:00",
+    )
+    availability_exception_factory(
+        doctor=doctor_user,
+        start_datetime=local(11),
+        end_datetime=local(12),
+    )
+    for start_hour, start_minute, end_hour, end_minute, status in (
+        (9, 0, 10, 0, Appointment.Status.COMPLETED),
+        (10, 0, 10, 30, Appointment.Status.NO_SHOW),
+        (10, 30, 11, 0, Appointment.Status.CANCELLED),
+        (11, 0, 11, 30, Appointment.Status.NEEDS_RESCHEDULE),
+        (12, 30, 13, 0, Appointment.Status.UPCOMING),
+    ):
+        appointment_factory(
+            doctor=doctor_user,
+            start_datetime=local(start_hour, start_minute),
+            end_datetime=local(end_hour, end_minute),
+            duration_minutes=int(
+                (local(end_hour, end_minute) - local(start_hour, start_minute)).total_seconds()
+                // 60
+            ),
+            status=status,
+        )
+
+    response = admin_client.get("/api/dashboard/admin/")
+
+    assert response.status_code == 200
+    utilization = next(
+        row
+        for row in response.data["doctor_utilization_last_30_days"]
+        if row["doctor"]["id"] == doctor_user.id
+    )
+    current_week = next(
+        row
+        for row in response.data["appointment_problem_rate_last_8_weeks"]
+        if row["week_start"] == "2026-07-13"
+    )
+    # Five Wednesdays in the 30-day window at 240 minutes each, minus the
+    # current Wednesday's 60-minute leave = 1,140 available minutes.
+    # Completed 60 + NO_SHOW 30 + future UPCOMING 30 = 120 booked minutes.
+    assert utilization == {
+        "doctor": {"id": doctor_user.id, "full_name": doctor_user.full_name},
+        "booked_minutes": 120,
+        "available_minutes": 1140,
+        "utilization_percent": 10.5,
+    }
+    # At 12:00 clinic time, future UPCOMING is excluded; NEEDS_RESCHEDULE is
+    # never eligible. COMPLETED, NO_SHOW, and CANCELLED yield 2 / 3 problems.
+    assert current_week == {
+        "week_start": "2026-07-13",
+        "scheduled": 3,
+        "cancelled": 1,
+        "no_show": 1,
+        "rate_percent": 66.7,
+    }
 
 
 @pytest.mark.django_db

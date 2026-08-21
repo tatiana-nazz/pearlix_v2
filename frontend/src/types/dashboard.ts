@@ -105,6 +105,7 @@ export interface AdminDashboardResponse {
   billing_activity_last_30_days: DashboardBillingActivityDay[];
   appointments_daily_last_30_days: DashboardAppointmentActivityDay[];
   doctor_utilization_last_30_days: DashboardDoctorUtilization[];
+  doctor_utilization_schedule_accuracy: "CURRENT_TEMPLATE_APPROXIMATION";
   patient_mix_last_8_weeks: DashboardPatientMixWeek[];
   appointment_problem_rate_last_8_weeks: DashboardProblemRateWeek[];
   receivables_aging: DashboardReceivablesAgingBucket[];

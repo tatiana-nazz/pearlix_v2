@@ -403,7 +403,16 @@ class Command(BaseCommand):
             app[f"leave_{index}"] = appointment
         rescheduled = marked[0]
         old_slot = {"doctor_id": rescheduled.doctor_id, "start_datetime": rescheduled.start_datetime.isoformat()}
-        appointment_serializer = AppointmentDetailSerializer(instance=rescheduled, data={"doctor_id": d2.id, "start_datetime": self._dt(future, 16), "duration_minutes": 30}, partial=True)
+        appointment_serializer = AppointmentDetailSerializer(
+            instance=rescheduled,
+            data={
+                "doctor_id": d2.id,
+                "start_datetime": self._dt(future, 16),
+                "duration_minutes": 30,
+                "version": rescheduled.version,
+            },
+            partial=True,
+        )
         appointment_serializer.is_valid(raise_exception=True)
         app["rescheduled"] = update_appointment(
             appointment=rescheduled,
@@ -461,6 +470,7 @@ class Command(BaseCommand):
         staff = accounts["staff.one"]
         visits = story["completed_visits"]
         reference_date = timezone.localtime(story["appointments"]["today_confirmed"].start_datetime).date()
+        story_now = self._dt(reference_date, 23, 59)
 
         visit_open = create_visit_completion_handoff(
             visit=visits[6],
@@ -484,16 +494,23 @@ class Command(BaseCommand):
                 "note": "Visit bill with two collection receipts",
             },
         )
-        self._set_story_timestamp(visit_partial, self._dt(reference_date - timedelta(days=21), 15, 30))
+        visit_partial_origin = visits[7].completed_at + timedelta(minutes=15)
+        self._set_story_timestamp(visit_partial, visit_partial_origin)
         partial_first, _ = issue_invoice(
             handoff=visit_partial,
             user=staff,
-            data={"amount": "100.00", "issued_at": self._dt(reference_date - timedelta(days=8), 16), "notes": "First instalment"},
+            data={
+                "amount": "100.00",
+                "issued_at": visit_partial_origin + timedelta(minutes=30),
+                "notes": "First instalment",
+            },
+            current_time=story_now,
         )
         partial_second, _ = issue_invoice(
             handoff=visit_partial,
             user=staff,
             data={"amount": "75.00", "issued_at": self._dt(reference_date, 10, 15), "notes": "Second instalment collected today"},
+            current_time=story_now,
         )
         self._set_story_timestamp(partial_first, partial_first.issued_at)
         self._set_story_timestamp(partial_second, partial_second.issued_at)
@@ -503,16 +520,27 @@ class Command(BaseCommand):
             user=visits[8].doctor,
             data={"description": "Dental cleaning and polish", "total_amount": "120.00", "currency": "USD", "note": "Fully paid in two receipts"},
         )
-        self._set_story_timestamp(visit_paid, self._dt(reference_date - timedelta(days=18), 9))
+        visit_paid_origin = visits[8].completed_at + timedelta(minutes=15)
+        self._set_story_timestamp(visit_paid, visit_paid_origin)
         paid_first, _ = issue_invoice(
             handoff=visit_paid,
             user=staff,
-            data={"amount": "50.00", "issued_at": self._dt(reference_date - timedelta(days=18), 9, 30), "notes": "Initial payment"},
+            data={
+                "amount": "50.00",
+                "issued_at": visit_paid_origin + timedelta(minutes=30),
+                "notes": "Initial payment",
+            },
+            current_time=story_now,
         )
         paid_second, _ = issue_invoice(
             handoff=visit_paid,
             user=staff,
-            data={"amount": "70.00", "issued_at": self._dt(reference_date - timedelta(days=17), 11), "notes": "Remaining balance"},
+            data={
+                "amount": "70.00",
+                "issued_at": visit_paid_origin + timedelta(days=1),
+                "notes": "Remaining balance",
+            },
+            current_time=story_now,
         )
         self._set_story_timestamp(paid_first, paid_first.issued_at)
         self._set_story_timestamp(paid_second, paid_second.issued_at)
@@ -529,16 +557,23 @@ class Command(BaseCommand):
             user=visits[10].doctor,
             data={"description": "Restorative treatment plan", "total_amount": "200000.00", "currency": "SYP", "note": "Partially paid bill generated from a completed visit"},
         )
-        self._set_story_timestamp(second_partial, self._dt(reference_date - timedelta(days=4), 10))
+        second_partial_origin = visits[10].completed_at + timedelta(minutes=15)
+        self._set_story_timestamp(second_partial, second_partial_origin)
         second_partial_first, _ = issue_invoice(
             handoff=second_partial,
             user=staff,
-            data={"amount": "50000.00", "issued_at": self._dt(reference_date - timedelta(days=4), 10, 30), "notes": "Deposit"},
+            data={
+                "amount": "50000.00",
+                "issued_at": second_partial_origin + timedelta(minutes=30),
+                "notes": "Deposit",
+            },
+            current_time=story_now,
         )
         second_partial_second, _ = issue_invoice(
             handoff=second_partial,
             user=staff,
             data={"amount": "25000.00", "issued_at": self._dt(reference_date, 11, 30), "notes": "Follow-up collection"},
+            current_time=story_now,
         )
         self._set_story_timestamp(second_partial_first, second_partial_first.issued_at)
         self._set_story_timestamp(second_partial_second, second_partial_second.issued_at)

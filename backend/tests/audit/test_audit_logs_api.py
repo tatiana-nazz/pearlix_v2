@@ -246,7 +246,10 @@ def test_important_actions_create_safe_audit_logs(
     )
     staff_client.patch(
         f"/api/appointments/{update_appointment.data['id']}/",
-        {"start_datetime": future_at(9).replace(minute=30).isoformat()},
+        {
+            "start_datetime": future_at(9).replace(minute=30).isoformat(),
+            "version": update_appointment.data["version"],
+        },
         format="json",
     )
     cancel_appointment = staff_client.post(

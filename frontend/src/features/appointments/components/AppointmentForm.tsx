@@ -17,10 +17,8 @@ import {
   type AppointmentFormValues,
 } from "../utils/appointmentFormMapping";
 
-interface AppointmentFormProps {
-  mode: "create" | "edit" | "reschedule";
+interface AppointmentFormBaseProps {
   doctors: DoctorListItem[];
-  appointment?: AppointmentDetail | AppointmentListItem | null;
   initialDate?: string;
   initialDoctorId?: number;
   isSubmitting?: boolean;
@@ -28,6 +26,15 @@ interface AppointmentFormProps {
   onCancel?: () => void;
   onSubmit: (payload: CreateAppointmentPayload | UpdateAppointmentPayload) => void | Promise<void>;
 }
+
+type AppointmentFormProps = AppointmentFormBaseProps &
+  (
+    | { mode: "create"; appointment?: null }
+    | {
+        mode: "edit" | "reschedule";
+        appointment: AppointmentDetail | AppointmentListItem;
+      }
+  );
 
 function initialValues(props: AppointmentFormProps): AppointmentFormValues {
   const fromAppointment = appointmentToFormValues(props.appointment);
@@ -62,7 +69,10 @@ export function AppointmentForm(props: AppointmentFormProps) {
     const nextErrors = validateAppointmentForm(values);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    const payload = props.mode === "create" ? formValuesToCreatePayload(values) : formValuesToUpdatePayload(values);
+    const payload =
+      props.mode === "create"
+        ? formValuesToCreatePayload(values)
+        : formValuesToUpdatePayload(values, props.appointment.version);
     await props.onSubmit(payload);
   }
 

@@ -60,8 +60,8 @@ export function formValuesToCreatePayload(values: AppointmentFormValues): Create
   };
 }
 
-export function formValuesToUpdatePayload(values: AppointmentFormValues): UpdateAppointmentPayload {
-  return formValuesToCreatePayload(values);
+export function formValuesToUpdatePayload(values: AppointmentFormValues, version: number): UpdateAppointmentPayload {
+  return { ...formValuesToCreatePayload(values), version };
 }
 
 export function apiFieldErrors(error: unknown): AppointmentFormErrors {

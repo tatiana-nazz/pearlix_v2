@@ -15,6 +15,7 @@ from apps.billing.selectors import annotate_handoff_financials
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
 from apps.dashboard.analytics import (
+    HISTORICAL_SCHEDULE_ACCURACY,
     appointment_daily_activity,
     appointment_problem_rate,
     doctor_utilization,
@@ -205,8 +206,13 @@ def admin_dashboard(request):
                 clinic_timezone,
                 weekly_closed_days=settings.weekly_closed_days,
             ),
+            "doctor_utilization_schedule_accuracy": HISTORICAL_SCHEDULE_ACCURACY,
             "patient_mix_last_8_weeks": patient_mix(today, clinic_timezone),
-            "appointment_problem_rate_last_8_weeks": appointment_problem_rate(today, clinic_timezone),
+            "appointment_problem_rate_last_8_weeks": appointment_problem_rate(
+                today,
+                clinic_timezone,
+                as_of=now,
+            ),
             "receivables_aging": receivables_aging(today, clinic_timezone),
             "recent_handoffs": [_handoff_summary(item) for item in recent_handoffs],
         }

@@ -40,6 +40,7 @@ export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting,
       duration_minutes: Number(durationMinutes),
       reason: appointment.reason,
       notes: appointment.notes,
+      version: appointment.version,
     });
   }
 

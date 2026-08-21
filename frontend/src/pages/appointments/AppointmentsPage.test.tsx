@@ -26,6 +26,7 @@ const item: AppointmentListItem = {
   duration_minutes: 30,
   reason: "Cleaning",
   status: "UPCOMING",
+  version: 1,
   reschedule_source_exception: null,
   reschedule_source_working_shift: null,
   reschedule_source_type: null,

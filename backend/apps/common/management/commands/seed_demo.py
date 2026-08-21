@@ -477,7 +477,12 @@ class Command(BaseCommand):
                 except AppointmentRuleError as exc:
                     errors.append(f"Upcoming appointment {appointment.id} violates clinic rules: {exc.code}.")
             if appointment.status == Appointment.Status.NEEDS_RESCHEDULE:
-                if not appointment.reschedule_source_exception_id and not appointment.reschedule_source_working_shift_id:
+                if (
+                    not appointment.reschedule_source_exception_id
+                    and not appointment.reschedule_source_working_shift_id
+                    and appointment.reschedule_source_clinic_weekday is None
+                    and not appointment.reschedule_source_kind
+                ):
                     errors.append(f"Needs-reschedule appointment {appointment.id} has no source.")
                 if appointment.reschedule_source_exception_id:
                     source = appointment.reschedule_source_exception

@@ -119,6 +119,12 @@ class Appointment(TimeStampedModel):
         NO_SHOW = "NO_SHOW", "No show"
         NEEDS_RESCHEDULE = "NEEDS_RESCHEDULE", "Needs reschedule"
 
+    class RescheduleSourceKind(models.TextChoices):
+        LEAVE = "LEAVE", "Leave"
+        WORKING_SCHEDULE_CHANGE = "WORKING_SCHEDULE_CHANGE", "Working schedule change"
+        CLINIC_WEEKLY_CLOSURE = "CLINIC_WEEKLY_CLOSURE", "Clinic weekly closure"
+        SCHEDULING_RULE_CONFLICT = "SCHEDULING_RULE_CONFLICT", "Scheduling rule conflict"
+
     patient = models.ForeignKey("patients.Patient", on_delete=models.PROTECT, related_name="appointments")
     doctor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="appointments")
     start_datetime = models.DateTimeField()
@@ -127,6 +133,7 @@ class Appointment(TimeStampedModel):
     reason = models.CharField(max_length=255, blank=True)
     notes = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.UPCOMING)
+    version = models.PositiveIntegerField(default=1)
     checked_in_at = models.DateTimeField(null=True, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
     no_show_at = models.DateTimeField(null=True, blank=True)
@@ -135,10 +142,11 @@ class Appointment(TimeStampedModel):
     reschedule_source_exception = models.ForeignKey("scheduling.AvailabilityException", null=True, blank=True, on_delete=models.SET_NULL, related_name="reschedule_appointments")
     reschedule_source_working_shift = models.ForeignKey("scheduling.WorkingShift", null=True, blank=True, on_delete=models.SET_NULL, related_name="reschedule_appointments")
     reschedule_source_clinic_weekday = models.PositiveSmallIntegerField(choices=Weekday.choices, null=True, blank=True)
+    reschedule_source_kind = models.CharField(max_length=40, choices=RescheduleSourceKind.choices, null=True, blank=True)
     reschedule_previous_status = models.CharField(max_length=20, choices=Status.choices, null=True, blank=True)
 
     class Meta:
-        indexes = [models.Index(fields=["doctor", "start_datetime"]), models.Index(fields=["start_datetime", "status"]), models.Index(fields=["patient", "start_datetime"]), models.Index(fields=["status"]), models.Index(fields=["reschedule_source_exception", "status"]), models.Index(fields=["reschedule_source_working_shift", "status"]), models.Index(fields=["reschedule_source_clinic_weekday", "status"], name="sched_appt_clday_stat_idx")]
+        indexes = [models.Index(fields=["doctor", "start_datetime"]), models.Index(fields=["start_datetime", "status"]), models.Index(fields=["patient", "start_datetime"]), models.Index(fields=["status"]), models.Index(fields=["reschedule_source_exception", "status"]), models.Index(fields=["reschedule_source_working_shift", "status"]), models.Index(fields=["reschedule_source_clinic_weekday", "status"], name="sched_appt_clday_stat_idx"), models.Index(fields=["reschedule_source_kind", "status"], name="sched_appt_rskind_stat_idx")]
         ordering = ["start_datetime", "id"]
 
     def clean(self):

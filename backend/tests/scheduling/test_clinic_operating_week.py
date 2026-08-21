@@ -142,6 +142,7 @@ def test_appointment_create_and_reschedule_reject_closed_day_but_open_day_works(
         {
             "start_datetime": "2026-07-17T09:00:00+03:00",
             "duration_minutes": 30,
+            "version": open_create.data["version"],
         },
         format="json",
     )
@@ -261,7 +262,7 @@ def test_reopening_restores_only_fully_valid_closure_impacts(
         end_datetime="2026-07-20T10:30:00+03:00",
     )
     assert set_closed_days(admin_client, [0, 4], confirm=True).status_code == 200
-    availability_exception_factory(
+    blocking_leave = availability_exception_factory(
         doctor=doctor_user,
         start_datetime="2026-07-20T10:00:00+03:00",
         end_datetime="2026-07-20T10:30:00+03:00",
@@ -278,7 +279,9 @@ def test_reopening_restores_only_fully_valid_closure_impacts(
     assert restorable.reschedule_previous_status is None
     assert restorable.reschedule_source_clinic_weekday is None
     assert blocked.status == Appointment.Status.NEEDS_RESCHEDULE
-    assert blocked.reschedule_source_clinic_weekday == 0
+    assert blocked.reschedule_source_clinic_weekday is None
+    assert blocked.reschedule_source_exception_id == blocking_leave.id
+    assert blocked.reschedule_source_kind == Appointment.RescheduleSourceKind.LEAVE
 
 
 @pytest.mark.django_db
@@ -308,7 +311,8 @@ def test_reopening_keeps_closure_impact_when_doctor_conflict_exists(
     assert reopened.data["still_blocked_appointments_count"] == 1
     impacted.refresh_from_db()
     assert impacted.status == Appointment.Status.NEEDS_RESCHEDULE
-    assert impacted.reschedule_source_clinic_weekday == 0
+    assert impacted.reschedule_source_clinic_weekday is None
+    assert impacted.reschedule_source_kind == Appointment.RescheduleSourceKind.SCHEDULING_RULE_CONFLICT
 
 
 @pytest.mark.django_db
@@ -326,12 +330,14 @@ def test_manually_rescheduled_closure_impact_is_not_restored(
         end_datetime="2026-07-20T09:30:00+03:00",
     )
     set_closed_days(admin_client, [0, 4], confirm=True)
+    appointment.refresh_from_db()
 
     manual = staff_client.patch(
         f"/api/appointments/{appointment.id}/",
         {
             "start_datetime": "2026-07-21T09:00:00+03:00",
             "duration_minutes": 30,
+            "version": appointment.version,
         },
         format="json",
     )
