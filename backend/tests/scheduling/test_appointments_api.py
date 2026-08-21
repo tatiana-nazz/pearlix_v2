@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 from django.utils import timezone
 
@@ -25,6 +27,46 @@ def appointment_payload(patient, doctor, **overrides):
 
 def add_working_hour(doctor, weekday=0, start="09:00", end="17:00"):
     return WorkingShift.objects.create(employee=doctor, name="Test shift", weekday=weekday, start_time=start, end_time=end)
+
+
+@pytest.mark.django_db
+def test_naive_calendar_window_uses_clinic_timezone_without_runtime_warning(
+    admin_client,
+    appointment_factory,
+):
+    ClinicSettings.objects.update_or_create(
+        pk=1,
+        defaults={"timezone": "Asia/Damascus", "weekly_closed_days": [4]},
+    )
+    included = appointment_factory(
+        start_datetime="2026-08-20T00:30:00+03:00",
+        end_datetime="2026-08-20T01:00:00+03:00",
+    )
+    excluded = appointment_factory(
+        start_datetime="2026-08-21T00:00:00+03:00",
+        end_datetime="2026-08-21T00:30:00+03:00",
+    )
+
+    with warnings.catch_warnings(record=True) as captured:
+        warnings.simplefilter("always")
+        response = admin_client.get(
+            "/api/appointments/",
+            {
+                "start_from": "2026-08-20T00:00:00",
+                "start_to": "2026-08-21T00:00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    result_ids = {row["id"] for row in response.data["results"]}
+    assert included.id in result_ids
+    assert excluded.id not in result_ids
+    assert not [
+        warning
+        for warning in captured
+        if issubclass(warning.category, RuntimeWarning)
+        and "received a naive datetime" in str(warning.message)
+    ]
 
 
 @pytest.mark.django_db

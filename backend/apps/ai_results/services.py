@@ -20,7 +20,12 @@ from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
 from apps.xrays.models import ExternalXrayCase, XrayAttachment
 from apps.xrays.image_validation import ImageValidationError, validate_image_upload
-from apps.xrays.quota import StorageQuotaExceeded, enforce_storage_quota, lock_storage_admission
+from apps.xrays.quota import (
+    StorageQuotaExceeded,
+    enforce_storage_quota,
+    lock_storage_admission,
+    register_pending_imaging_deletion,
+)
 
 
 DEFAULT_PROCESSING_STALE_SECONDS = 15 * 60
@@ -163,17 +168,31 @@ def _is_active_processing(result: AIResult) -> bool:
     return result.updated_at > cutoff
 
 
-def _safe_delete_storage_file(storage, name: str) -> None:
+def _safe_delete_storage_file(
+    storage,
+    name: str,
+    *,
+    size_bytes: int,
+    uploader_id: int | None,
+    patient_id: int | None,
+) -> None:
     try:
         storage.delete(name)
     except Exception as exc:
-        from apps.xrays.models import ImagingDeletionTask
-
-        ImagingDeletionTask.objects.update_or_create(
+        register_pending_imaging_deletion(
             storage_name=name,
-            defaults={"last_error": str(exc)[:255]},
+            size_bytes=size_bytes,
+            uploader_id=uploader_id,
+            patient_id=patient_id,
+            last_error=str(exc),
         )
         return
+
+
+def _process_pending_deletion_task(task_id: int) -> None:
+    from apps.xrays.services import process_imaging_deletion_task
+
+    process_imaging_deletion_task(task_id)
 
 
 def _validate_locked_source(source) -> None:
@@ -269,7 +288,13 @@ def _claim_processing(*, source_model, source_id: int, source_field: str, user) 
         if result is None:
             result = AIResult(**{source_field: source})
         elif result.overlay_file:
-            old_overlay = (result.overlay_file.storage, result.overlay_file.name)
+            old_overlay = (
+                result.overlay_file.storage,
+                result.overlay_file.name,
+                result.overlay_size_bytes,
+                source.uploaded_by_id,
+                source.patient_id if isinstance(source, XrayAttachment) else None,
+            )
 
         result.status = AIResult.Status.PROCESSING
         result.requested_by = user
@@ -289,8 +314,16 @@ def _claim_processing(*, source_model, source_id: int, source_field: str, user) 
         result.save()
 
         if old_overlay:
-            storage, name = old_overlay
-            transaction.on_commit(lambda storage=storage, name=name: _safe_delete_storage_file(storage, name))
+            _storage, name, size_bytes, uploader_id, patient_id = old_overlay
+            task = register_pending_imaging_deletion(
+                storage_name=name,
+                size_bytes=size_bytes,
+                uploader_id=uploader_id,
+                patient_id=patient_id,
+            )
+            transaction.on_commit(
+                lambda task_id=task.id: _process_pending_deletion_task(task_id)
+            )
         return _ProcessingClaim(result_id=result.id, claimed_at=result.updated_at), source
 
 
@@ -343,13 +376,26 @@ def _complete_result(claim: _ProcessingClaim, pipeline_result: PipelineResult) -
                 )
                 result.overlay_file.save(f"{uuid4().hex}.png", ContentFile(validated_overlay.content), save=False)
                 result.overlay_size_bytes = validated_overlay.size_bytes
-                created_overlay = (result.overlay_file.storage, result.overlay_file.name)
+                created_overlay = (
+                    result.overlay_file.storage,
+                    result.overlay_file.name,
+                    result.overlay_size_bytes,
+                    source.uploaded_by_id,
+                    patient_id,
+                )
             result.full_clean()
             result.save()
             return result
     except Exception:
         if created_overlay:
-            _safe_delete_storage_file(*created_overlay)
+            storage, name, size_bytes, uploader_id, patient_id = created_overlay
+            _safe_delete_storage_file(
+                storage,
+                name,
+                size_bytes=size_bytes,
+                uploader_id=uploader_id,
+                patient_id=patient_id,
+            )
         raise
 
 

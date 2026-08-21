@@ -134,6 +134,9 @@ class XrayStorageState(models.Model):
 
 class ImagingDeletionTask(TimeStampedModel):
     storage_name = models.CharField(max_length=1024, unique=True)
+    size_bytes = models.PositiveBigIntegerField(default=0)
+    uploader_id = models.PositiveBigIntegerField(null=True, blank=True, db_index=True)
+    patient_id = models.PositiveBigIntegerField(null=True, blank=True, db_index=True)
     attempts = models.PositiveIntegerField(default=0)
     last_error = models.CharField(max_length=255, blank=True)
 

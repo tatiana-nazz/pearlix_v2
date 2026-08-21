@@ -56,6 +56,15 @@ def _submitted_version(request):
     return None if value is None else serializers.IntegerField(min_value=1).run_validation(value)
 
 
+def _clinic_datetime_filters(params, *names):
+    raw_values = {name: params.get(name) for name in names if params.get(name)}
+    if not raw_values:
+        return {}
+    clinic_timezone = ZoneInfo(get_clinic_settings().timezone)
+    field = serializers.DateTimeField(default_timezone=clinic_timezone)
+    return {name: field.run_validation(value) for name, value in raw_values.items()}
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def doctors_list(request):
@@ -182,8 +191,9 @@ class AvailabilityExceptionViewSet(viewsets.ModelViewSet):
             elif user.role == "STAFF": query = query.filter(Q(doctor__isnull=False) | Q(staff=user))
         for field in ("doctor_id", "staff_id", "type"):
             if self.request.query_params.get(field): query = query.filter(**{field: self.request.query_params[field]})
-        if self.request.query_params.get("start_from"): query = query.filter(start_datetime__gte=self.request.query_params["start_from"])
-        if self.request.query_params.get("end_to"): query = query.filter(end_datetime__lte=self.request.query_params["end_to"])
+        datetime_filters = _clinic_datetime_filters(self.request.query_params, "start_from", "end_to")
+        if datetime_filters.get("start_from"): query = query.filter(start_datetime__gte=datetime_filters["start_from"])
+        if datetime_filters.get("end_to"): query = query.filter(end_datetime__lte=datetime_filters["end_to"])
         if self.request.query_params.get("is_cancelled") in {"true", "false"}: query = query.filter(is_cancelled=self.request.query_params["is_cancelled"] == "true")
         return query
     def create(self, request, *args, **kwargs):
@@ -232,9 +242,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         for field in ("doctor_id", "patient_id", "status"):
             if self.request.query_params.get(field): query = query.filter(**{field: self.request.query_params[field]})
         if self.request.query_params.get("date"): query = query.filter(start_datetime__date=self.request.query_params["date"])
-        if self.request.query_params.get("start_from"): query = query.filter(start_datetime__gte=self.request.query_params["start_from"])
+        datetime_filters = _clinic_datetime_filters(self.request.query_params, "start_from", "start_to")
+        if datetime_filters.get("start_from"): query = query.filter(start_datetime__gte=datetime_filters["start_from"])
         # Calendar clients send the next period start, so bounded windows are [start, end).
-        if self.request.query_params.get("start_to"): query = query.filter(start_datetime__lt=self.request.query_params["start_to"])
+        if datetime_filters.get("start_to"): query = query.filter(start_datetime__lt=datetime_filters["start_to"])
         if self.request.query_params.get("search"):
             term = self.request.query_params["search"]
             query = query.filter(Q(patient__first_name__icontains=term) | Q(patient__last_name__icontains=term) | Q(patient__phone_number__icontains=term))

@@ -14,7 +14,12 @@ from apps.patients.selectors import user_can_read_patient_clinical_history
 from apps.visits.models import Visit
 from apps.xrays.models import ExternalXrayCase, ImagingDeletionTask, XrayAttachment
 from apps.xrays.image_validation import ImageValidationError, validate_image_upload
-from apps.xrays.quota import StorageQuotaExceeded, enforce_storage_quota, lock_storage_admission
+from apps.xrays.quota import (
+    StorageQuotaExceeded,
+    enforce_storage_quota,
+    lock_storage_admission,
+    register_pending_imaging_deletion,
+)
 
 
 ALLOWED_XRAY_EXTENSIONS = {".png", ".jpg", ".jpeg"}
@@ -141,7 +146,17 @@ def create_xray_attachment(*, patient, visit, uploaded_by, uploaded_file, title=
         raise _quota_error(exc) from exc
     except Exception:
         if xray is not None and xray.original_file and getattr(xray.original_file, "_committed", False):
-            _delete_storage_files([(xray.original_file.storage, xray.original_file.name)])
+            _delete_storage_files(
+                [
+                    (
+                        xray.original_file.storage,
+                        xray.original_file.name,
+                        metadata["size_bytes"],
+                        uploaded_by.id,
+                        patient.id,
+                    )
+                ]
+            )
         raise
 
 
@@ -166,7 +181,17 @@ def create_external_xray_case(*, uploaded_by, uploaded_file, title="", notes="",
         raise _quota_error(exc) from exc
     except Exception:
         if external is not None and external.original_file and getattr(external.original_file, "_committed", False):
-            _delete_storage_files([(external.original_file.storage, external.original_file.name)])
+            _delete_storage_files(
+                [
+                    (
+                        external.original_file.storage,
+                        external.original_file.name,
+                        metadata["size_bytes"],
+                        uploaded_by.id,
+                        None,
+                    )
+                ]
+            )
         raise
 
 
@@ -299,22 +324,41 @@ def _copy_external_file_to_saved_xray(
         xray.save()
     except Exception:
         if xray.original_file and getattr(xray.original_file, "_committed", False):
-            xray.original_file.storage.delete(xray.original_file.name)
+            created_storage_files.append(
+                (
+                    xray.original_file.storage,
+                    xray.original_file.name,
+                    xray.size_bytes,
+                    uploaded_by.id,
+                    patient.id,
+                )
+            )
         raise
-    created_storage_files.append((xray.original_file.storage, xray.original_file.name))
+    created_storage_files.append(
+        (
+            xray.original_file.storage,
+            xray.original_file.name,
+            xray.size_bytes,
+            uploaded_by.id,
+            patient.id,
+        )
+    )
     return xray
 
 
 def _delete_storage_files(files):
-    for storage, name in files:
+    for storage, name, size_bytes, uploader_id, patient_id in files:
         if not name:
             continue
         try:
             storage.delete(name)
         except Exception as exc:
-            ImagingDeletionTask.objects.update_or_create(
+            register_pending_imaging_deletion(
                 storage_name=name,
-                defaults={"last_error": str(exc)[:255]},
+                size_bytes=size_bytes,
+                uploader_id=uploader_id,
+                patient_id=patient_id,
+                last_error=str(exc),
             )
             continue
 
@@ -344,6 +388,7 @@ def process_imaging_deletion_task(task_id: int) -> bool:
 
 def delete_xray_attachment(*, xray):
     with transaction.atomic():
+        lock_storage_admission()
         locked_xray = (
             XrayAttachment.objects.select_for_update(of=("self",))
             .select_related("patient", "visit", "uploaded_by", "ai_result")
@@ -357,9 +402,25 @@ def delete_xray_attachment(*, xray):
                 status.HTTP_409_CONFLICT,
             )
 
-        files = [(locked_xray.original_file.storage, locked_xray.original_file.name)]
+        files = [
+            (
+                locked_xray.original_file.storage,
+                locked_xray.original_file.name,
+                locked_xray.size_bytes,
+                locked_xray.uploaded_by_id,
+                locked_xray.patient_id,
+            )
+        ]
         if ai_result is not None and ai_result.overlay_file:
-            files.append((ai_result.overlay_file.storage, ai_result.overlay_file.name))
+            files.append(
+                (
+                    ai_result.overlay_file.storage,
+                    ai_result.overlay_file.name,
+                    ai_result.overlay_size_bytes,
+                    locked_xray.uploaded_by_id,
+                    locked_xray.patient_id,
+                )
+            )
 
         summary = {
             "xray_id": locked_xray.id,
@@ -371,8 +432,14 @@ def delete_xray_attachment(*, xray):
         ExternalXrayCase.objects.filter(attached_xray=locked_xray).update(attached_xray=None)
         locked_xray.delete()
         task_ids = [
-            ImagingDeletionTask.objects.get_or_create(storage_name=name)[0].id
-            for _storage, name in files if name
+            register_pending_imaging_deletion(
+                storage_name=name,
+                size_bytes=size_bytes,
+                uploader_id=uploader_id,
+                patient_id=patient_id,
+            ).id
+            for _storage, name, size_bytes, uploader_id, patient_id in files
+            if name
         ]
         transaction.on_commit(lambda: [process_imaging_deletion_task(task_id) for task_id in task_ids])
         return summary
@@ -400,7 +467,15 @@ def _copy_external_ai_result(*, external_case, xray_attachment, created_storage_
             source_handle.close()
         result.overlay_file.save(f"{uuid4().hex}.png", ContentFile(overlay_content), save=False)
         result.overlay_size_bytes = len(overlay_content)
-        created_storage_files.append((result.overlay_file.storage, result.overlay_file.name))
+        created_storage_files.append(
+            (
+                result.overlay_file.storage,
+                result.overlay_file.name,
+                result.overlay_size_bytes,
+                xray_attachment.uploaded_by_id,
+                xray_attachment.patient_id,
+            )
+        )
     result.full_clean()
     result.save()
     return result
@@ -480,10 +555,5 @@ def attach_external_case_to_patient(*, external_case, patient, visit, user, titl
             transaction.on_commit(lambda external_id=external_case.id: purge_external_artifacts(external_id))
             return external_case
     except Exception:
-        for storage, name in reversed(created_storage_files):
-            try:
-                storage.delete(name)
-            except Exception as exc:
-                ImagingDeletionTask.objects.update_or_create(storage_name=name, defaults={"last_error": str(exc)[:255]})
-                continue
+        _delete_storage_files(reversed(created_storage_files))
         raise
