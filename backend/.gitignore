@@ -15,6 +15,9 @@ staticfiles/
 !.env.example
 .venv/
 .hf-deploy-venv/
+.local-ai-venv/
+.local-ai-models/
+.local-ai-token
 venv/
 env/
 *.pt

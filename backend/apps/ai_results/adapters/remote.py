@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import json
+import base64
+import binascii
 import ipaddress
+import json
 import re
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
@@ -10,9 +12,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from django.core.files.uploadedfile import SimpleUploadedFile
-
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.ai_results.adapters.base import (
     InferenceConfigurationError,
@@ -39,6 +40,8 @@ MAX_REMOTE_JSON_BYTES = 256 * 1024
 MAX_REMOTE_RUNTIME_METADATA_BYTES = 16 * 1024
 MAX_REMOTE_TOOTH_ROWS = 32
 MAX_REMOTE_OVERLAY_BYTES = 20 * 1024 * 1024
+MAX_REMOTE_OVERLAY_BASE64_BYTES = 4 * ((MAX_REMOTE_OVERLAY_BYTES + 2) // 3)
+MAX_REMOTE_HTTPS_RESPONSE_BYTES = MAX_REMOTE_JSON_BYTES + MAX_REMOTE_OVERLAY_BASE64_BYTES + 4096
 SPACE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
 
@@ -97,6 +100,22 @@ def _load_remote_payload(raw: Any) -> dict:
     return payload
 
 
+def _validate_overlay_png(data: bytes | None) -> bytes | None:
+    if data is None:
+        return None
+    if len(data) > MAX_REMOTE_OVERLAY_BYTES:
+        raise InferenceRuntimeError("The AI service overlay exceeded the size limit.")
+    try:
+        validated = validate_image_upload(
+            SimpleUploadedFile("overlay.png", data, content_type="image/png"),
+            require_png=True,
+            maximum_bytes=MAX_REMOTE_OVERLAY_BYTES,
+        )
+    except ImageValidationError as exc:
+        raise InferenceRuntimeError("The AI service overlay is invalid.") from exc
+    return validated.content
+
+
 def _read_overlay_bytes(raw: Any) -> bytes | None:
     if raw is None or raw == "":
         return None
@@ -110,22 +129,26 @@ def _read_overlay_bytes(raw: Any) -> bytes | None:
     try:
         with path.open("rb") as handle:
             data = handle.read(MAX_REMOTE_OVERLAY_BYTES + 1)
-        if len(data) > MAX_REMOTE_OVERLAY_BYTES:
-            raise InferenceRuntimeError("The AI service overlay exceeded the size limit.")
-        try:
-            validated = validate_image_upload(
-                SimpleUploadedFile("overlay.png", data, content_type="image/png"),
-                require_png=True,
-                maximum_bytes=MAX_REMOTE_OVERLAY_BYTES,
-            )
-        except ImageValidationError as exc:
-            raise InferenceRuntimeError("The AI service overlay is invalid.") from exc
-        return validated.content
+        return _validate_overlay_png(data)
     finally:
         path.unlink(missing_ok=True)
 
 
-def pipeline_result_from_remote(payload: dict, overlay_png: bytes | None) -> PipelineResult:
+def _decode_overlay_base64(raw: Any) -> bytes | None:
+    if raw is None or raw == "":
+        return None
+    if not isinstance(raw, str):
+        raise InferenceRuntimeError("The AI service returned an invalid overlay payload.")
+    if len(raw) > MAX_REMOTE_OVERLAY_BASE64_BYTES:
+        raise InferenceRuntimeError("The AI service overlay exceeded the size limit.")
+    try:
+        data = base64.b64decode(raw, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise InferenceRuntimeError("The AI service returned invalid overlay encoding.") from exc
+    return _validate_overlay_png(data)
+
+
+def pipeline_result_from_remote(payload: dict, overlay_png: bytes | None, *, transport: str = "remote") -> PipelineResult:
     if payload.get("contract_version") != REMOTE_CONTRACT_VERSION:
         raise InferenceRuntimeError("The AI service contract version is unsupported.")
     if payload.get("model_version") != PIPELINE_VERSION:
@@ -147,8 +170,6 @@ def pipeline_result_from_remote(payload: dict, overlay_png: bytes | None) -> Pip
                 bbox_xyxy=tuple(row["bbox_xyxy"]),
             )
             scores = ToothScores.from_mapping(row["model_scores"])
-            # The remote service is not trusted to make final decisions. Pearlix
-            # reapplies its code-locked thresholds/review band/hierarchy locally.
             teeth.append(apply_locked_policy(tooth, scores))
         except (KeyError, TypeError, ValueError) as exc:
             raise InferenceRuntimeError("The AI service returned a tooth row outside the locked contract.") from exc
@@ -165,17 +186,32 @@ def pipeline_result_from_remote(payload: dict, overlay_png: bytes | None) -> Pip
         metadata["remote_runtime"] = runtime
     metadata["remote_service"] = {
         "contract_version": REMOTE_CONTRACT_VERSION,
-        "transport": "hugging-face-gradio",
+        "transport": transport,
     }
 
-    return PipelineResult(
-        result_summary="Research-only AI analysis completed.",
-        model_version=PIPELINE_VERSION,
-        teeth=tuple(teeth),
-        overall_confidence=None,
-        pipeline_metadata=metadata,
-        overlay_png=overlay_png,
-    )
+    try:
+        return PipelineResult(
+            result_summary="Research-only AI analysis completed.",
+            model_version=PIPELINE_VERSION,
+            teeth=tuple(teeth),
+            overall_confidence=None,
+            pipeline_metadata=metadata,
+            overlay_png=overlay_png,
+        )
+    except ValueError as exc:
+        raise InferenceRuntimeError("The AI service response violated the locked result contract.") from exc
+
+
+def _run_with_total_timeout(callable_):
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pearlix-remote-ai")
+    future = executor.submit(callable_)
+    try:
+        return future.result(timeout=REMOTE_TOTAL_TIMEOUT_SECONDS)
+    except FutureTimeoutError as exc:
+        future.cancel()
+        raise InferenceRuntimeError("The separate AI service request timed out.") from exc
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 class RemoteInferenceAdapter:
@@ -184,14 +220,65 @@ class RemoteInferenceAdapter:
     def __init__(self, config: RemoteInferenceConfig):
         self.config = config
 
-    def analyze(self, image: ImageInput) -> PipelineResult:
-        if not isinstance(image, ImageInput):
-            raise TypeError("RemoteInferenceAdapter requires ImageInput.")
-        content_type = image.content_type.lower()
-        suffix = ".png" if content_type == "image/png" else ".jpg" if content_type == "image/jpeg" else None
-        if suffix is None:
-            raise InferenceImageInvalidError("The image content type is unsupported.")
+    def _analyze_https(self, image: ImageInput, suffix: str) -> PipelineResult:
+        try:
+            import httpx
+        except ImportError as exc:
+            raise InferenceConfigurationError("The HTTP client dependency is unavailable.") from exc
 
+        def request_bytes() -> bytes:
+            timeout = httpx.Timeout(
+                REMOTE_READ_TIMEOUT_SECONDS,
+                connect=REMOTE_CONNECT_TIMEOUT_SECONDS,
+                write=REMOTE_CONNECT_TIMEOUT_SECONDS,
+                pool=REMOTE_CONNECT_TIMEOUT_SECONDS,
+            )
+            with httpx.Client(timeout=timeout, follow_redirects=False, trust_env=False) as client:
+                with client.stream(
+                    "POST",
+                    f"{self.config.service_url}{self.config.api_name}",
+                    headers={"Authorization": f"Bearer {self.config.hf_token}"},
+                    files={"image": (f"panoramic{suffix}", image.content, image.content_type)},
+                ) as response:
+                    if response.status_code in {401, 403}:
+                        raise InferenceConfigurationError("The separate AI service rejected its bearer token.")
+                    if response.status_code >= 300:
+                        raise InferenceRuntimeError(
+                            f"The separate AI service returned HTTP {response.status_code}."
+                        )
+                    declared_length = response.headers.get("content-length")
+                    if declared_length is not None:
+                        try:
+                            if int(declared_length) > MAX_REMOTE_HTTPS_RESPONSE_BYTES:
+                                raise InferenceRuntimeError("The AI service response exceeded the size limit.")
+                        except ValueError as exc:
+                            raise InferenceRuntimeError("The AI service returned an invalid content length.") from exc
+                    chunks = []
+                    received = 0
+                    for chunk in response.iter_bytes():
+                        received += len(chunk)
+                        if received > MAX_REMOTE_HTTPS_RESPONSE_BYTES:
+                            raise InferenceRuntimeError("The AI service response exceeded the size limit.")
+                        chunks.append(chunk)
+                    return b"".join(chunks)
+
+        try:
+            raw_response = _run_with_total_timeout(request_bytes)
+        except (InferenceConfigurationError, InferenceRuntimeError):
+            raise
+        except Exception as exc:
+            raise InferenceRuntimeError("The separate AI service request failed.") from exc
+        try:
+            envelope = json.loads(raw_response)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise InferenceRuntimeError("The AI service returned invalid JSON.") from exc
+        if not isinstance(envelope, dict):
+            raise InferenceRuntimeError("The AI service returned an invalid response envelope.")
+        payload = _load_remote_payload(envelope.get("payload"))
+        overlay_png = _decode_overlay_base64(envelope.get("overlay_png_base64"))
+        return pipeline_result_from_remote(payload, overlay_png, transport="https-json")
+
+    def _analyze_hf_space(self, image: ImageInput, suffix: str) -> PipelineResult:
         try:
             from gradio_client import Client, handle_file
             import httpx
@@ -218,24 +305,17 @@ class RemoteInferenceAdapter:
                     )
                 },
             )
-            executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pearlix-remote-ai")
-            future = executor.submit(
-                client.predict,
-                image=handle_file(str(temporary_path)),
-                api_name=self.config.api_name,
+            result = _run_with_total_timeout(
+                lambda: client.predict(
+                    image=handle_file(str(temporary_path)),
+                    api_name=self.config.api_name,
+                )
             )
-            try:
-                result = future.result(timeout=REMOTE_TOTAL_TIMEOUT_SECONDS)
-            except FutureTimeoutError as exc:
-                future.cancel()
-                raise InferenceRuntimeError("The separate AI service request timed out.") from exc
-            finally:
-                executor.shutdown(wait=False, cancel_futures=True)
             if not isinstance(result, (tuple, list)) or len(result) != 2:
                 raise InferenceRuntimeError("The AI service returned the wrong output shape.")
             payload = _load_remote_payload(result[0])
             overlay_png = _read_overlay_bytes(result[1])
-            return pipeline_result_from_remote(payload, overlay_png)
+            return pipeline_result_from_remote(payload, overlay_png, transport="hugging-face-gradio")
         except (InferenceConfigurationError, InferenceImageInvalidError, InferenceRuntimeError):
             raise
         except Exception as exc:
@@ -243,6 +323,17 @@ class RemoteInferenceAdapter:
         finally:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
+
+    def analyze(self, image: ImageInput) -> PipelineResult:
+        if not isinstance(image, ImageInput):
+            raise TypeError("RemoteInferenceAdapter requires ImageInput.")
+        content_type = image.content_type.lower()
+        suffix = ".png" if content_type == "image/png" else ".jpg" if content_type == "image/jpeg" else None
+        if suffix is None:
+            raise InferenceImageInvalidError("The image content type is unsupported.")
+        if self.config.service_url.startswith("https://"):
+            return self._analyze_https(image, suffix)
+        return self._analyze_hf_space(image, suffix)
 
 
 _REMOTE_ADAPTER: RemoteInferenceAdapter | None = None
