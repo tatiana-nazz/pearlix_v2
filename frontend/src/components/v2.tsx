@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, ChevronRight, Circle, Info, Lock, MoreHorizontal, Search, X } from "lucide-react";
 import type { ButtonHTMLAttributes, ComponentPropsWithoutRef, InputHTMLAttributes, PropsWithChildren, ReactNode, SelectHTMLAttributes } from "react";
 import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export function Button({ children, variant = "primary", compact, loading = false, disabled, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger"; compact?: boolean; loading?: boolean }) { return <button {...props} disabled={disabled || loading} aria-busy={loading || undefined} className={["v2-button", variant === "primary" ? "" : variant, compact ? "compact" : "", props.className].filter(Boolean).join(" ")}>{children}</button>; }
 export function IconButton({ label, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) { return <button {...props} className={["v2-icon-button", props.className].filter(Boolean).join(" ")} aria-label={label} data-tooltip={label}>{children}</button>; }
@@ -204,14 +205,26 @@ export function FormSection({ title, children }: PropsWithChildren<{ title:strin
 export function StickyActionBar({ children }: PropsWithChildren) { return <div className="v2-sticky-actions">{children}</div>; }
 
 type OverlayProps = PropsWithChildren<{ open:boolean; title:string; description?:string; onClose:()=>void; dirty?:boolean; pending?:boolean; wide?:boolean }>;
+const overlayFocusableSelector = "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])";
+
 function Overlay({ open, title, description, onClose, dirty, pending, wide, children, drawer = false }: OverlayProps & { drawer?:boolean }) {
   const dialog = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const titleId = useId();
+  const descriptionId = useId();
+  const discardRef = useRef<HTMLDivElement>(null);
+  const dirtyRef = useRef(dirty);
+  const pendingRef = useRef(pending);
+  const confirmDiscardRef = useRef(confirmDiscard);
+
+  useEffect(() => { dirtyRef.current = dirty; }, [dirty]);
+  useEffect(() => { pendingRef.current = pending; }, [pending]);
+  useEffect(() => { confirmDiscardRef.current = confirmDiscard; }, [confirmDiscard]);
 
   function requestClose() {
-    if (pending) return;
-    if (dirty) {
+    if (pendingRef.current) return;
+    if (dirtyRef.current) {
       setConfirmDiscard(true);
       return;
     }
@@ -226,17 +239,36 @@ function Overlay({ open, title, description, onClose, dirty, pending, wide, chil
     trigger.current = document.activeElement as HTMLElement;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const timer = window.setTimeout(() => dialog.current?.querySelector<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])")?.focus(), 0);
+    const backdrop = dialog.current?.closest(".v2-overlay-backdrop");
+    const background = Array.from(document.body.children).filter((element) => element !== backdrop) as HTMLElement[];
+    const backgroundState = background.map((element) => ({ element, inert: element.inert, ariaHidden: element.getAttribute("aria-hidden") }));
+    background.forEach((element) => { element.inert = true; element.setAttribute("aria-hidden", "true"); });
+    const timer = window.setTimeout(() => {
+      const firstFocusable = dialog.current?.querySelector<HTMLElement>(overlayFocusableSelector);
+      if (firstFocusable) firstFocusable.focus();
+      else dialog.current?.focus();
+    }, 0);
     const onKey = (event:KeyboardEvent) => {
-      if (event.key === "Escape") requestClose();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (confirmDiscardRef.current) setConfirmDiscard(false);
+        else requestClose();
+      }
       if (event.key === "Tab" && dialog.current) {
-        const focusable = Array.from(dialog.current.querySelectorAll<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])"));
-        if (!focusable.length) return;
+        const scope = confirmDiscardRef.current ? discardRef.current : dialog.current;
+        const focusable = Array.from(scope?.querySelectorAll<HTMLElement>(overlayFocusableSelector) ?? []);
+        if (!focusable.length) {
+          event.preventDefault();
+          dialog.current.focus();
+          return;
+        }
+        const active = document.activeElement;
         const last = focusable[focusable.length - 1];
-        if (event.shiftKey && document.activeElement === focusable[0]) {
+        const focusEscaped = !scope?.contains(active);
+        if (event.shiftKey && (active === focusable[0] || active === scope || focusEscaped)) {
           event.preventDefault();
           last?.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
+        } else if (!event.shiftKey && (active === last || active === scope || focusEscaped)) {
           event.preventDefault();
           focusable[0].focus();
         }
@@ -247,12 +279,21 @@ function Overlay({ open, title, description, onClose, dirty, pending, wide, chil
       clearTimeout(timer);
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
+      backgroundState.forEach(({ element, inert, ariaHidden }) => {
+        element.inert = inert;
+        if (ariaHidden === null) element.removeAttribute("aria-hidden");
+        else element.setAttribute("aria-hidden", ariaHidden);
+      });
       window.setTimeout(() => trigger.current?.focus(), 0);
     };
-  }, [open, dirty, pending]);
+  }, [open]);
+
+  useEffect(() => {
+    if (confirmDiscard) window.setTimeout(() => discardRef.current?.querySelector<HTMLElement>("button")?.focus(), 0);
+  }, [confirmDiscard]);
 
   if (!open) return null;
-  return <div className="v2-overlay-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><div className={`v2-overlay ${drawer ? "drawer" : ""} ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-labelledby="overlay-title" aria-describedby={description ? "overlay-description" : undefined} ref={dialog}><div className="v2-overlay-header"><div><h2 id="overlay-title">{title}</h2>{description ? <p id="overlay-description">{description}</p> : null}</div><IconButton label="Close" onClick={requestClose} disabled={pending}><X size={20} /></IconButton></div><div className="v2-overlay-body">{children}{confirmDiscard ? <div role="alertdialog" aria-label="Discard changes"><p>Discard unsaved changes?</p><Button variant="danger" onClick={onClose}>Discard</Button><Button variant="secondary" onClick={() => setConfirmDiscard(false)}>Keep editing</Button></div> : null}</div></div></div>;
+  return createPortal(<div className="v2-overlay-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><div className={`v2-overlay ${drawer ? "drawer" : ""} ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} ref={dialog} tabIndex={-1}><div className="v2-overlay-header"><div><h2 id={titleId}>{title}</h2>{description ? <p id={descriptionId}>{description}</p> : null}</div><IconButton label="Close" onClick={requestClose} disabled={pending}><X size={20} /></IconButton></div><div className="v2-overlay-body">{children}{confirmDiscard ? <div ref={discardRef} role="alertdialog" aria-modal="true" aria-label="Discard changes"><p>Discard unsaved changes?</p><Button variant="danger" onClick={onClose}>Discard</Button><Button variant="secondary" onClick={() => setConfirmDiscard(false)}>Keep editing</Button></div> : null}</div></div></div>, document.body);
 }
 export function Modal(props:OverlayProps) { return <Overlay {...props} />; } export function Drawer(props:OverlayProps) { return <Overlay {...props} drawer />; } export function ConfirmDialog(props:OverlayProps) { return <Overlay {...props}>{props.children}</Overlay>; }
 export function StatePanel({ state, title, description, action }: { state:"loading"|"empty"|"error"|"denied"|"readonly"|"locked"|"notFound"; title:string; description?:string; action?:ReactNode }) { const Icon = state === "error" ? AlertCircle : state === "locked" ? Lock : state === "denied" ? AlertCircle : Info; return <div className="v2-state" role={state === "error" ? "alert" : "status"}><Icon size={24} aria-hidden="true" /><h3>{title}</h3>{description ? <p>{description}</p> : null}{action}</div>; }

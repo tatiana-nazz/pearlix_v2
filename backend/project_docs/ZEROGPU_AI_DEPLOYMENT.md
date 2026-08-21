@@ -11,12 +11,14 @@ Vercel pearlix-api-staging
         |
         +-- Supabase PostgreSQL + private X-ray storage
         |
-        +-- private Hugging Face Gradio ZeroGPU Space
+        +-- private Hugging Face ZeroGPU Space
                     |
+                    +-- authenticated direct HTTPS POST /analyze
+                    +-- optional human Gradio UI at /ui
                     +-- read-only mounted private HF model repository
 ```
 
-The Vercel backend stays lightweight. The Space runs the locked DENTEX detector/classifier on ZeroGPU and returns detector geometry plus raw four-class model scores. Pearlix **reapplies its locked thresholds, Any-Caries review band, and Deep-Caries hierarchy locally** before persisting results. No remote decision is trusted directly.
+The Vercel backend stays lightweight. The Space runs the locked DENTEX detector/classifier on ZeroGPU and returns detector geometry plus raw four-class model scores through the bounded direct HTTPS contract. Pearlix **reapplies its locked thresholds, Any-Caries review band, and Deep-Caries hierarchy locally** before persisting results. No remote decision is trusted directly.
 
 ## Locked artifacts
 
@@ -35,50 +37,85 @@ The publisher requests the Hub hardware flavor `zero-a10g` (the Hub API identifi
 ## Publish
 
 1. Download the verified `pearlix-dentex-model-bundle.zip` supplied during deployment.
-2. Pull the current `main` branch.
+2. Pull the current approved Pearlix release/main revision.
 3. From PowerShell:
 
 ```powershell
 cd D:\pearlix_v2
-git pull --ff-only origin main
 cd backend
 .\deployment\publish_hf_ai.ps1 -Bundle "C:\path\to\pearlix-dentex-model-bundle.zip"
 ```
 
-The helper creates an isolated `.hf-deploy-venv`, authenticates through `hf auth login`, verifies the three hashes, uploads a private model repo, builds the Space from the exact Pearlix inference core, mounts the model repo read-only, requests ZeroGPU, and uploads the Space.
+The helper creates an isolated `.hf-deploy-venv`, authenticates through `hf auth login`, safely extracts the bundle with archive-member/expanded-size/compression-ratio limits, verifies the three locked hashes, uploads a private model repo, builds a self-contained Space from the exact Pearlix inference core, validates the Space in a clean-room import, mounts the model repo read-only, requests ZeroGPU, and uploads the Space.
 
 Expected output includes:
 
 ```text
 Model bundle verification PASS.
 MODEL_REPO_ID=<hf-user>/pearlix-dentex-models
-AI_SERVICE_URL=<hf-user>/pearlix-dentex-ai
+SPACE_REPO_ID=<hf-user>/pearlix-dentex-ai
+AI_SERVICE_URL=https://<hf-user>-pearlix-dentex-ai.hf.space
 SPACE_REQUESTED_HARDWARE=zero-a10g
 ```
 
+For the intended account/repository naming, the HTTPS origin is equivalent to `https://tay164-pearlix-dentex-ai.hf.space`. Always use the publisher's emitted `AI_SERVICE_URL` rather than manually guessing it.
+
 If the Hub rejects ZeroGPU creation because the personal account is not eligible, stop. Do not fall back to paid hardware merely to make deployment succeed.
+
+## Production transport contract
+
+The generated private Space exposes:
+
+```text
+GET  /health
+POST /analyze
+```
+
+`POST /analyze` accepts one JPEG/PNG multipart image, validates the encoded and decoded image bounds before inference, runs the locked GPU pipeline, and returns:
+
+```json
+{
+  "payload": {
+    "contract_version": "pearlix-dentex-remote-v1",
+    "model_version": "...",
+    "teeth": [],
+    "runtime": {}
+  },
+  "overlay_png_base64": null
+}
+```
+
+The Space remains private. The Pearlix backend sends the Hugging Face read/fine-grained token as `Authorization: Bearer ...`; the private Space gateway authenticates that request before the application receives it. The backend production adapter uses bounded synchronous HTTPS streaming and does not rely on a background Gradio-client thread for its timeout/resource boundary.
+
+The Gradio UI is mounted at `/ui` only for controlled human verification. It is not the production Pearlix transport.
 
 ## Backend authentication and enablement
 
-After the private Space exists, create a Hugging Face read/fine-grained access token suitable for calling that Space. Keep it private and do not paste it into chat, Git, or screenshots.
+After the private Space exists, create a Hugging Face read/fine-grained access token suitable for calling that Space. Keep it private and do not paste it into chat, Git, screenshots, or terminal logs.
 
 Set these on the **Vercel backend project**:
 
 ```text
-AI_SERVICE_URL=<hf-user>/pearlix-dentex-ai
+AI_SERVICE_URL=https://<hf-user>-pearlix-dentex-ai.hf.space
 AI_SERVICE_TOKEN=<private HF read/fine-grained token>
 ```
 
-`ClinicSettings.ai_mode` must be `SEPARATE_SERVICE`. The current staging seed already uses that mode. Until both environment variables are present and valid, Pearlix fails closed with `AI_SERVICE_NOT_CONFIGURED`; there is no mock fallback.
+`ClinicSettings.ai_mode` must be `SEPARATE_SERVICE`. Until both environment variables are present and valid, Pearlix fails closed with `AI_SERVICE_NOT_CONFIGURED`; there is no mock fallback.
 
-Redeploy the Vercel backend after setting the variables.
+Production rejects the `owner/space` Gradio reference form; that compatibility transport is retained only for local/development use. Redeploy the Vercel backend after setting the production HTTPS URL and token.
 
 ## Acceptance
 
-Use one de-identified research panoramic X-ray through the ordinary Pearlix UI and verify:
+Before enabling ordinary staging inference, verify the private Space itself with a de-identified test image:
+
+1. `GET AI_SERVICE_URL/health` succeeds through the private bearer-authenticated gateway.
+2. `POST AI_SERVICE_URL/analyze` accepts a bounded JPEG/PNG and returns the expected contract/model version.
+3. A wrong/absent token is rejected by the private Space rather than reaching inference.
+
+Then use one de-identified research panoramic X-ray through the ordinary Pearlix UI and verify:
 
 1. upload remains protected through Pearlix/Supabase;
-2. `Run AI` calls the private ZeroGPU Space;
+2. `Run AI` calls the private ZeroGPU Space direct HTTPS endpoint;
 3. remote response model version equals the locked Pearlix pipeline version;
 4. Pearlix locally reapplies locked decisions;
 5. result and overlay persist in Supabase-backed storage;

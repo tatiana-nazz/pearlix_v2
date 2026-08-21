@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from apps.audit.models import ActivityLog
+from apps.common.client_ip import get_request_ip
 
 
 SENSITIVE_KEY_PARTS = {
@@ -38,15 +39,6 @@ def _safe_metadata(value):
     return value
 
 
-def _request_ip(request):
-    if request is None:
-        return None
-    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded_for:
-        return forwarded_for.split(",", 1)[0].strip() or None
-    return request.META.get("REMOTE_ADDR") or None
-
-
 def log_activity(
     *,
     request=None,
@@ -71,7 +63,7 @@ def log_activity(
             entity_type=entity_type,
             entity_id="" if entity_id is None else str(entity_id),
             metadata_json=_safe_metadata(metadata or {}),
-            ip_address=_request_ip(request),
+            ip_address=get_request_ip(request),
             user_agent=user_agent,
         )
     except Exception:

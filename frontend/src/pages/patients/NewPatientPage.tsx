@@ -1,4 +1,5 @@
 import { Navigate, useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 import { Card } from "../../components/Card";
 import { PageHeader } from "../../components/PageHeader";
@@ -7,6 +8,7 @@ import { useCreatePatient } from "../../features/patients/hooks/usePatientMutati
 import { patientListPath, patientProfilePath } from "../../features/patients/utils/patientPermissions";
 import type { UserRole } from "../../types/auth";
 import type { PatientFormValues } from "../../features/patients/utils/patientFormMapping";
+import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 
 interface NewPatientPageProps {
   role: UserRole;
@@ -15,11 +17,14 @@ interface NewPatientPageProps {
 export function NewPatientPage({ role }: NewPatientPageProps) {
   const navigate = useNavigate();
   const createPatient = useCreatePatient();
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, "You have unsaved patient information. Leave this page and discard it?");
 
   if (role !== "STAFF") return <Navigate to="/access-denied" replace />;
 
   async function handleSubmit(values: PatientFormValues) {
     const patient = await createPatient.mutateAsync(createPayloadFromForm(values));
+    setDirty(false);
     navigate(patientProfilePath(role, patient.id));
   }
 
@@ -35,6 +40,7 @@ export function NewPatientPage({ role }: NewPatientPageProps) {
           error={createPatient.error}
           onSubmit={handleSubmit}
           onCancel={() => navigate(patientListPath(role))}
+          onDirtyChange={setDirty}
         />
       </Card>
     </div>

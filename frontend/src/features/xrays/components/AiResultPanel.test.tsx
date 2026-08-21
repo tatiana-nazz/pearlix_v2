@@ -82,7 +82,7 @@ describe("AiResultPanel real lifecycle presentation", () => {
     expect(screen.getByText("71%")).toBeInTheDocument();
   });
 
-  it("renders review separately and explains its operating threshold", () => {
+  it("keeps review-band decisions persisted but hides them from the clinician finding table", () => {
     const review: AIFinding = {
       fdi_tooth_id: "17",
       disease_label: "Any Caries",
@@ -93,13 +93,14 @@ describe("AiResultPanel real lifecycle presentation", () => {
     };
     render(<AiResultPanel result={result({ findings: [review] })} isLoading={false} onRetry={vi.fn()} />);
 
-    expect(screen.getByLabelText("Status: Review")).toBeInTheDocument();
-    expect(screen.getByText("42%")).toBeInTheDocument();
-    expect(screen.getByText("Operating threshold: 44%")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Status: Flagged")).not.toBeInTheDocument();
+    expect(screen.getByText("Findings")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Status: Review")).not.toBeInTheDocument();
+    expect(screen.queryByText("42%")).not.toBeInTheDocument();
+    expect(screen.queryByText("Operating threshold: 44%")).not.toBeInTheDocument();
   });
 
-  it("preserves semantic status tones for AI lifecycle and finding decisions", () => {
+  it("preserves semantic status tones while filtering review-band rows", () => {
     const review: AIFinding = {
       fdi_tooth_id: "17",
       disease_label: "Any Caries",
@@ -114,7 +115,7 @@ describe("AiResultPanel real lifecycle presentation", () => {
 
     expect(screen.getByLabelText("Status: Completed")).toHaveClass("success");
     expect(screen.getByLabelText("Status: Flagged")).toHaveClass("success");
-    expect(screen.getByLabelText("Status: Review")).toHaveClass("warning");
+    expect(screen.queryByLabelText("Status: Review")).not.toBeInTheDocument();
 
     rerender(<AiResultPanel result={result({ status: "FAILED", findings: [] })} isLoading={false} onRetry={vi.fn()} />);
     expect(screen.getByLabelText("Status: Failed")).toHaveClass("danger");

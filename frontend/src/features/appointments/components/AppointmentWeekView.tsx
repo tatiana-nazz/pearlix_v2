@@ -6,6 +6,7 @@ import { addDays, formatAppointmentDate, formatAppointmentTime, getWeekRange } f
 import { dateFromAppointment } from "../utils/appointmentFilters";
 import { appointmentStatusClass } from "../utils/appointmentStatusPresentation";
 import { AppointmentStatusBadge } from "./AppointmentStatusBadge";
+import { isCurrentPolicyClinicClosedDate } from "../../../utils/clinicWeek";
 
 interface AppointmentWeekViewProps {
   role: UserRole;
@@ -14,18 +15,24 @@ interface AppointmentWeekViewProps {
   appointments: AppointmentListItem[];
   onDetails: (appointment: AppointmentListItem) => void;
   onDaySelect: (date: string) => void;
+  weeklyClosedDays?: readonly number[];
+  currentDate?: string;
 }
 
-export function AppointmentWeekView({ date, timezone, appointments, onDetails, onDaySelect }: AppointmentWeekViewProps) {
+export function AppointmentWeekView({ date, timezone, appointments, onDetails, onDaySelect, weeklyClosedDays = [], currentDate }: AppointmentWeekViewProps) {
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = appointmentCopy(language);
   const range = getWeekRange(date);
   const days = Array.from({ length: 7 }, (_, index) => addDays(range.start, index));
+  const today = currentDate ?? dateFromAppointment(new Date().toISOString(), timezone);
   return (
     <div className="appointment-week-grid">
-      {days.map((day) => (
-        <section key={day} className="appointment-calendar-column" data-date={day} onDoubleClick={(event) => { if (event.target === event.currentTarget) onDaySelect(day); }}>
+      {days.map((day) => {
+        const clinicClosed = isCurrentPolicyClinicClosedDate(day, today, weeklyClosedDays);
+        return (
+        <section key={day} className={`appointment-calendar-column${clinicClosed ? " clinic-closed" : ""}`} data-date={day} data-clinic-closed={clinicClosed || undefined} onDoubleClick={(event) => { if (event.target === event.currentTarget) onDaySelect(day); }}>
           <h3><button type="button" onClick={() => onDaySelect(day)} onDoubleClick={(event) => event.stopPropagation()} aria-label={`${c.openDay} ${day}`}>{formatAppointmentDate(day, language, timezone)}</button></h3>
+          {clinicClosed ? <span className="appointment-clinic-closed-label">{c.clinicClosed}</span> : null}
           {appointments.filter((appointment) => dateFromAppointment(appointment.start_datetime, timezone) === day).map((appointment) => (
             <button key={appointment.id} type="button" className={appointmentStatusClass("appointment-calendar-item", appointment.status)} data-status={appointment.status} aria-label={`${c.openAppointment} ${appointment.id}: ${appointment.patient.full_name}`} onClick={() => onDetails(appointment)} onDoubleClick={(event) => event.stopPropagation()}>
               <strong>{formatAppointmentTime(appointment.start_datetime, language, timezone)}</strong>
@@ -33,8 +40,8 @@ export function AppointmentWeekView({ date, timezone, appointments, onDetails, o
               <AppointmentStatusBadge status={appointment.status} />
             </button>
           ))}
-        </section>
-      ))}
+        </section>);
+      })}
     </div>
   );
 }

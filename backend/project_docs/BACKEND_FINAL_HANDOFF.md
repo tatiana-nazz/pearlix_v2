@@ -17,7 +17,9 @@ Local development expects Python virtualenv at `backend/.venv` and PostgreSQL fr
 - Database: `pearlix`
 - User: `pearlix`
 - Host port: `5433`
-- Default local `DATABASE_URL`: `postgresql://pearlix:pearlix_dev_password@127.0.0.1:5433/pearlix`
+- Local `DATABASE_URL`: use the ignored `backend/.env` and its unique
+  `PEARLIX_LOCAL_DB_PASSWORD` as documented in `LOCAL_DEVELOPMENT.md`; the
+  database binds only to `127.0.0.1:5433`.
 
 Run backend commands from `backend` with the virtualenv active.
 
@@ -80,14 +82,14 @@ pg_dump "$DATABASE_URL" --file ../_local_backups/pearlix_before_13e1_patient_sch
 Phase 13E.1 migration checks:
 
 ```text
-python manage.py showmigrations patients
+python manage.py showmigrations patients --settings=config.settings.local
 patients.0001_initial applied
 patients.0002_patient_schema_upgrade pending before migrate
 
-python manage.py migrate --plan
+python manage.py migrate --plan --settings=config.settings.local
 patients.0002_patient_schema_upgrade planned
 
-python manage.py migrate
+python manage.py migrate --settings=config.settings.local
 patients.0002_patient_schema_upgrade OK
 ```
 

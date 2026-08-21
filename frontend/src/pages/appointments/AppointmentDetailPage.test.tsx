@@ -39,6 +39,7 @@ const item: AppointmentDetail = {
   reason: "Cleaning",
   notes: "Bring prior images",
   status: "UPCOMING",
+  version: 1,
   reschedule_source_exception: null,
   reschedule_source_working_shift: null,
   reschedule_source_type: null,
@@ -73,6 +74,7 @@ describe("AppointmentDetailPage", () => {
     expect(screen.getByRole("heading", { name: "Maya Patient" })).toBeInTheDocument();
     expect(screen.getByText("Dr. Lin")).toBeInTheDocument();
     expect(screen.getByText("Cleaning")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to Appointments" })).toHaveAttribute("href", "/admin/appointments/list");
     expect(screen.getByRole("link", { name: "Maya Patient" })).toHaveAttribute("href", "/admin/patients/10");
   });
 

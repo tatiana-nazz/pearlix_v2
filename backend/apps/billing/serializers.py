@@ -1,7 +1,10 @@
+from zoneinfo import ZoneInfo
+
 from rest_framework import serializers
 
 from apps.accounts.serializers import UserSummarySerializer
 from apps.billing.models import BillingHandoff, Invoice
+from apps.clinic.models import ClinicSettings
 from apps.patients.serializers import PatientListSerializer
 from apps.visits.models import Visit
 from apps.visits.serializers import VisitAppointmentSummarySerializer
@@ -81,9 +84,14 @@ class BillingHandoffSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class ClinicDateTimeField(serializers.DateTimeField):
+    def default_timezone(self):
+        return ZoneInfo(ClinicSettings.get_solo().timezone)
+
+
 class InvoiceIssueSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=12, decimal_places=2)
-    issued_at = serializers.DateTimeField(required=False)
+    issued_at = ClinicDateTimeField(required=False)
     notes = serializers.CharField(required=False, allow_blank=True)
 
     def validate_amount(self, value):

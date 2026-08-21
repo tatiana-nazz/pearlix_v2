@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiClientError } from "../api/errors";
 import { useAuthStore } from "../auth/authStore";
-import { LoginPage } from "./LoginPage";
+import { LoginPage, safeReturnPath, safeReturnPathForRole } from "./LoginPage";
 
 const originalState = useAuthStore.getState();
 
@@ -19,6 +19,17 @@ function renderLogin(login: ReturnType<typeof vi.fn>) {
 }
 
 describe("LoginPage", () => {
+  it("accepts only internal deep-link return destinations", () => {
+    expect(safeReturnPath({ from: { pathname: "/doctor/patients/123", search: "?tab=medical", hash: "#summary" } })).toBe("/doctor/patients/123?tab=medical#summary");
+    expect(safeReturnPath({ from: { pathname: "//evil.example/path" } })).toBeNull();
+    expect(safeReturnPath({ from: { pathname: "https://evil.example" } })).toBeNull();
+  });
+  it("rejects a stale return destination from another role after identity switching", () => {
+    const staleAdminReturn = { from: { pathname: "/admin/dashboard" } };
+    expect(safeReturnPathForRole(staleAdminReturn, "STAFF")).toBeNull();
+    expect(safeReturnPathForRole(staleAdminReturn, "DOCTOR")).toBeNull();
+    expect(safeReturnPathForRole(staleAdminReturn, "ADMIN")).toBe("/admin/dashboard");
+  });
   it("announces an unavailable-service message instead of the raw network error", async () => {
     renderLogin(vi.fn().mockRejectedValue(new ApiClientError({ code: "NETWORK_ERROR", message: "Network request failed.", details: {}, status: 0 })));
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "staff@example.test" } });

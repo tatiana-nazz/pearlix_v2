@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status
@@ -7,7 +8,9 @@ from rest_framework import status
 from apps.audit.services import log_activity
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
-from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
+from apps.patients.models import Patient
+from apps.scheduling.capacity import assess_candidate_capacity
+from apps.scheduling.models import Appointment, AvailabilityException, Weekday, WorkingShift
 from apps.scheduling.time_utils import (
     calculate_end_datetime,
     clinic_localtime,
@@ -25,6 +28,9 @@ LOCKED_EDIT_STATUSES = [
 ]
 NEEDS_RESCHEDULE_SOURCE_STATUSES = [Appointment.Status.UPCOMING, Appointment.Status.CHECKED_IN]
 RESCHEDULE_FIELDS = {"doctor", "start_datetime", "duration_minutes"}
+
+
+User = get_user_model()
 
 
 class AppointmentRuleError(Exception):
@@ -49,6 +55,26 @@ def require_version(instance, submitted_version):
             {"submitted_version": submitted_version, "current_version": instance.version},
             status.HTTP_409_CONFLICT,
         )
+
+
+def validate_locked_doctor(doctor):
+    if doctor.role != User.Role.DOCTOR or not doctor.is_active:
+        raise AppointmentRuleError(
+            "VALIDATION_ERROR",
+            "Some fields are invalid.",
+            {"doctor_id": ["Doctor must be active."]},
+        )
+    return doctor
+
+
+def validate_locked_patient(patient):
+    if patient.is_archived:
+        raise AppointmentRuleError(
+            "VALIDATION_ERROR",
+            "Some fields are invalid.",
+            {"patient_id": ["Patient must not be archived."]},
+        )
+    return patient
 
 
 def validate_duration(duration_minutes, settings=None):
@@ -99,6 +125,22 @@ def validate_working_hours(doctor, start_datetime, end_datetime, settings=None):
         )
 
 
+def validate_clinic_open(start_datetime, settings=None):
+    settings = settings or get_clinic_settings()
+    weekday = clinic_localtime(start_datetime, settings).weekday()
+    if settings.is_weekday_closed(weekday):
+        raise AppointmentRuleError(
+            "CLINIC_CLOSED_DAY",
+            "The clinic is closed on this weekday.",
+            {
+                "weekday": weekday,
+                "weekday_label": Weekday(weekday).label,
+                "weekly_closed_days": settings.weekly_closed_days,
+            },
+            status.HTTP_409_CONFLICT,
+        )
+
+
 def validate_unavailable_exception(
     doctor,
     start_datetime,
@@ -130,15 +172,25 @@ def _candidate_appointments(exclude_id=None):
 
 def validate_capacity(start_datetime, end_datetime, exclude_id=None, settings=None):
     settings = settings or get_clinic_settings()
-    count = _candidate_appointments(exclude_id).filter(
+    intervals = _candidate_appointments(exclude_id).filter(
         start_datetime__lt=end_datetime,
         end_datetime__gt=start_datetime,
-    ).count()
-    if count >= settings.capacity_per_slot:
+    ).values_list("start_datetime", "end_datetime")
+    assessment = assess_candidate_capacity(
+        intervals,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
+        capacity=settings.capacity_per_slot,
+    )
+    if not assessment.available:
         raise AppointmentRuleError(
             "CAPACITY_FULL",
             "Clinic capacity is full for this time range.",
-            {"capacity": settings.capacity_per_slot, "current_count": count},
+            {
+                "capacity": settings.capacity_per_slot,
+                "current_count": assessment.existing_peak,
+                "projected_count": assessment.projected_peak,
+            },
             status.HTTP_409_CONFLICT,
         )
 
@@ -168,6 +220,7 @@ def validate_appointment_slot(
     settings = validate_duration(duration_minutes, settings)
     validate_start_not_past(start_datetime, settings, current_time)
     end_datetime = calculate_end_datetime(start_datetime, duration_minutes)
+    validate_clinic_open(start_datetime, settings)
     validate_working_hours(doctor, start_datetime, end_datetime, settings)
     validate_unavailable_exception(
         doctor,
@@ -185,28 +238,72 @@ def create_appointment(*, serializer, user):
         settings = ClinicSettings.get_solo()
         settings = ClinicSettings.objects.select_for_update().get(pk=settings.pk)
         data = serializer.validated_data
+        patient = validate_locked_patient(
+            Patient.objects.select_for_update().get(pk=data["patient"].pk)
+        )
+        doctor = validate_locked_doctor(
+            User.objects.select_for_update().get(pk=data["doctor"].pk)
+        )
         end = validate_appointment_slot(
-            data["doctor"],
+            doctor,
             data["start_datetime"],
             data["duration_minutes"],
             settings=settings,
         )
-        return serializer.save(end_datetime=end, created_by=user, updated_by=user)
+        return serializer.save(
+            patient=patient,
+            doctor=doctor,
+            end_datetime=end,
+            created_by=user,
+            updated_by=user,
+        )
 
 
 def update_appointment(*, appointment, serializer, user, current_time=None):
-    if appointment.status in LOCKED_EDIT_STATUSES:
-        raise AppointmentRuleError(
-            "INVALID_STATUS_TRANSITION",
-            "Locked appointments cannot be edited.",
-            status_code=status.HTTP_409_CONFLICT,
-        )
     with transaction.atomic():
         settings = ClinicSettings.get_solo()
         settings = ClinicSettings.objects.select_for_update().get(pk=settings.pk)
+        data = dict(serializer.validated_data)
+        submitted_version = data.pop("version", None)
+        current_patient_id, current_doctor_id = Appointment.objects.values_list(
+            "patient_id",
+            "doctor_id",
+        ).get(pk=appointment.pk)
+        requested_patient = data.get("patient")
+        patient_ids = sorted(
+            {
+                current_patient_id,
+                requested_patient.pk if requested_patient else current_patient_id,
+            }
+        )
+        locked_patients = {
+            patient.pk: patient
+            for patient in Patient.objects.select_for_update()
+            .filter(pk__in=patient_ids)
+            .order_by("pk")
+        }
+        requested_doctor = data.get("doctor")
+        doctor_ids = sorted({current_doctor_id, requested_doctor.pk if requested_doctor else current_doctor_id})
+        locked_doctors = {
+            doctor.pk: doctor
+            for doctor in User.objects.select_for_update().filter(pk__in=doctor_ids).order_by("pk")
+        }
         locked = Appointment.objects.select_for_update().get(pk=appointment.pk)
-        data = serializer.validated_data
-        doctor = data.get("doctor", locked.doctor)
+        require_version(locked, submitted_version)
+        if locked.status in LOCKED_EDIT_STATUSES:
+            raise AppointmentRuleError(
+                "INVALID_STATUS_TRANSITION",
+                "Locked appointments cannot be edited.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        selected_patient_id = data["patient"].pk if "patient" in data else locked.patient_id
+        selected_doctor_id = data["doctor"].pk if "doctor" in data else locked.doctor_id
+        patient = validate_locked_patient(locked_patients[selected_patient_id])
+        doctor = validate_locked_doctor(locked_doctors[selected_doctor_id])
+        if "patient" in data:
+            data["patient"] = patient
+        if "doctor" in data:
+            data["doctor"] = doctor
         start = data.get("start_datetime", locked.start_datetime)
         duration = data.get("duration_minutes", locked.duration_minutes)
         end = validate_appointment_slot(
@@ -226,7 +323,10 @@ def update_appointment(*, appointment, serializer, user, current_time=None):
             locked.checked_in_at = None
             locked.reschedule_source_exception = None
             locked.reschedule_source_working_shift = None
+            locked.reschedule_source_clinic_weekday = None
+            locked.reschedule_source_kind = None
             locked.reschedule_previous_status = None
+        locked.version += 1
         locked.save()
         return locked
 
@@ -241,24 +341,27 @@ def transition_appointment(
     user,
     request=None,
 ):
-    if appointment.status not in allowed_statuses:
-        raise AppointmentRuleError(
-            "INVALID_STATUS_TRANSITION",
-            "Invalid appointment status transition.",
-            status_code=status.HTTP_409_CONFLICT,
+    with transaction.atomic():
+        locked = Appointment.objects.select_for_update().get(pk=appointment.pk)
+        if locked.status not in allowed_statuses:
+            raise AppointmentRuleError(
+                "INVALID_STATUS_TRANSITION",
+                "Invalid appointment status transition.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        locked.status = target_status
+        setattr(locked, timestamp_field, timezone.now())
+        locked.updated_by = user
+        locked.version += 1
+        locked.save(update_fields=["status", timestamp_field, "updated_by", "version", "updated_at"])
+        log_activity(
+            request=request,
+            action=audit_action,
+            entity_type="appointment",
+            entity_id=locked.id,
+            metadata={"appointment_id": locked.id},
         )
-    appointment.status = target_status
-    setattr(appointment, timestamp_field, timezone.now())
-    appointment.updated_by = user
-    appointment.save(update_fields=["status", timestamp_field, "updated_by", "updated_at"])
-    log_activity(
-        request=request,
-        action=audit_action,
-        entity_type="appointment",
-        entity_id=appointment.id,
-        metadata={"appointment_id": appointment.id},
-    )
-    return appointment
+        return locked
 
 
 def check_in_appointment(*, appointment, user, request=None):

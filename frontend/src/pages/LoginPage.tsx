@@ -1,13 +1,15 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../auth/authStore";
+import type { UserRole } from "../types/auth";
 import { loginErrorMessage } from "../utils/apiErrors";
 import { dashboardPathForRole } from "../utils/roles";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { accessToken, authStatus, isAuthenticated, role, mustChangePassword, login, loadMe } = useAuthStore();
+  const location = useLocation();
+  const { accessToken, authStatus, isAuthenticated, role, mustChangePassword, restorationError, login, loadMe } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +26,12 @@ export function LoginPage() {
     return <div className="screen-center">Restoring session...</div>;
   }
 
+  if (accessToken && authStatus === "restoration_error") {
+    return <div className="screen-center" role="alert"><p>{restorationError || "Session restoration is temporarily unavailable."}</p><button className="button primary" type="button" onClick={() => void loadMe()}>Retry</button></div>;
+  }
+
   if (isAuthenticated) {
-    return <Navigate to={mustChangePassword ? "/change-password" : dashboardPathForRole(role)} replace />;
+    return <Navigate to={mustChangePassword ? "/change-password" : safeReturnPathForRole(location.state, role) ?? dashboardPathForRole(role)} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -38,7 +44,7 @@ export function LoginPage() {
     setIsSubmitting(true);
     try {
       const user = await login({ email, password });
-      navigate(user.must_change_password ? "/change-password" : dashboardPathForRole(user.role), { replace: true });
+      navigate(user.must_change_password ? "/change-password" : safeReturnPathForRole(location.state, user.role) ?? dashboardPathForRole(user.role), { replace: true });
     } catch (err) {
       setError(loginErrorMessage(err, language));
     } finally {
@@ -68,4 +74,22 @@ export function LoginPage() {
       </button>
     </form>
   );
+}
+
+export function safeReturnPath(state: unknown): string | null {
+  if (!state || typeof state !== "object" || !("from" in state)) return null;
+  const from = (state as { from?: unknown }).from;
+  if (!from || typeof from !== "object") return null;
+  const pathname = String((from as { pathname?: unknown }).pathname ?? "");
+  if (!pathname.startsWith("/") || pathname.startsWith("//") || pathname.includes("://")) return null;
+  const search = String((from as { search?: unknown }).search ?? "");
+  const hash = String((from as { hash?: unknown }).hash ?? "");
+  return `${pathname}${search.startsWith("?") ? search : ""}${hash.startsWith("#") ? hash : ""}`;
+}
+
+export function safeReturnPathForRole(state: unknown, role: UserRole | null): string | null {
+  if (!role) return null;
+  const path = safeReturnPath(state);
+  const roleRoot = `/${role.toLowerCase()}`;
+  return path && (path === roleRoot || path.startsWith(`${roleRoot}/`)) ? path : null;
 }

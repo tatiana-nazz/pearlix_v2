@@ -8,7 +8,6 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
-from django.utils.crypto import get_random_string
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
 from apps.ai_results.models import AIResult
@@ -16,6 +15,7 @@ from apps.audit.models import ActivityLog
 from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.services import refresh_handoff_status
 from apps.clinic.models import ClinicSettings
+from apps.common.demo_safety import assert_demo_environment_safe
 from apps.patients.models import Patient
 from apps.patients.selectors import annotate_patient_directory, patient_has_archive_blocking_appointments
 from apps.scheduling.appointment_services import (
@@ -43,10 +43,10 @@ def aware(day, hour, minute=0):
     return timezone.make_aware(datetime.combine(day, time(hour, minute)), CLINIC_TZ)
 
 
-def working_day(anchor, delta):
+def working_day(anchor, delta, closed_weekdays):
     day = anchor + timedelta(days=delta)
     direction = 1 if delta >= 0 else -1
-    while day.weekday() == 4:  # Friday is closed.
+    while day.weekday() in closed_weekdays:
         day += timedelta(days=direction)
     return day
 
@@ -63,10 +63,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true", help="Replace demo records only; preserve non-demo data.")
-        parser.add_argument("--password", default="", help="Shared demo password; random when omitted.")
+        parser.add_argument("--password", default="", help="Shared local/test demo password; never printed.")
 
     def handle(self, *args, **options):
-        password = options["password"] or get_random_string(22)
+        assert_demo_environment_safe()
+        password = options["password"]
+        if not password:
+            raise CommandError(
+                "Provide the local/test demo password with --password; credentials are never printed."
+            )
         existing = User.objects.filter(email__endswith=DEMO_EMAIL_SUFFIX).exists() or Patient.objects.filter(
             national_id_or_passport__startswith=DEMO_PATIENT_PREFIX
         ).exists()
@@ -95,7 +100,7 @@ class Command(BaseCommand):
             ("Doctor", "omar.doctor@pearlix.demo"),
         ):
             self.stdout.write(f"  {label:6} {email}")
-        self.stdout.write(f"  Password for all demo accounts: {password}")
+        self.stdout.write("  Credential values are not printed.")
         self.stdout.write("\nStories: Layla restorative; Omar endodontic; Maya periodontal; Karim no-show/rebook; Noor extraction; Rami needs-reschedule; Hala archived history; Dima new; Tarek cancel/rebook; Salma preventive.")
 
     def reset_demo(self):
@@ -191,12 +196,22 @@ class Command(BaseCommand):
         clinic.default_currency = ClinicSettings.Currency.USD
         clinic.supported_currencies = ["USD", "SYP"]
         clinic.default_language = ClinicSettings.Language.EN
+        # Friday is an explicit demo policy, not an application-level weekend
+        # assumption. Population and auditing below always read this setting.
+        clinic.weekly_closed_days = [4]
         clinic.ai_mode = ClinicSettings.AiMode.SEPARATE_SERVICE
-        clinic.ai_service_url = ""
         clinic.save()
 
     def create_shifts(self, users):
-        labels = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 5: "Saturday", 6: "Sunday"}
+        labels = {
+            0: "Monday",
+            1: "Tuesday",
+            2: "Wednesday",
+            3: "Thursday",
+            4: "Friday",
+            5: "Saturday",
+            6: "Sunday",
+        }
         defaults = {}
         for weekday, label in labels.items():
             defaults[weekday] = ClinicDefaultShift.objects.create(
@@ -361,7 +376,10 @@ class Command(BaseCommand):
 
     def create_story_records(self, users, p):
         anchor = timezone.localdate()
-        at = lambda delta, hour, minute=0: aware(working_day(anchor, delta), hour, minute)
+        closed_weekdays = set(ClinicSettings.get_solo().weekly_closed_days)
+        at = lambda delta, hour, minute=0: aware(
+            working_day(anchor, delta, closed_weekdays), hour, minute
+        )
         story = {}
 
         a = self.create_appointment(patient=p["layla"], doctor=users["sara"], staff=users["staff"], start=at(-90, 10), duration=60, status=Appointment.Status.COMPLETED, reason="Pain when chewing on lower-left molar")
@@ -433,8 +451,16 @@ class Command(BaseCommand):
         errors = []
         demo = Patient.objects.filter(national_id_or_passport__startswith=DEMO_PATIENT_PREFIX)
         demo_ids = list(demo.values_list("id", flat=True))
+        closed_weekdays = set(ClinicSettings.get_solo().weekly_closed_days)
 
         for appointment in Appointment.objects.filter(patient_id__in=demo_ids).select_related("doctor", "reschedule_source_exception"):
+            local_weekday = timezone.localtime(
+                appointment.start_datetime, CLINIC_TZ
+            ).weekday()
+            if local_weekday in closed_weekdays:
+                errors.append(
+                    f"Demo appointment {appointment.id} falls on configured closed weekday {local_weekday}."
+                )
             has_visit = Visit.objects.filter(appointment=appointment).exists()
             if appointment.status == Appointment.Status.COMPLETED and not has_visit:
                 errors.append(f"Completed appointment {appointment.id} has no visit.")
@@ -450,7 +476,12 @@ class Command(BaseCommand):
                 except AppointmentRuleError as exc:
                     errors.append(f"Upcoming appointment {appointment.id} violates clinic rules: {exc.code}.")
             if appointment.status == Appointment.Status.NEEDS_RESCHEDULE:
-                if not appointment.reschedule_source_exception_id and not appointment.reschedule_source_working_shift_id:
+                if (
+                    not appointment.reschedule_source_exception_id
+                    and not appointment.reschedule_source_working_shift_id
+                    and appointment.reschedule_source_clinic_weekday is None
+                    and not appointment.reschedule_source_kind
+                ):
                     errors.append(f"Needs-reschedule appointment {appointment.id} has no source.")
                 if appointment.reschedule_source_exception_id:
                     source = appointment.reschedule_source_exception

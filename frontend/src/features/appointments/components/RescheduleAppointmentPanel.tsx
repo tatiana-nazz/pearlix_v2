@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { useAuthStore } from "../../../auth/authStore";
 import { Card } from "../../../components/Card";
 import type { AppointmentDetail, UpdateAppointmentPayload, AvailabilitySlot } from "../../../types/appointments";
 import type { DoctorListItem } from "../../../types/schedule";
-import { formatDateRange } from "../../../utils/dates";
+import { formatAppointmentDateTime, formatAppointmentTime } from "../utils/appointmentDates";
 import { useAppointmentAvailability } from "../hooks/useAppointments";
 import { appointmentToFormValues, formValuesToUpdatePayload } from "../utils/appointmentFormMapping";
 import { AvailabilityPicker } from "./AvailabilityPicker";
@@ -13,11 +14,14 @@ interface RescheduleAppointmentPanelProps {
   doctors: DoctorListItem[];
   isSubmitting?: boolean;
   error?: unknown;
+  clinicTimezone?: string;
+  onDirtyChange?: (dirty: boolean) => void;
   onSubmit: (payload: UpdateAppointmentPayload) => void | Promise<void>;
 }
 
-export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting, error, onSubmit }: RescheduleAppointmentPanelProps) {
-  const initial = appointmentToFormValues(appointment);
+export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting, error, clinicTimezone, onDirtyChange, onSubmit }: RescheduleAppointmentPanelProps) {
+  const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
+  const initial = appointmentToFormValues(appointment, clinicTimezone);
   const [doctorId, setDoctorId] = useState(initial.doctorId);
   const [date, setDate] = useState(initial.date);
   const [durationMinutes, setDurationMinutes] = useState(initial.durationMinutes);
@@ -30,9 +34,14 @@ export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting,
     [date, doctorId, durationMinutes, appointment.duration_minutes],
   );
   const availability = useAppointmentAvailability(filters);
+  useEffect(() => setSelectedSlot(null), [doctorId, date, durationMinutes]);
+  useEffect(() => {
+    onDirtyChange?.(Boolean(selectedSlot) || doctorId !== initial.doctorId || date !== initial.date || durationMinutes !== initial.durationMinutes);
+  }, [date, doctorId, durationMinutes, initial.date, initial.doctorId, initial.durationMinutes, onDirtyChange, selectedSlot]);
 
   async function submit() {
-    const slot = selectedSlot?.start_datetime ?? appointment.start_datetime;
+    if (!selectedSlot) return;
+    const slot = selectedSlot.start_datetime;
     await onSubmit({
       patient_id: appointment.patient.id,
       doctor_id: Number(doctorId),
@@ -40,6 +49,7 @@ export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting,
       duration_minutes: Number(durationMinutes),
       reason: appointment.reason,
       notes: appointment.notes,
+      version: appointment.version,
     });
   }
 
@@ -48,7 +58,7 @@ export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting,
       <Card>
         <p className="eyebrow">Current appointment</p>
         <h3>{appointment.patient.full_name}</h3>
-        <p>{formatDateRange(appointment.start_datetime, appointment.end_datetime)}</p>
+        <p>{formatAppointmentDateTime(appointment.start_datetime, language, clinicTimezone)} - {formatAppointmentTime(appointment.end_datetime, language, clinicTimezone)}</p>
         <p className="panel-note">Saving a new slot returns a NEEDS_RESCHEDULE appointment to UPCOMING through the backend update service.</p>
       </Card>
       <Card>
@@ -78,6 +88,7 @@ export function RescheduleAppointmentPanel({ appointment, doctors, isSubmitting,
           isLoading={availability.isLoading}
           error={availability.error}
           selectedStart={selectedSlot?.start_datetime}
+          clinicTimezone={clinicTimezone}
           onSelect={setSelectedSlot}
           onRetry={() => void availability.refetch()}
         />

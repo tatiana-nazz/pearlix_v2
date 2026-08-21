@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { clinicApi } from "../../../api/endpoints/clinic";
 import { teamApi } from "../../../api/endpoints/team";
 import { useAuthStore } from "../../../auth/authStore";
 import type { TeamMemberDetail, TeamMemberSummary } from "../../../types/team";
@@ -64,7 +65,10 @@ function renderDetail(detail: TeamMemberDetail, role: "ADMIN" | "STAFF" = "ADMIN
 }
 
 describe("Team professional directory and detail", () => {
-  beforeEach(() => setRole("ADMIN"));
+  beforeEach(() => {
+    setRole("ADMIN");
+    vi.spyOn(clinicApi, "getSettings").mockResolvedValue({ clinic_name: "Pearlix", address: "", phone: "", email: "", timezone: "Asia/Damascus", capacity_per_slot: 1, default_appointment_duration_minutes: 30, allowed_durations_minutes: [30], default_currency: "SYP", supported_currencies: ["SYP"], default_language: "EN", weekly_closed_days: [4] });
+  });
   afterEach(() => vi.restoreAllMocks());
 
   it("opens the exact Admin Team card and maps compact list filters to the API", async () => {
@@ -90,12 +94,13 @@ describe("Team professional directory and detail", () => {
   it("defaults Admin Team detail to readable professional, contact, workload, schedule, and leave sections", async () => {
     renderDetail(doctorDetail);
     expect(await screen.findByRole("heading", { name: "Dr Noor" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to Team" })).toHaveAttribute("href", "/admin/team");
     expect(screen.getByRole("heading", { name: "Professional information" })).toBeInTheDocument();
     expect(screen.getByText("Calm clinician")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Contact" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Today's workload" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
-    expect(screen.getByText("Morning")).toBeInTheDocument();
+    expect(screen.getByRole("rowheader", { name: "Shift 1" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Leave / availability" })).toBeInTheDocument();
     expect(screen.getByText("Conference")).toBeInTheDocument();
     expect(screen.queryByLabelText("Specialty")).not.toBeInTheDocument();
@@ -107,6 +112,7 @@ describe("Team professional directory and detail", () => {
   it("keeps Staff Team detail read-only with no edit, status mutation, or Users & Access controls", async () => {
     renderDetail({ ...doctorDetail, account: undefined, version: undefined }, "STAFF");
     expect(await screen.findByRole("heading", { name: "Dr Noor" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to Team" })).toHaveAttribute("href", "/staff/team");
     expect(screen.getByRole("heading", { name: "Professional information" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit professional profile" })).not.toBeInTheDocument();

@@ -5,6 +5,22 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from apps.common.models import TimeStampedModel
 
 
+def default_weekly_closed_days():
+    return [4]
+
+
+def normalize_weekly_closed_days(value):
+    if not isinstance(value, list):
+        raise ValidationError("Weekly closed days must be a list.")
+    if any(type(item) is not int or item < 0 or item > 6 for item in value):
+        raise ValidationError("Weekly closed days must contain only integers from 0 through 6.")
+    if len(value) != len(set(value)):
+        raise ValidationError("Weekly closed days cannot contain duplicates.")
+    if len(value) == 7:
+        raise ValidationError("At least one weekday must remain open.")
+    return sorted(value)
+
+
 class ClinicSettings(TimeStampedModel):
     class Currency(models.TextChoices):
         SYP = "SYP", "Syrian Pound"
@@ -27,11 +43,11 @@ class ClinicSettings(TimeStampedModel):
     capacity_per_slot = models.PositiveIntegerField(default=3)
     default_appointment_duration_minutes = models.PositiveIntegerField(default=30)
     allowed_durations_minutes = models.JSONField(default=list)
+    weekly_closed_days = models.JSONField(default=default_weekly_closed_days, blank=True)
     default_currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.SYP)
     supported_currencies = models.JSONField(default=list)
     default_language = models.CharField(max_length=2, choices=Language.choices, default=Language.EN)
     ai_mode = models.CharField(max_length=30, choices=AiMode.choices, default=AiMode.MOCK_ADAPTER)
-    ai_service_url = models.URLField(blank=True)
 
     class Meta:
         verbose_name_plural = "Clinic settings"
@@ -58,6 +74,10 @@ class ClinicSettings(TimeStampedModel):
             ZoneInfo(self.timezone)
         except ZoneInfoNotFoundError:
             errors["timezone"] = "Use a valid IANA timezone identifier."
+        try:
+            self.weekly_closed_days = normalize_weekly_closed_days(self.weekly_closed_days)
+        except ValidationError as exc:
+            errors["weekly_closed_days"] = exc.messages
 
         if errors:
             raise ValidationError(errors)
@@ -77,3 +97,11 @@ class ClinicSettings(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.clinic_name
+
+    def is_weekday_closed(self, weekday: int) -> bool:
+        return weekday in self.weekly_closed_days
+
+
+def is_clinic_weekday_closed(weekday: int, clinic_settings=None) -> bool:
+    clinic_settings = clinic_settings or ClinicSettings.get_solo()
+    return clinic_settings.is_weekday_closed(weekday)

@@ -1,5 +1,12 @@
 import pytest
+from io import BytesIO
+from PIL import Image
 from django.core.files.uploadedfile import SimpleUploadedFile
+from apps.accounts.management.commands.seed_demo_clinic_story import XRAY_PNG_BYTES
+
+_jpeg = BytesIO()
+Image.new("L", (32, 16), 100).save(_jpeg, format="JPEG")
+XRAY_JPEG_BYTES = _jpeg.getvalue()
 
 from apps.xrays.models import ExternalXrayCase
 
@@ -10,7 +17,7 @@ def temp_media_root(settings, tmp_path):
 
 
 def upload_file(name="external.png", content_type="image/png"):
-    return SimpleUploadedFile(name, b"fake-image", content_type=content_type)
+    return SimpleUploadedFile(name, XRAY_JPEG_BYTES if content_type == "image/jpeg" else XRAY_PNG_BYTES, content_type=content_type)
 
 
 @pytest.mark.django_db

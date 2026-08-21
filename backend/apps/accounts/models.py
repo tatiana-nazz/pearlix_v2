@@ -1,4 +1,7 @@
+import uuid
+
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -64,8 +67,8 @@ class User(AbstractBaseUser, TimeStampedModel):
     )
     must_change_password = models.BooleanField(default=False)
     password_changed_at = models.DateTimeField(null=True, blank=True)
-    # Used by explicit account-linkage transitions.  It deliberately lives on
-    # the account because a role transition can change the linked profile.
+    # Bound into JWTs and incremented for credential, activation, and role
+    # lifecycle changes so previously issued authority becomes stale.
     version = models.PositiveIntegerField(default=1)
 
     objects = UserManager()
@@ -79,9 +82,27 @@ class User(AbstractBaseUser, TimeStampedModel):
             models.Index(fields=["role"]),
             models.Index(fields=["role", "is_active"]),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(role="ADMIN")
+                | models.Q(is_staff=False, is_superuser=False),
+                name="accounts_non_admin_no_django_privilege",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.email
+
+    def save(self, *args, **kwargs):
+        # Django-admin authority is an explicit maintenance capability reserved
+        # for ADMIN accounts.  Promoting a business role to ADMIN does not grant
+        # it automatically, while demotion must clear both flags atomically in
+        # the role-transition service.
+        if self.role != self.Role.ADMIN and (self.is_staff or self.is_superuser):
+            raise ValidationError(
+                "Django staff and superuser privileges are reserved for ADMIN accounts."
+            )
+        return super().save(*args, **kwargs)
 
     def has_perm(self, perm, obj=None) -> bool:
         return self.is_active and self.is_superuser
@@ -93,6 +114,70 @@ class User(AbstractBaseUser, TimeStampedModel):
         self.set_password(raw_password)
         self.must_change_password = must_change_password
         self.password_changed_at = timezone.now() if mark_changed else None
+
+
+class AccountSecurityState(models.Model):
+    """Singleton row used to serialize cross-account authority transitions."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+
+    class Meta:
+        verbose_name = "account security state"
+
+    def save(self, *args, **kwargs):
+        if self.pk != 1:
+            raise ValidationError("Account security state must use the singleton primary key.")
+        return super().save(*args, **kwargs)
+
+
+class AuthSession(models.Model):
+    """One independently revocable server-side JWT token family."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="auth_sessions")
+    account_version = models.PositiveIntegerField()
+    expires_at = models.DateTimeField(db_index=True)
+    revoked_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["user", "revoked_at", "expires_at"],
+                name="accounts_as_user_rev_exp_idx",
+            ),
+        ]
+
+
+class AuthenticationThrottleLock(models.Model):
+    """Pre-created shard locks serialize absent and existing bucket updates."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, editable=False)
+    # Shard zero also leases the bounded opportunistic cleanup job.
+    next_cleanup_at = models.DateTimeField(null=True, blank=True)
+
+
+class AuthenticationThrottleBucket(models.Model):
+    """Shared, privacy-preserving fixed-window authentication throttle state."""
+
+    scope = models.CharField(max_length=64)
+    key_digest = models.CharField(max_length=64)
+    request_count = models.PositiveIntegerField(default=1)
+    window_started_at = models.DateTimeField()
+    expires_at = models.DateTimeField(db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["scope", "key_digest"],
+                name="accounts_auth_throttle_scope_key_unique",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(request_count__gte=1),
+                name="accounts_auth_throttle_count_positive",
+            ),
+        ]
 
 
 class DoctorProfile(TimeStampedModel):

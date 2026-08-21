@@ -2,6 +2,7 @@ from datetime import timedelta
 from io import BytesIO
 
 import pytest
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.utils import timezone
@@ -238,6 +239,95 @@ def test_mock_mode_fails_closed_when_runtime_mock_support_is_disabled(
     rejected_log = ActivityLog.objects.get(action="xray_ai_rejected")
     assert rejected_log.metadata_json["request_outcome"] == "REJECTED"
     assert not ActivityLog.objects.filter(action="xray_ai_failed").exists()
+
+
+@pytest.mark.django_db
+@override_settings(
+    PEARLIX_ALLOW_MOCK_AI=True,
+    PEARLIX_RUNTIME_ENVIRONMENT="production",
+)
+def test_production_mock_mode_fails_before_any_result_can_be_persisted(
+    doctor_client,
+    xray_attachment_factory,
+):
+    clinic_settings = ClinicSettings.get_solo()
+    clinic_settings.ai_mode = ClinicSettings.AiMode.MOCK_ADAPTER
+    clinic_settings.save(update_fields=["ai_mode", "updated_at"])
+    xray = xray_attachment_factory()
+
+    response = doctor_client.post(f"/api/xrays/{xray.id}/run-ai/")
+
+    assert response.status_code == 503
+    assert response.data["code"] == "AI_SERVICE_NOT_CONFIGURED"
+    assert not AIResult.objects.filter(xray_attachment=xray).exists()
+    assert ActivityLog.objects.filter(action="xray_ai_rejected").exists()
+    assert not ActivityLog.objects.filter(action="xray_ai_failed").exists()
+
+
+@override_settings(
+    PEARLIX_RUNTIME_ENVIRONMENT="production",
+    AI_SERVICE_URL="https://ai.example.test",
+    AI_SERVICE_TOKEN="placeholder-service-token",
+)
+def test_production_separate_service_mode_remains_configurable():
+    adapter = services.select_inference_adapter(ClinicSettings.AiMode.SEPARATE_SERVICE)
+
+    assert adapter.model_version != "pearlix-mock-xray-v1"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("model_version", "pipeline"),
+    [
+        ("pearlix-mock-xray-v1", {}),
+        ("renamed-synthetic-adapter", {"adapter": "mock"}),
+        (
+            "renamed-synthetic-adapter",
+            {"score_semantics": "DETERMINISTIC_MOCK_SCORE"},
+        ),
+    ],
+)
+@override_settings(PEARLIX_RUNTIME_ENVIRONMENT="production")
+def test_production_persistence_boundary_rejects_synthetic_result_representations(
+    external_xray_case_factory,
+    model_version,
+    pipeline,
+):
+    external_case = external_xray_case_factory()
+
+    with pytest.raises(ValidationError, match="Synthetic AI results cannot be persisted"):
+        AIResult.objects.create(
+            external_xray_case=external_case,
+            status=AIResult.Status.COMPLETED,
+            result_summary="Synthetic result",
+            model_version=model_version,
+            findings_json={"pipeline": pipeline},
+        )
+
+    assert not AIResult.objects.filter(external_xray_case=external_case).exists()
+
+
+@pytest.mark.django_db
+@override_settings(PEARLIX_RUNTIME_ENVIRONMENT="production")
+def test_production_persistence_boundary_allows_real_service_result(
+    external_xray_case_factory,
+):
+    external_case = external_xray_case_factory()
+
+    result = AIResult.objects.create(
+        external_xray_case=external_case,
+        status=AIResult.Status.COMPLETED,
+        result_summary="Verified real-service result",
+        model_version="pearlix-dentex-v1",
+        findings_json={
+            "pipeline": {
+                "adapter": "remote",
+                "score_semantics": "MODEL_PROBABILITY",
+            }
+        },
+    )
+
+    assert AIResult.objects.filter(pk=result.pk).exists()
 
 
 @pytest.mark.django_db

@@ -50,46 +50,58 @@ PEARLIX_AI_CLASSIFIER_PATH=weights/classifier_exp1_epoch12.pt
 PEARLIX_AI_FDI_MAP_PATH=contract/fdi_class_map.json
 PEARLIX_AI_DEVICE=cpu|cuda
 PEARLIX_AI_MAX_CONCURRENT_INFERENCES=1
+PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL=2
+PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER=1
+PEARLIX_AI_INVOCATION_WINDOW_SECONDS=3600
+PEARLIX_AI_MAX_INVOCATIONS_PER_USER=10
+PEARLIX_AI_MAX_INVOCATIONS_GLOBAL=50
 ```
 
 ### `SEPARATE_SERVICE`
 
-This mode is operational for staging through `apps.ai_results.adapters.remote`. The current zero-cost target is a **private Hugging Face Gradio ZeroGPU Space** documented in [`ZEROGPU_AI_DEPLOYMENT.md`](ZEROGPU_AI_DEPLOYMENT.md).
+This mode is operational for staging through `apps.ai_results.adapters.remote`. The current zero-cost target is a **private Hugging Face ZeroGPU Space exposing the bounded direct HTTPS `POST /analyze` contract** documented in [`ZEROGPU_AI_DEPLOYMENT.md`](ZEROGPU_AI_DEPLOYMENT.md).
 
 Configure the Django/Vercel backend with:
 
 ```text
-AI_SERVICE_URL=<Hugging Face Space ID or HTTPS Gradio URL>
+AI_SERVICE_URL=https://<hf-user>-<space-name>.hf.space
 AI_SERVICE_TOKEN=<Hugging Face read/fine-grained token authorized for the private Space>
 ```
 
+Production requires the direct HTTPS origin. A Hugging Face Space ID such as `owner/space` is retained only for local/development Gradio compatibility and is rejected by production settings. The production backend posts a multipart image to `AI_SERVICE_URL/analyze`, sends the private Space token as a bearer credential, and reads a bounded JSON envelope containing `payload` and optional `overlay_png_base64`.
+
 The remote service returns only the locked pipeline version, detector geometry, detector confidence, raw four-class model scores, runtime metadata, and optional PNG overlay. The Django backend does **not** trust remote disease decisions: it reconstructs the tooth objects and reapplies the code-locked thresholds, review band, and Deep-Caries hierarchy locally before persistence.
 
-If the service reference/token is absent, invalid, unreachable, or returns a different contract/model version, Pearlix fails closed. There is no mock fallback.
+If the service URL/token is absent, invalid, unreachable, times out, exceeds response limits, or returns a different contract/model version, Pearlix fails closed. There is no mock fallback.
 
 ## Preflight and enablement
 
 For an internal/local model installation, run from `backend/` with the deployment environment loaded:
 
 ```powershell
-python manage.py ai_preflight
-python manage.py ai_preflight --load-models
+python manage.py ai_preflight --settings=config.settings.production
+python manage.py ai_preflight --load-models --settings=config.settings.production
 ```
 
 The default command validates trusted-root containment, regular files, all three hashes, device support, required imports, and locked runtime versions without deserializing weights. `--load-models` additionally uses the production trusted loader to validate detector names, the FDI map, classifier checkpoint metadata, architecture, class order, and epoch. Both commands are read-only and do not analyze an X-ray.
 
-For the ZeroGPU staging path, `backend/deployment/publish_hf_ai.py` independently verifies all three locked hashes before uploading the model repository. The Space then uses the same `model_contract.py`, `result_types.py`, `overlay.py`, and `adapters/dentex.py` copied from the Pearlix revision being published.
+For the ZeroGPU staging path, `backend/deployment/publish_hf_ai.py` independently verifies all three locked hashes before uploading the model repository. It builds a self-contained Space from the exact Pearlix inference core, packages the shared X-ray validator, verifies clean-room importability, mounts the private model repository read-only, and publishes the Space. The generated application exposes the production direct HTTPS `/analyze` contract and retains the Gradio UI only under `/ui` for controlled human verification.
 
 Enable real inference only after the target path is ready:
 
 1. Verify the three immutable artifacts and hashes.
 2. Verify the exact accepted runtime versions.
 3. For internal mode, run both preflight commands; for ZeroGPU, verify successful Space build on ZeroGPU with the private model volume mounted.
-4. Set `ClinicSettings.ai_mode` to the intended real mode (`DJANGO_INTERNAL` or `SEPARATE_SERVICE`).
-5. Run one authorized, de-identified research X-ray acceptance through the ordinary Pearlix application.
-6. Verify persisted findings and overlay survive reload and remain protected by Pearlix authorization.
+4. Verify the direct Space `GET /health` and authenticated `POST /analyze` contract using a de-identified test input.
+5. Set `ClinicSettings.ai_mode` to the intended real mode (`DJANGO_INTERNAL` or `SEPARATE_SERVICE`).
+6. Run one authorized, de-identified research X-ray acceptance through the ordinary Pearlix application.
+7. Verify persisted findings and overlay survive reload and remain protected by Pearlix authorization.
 
 The demo seed must never enable mock AI or fabricate AI findings.
+
+## Shared admission and invocation policy
+
+AI admission is serialized through PostgreSQL state shared by every backend instance. The per-user active-job limit is attributed to the authenticated requester, not the X-ray uploader. Stable fixed-window database buckets also bound cumulative starts per requester and across the clinic; the defaults allow 10 starts per user and 50 clinic-wide starts per hour and can be tuned through the variables above. Every admitted start consumes the budget, including an attempt that later fails image validation or at the provider boundary. A request rejected before admission does not create a processing result or consume a budget slot.
 
 ## Safe disablement and mock policy
 
@@ -112,6 +124,7 @@ CPU is sufficient for the functional MVP when adequately provisioned. Use one mo
 - Verify hashes at every model publication/deployment; never bypass verification.
 - Keep the ZeroGPU Space and model repository private for the current staging design.
 - Keep Hugging Face/Vercel tokens in platform secrets only.
+- Never print bearer-token values in launcher/deployment output; copy secrets through a trusted local clipboard or platform-secret flow.
 - Do not expose preflight or artifact paths through public HTTP.
 - Never log image bytes, raw score matrices, patient data, secrets, or storage paths.
 - Never commit `*.pt`, `.local/ai_integration`, golden X-rays, generated overlays, `.env`, or temporary smoke output.

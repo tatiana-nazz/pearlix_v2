@@ -1,4 +1,4 @@
-import { Menu, Moon, Sun } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useAuthStore } from "../auth/authStore";
@@ -29,7 +29,9 @@ export function Topbar({ onMenu }: { onMenu: (trigger: HTMLElement) => void }) {
         </div>
       </div>
       <div className="workspace-header-utilities">
-        <button className="v2-icon-button theme-toggle" type="button" aria-label={`${t(language, "theme")}: ${effectiveTheme === "dark" ? t(language, "light") : t(language, "dark")}`} data-tooltip={preference === "SYSTEM" ? `${t(language, "system")}: ${effectiveTheme === "dark" ? t(language, "dark") : t(language, "light")}` : effectiveTheme === "dark" ? t(language, "light") : t(language, "dark")} aria-pressed={effectiveTheme === "dark"} onClick={() => setTheme(effectiveTheme === "dark" ? "LIGHT" : "DARK")}>{effectiveTheme === "dark" ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}</button>
+        <div className="shell-segment theme-selector" role="group" aria-label={t(language, "theme")} data-resolved-theme={effectiveTheme}>
+          {(["LIGHT", "DARK", "SYSTEM"] as ThemePreference[]).map((theme) => <button key={theme} type="button" aria-pressed={preference === theme} onClick={() => setTheme(theme)}>{theme === "LIGHT" ? t(language, "light") : theme === "DARK" ? t(language, "dark") : t(language, "system")}</button>)}
+        </div>
         <div className="shell-segment language-toggle" role="group" aria-label={t(language, "language")}><button type="button" aria-pressed={language === "EN"} onClick={() => setLanguage("EN")}>EN</button><button type="button" aria-pressed={language === "AR"} onClick={() => setLanguage("AR")}>AR</button></div>
       </div>
     </header>

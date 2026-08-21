@@ -6,8 +6,8 @@ Backend:
 
 ```bash
 cd backend
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user
-python manage.py runserver
+python manage.py seed_dev_qa_users --password "<LOCAL_QA_PASSWORD>" --include-must-change-user --settings=config.settings.local
+python manage.py runserver --settings=config.settings.local
 ```
 
 Frontend:

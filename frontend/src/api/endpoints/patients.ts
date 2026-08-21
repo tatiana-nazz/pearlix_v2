@@ -14,6 +14,7 @@ import type {
 import type { VisitDetail } from "../../types/visits";
 import type { XrayAttachment } from "../../types/xrays";
 import { api } from "../http";
+import { getAllPages } from "../pagination";
 
 export function patientListQuery(filters?: PatientListFilters): QueryParams | undefined {
   if (!filters) return undefined;
@@ -65,22 +66,6 @@ export function getPatientAppointments(id: number, query?: QueryParams) {
   return api.get<Page<AppointmentList>>(`/patients/${id}/appointments/`, query);
 }
 
-async function getAllPages<T>(fetchPage: (page: number) => Promise<Page<T>>): Promise<Page<T>> {
-  const results: T[] = [];
-  let pageNumber = 1;
-  let total = 0;
-
-  while (true) {
-    const page = await fetchPage(pageNumber);
-    total = page.count;
-    results.push(...page.results);
-    if (!page.next || results.length >= total) break;
-    pageNumber += 1;
-  }
-
-  return { count: total, next: null, previous: null, results };
-}
-
 // Patient profile history must be complete, not silently limited to the first
 // DRF page. The directory itself remains paginated; only one patient's timeline
 // is expanded here.
@@ -98,6 +83,14 @@ export function getPatientXrays(id: number, query?: QueryParams) {
 
 export function getPatientAiResults(id: number, query?: QueryParams) {
   return api.get<Page<AIResult>>(`/patients/${id}/ai-results/`, query);
+}
+
+export function getAllPatientXrays(id: number) {
+  return getAllPages((page) => getPatientXrays(id, { page }));
+}
+
+export function getAllPatientAiResults(id: number) {
+  return getAllPages((page) => getPatientAiResults(id, { page }));
 }
 
 export const patientsApi = {

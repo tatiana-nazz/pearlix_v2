@@ -20,6 +20,7 @@ import { visitCopy } from "../i18n";
 import { areClinicalNotesEqual, clinicalNotesValues, type ClinicalNotesValues } from "../utils/visitForm";
 import { getVisitPermissions } from "../utils/visitPermissions";
 import { ClinicalNotesForm } from "./ClinicalNotesForm";
+import { useUnsavedChanges } from "../../../hooks/useUnsavedChanges";
 
 interface VisitWorkspaceProps {
   role: UserRole;
@@ -127,7 +128,7 @@ export function VisitWorkspace({ role, visit, onReloadVisit }: VisitWorkspacePro
   const notesDirty = !areClinicalNotesEqual(values, savedValues);
   const billingDirty = Boolean(billingDraft.description.trim() || billingDraft.amount.trim() || billingDraft.note.trim());
   const isDirty = notesDirty || billingDirty;
-  useEffect(() => { if (!isDirty) return undefined; const warnBeforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; }; window.addEventListener("beforeunload", warnBeforeUnload); return () => window.removeEventListener("beforeunload", warnBeforeUnload); }, [isDirty]);
+  useUnsavedChanges(isDirty, c.unsavedProfileConfirm);
 
   async function saveNotes() { const updated = await updateNotes.mutateAsync(values); const updatedValues = clinicalNotesValues(updated); setValues(updatedValues); setSavedValues(updatedValues); setSaveNotice(true); return updated; }
   const updateBillingDraft = useCallback(<Key extends keyof VisitBillingDraft>(key: Key, value: VisitBillingDraft[Key]) => {

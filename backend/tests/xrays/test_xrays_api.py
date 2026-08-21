@@ -1,4 +1,6 @@
 import pytest
+from io import BytesIO
+from PIL import Image
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -15,8 +17,16 @@ def temp_media_root(settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
 
 
-def upload_file(name="xray.png", content_type="image/png", content=b"fake-image"):
-    return SimpleUploadedFile(name, content, content_type=content_type)
+from apps.accounts.management.commands.seed_demo_clinic_story import XRAY_PNG_BYTES
+
+_jpeg_buffer = BytesIO()
+Image.new("L", (32, 16), 128).save(_jpeg_buffer, format="JPEG")
+XRAY_JPEG_BYTES = _jpeg_buffer.getvalue()
+
+
+def upload_file(name="xray.png", content_type="image/png", content=None):
+    payload = content if content is not None else (XRAY_JPEG_BYTES if content_type == "image/jpeg" else XRAY_PNG_BYTES)
+    return SimpleUploadedFile(name, payload, content_type=content_type)
 
 
 def other_doctor_visit(visit_factory, appointment_factory, other_doctor_user, patient_factory):

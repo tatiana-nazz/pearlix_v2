@@ -41,6 +41,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.accounts.middleware.MandatoryPasswordChangeMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -113,6 +114,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", [])
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", [])
+# Forwarded client addresses are trusted only when the directly connected
+# peer belongs to an explicitly configured reverse-proxy network.
+TRUSTED_PROXY_CIDRS = env_list("TRUSTED_PROXY_CIDRS", [])
 FRONTEND_URL = env("FRONTEND_URL", "http://localhost:5173")
 AI_SERVICE_URL = env("AI_SERVICE_URL", "")
 AI_SERVICE_TOKEN = env("AI_SERVICE_TOKEN", "")
@@ -135,19 +139,65 @@ PEARLIX_ALLOW_MOCK_AI = env_bool("PEARLIX_ALLOW_MOCK_AI", False)
 PEARLIX_AI_PROCESSING_STALE_SECONDS = int(
     env("PEARLIX_AI_PROCESSING_STALE_SECONDS", "900") or "900"
 )
+PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL = int(env("PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL", "2") or "2")
+PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER = int(env("PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER", "1") or "1")
+# Every admitted start counts, including attempts that later fail validation or
+# at the provider boundary. Stable database buckets make this serverless-safe.
+PEARLIX_AI_INVOCATION_WINDOW_SECONDS = int(env("PEARLIX_AI_INVOCATION_WINDOW_SECONDS", "3600") or "3600")
+PEARLIX_AI_MAX_INVOCATIONS_PER_USER = int(env("PEARLIX_AI_MAX_INVOCATIONS_PER_USER", "10") or "10")
+PEARLIX_AI_MAX_INVOCATIONS_GLOBAL = int(env("PEARLIX_AI_MAX_INVOCATIONS_GLOBAL", "50") or "50")
+PEARLIX_XRAY_PATIENT_QUOTA_BYTES = int(env("PEARLIX_XRAY_PATIENT_QUOTA_BYTES", str(250 * 1024 * 1024)) or str(250 * 1024 * 1024))
+PEARLIX_XRAY_USER_QUOTA_BYTES = int(env("PEARLIX_XRAY_USER_QUOTA_BYTES", str(500 * 1024 * 1024)) or str(500 * 1024 * 1024))
+PEARLIX_XRAY_GLOBAL_QUOTA_BYTES = int(env("PEARLIX_XRAY_GLOBAL_QUOTA_BYTES", str(5 * 1024 * 1024 * 1024)) or str(5 * 1024 * 1024 * 1024))
+PEARLIX_EXTERNAL_XRAY_RETENTION_HOURS = int(env("PEARLIX_EXTERNAL_XRAY_RETENTION_HOURS", "0") or "0")
 FILE_UPLOAD_MAX_MEMORY_SIZE = int(env("FILE_UPLOAD_MAX_MEMORY_SIZE", str(10 * 1024 * 1024)) or str(10 * 1024 * 1024))
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "apps.accounts.authentication.PasswordLifecycleJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+        "rest_framework.parsers.FormParser",
+        "apps.xrays.parsers.BoundedXrayMultiPartParser",
+    ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "EXCEPTION_HANDLER": "apps.common.exceptions.standard_exception_handler",
+    "DEFAULT_THROTTLE_RATES": {
+        "auth_login_source": (
+            env("AUTH_LOGIN_SOURCE_THROTTLE_RATE", "60/min") or "60/min"
+        ),
+        "auth_login_identifier": (
+            env("AUTH_LOGIN_IDENTIFIER_THROTTLE_RATE", "10/min") or "10/min"
+        ),
+        "auth_refresh_source": (
+            env("AUTH_REFRESH_SOURCE_THROTTLE_RATE", "120/min") or "120/min"
+        ),
+        "auth_refresh_identifier": (
+            env("AUTH_REFRESH_IDENTIFIER_THROTTLE_RATE", "30/min") or "30/min"
+        ),
+        "auth_logout_source": (
+            env("AUTH_LOGOUT_SOURCE_THROTTLE_RATE", "120/min") or "120/min"
+        ),
+    },
 }
+
+# Authentication throttles use PostgreSQL-shared state. Every evaluation drains
+# a tiny indexed expiry batch; one request periodically leases an additional
+# configurable batch. Neither path scans or deletes a full table.
+AUTH_THROTTLE_CLEANUP_INTERVAL_SECONDS = int(
+    env("AUTH_THROTTLE_CLEANUP_INTERVAL_SECONDS", "60") or "60"
+)
+AUTH_THROTTLE_CLEANUP_BATCH_SIZE = int(
+    env("AUTH_THROTTLE_CLEANUP_BATCH_SIZE", "256") or "256"
+)
+AUTH_SESSION_REVOKED_RETENTION_SECONDS = int(
+    env("AUTH_SESSION_REVOKED_RETENTION_SECONDS", "86400") or "86400"
+)
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),

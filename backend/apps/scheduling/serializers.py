@@ -31,15 +31,30 @@ class VersionedSerializer(serializers.ModelSerializer):
         return value
 
 
-class ClinicDefaultShiftSerializer(VersionedSerializer):
+class ClinicOperatingWeekSerializerMixin:
+    def _weekly_closed_days(self):
+        if not hasattr(self, "_cached_weekly_closed_days"):
+            self._cached_weekly_closed_days = set(ClinicSettings.get_solo().weekly_closed_days)
+        return self._cached_weekly_closed_days
+
+    def get_clinic_closed(self, obj):
+        return obj.weekday in self._weekly_closed_days()
+
+    def get_effective_is_active(self, obj):
+        return obj.is_active and not self.get_clinic_closed(obj)
+
+
+class ClinicDefaultShiftSerializer(ClinicOperatingWeekSerializerMixin, VersionedSerializer):
     weekday_label = serializers.CharField(source="get_weekday_display", read_only=True)
+    clinic_closed = serializers.SerializerMethodField()
+    effective_is_active = serializers.SerializerMethodField()
     created_by = UserSummarySerializer(read_only=True)
     updated_by = UserSummarySerializer(read_only=True)
 
     class Meta:
         model = ClinicDefaultShift
-        fields = ("id", "name", "weekday", "weekday_label", "start_time", "end_time", "is_active", "version", "created_by", "updated_by", "created_at", "updated_at")
-        read_only_fields = ("id", "weekday_label", "is_active", "created_by", "updated_by", "created_at", "updated_at")
+        fields = ("id", "name", "weekday", "weekday_label", "start_time", "end_time", "is_active", "clinic_closed", "effective_is_active", "version", "created_by", "updated_by", "created_at", "updated_at")
+        read_only_fields = ("id", "weekday_label", "is_active", "clinic_closed", "effective_is_active", "created_by", "updated_by", "created_at", "updated_at")
 
     def validate(self, attrs):
         if "name" in attrs:
@@ -53,18 +68,20 @@ class ClinicDefaultShiftSerializer(VersionedSerializer):
         return attrs
 
 
-class WorkingShiftSerializer(VersionedSerializer):
+class WorkingShiftSerializer(ClinicOperatingWeekSerializerMixin, VersionedSerializer):
     employee_id = serializers.PrimaryKeyRelatedField(source="employee", queryset=User.objects.filter(role__in=[User.Role.DOCTOR, User.Role.STAFF]), write_only=True, required=True)
     employee = UserSummarySerializer(read_only=True)
     weekday_label = serializers.CharField(source="get_weekday_display", read_only=True)
+    clinic_closed = serializers.SerializerMethodField()
+    effective_is_active = serializers.SerializerMethodField()
     source_default_shift = serializers.PrimaryKeyRelatedField(read_only=True)
     created_by = UserSummarySerializer(read_only=True)
     updated_by = UserSummarySerializer(read_only=True)
 
     class Meta:
         model = WorkingShift
-        fields = ("id", "employee_id", "employee", "name", "weekday", "weekday_label", "start_time", "end_time", "is_active", "source_default_shift", "version", "created_by", "updated_by", "created_at", "updated_at")
-        read_only_fields = ("id", "employee", "weekday_label", "is_active", "source_default_shift", "created_by", "updated_by", "created_at", "updated_at")
+        fields = ("id", "employee_id", "employee", "name", "weekday", "weekday_label", "start_time", "end_time", "is_active", "clinic_closed", "effective_is_active", "source_default_shift", "version", "created_by", "updated_by", "created_at", "updated_at")
+        read_only_fields = ("id", "employee", "weekday_label", "is_active", "clinic_closed", "effective_is_active", "source_default_shift", "created_by", "updated_by", "created_at", "updated_at")
 
     def validate(self, attrs):
         if "name" in attrs:
@@ -74,6 +91,8 @@ class WorkingShiftSerializer(VersionedSerializer):
         employee = attrs.get("employee", getattr(self.instance, "employee", None))
         if employee and employee.role not in {User.Role.DOCTOR, User.Role.STAFF}:
             raise serializers.ValidationError({"employee_id": ["Employee must have DOCTOR or STAFF role."]})
+        if self.instance and employee and employee.pk != self.instance.employee_id:
+            raise serializers.ValidationError({"employee_id": ["A working shift cannot be moved to another employee."]})
         start = attrs.get("start_time", getattr(self.instance, "start_time", None))
         end = attrs.get("end_time", getattr(self.instance, "end_time", None))
         if start and end and start >= end:
@@ -139,21 +158,52 @@ class AppointmentListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Appointment
-        fields = ("id", "patient", "doctor", "start_datetime", "end_datetime", "duration_minutes", "reason", "status", "reschedule_source_exception", "reschedule_source_working_shift", "reschedule_source_type", "reschedule_source_label", "reschedule_previous_status", "created_at", "updated_at")
+        fields = ("id", "patient", "doctor", "start_datetime", "end_datetime", "duration_minutes", "reason", "status", "version", "reschedule_source_exception", "reschedule_source_working_shift", "reschedule_source_clinic_weekday", "reschedule_source_kind", "reschedule_source_type", "reschedule_source_label", "reschedule_previous_status", "created_at", "updated_at")
         read_only_fields = fields
 
     def get_reschedule_source_type(self, obj):
-        if obj.reschedule_source_working_shift_id:
+        kind = obj.reschedule_source_kind
+        if kind == Appointment.RescheduleSourceKind.CLINIC_WEEKLY_CLOSURE or (
+            not kind and obj.reschedule_source_clinic_weekday is not None
+        ):
+            return "CLINIC_WEEKLY_CLOSURE"
+        if kind == Appointment.RescheduleSourceKind.WORKING_SCHEDULE_CHANGE or (
+            not kind and obj.reschedule_source_working_shift_id
+        ):
             return "SHIFT_CHANGE"
-        if obj.reschedule_source_exception_id:
+        if kind == Appointment.RescheduleSourceKind.LEAVE or (
+            not kind and obj.reschedule_source_exception_id
+        ):
             return "LEAVE"
+        if kind == Appointment.RescheduleSourceKind.SCHEDULING_RULE_CONFLICT:
+            return "SCHEDULING_RULE_CONFLICT"
         return None
 
     def get_reschedule_source_label(self, obj):
-        if obj.reschedule_source_working_shift_id:
-            return obj.reschedule_source_working_shift.name
-        if obj.reschedule_source_exception_id:
-            return obj.reschedule_source_exception.reason or "Unavailable period"
+        kind = obj.reschedule_source_kind
+        if kind == Appointment.RescheduleSourceKind.CLINIC_WEEKLY_CLOSURE or (
+            not kind and obj.reschedule_source_clinic_weekday is not None
+        ):
+            weekday = Weekday(obj.reschedule_source_clinic_weekday).label
+            return f"Clinic closed on {weekday}"
+        if kind == Appointment.RescheduleSourceKind.WORKING_SCHEDULE_CHANGE or (
+            not kind and obj.reschedule_source_working_shift_id
+        ):
+            return (
+                obj.reschedule_source_working_shift.name
+                if obj.reschedule_source_working_shift_id
+                else "Doctor working schedule changed"
+            )
+        if kind == Appointment.RescheduleSourceKind.LEAVE or (
+            not kind and obj.reschedule_source_exception_id
+        ):
+            return (
+                obj.reschedule_source_exception.reason or "Unavailable period"
+                if obj.reschedule_source_exception_id
+                else "Doctor unavailable"
+            )
+        if kind == Appointment.RescheduleSourceKind.SCHEDULING_RULE_CONFLICT:
+            return "Appointment no longer satisfies current scheduling rules"
         return None
 
 
@@ -161,12 +211,13 @@ class AppointmentDetailSerializer(AppointmentListSerializer):
     patient_id = serializers.PrimaryKeyRelatedField(source="patient", queryset=Patient.objects.filter(is_archived=False), write_only=True, required=False)
     doctor_id = serializers.PrimaryKeyRelatedField(source="doctor", queryset=User.objects.filter(role=User.Role.DOCTOR, is_active=True), write_only=True, required=False)
     duration_minutes = serializers.IntegerField(required=False)
+    version = serializers.IntegerField(required=False, min_value=1)
     created_by = UserSummarySerializer(read_only=True)
     updated_by = UserSummarySerializer(read_only=True)
 
     class Meta(AppointmentListSerializer.Meta):
         fields = AppointmentListSerializer.Meta.fields + ("patient_id", "doctor_id", "notes", "created_by", "updated_by")
-        read_only_fields = tuple(field for field in fields if field not in {"patient_id", "doctor_id", "start_datetime", "duration_minutes", "reason", "notes"})
+        read_only_fields = tuple(field for field in fields if field not in {"patient_id", "doctor_id", "start_datetime", "duration_minutes", "reason", "notes", "version"})
 
     def validate(self, attrs):
         if self.instance is None:

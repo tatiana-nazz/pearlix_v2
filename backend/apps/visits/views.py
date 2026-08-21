@@ -31,10 +31,9 @@ class VisitViewSet(viewsets.ReadOnlyModelViewSet):
         ).all()
         user = self.request.user
         if user.is_authenticated and user.role == "DOCTOR":
+            queryset = queryset.filter(patient__in=get_patients_for_user(user))
             patient_id = self.request.query_params.get("patient_id")
-            if self.action == "retrieve" or patient_id:
-                queryset = queryset.filter(patient__in=get_patients_for_user(user))
-            else:
+            if self.action != "retrieve" and not patient_id:
                 queryset = queryset.filter(doctor=user)
 
         doctor_id = self.request.query_params.get("doctor_id")

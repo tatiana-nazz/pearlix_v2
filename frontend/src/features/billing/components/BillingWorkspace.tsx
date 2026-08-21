@@ -46,7 +46,7 @@ export function BillingOverviewPage({ role }: { role: Exclude<UserRole, "DOCTOR"
   const queries = [bills, todayInvoices, recentBills, recentInvoices];
   const error = queries.find((query) => query.isError);
 
-  return <main className="billing-page billing-overview-page"><BillingWorkspaceHeader role={role} />
+  return <div className="billing-page billing-overview-page"><BillingWorkspaceHeader role={role} />
     <div className="billing-page-intro"><div><p className="billing-eyebrow">{clinicDate ?? c.overview}</p><h2>{c.overviewTitle}</h2><p>{c.overviewDescription}</p></div></div>
     {queries.some((query) => query.isLoading) && !bills.data ? <LoadingState title={c.loading} /> : null}
     {error ? <ErrorState error={error.error} title={c.unavailable} onRetry={() => queries.forEach((query) => void query.refetch())} /> : null}
@@ -61,7 +61,7 @@ export function BillingOverviewPage({ role }: { role: Exclude<UserRole, "DOCTOR"
       {recentBills.data ? <section className="billing-overview-section"><SectionHeading title={c.recentBills} action={<Link to={`${base}/handoffs`}>{c.viewAll}</Link>} /><HandoffList role={role} handoffs={recentBills.data.results.slice(0, 5)} compact /></section> : null}
       {recentInvoices.data ? <section className="billing-overview-section"><SectionHeading title={c.recentInvoices} action={<Link to={`${base}/invoices`}>{c.viewAll}</Link>} /><InvoiceList role={role} invoices={recentInvoices.data.results.slice(0, 5)} compact /></section> : null}
     </div>
-  </main>;
+  </div>;
 }
 
 function applyPreset(preset: Exclude<InvoiceDatePreset, "CUSTOM">, clinicDate: string, searchParams: URLSearchParams, setSearchParams: ReturnType<typeof useSearchParams>[1]) {
@@ -87,10 +87,10 @@ export function InvoiceHistoryPage({ role }: { role: Exclude<UserRole, "DOCTOR">
   const summary = useInvoiceSummary(query);
   const page = Number(searchParams.get("page") || "1");
   const clinicDate = summary.data?.clinic_date ?? "";
-  return <main className="billing-page billing-history-page"><BillingWorkspaceHeader role={role} /><div className="billing-page-intro"><div><h2>{c.historyTitle}</h2><p>{c.historyDescription}</p></div></div>
+  return <div className="billing-page billing-history-page"><BillingWorkspaceHeader role={role} /><div className="billing-page-intro"><div><h2>{c.historyTitle}</h2><p>{c.historyDescription}</p></div></div>
     <BillingDateFilters clinicDate={clinicDate} searchParams={searchParams} setSearchParams={setSearchParams} />
     {summary.data ? <section className="billing-summary-grid billing-history-summary"><Card className="billing-summary-card"><span>{c.invoices}</span><strong>{summary.data.invoice_count}</strong></Card><Card className="billing-summary-card"><span>{c.collectedToday}</span><strong><CurrencyLines values={summary.data.collected_by_currency} /></strong></Card></section> : null}
     <Card className="billing-filter-card"><div className="billing-history-filters"><label>{c.search}<input type="search" value={searchParams.get("search") ?? ""} placeholder={c.searchInvoices} onChange={(event) => setSearchValue(searchParams, setSearchParams, "search", event.target.value)} /></label><label>{c.currency}<select value={searchParams.get("currency") ?? ""} onChange={(event) => setSearchValue(searchParams, setSearchParams, "currency", event.target.value)}><option value="">{c.allCurrencies}</option><option value="SYP">SYP</option><option value="USD">USD</option></select></label><div className="billing-filter-actions"><span>{invoices.data ? `${invoices.data.count} ${c.records}` : ""}</span>{searchParams.size ? <button className="button secondary" type="button" onClick={() => setSearchParams({})}>{c.clearFilters}</button> : null}</div></div></Card>
     {invoices.isLoading ? <LoadingState title={c.loading} /> : null}{invoices.isError ? <ErrorState error={invoices.error} title={c.unavailable} onRetry={() => void invoices.refetch()} /> : null}{invoices.data ? <><InvoiceList role={role} invoices={invoices.data.results} /><Pagination page={page} hasPrevious={Boolean(invoices.data.previous)} hasNext={Boolean(invoices.data.next)} onPrevious={() => setSearchValue(searchParams, setSearchParams, "page", String(Math.max(1, page - 1)), false)} onNext={() => setSearchValue(searchParams, setSearchParams, "page", String(page + 1), false)} labels={{ page: `${invoices.data.count} ${c.records} · ${c.page}`, previous: c.previous, next: c.next }} /></> : null}
-  </main>;
+  </div>;
 }

@@ -12,6 +12,7 @@ export type XrayCopy = {
   chooseFile: string;
   supportedFiles: string;
   cancel: string;
+  discardChanges: string;
   upload: string;
   uploading: string;
   aiResult: string;
@@ -52,7 +53,9 @@ export type XrayCopy = {
   retryAi: string;
   runningAi: string;
   analysisAlreadyRunning: string;
-  aiServiceUnavailable: string;
+  aiNotConfigured: string;
+  aiCapacityBusy: string;
+  aiRateLimited: string;
   aiImageInvalid: string;
   aiRequestFailed: string;
   loadingAiResult: string;
@@ -105,6 +108,7 @@ const en: XrayCopy = {
   chooseFile: "Choose file",
   supportedFiles: "PNG, JPG, or JPEG only. Maximum size 10 MB.",
   cancel: "Cancel",
+  discardChanges: "Discard the unsaved X-ray upload?",
   upload: "Upload",
   uploading: "Uploading…",
   aiResult: "AI Result",
@@ -145,7 +149,9 @@ const en: XrayCopy = {
   retryAi: "Retry AI",
   runningAi: "Running AI Analysis…",
   analysisAlreadyRunning: "AI analysis is already running.",
-  aiServiceUnavailable: "AI service is currently unavailable.",
+  aiNotConfigured: "AI analysis is not configured for this environment.",
+  aiCapacityBusy: "AI analysis is busy. Try again shortly.",
+  aiRateLimited: "AI analysis limit reached. Try again later.",
   aiImageInvalid: "This X-ray image could not be analyzed.",
   aiRequestFailed: "Unable to run AI analysis. Review the message and try again.",
   loadingAiResult: "Loading AI result…",
@@ -176,7 +182,7 @@ const en: XrayCopy = {
   deleteSavedXray: "Delete saved X-ray",
   deleteSavedXrayDescription: "The saved X-ray, its AI result, and its overlay will be permanently removed.",
   keepSavedXray: "Keep X-ray",
-  deletingSavedXray: "Deletingâ€¦",
+    deletingSavedXray: "Deleting…",
   deleteSavedXrayFailed: "Unable to delete saved X-ray",
   overlayLegend: "Overlay colors",
   quadrantUpperRight: "Q1 upper right",
@@ -209,6 +215,7 @@ const ar: XrayCopy = {
   chooseFile: "اختر ملفاً",
   supportedFiles: "PNG أو JPG أو JPEG فقط. الحد الأقصى للحجم 10 ميغابايت.",
   cancel: "إلغاء",
+  discardChanges: "هل تريد تجاهل بيانات رفع الأشعة غير المحفوظة؟",
   upload: "رفع",
   uploading: "جارٍ الرفع…",
   aiResult: "نتيجة الذكاء الاصطناعي",
@@ -249,7 +256,9 @@ const ar: XrayCopy = {
   retryAi: "إعادة تشغيل التحليل",
   runningAi: "جارٍ تشغيل تحليل الذكاء الاصطناعي…",
   analysisAlreadyRunning: "تحليل الذكاء الاصطناعي قيد التشغيل بالفعل.",
-  aiServiceUnavailable: "خدمة الذكاء الاصطناعي غير متاحة حالياً.",
+  aiNotConfigured: "تحليل الذكاء الاصطناعي غير مهيأ لهذه البيئة.",
+  aiCapacityBusy: "تحليل الذكاء الاصطناعي مشغول. حاول مجدداً بعد قليل.",
+  aiRateLimited: "تم بلوغ حد تحليل الذكاء الاصطناعي. حاول مجدداً لاحقاً.",
   aiImageInvalid: "تعذر تحليل صورة الأشعة هذه.",
   aiRequestFailed: "تعذر تشغيل تحليل الذكاء الاصطناعي. راجع الرسالة وحاول مجدداً.",
   loadingAiResult: "جارٍ تحميل نتيجة الذكاء الاصطناعي…",

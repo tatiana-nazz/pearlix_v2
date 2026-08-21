@@ -1,5 +1,6 @@
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from apps.accounts.management.commands.seed_demo_clinic_story import XRAY_PNG_BYTES
 
 from apps.ai_results.serializers import AI_DISCLAIMER_EN
 
@@ -10,7 +11,7 @@ def temp_media_root(settings, tmp_path):
 
 
 def upload_file(name="workflow-xray.png", content_type="image/png"):
-    return SimpleUploadedFile(name, b"fake-image", content_type=content_type)
+    return SimpleUploadedFile(name, XRAY_PNG_BYTES, content_type=content_type)
 
 
 @pytest.mark.django_db

@@ -14,6 +14,15 @@ from apps.billing.models import BillingHandoff, Invoice
 from apps.billing.selectors import annotate_handoff_financials
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
+from apps.dashboard.analytics import (
+    HISTORICAL_SCHEDULE_ACCURACY,
+    appointment_daily_activity,
+    appointment_problem_rate,
+    doctor_utilization,
+    patient_mix,
+    receivables_aging,
+)
+from apps.patients.selectors import get_patients_for_user
 from apps.scheduling.models import Appointment
 from apps.visits.models import Visit
 
@@ -191,6 +200,20 @@ def admin_dashboard(request):
             "today_appointments": [_appointment_summary(item) for item in today_appointments[:7]],
             "appointment_status_last_7_days": _appointment_status_activity(today, clinic_timezone),
             "billing_activity_last_30_days": _billing_activity(today, clinic_timezone),
+            "appointments_daily_last_30_days": appointment_daily_activity(today, clinic_timezone),
+            "doctor_utilization_last_30_days": doctor_utilization(
+                today,
+                clinic_timezone,
+                weekly_closed_days=settings.weekly_closed_days,
+            ),
+            "doctor_utilization_schedule_accuracy": HISTORICAL_SCHEDULE_ACCURACY,
+            "patient_mix_last_8_weeks": patient_mix(today, clinic_timezone),
+            "appointment_problem_rate_last_8_weeks": appointment_problem_rate(
+                today,
+                clinic_timezone,
+                as_of=now,
+            ),
+            "receivables_aging": receivables_aging(today, clinic_timezone),
             "recent_handoffs": [_handoff_summary(item) for item in recent_handoffs],
         }
     )
@@ -247,14 +270,22 @@ def doctor_dashboard(request):
     settings, clinic_timezone, now = _clinic_context()
     today = now.date()
     today_start, tomorrow_start = _local_day_bounds(today, clinic_timezone)
-    own_appointments = Appointment.objects.select_related("patient", "doctor").filter(doctor=request.user)
+    accessible_patients = get_patients_for_user(request.user)
+    own_appointments = Appointment.objects.select_related("patient", "doctor").filter(
+        doctor=request.user,
+        patient__in=accessible_patients,
+    )
     today_appointments = own_appointments.filter(
         start_datetime__gte=today_start,
         start_datetime__lt=tomorrow_start,
     ).order_by("start_datetime", "id")
     active_visit = (
         Visit.objects.select_related("patient", "appointment")
-        .filter(doctor=request.user, status=Visit.Status.ACTIVE)
+        .filter(
+            doctor=request.user,
+            patient__in=accessible_patients,
+            status=Visit.Status.ACTIVE,
+        )
         .order_by("-started_at", "-id")
         .first()
     )
@@ -271,6 +302,7 @@ def doctor_dashboard(request):
                 completed_at__gte=today_start,
                 completed_at__lt=tomorrow_start,
                 doctor=request.user,
+                patient__in=accessible_patients,
                 status=Visit.Status.COMPLETED,
             ).count(),
         }

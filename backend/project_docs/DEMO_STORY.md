@@ -1,4 +1,9 @@
-# Phase 14A Integrated Demo Clinic Story
+# Phase 14A Integrated Demo Clinic Story (legacy)
+
+> **Deprecated for release demos.** This command remains as a historical
+> regression fixture. Use the canonical `seed_demo` →
+> `populate_demo_analytics_realistic` → `finalize_demo_seed` workflow documented
+> in `DEMO_WORKFLOW.md`.
 
 The Phase 14A demo is a deterministic, development-only dataset for exercising every implemented Pearlix workspace. It creates synthetic records only; its PNG assets are clearly non-clinical, contain no patient data, and must never be presented as diagnostic images.
 
@@ -6,10 +11,10 @@ The Phase 14A demo is a deterministic, development-only dataset for exercising e
 
 ```powershell
 cd backend
-python manage.py seed_demo_clinic_story --password "<LOCAL_QA_PASSWORD>" --reset-demo --reference-date 2026-08-08
+python manage.py seed_demo_clinic_story --password "<LOCAL_QA_PASSWORD>" --reset-demo --reference-date 2026-08-08 --settings=config.settings.local
 ```
 
-`--password` accepts a local QA password and defaults to a development-only value. Do not commit or reuse it outside local development. The command refuses to run unless `DEBUG=true`. `--reference-date YYYY-MM-DD` makes the relative story dates deterministic; without it the command derives the date in the configured clinic timezone. `--include-must-change-user` remains accepted for compatibility, but the must-change QA account is now always included.
+`--password` accepts a local QA password; when omitted, the command generates an inaccessible random value and never prints credentials. Do not commit or reuse supplied credentials outside local development. The command refuses production/deployed/live-database targets and also requires `DEBUG=true`. `--reference-date YYYY-MM-DD` makes the relative story dates deterministic; without it the command derives the date in the configured clinic timezone. `--include-must-change-user` remains accepted for compatibility, but the must-change QA account is now always included.
 
 Without `--reset-demo`, an existing Phase 14A story is left untouched. With it, only accounts whose email ends with `@pearlix-demo.local` are removed, together with patients whose identity begins `DEMO14A-`, their transitively owned workflow records, audit rows tagged by the `phase-14a-integrated-demo-story` marker, and `demo14a-` media. It never deletes unrelated users, patients, workflow records, audit rows, settings, or media.
 
@@ -39,7 +44,7 @@ The seeded Admin, Staff, and Doctor dashboards are non-empty and their related r
 
 ## Automated verification
 
-Phase 14F.3 makes the clinical demo state explicit: Doctor One has named Morning (08:00–12:00) and Evening (14:00–18:00) shifts Monday–Friday with weekends Off; Doctor Two and Staff One have different valid split-shift examples. Exactly one Doctor One visit is started through the normal service transition, while a separate Doctor Two appointment remains checked in and eligible for Start Visit. Eligible appointments fit active shifts; explicit leave/shift-impact records remain intentionally marked Needs Reschedule.
+Phase 14F.3 makes the clinical demo state explicit: Doctor One has stored split-shift examples, while Doctor Two and Staff One have different valid schedules. Their effective days follow the authoritative Clinic Settings weekly closure policy; stored shifts on a closed weekday remain suppressed rather than deleted. Exactly one Doctor One visit is started through the normal service transition, while a separate Doctor Two appointment remains checked in and eligible for Start Visit. Eligible appointments fit active shifts and clinic-open days; explicit leave/shift-impact records remain intentionally marked Needs Reschedule.
 
 Phase 14F.4 keeps that active visit populated with two visit-owned synthetic X-rays suitable for exercising the normal authorized AI workflow. The seed creates no `AIResult`, overlay, findings, confidence, or fake AI-run audit event; inference results exist only after an authorized runtime request.
 

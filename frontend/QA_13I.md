@@ -21,8 +21,8 @@ python -m pytest tests/dashboard -q
 python -m pytest tests/workflows -q
 python -m pytest tests/security -q
 python -m pytest -q
-python manage.py check
-python manage.py makemigrations --check --dry-run
+python manage.py check --settings=config.settings.local
+python manage.py makemigrations --check --dry-run --settings=config.settings.local
 
 cd ../frontend
 npm run typecheck

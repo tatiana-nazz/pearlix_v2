@@ -38,7 +38,7 @@ This document summarizes current accepted backend decisions for human developers
 - Role transitions with direct shifts, leave, appointments, or visits are blocked with `ROLE_TRANSITION_BLOCKED_BY_HISTORY`; no operational history is deleted or rewritten.
 - Profile versions protect professional edits and professional-status changes. Login deactivation/reactivation and professional active state remain separate.
 - Users report a safe linked-profile state. Legacy unlinked professional accounts are `PROFILE_SETUP_REQUIRED`, visible in Users & Access but excluded from Team.
-- `manage.py check_profile_integrity --strict` detects dual profiles, mismatches, and active Admin professional profiles without changing data.
+- `manage.py check_profile_integrity --strict --settings=config.settings.local` detects dual profiles, mismatches, and active Admin professional profiles without changing data.
 - Phase 14F.2 permits authenticated Staff to `GET` Team list/detail through a safe professional projection. Staff responses omit account/security state, optimistic-lock versions, and patient appointment detail. Team create/update/status actions remain Admin-only. Doctor and unauthenticated Team access remain denied.
 
 ## Patient Directory Dates (Phase 14F.2)
@@ -101,7 +101,7 @@ This document summarizes current accepted backend decisions for human developers
 - Admin sees full clinic settings.
 - Staff and Doctor see safe clinic settings only.
 - Safe fields include clinic name, timezone, appointment durations, capacity, and currencies.
-- Internal or technical fields such as `ai_mode` and `ai_service_url` are Admin-only.
+- `ai_mode` is Admin-only. `AI_SERVICE_URL` and `AI_SERVICE_TOKEN` are the sole runtime endpoint/secret source and remain environment-owned; no database or frontend setting can override them.
 
 ## AI Mode
 
@@ -118,7 +118,36 @@ This document summarizes current accepted backend decisions for human developers
 - Handoffs are immutable financial history after Visit completion. No role has a current API operation to create, patch, or cancel a Handoff directly; historical manual/cancelled records remain readable.
 - `Invoice` is one immutable completed payment receipt linked to a Handoff. Patient, currency, treatment, Visit, and Appointment derive through the Handoff and are never independently writable.
 - Invoice issue is Staff-only, locks the Handoff, rejects non-positive amounts and overpayment, inherits context, creates the receipt number, recomputes Handoff status, and returns the Invoice plus refreshed Handoff.
+- Staff may optionally record the actual payment datetime. It is interpreted as
+  an absolute instant and validated in the configured clinic IANA timezone: it
+  cannot precede Handoff creation or, for Visit-completion bills, Visit
+  completion. A maximum five-minute positive clock skew is accepted; later
+  future timestamps are rejected rather than normalized. Offset-less input is
+  interpreted in clinic time, while chronology comparisons normalize to UTC so
+  repeated DST hours cannot invert absolute ordering. Omitted values use
+  server-authoritative issue time.
 - Standalone Invoice creation and `/invoices/{id}/payments/` are not part of the current runtime architecture. Legacy Payment rows were migrated into receipt Invoices, and the Payment model was removed.
+
+## Dashboard Analytics Semantics
+
+- Doctor utilization is booked clinical appointment interval minutes divided
+  by effective available interval minutes for the analysis window. Effective
+  availability unions recurring active shifts and allowed available overrides
+  on clinic-open weekdays, then subtracts the union of overlapping unavailable
+  exceptions and clips all intervals to the window. Cancelled and
+  `NEEDS_RESCHEDULE` appointments do not count. `NO_SHOW` does count because it
+  consumed a reserved clinical slot. Overlapping legacy appointments are
+  interval-unioned rather than double-counted.
+- Historical utilization accuracy is `CURRENT_TEMPLATE_APPROXIMATION` because
+  Pearlix stores the current recurring WorkingShift template, not
+  effective-dated shift history. Closure, leave, override, clipping, and
+  interval arithmetic are exact for current stored inputs; historical schedule
+  reconstruction after a shift change is not.
+- Appointment problem rate is (`CANCELLED` + `NO_SHOW`) divided by scheduled
+  appointments whose start has reached the analysis as-of time, excluding
+  `NEEDS_RESCHEDULE`. The current clinic week is clipped at clinic-now,
+  completed historical weeks use their full interval, and a zero denominator
+  returns `0.0`.
 
 ## Doctor Leave and Reschedule
 
@@ -129,7 +158,19 @@ This document summarizes current accepted backend decisions for human developers
 - Add appointment status `NEEDS_RESCHEDULE`.
 - Rescheduling validates working hours, unavailable exceptions, doctor conflict, and capacity.
 - Leave is cancelled/voided, not hard-deleted.
-- Cancelling doctor leave restores only appointments still `NEEDS_RESCHEDULE` from that leave when the original slot is still valid.
+- Creating, editing, moving, changing, or cancelling Doctor leave reconciles
+  both newly affected appointments and appointments formerly sourced to that
+  exception. Restoration occurs only when the prior status is restorable and
+  the slot passes every current clinic, shift, exception, conflict, capacity,
+  duration, and time rule.
+- Creating, expanding, shrinking, moving, retargeting, or cancelling an
+  `AVAILABLE_OVERRIDE` performs the same bidirectional reconciliation for
+  schedule-sourced appointments; clinic closure and unavailable leave retain
+  precedence.
+- Active reschedule provenance is explicit: `LEAVE`,
+  `WORKING_SCHEDULE_CHANGE`, `CLINIC_WEEKLY_CLOSURE`, or
+  `SCHEDULING_RULE_CONFLICT`. A full schedule replacement uses the schedule
+  cause without falsely naming one arbitrary shift.
 - Already-rescheduled appointments are not moved back.
 - Cancelled leave no longer blocks scheduling.
 - Staff leave is visibility-only and cancellation does not affect appointments.
@@ -144,6 +185,21 @@ This document summarizes current accepted backend decisions for human developers
 - Doctor schedule reductions, moves, replacements, or deactivations first return `SHIFT_CHANGE_REQUIRES_CONFIRMATION` when future appointments are invalidated. Confirmation marks only affected future `UPCOMING` and `CHECKED_IN` appointments as `NEEDS_RESCHEDULE` with a `SHIFT_CHANGE` source.
 - Staff shifts never affect appointment availability. Appointment availability uses active Doctor `WorkingShift` records and keeps `GET /api/doctors/{id}/working-hours/` as a read-compatible Doctor schedule route.
 - Default shifts, working shifts, and availability exception update/cancel actions use `version`; missing versions return `VERSION_REQUIRED`, stale versions return `VERSION_CONFLICT`.
+- Appointment PATCH also requires `version`; all appointment state transitions,
+  leave/closure/schedule reconciliation, Visit start, and Visit completion lock
+  and reload the authoritative Appointment row and advance its version.
+- Cross-domain mutation lock order is: `ClinicSettings` (when scheduling policy
+  is involved), sorted Patient rows (when a patient relation is involved),
+  sorted User rows, sorted scheduling-definition rows, sorted Appointment rows,
+  Visit, then Billing rows. Operations omit irrelevant layers but do not reverse
+  this order. Stable User locks serialize first-shift, leave-target, and copied
+  schedule mutations even when no child row exists yet.
+- Clinic timezone changes use the operating-week confirmation transaction and
+  re-evaluate future operational and schedule-sourced appointments under the
+  proposed IANA timezone before commit.
+- Django admin exposes Patient, scheduling, Visit, Handoff, and Invoice records
+  for diagnosis only. All mutations use the versioned/audited domain APIs and
+  services rather than ModelAdmin save/delete paths.
 
 ## External X-ray Attach
 

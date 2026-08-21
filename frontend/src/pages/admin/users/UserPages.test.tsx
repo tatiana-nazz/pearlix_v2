@@ -77,14 +77,16 @@ describe("Users & Access pages", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("keeps list search, role, and login filters and opens the exact whole row", async () => {
-    vi.spyOn(usersApi, "list").mockResolvedValue({ count: 2, next: null, previous: null, results: [baseAccount, doctorAccount] });
+    vi.spyOn(usersApi, "list").mockImplementation(async (query) => query?.search
+      ? { count: 1, next: null, previous: null, results: [doctorAccount] }
+      : { count: 2, next: null, previous: null, results: [baseAccount, doctorAccount] });
     renderList();
     expect(await screen.findByText("Dr Noor")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Search"), { target: { value: "Noor" } });
     expect(screen.queryByText("Amina Admin")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Role"), { target: { value: "DOCTOR" } });
     fireEvent.change(screen.getByLabelText("Login status"), { target: { value: "ACTIVE" } });
-    fireEvent.click(screen.getByRole("row", { name: /Dr Noor/ }));
+    fireEvent.click(await screen.findByRole("row", { name: /Dr Noor/ }));
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/admin/users/7"));
   });
 
@@ -105,6 +107,7 @@ describe("Users & Access pages", () => {
     const preview = vi.spyOn(teamApi, "previewRoleTransition");
     renderDetail(doctorAccount);
     expect(await screen.findByRole("heading", { name: "Dr Noor" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to Users & Access" })).toHaveAttribute("href", "/admin/users");
     expect(screen.getByText("noor@example.test").closest("p")).toHaveAttribute("dir", "ltr");
     expect(screen.getAllByLabelText("Status: Active").length).toBeGreaterThan(0);
     const access = screen.getByRole("heading", { name: "Effective Access" }).closest("section")!;

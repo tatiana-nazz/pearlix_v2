@@ -63,7 +63,7 @@ class ExternalXrayCase(TimeStampedModel):
         DISCARDED = "DISCARDED", "Discarded"
 
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="external_xray_cases")
-    original_file = models.FileField(upload_to=external_xray_upload_path)
+    original_file = models.FileField(upload_to=external_xray_upload_path, blank=True)
     stored_file_name = models.CharField(max_length=255)
     original_file_name = models.CharField(max_length=255)
     content_type = models.CharField(max_length=100)
@@ -94,6 +94,12 @@ class ExternalXrayCase(TimeStampedModel):
     )
     discarded_at = models.DateTimeField(null=True, blank=True)
     attached_at = models.DateTimeField(null=True, blank=True)
+    purge_after = models.DateTimeField(null=True, blank=True)
+    purge_attempts = models.PositiveIntegerField(default=0)
+    purge_last_error = models.CharField(max_length=255, blank=True)
+    purge_last_attempt_at = models.DateTimeField(null=True, blank=True)
+    purge_next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    artifacts_purged_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         indexes = [
@@ -118,3 +124,30 @@ class ExternalXrayCase(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.title or self.original_file_name
+
+
+class XrayStorageState(models.Model):
+    """Stable singleton row used to serialize cumulative storage admission."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return "X-ray storage admission state"
+
+
+class ImagingDeletionTask(TimeStampedModel):
+    storage_name = models.CharField(max_length=1024, unique=True)
+    size_bytes = models.PositiveBigIntegerField(default=0)
+    uploader_id = models.PositiveBigIntegerField(null=True, blank=True, db_index=True)
+    patient_id = models.PositiveBigIntegerField(null=True, blank=True, db_index=True)
+    attempts = models.PositiveIntegerField(default=0)
+    last_error = models.CharField(max_length=255, blank=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self) -> str:
+        return self.storage_name

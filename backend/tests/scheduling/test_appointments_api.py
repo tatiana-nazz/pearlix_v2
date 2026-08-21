@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 from django.utils import timezone
 
@@ -25,6 +27,46 @@ def appointment_payload(patient, doctor, **overrides):
 
 def add_working_hour(doctor, weekday=0, start="09:00", end="17:00"):
     return WorkingShift.objects.create(employee=doctor, name="Test shift", weekday=weekday, start_time=start, end_time=end)
+
+
+@pytest.mark.django_db
+def test_naive_calendar_window_uses_clinic_timezone_without_runtime_warning(
+    admin_client,
+    appointment_factory,
+):
+    ClinicSettings.objects.update_or_create(
+        pk=1,
+        defaults={"timezone": "Asia/Damascus", "weekly_closed_days": [4]},
+    )
+    included = appointment_factory(
+        start_datetime="2026-08-20T00:30:00+03:00",
+        end_datetime="2026-08-20T01:00:00+03:00",
+    )
+    excluded = appointment_factory(
+        start_datetime="2026-08-21T00:00:00+03:00",
+        end_datetime="2026-08-21T00:30:00+03:00",
+    )
+
+    with warnings.catch_warnings(record=True) as captured:
+        warnings.simplefilter("always")
+        response = admin_client.get(
+            "/api/appointments/",
+            {
+                "start_from": "2026-08-20T00:00:00",
+                "start_to": "2026-08-21T00:00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    result_ids = {row["id"] for row in response.data["results"]}
+    assert included.id in result_ids
+    assert excluded.id not in result_ids
+    assert not [
+        warning
+        for warning in captured
+        if issubclass(warning.category, RuntimeWarning)
+        and "received a naive datetime" in str(warning.message)
+    ]
 
 
 @pytest.mark.django_db
@@ -82,7 +124,7 @@ def test_staff_can_create_read_update_and_transition_appointment(staff_client, s
 
     update_response = staff_client.patch(
         f"/api/appointments/{appointment.id}/",
-        {"reason": "Updated reason"},
+        {"reason": "Updated reason", "version": appointment.version},
         format="json",
     )
     assert update_response.status_code == 200
@@ -294,8 +336,8 @@ def test_staff_update_revalidates_rules_and_rejects_direct_status_change(staff_c
     appointment_factory(doctor=doctor_user, start_datetime="2026-07-20T11:00:00+03:00", end_datetime="2026-07-20T11:30:00+03:00")
 
     status_response = staff_client.patch(f"/api/appointments/{appointment.id}/", {"status": "CANCELLED"}, format="json")
-    conflict_response = staff_client.patch(f"/api/appointments/{appointment.id}/", {"start_datetime": "2026-07-20T11:00:00+03:00"}, format="json")
-    hours_response = staff_client.patch(f"/api/appointments/{appointment.id}/", {"start_datetime": "2026-07-20T18:00:00+03:00"}, format="json")
+    conflict_response = staff_client.patch(f"/api/appointments/{appointment.id}/", {"start_datetime": "2026-07-20T11:00:00+03:00", "version": appointment.version}, format="json")
+    hours_response = staff_client.patch(f"/api/appointments/{appointment.id}/", {"start_datetime": "2026-07-20T18:00:00+03:00", "version": appointment.version}, format="json")
 
     AvailabilityException.objects.create(
         doctor=doctor_user,
@@ -303,7 +345,7 @@ def test_staff_update_revalidates_rules_and_rejects_direct_status_change(staff_c
         end_datetime="2026-07-20T13:00:00+03:00",
         type=AvailabilityException.Type.UNAVAILABLE,
     )
-    unavailable_response = staff_client.patch(f"/api/appointments/{appointment.id}/", {"start_datetime": "2026-07-20T12:00:00+03:00"}, format="json")
+    unavailable_response = staff_client.patch(f"/api/appointments/{appointment.id}/", {"start_datetime": "2026-07-20T12:00:00+03:00", "version": appointment.version}, format="json")
 
     assert status_response.status_code == 400
     assert conflict_response.status_code == 409
@@ -325,8 +367,8 @@ def test_update_revalidates_capacity_and_locked_statuses_are_not_editable(staff_
     appointment_factory(doctor=other_doctor_user, start_datetime="2026-07-20T11:00:00+03:00", end_datetime="2026-07-20T11:30:00+03:00")
     locked = appointment_factory(doctor=doctor_user, start_datetime="2026-07-20T12:00:00+03:00", end_datetime="2026-07-20T12:30:00+03:00", status=Appointment.Status.CANCELLED)
 
-    capacity_response = staff_client.patch(f"/api/appointments/{appointment.id}/", {"start_datetime": "2026-07-20T11:00:00+03:00"}, format="json")
-    locked_response = staff_client.patch(f"/api/appointments/{locked.id}/", {"reason": "No"}, format="json")
+    capacity_response = staff_client.patch(f"/api/appointments/{appointment.id}/", {"start_datetime": "2026-07-20T11:00:00+03:00", "version": appointment.version}, format="json")
+    locked_response = staff_client.patch(f"/api/appointments/{locked.id}/", {"reason": "No", "version": locked.version}, format="json")
 
     assert capacity_response.status_code == 409
     assert capacity_response.data["code"] == "CAPACITY_FULL"
@@ -381,7 +423,7 @@ def test_staff_can_reschedule_needs_reschedule_appointment_to_valid_slot(
 
     response = staff_client.patch(
         f"/api/appointments/{appointment.id}/",
-        {"start_datetime": "2026-07-21T09:00:00+03:00", "duration_minutes": 30},
+        {"start_datetime": "2026-07-21T09:00:00+03:00", "duration_minutes": 30, "version": appointment.version},
         format="json",
     )
 
@@ -417,7 +459,7 @@ def test_needs_reschedule_reschedule_validates_slot_rules(
 
     conflict_response = staff_client.patch(
         f"/api/appointments/{target.id}/",
-        {"start_datetime": "2026-07-21T09:00:00+03:00"},
+        {"start_datetime": "2026-07-21T09:00:00+03:00", "version": target.version},
         format="json",
     )
     unavailable = AvailabilityException.objects.create(
@@ -428,17 +470,17 @@ def test_needs_reschedule_reschedule_validates_slot_rules(
     )
     unavailable_response = staff_client.patch(
         f"/api/appointments/{target.id}/",
-        {"start_datetime": "2026-07-21T09:30:00+03:00"},
+        {"start_datetime": "2026-07-21T09:30:00+03:00", "version": target.version},
         format="json",
     )
     hours_response = staff_client.patch(
         f"/api/appointments/{target.id}/",
-        {"start_datetime": "2026-07-21T12:00:00+03:00"},
+        {"start_datetime": "2026-07-21T12:00:00+03:00", "version": target.version},
         format="json",
     )
     past_response = staff_client.patch(
         f"/api/appointments/{target.id}/",
-        {"start_datetime": "2020-01-01T09:00:00+03:00"},
+        {"start_datetime": "2020-01-01T09:00:00+03:00", "version": target.version},
         format="json",
     )
 
@@ -482,7 +524,7 @@ def test_needs_reschedule_reschedule_rejects_capacity_and_roles(
 
     capacity_response = staff_client.patch(
         f"/api/appointments/{target.id}/",
-        {"start_datetime": "2026-07-21T10:00:00+03:00"},
+        {"start_datetime": "2026-07-21T10:00:00+03:00", "version": target.version},
         format="json",
     )
     admin_response = admin_client.patch(f"/api/appointments/{target.id}/", {"start_datetime": "2026-07-21T09:00:00+03:00"}, format="json")

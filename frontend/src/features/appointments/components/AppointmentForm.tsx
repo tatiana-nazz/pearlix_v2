@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { AppointmentDetail, AppointmentListItem, CreateAppointmentPayload, UpdateAppointmentPayload } from "../../../types/appointments";
 import type { DoctorListItem } from "../../../types/schedule";
@@ -17,20 +17,29 @@ import {
   type AppointmentFormValues,
 } from "../utils/appointmentFormMapping";
 
-interface AppointmentFormProps {
-  mode: "create" | "edit" | "reschedule";
+interface AppointmentFormBaseProps {
   doctors: DoctorListItem[];
-  appointment?: AppointmentDetail | AppointmentListItem | null;
   initialDate?: string;
   initialDoctorId?: number;
   isSubmitting?: boolean;
   error?: unknown;
+  clinicTimezone?: string;
   onCancel?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
   onSubmit: (payload: CreateAppointmentPayload | UpdateAppointmentPayload) => void | Promise<void>;
 }
 
+type AppointmentFormProps = AppointmentFormBaseProps &
+  (
+    | { mode: "create"; appointment?: null }
+    | {
+        mode: "edit" | "reschedule";
+        appointment: AppointmentDetail | AppointmentListItem;
+      }
+  );
+
 function initialValues(props: AppointmentFormProps): AppointmentFormValues {
-  const fromAppointment = appointmentToFormValues(props.appointment);
+  const fromAppointment = appointmentToFormValues(props.appointment, props.clinicTimezone);
   if (props.appointment) return fromAppointment;
   return {
     ...defaultAppointmentFormValues,
@@ -46,11 +55,17 @@ export function AppointmentForm(props: AppointmentFormProps) {
   const backendErrors = useMemo(() => apiFieldErrors(props.error), [props.error]);
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = appointmentCopy(language);
+  const initialSnapshot = useRef(JSON.stringify(initialValues(props)));
 
   useEffect(() => {
     setValues(initialValues(props));
     setSelectedPatient(props.appointment?.patient ?? null);
-  }, [props.appointment, props.initialDate, props.initialDoctorId]);
+    initialSnapshot.current = JSON.stringify(initialValues(props));
+  }, [props.appointment, props.initialDate, props.initialDoctorId, props.clinicTimezone]);
+
+  useEffect(() => {
+    props.onDirtyChange?.(JSON.stringify(values) !== initialSnapshot.current);
+  }, [props.onDirtyChange, values]);
 
   function setField(field: keyof AppointmentFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -62,7 +77,10 @@ export function AppointmentForm(props: AppointmentFormProps) {
     const nextErrors = validateAppointmentForm(values);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    const payload = props.mode === "create" ? formValuesToCreatePayload(values) : formValuesToUpdatePayload(values);
+    const payload =
+      props.mode === "create"
+        ? formValuesToCreatePayload(values)
+        : formValuesToUpdatePayload(values, props.appointment.version);
     await props.onSubmit(payload);
   }
 

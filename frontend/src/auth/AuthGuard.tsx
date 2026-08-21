@@ -5,7 +5,7 @@ import { useAuthStore } from "./authStore";
 
 export function AuthGuard() {
   const location = useLocation();
-  const { accessToken, authStatus, isAuthenticated, loadMe } = useAuthStore();
+  const { accessToken, authStatus, isAuthenticated, restorationError, loadMe } = useAuthStore();
 
   useEffect(() => {
     if (accessToken && authStatus === "unknown") {
@@ -15,6 +15,13 @@ export function AuthGuard() {
 
   if (authStatus === "unknown" && accessToken) {
     return <div className="screen-center">Loading workspace...</div>;
+  }
+
+  if (authStatus === "restoration_error" && accessToken) {
+    return <div className="screen-center" role="alert">
+      <p>{restorationError || "The session could not be restored temporarily."}</p>
+      <button className="button primary" type="button" onClick={() => void loadMe()}>Retry session restoration</button>
+    </div>;
   }
 
   if (!isAuthenticated) {

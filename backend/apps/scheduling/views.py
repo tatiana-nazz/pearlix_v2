@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +13,7 @@ from rest_framework.response import Response
 
 from apps.audit.services import log_activity
 from apps.common.errors import error_response
+from apps.patients.selectors import get_patients_for_user
 from apps.scheduling.appointment_services import (
     AppointmentRuleError,
     cancel_appointment,
@@ -49,6 +50,19 @@ User = get_user_model()
 
 def _rule_error(exc): return exc.to_response()
 def _employee_or_404(pk): return get_object_or_404(User, id=pk, role__in=[User.Role.DOCTOR, User.Role.STAFF])
+def _confirm_appointment_impact(request): return serializers.BooleanField().run_validation(request.data.get("confirm_appointment_impact", False))
+def _submitted_version(request):
+    value = request.data.get("version")
+    return None if value is None else serializers.IntegerField(min_value=1).run_validation(value)
+
+
+def _clinic_datetime_filters(params, *names):
+    raw_values = {name: params.get(name) for name in names if params.get(name)}
+    if not raw_values:
+        return {}
+    clinic_timezone = ZoneInfo(get_clinic_settings().timezone)
+    field = serializers.DateTimeField(default_timezone=clinic_timezone)
+    return {name: field.run_validation(value) for name, value in raw_values.items()}
 
 
 @api_view(["GET"])
@@ -104,7 +118,7 @@ class ClinicDefaultShiftViewSet(viewsets.ModelViewSet):
     def deactivate(self, request, pk=None): return self._set_active(request, False, "clinic_default_shift_deactivated")
     def _set_active(self, request, active, audit_action):
         instance = self.get_object()
-        try: instance = set_default_shift_active(instance=instance, version=request.data.get("version"), is_active=active, user=request.user)
+        try: instance = set_default_shift_active(instance=instance, version=_submitted_version(request), is_active=active, user=request.user)
         except AppointmentRuleError as exc: return _rule_error(exc)
         log_activity(request=request, action=audit_action, entity_type="clinic_default_shift", entity_id=instance.id, metadata={"weekday": instance.weekday})
         return Response(self.get_serializer(instance).data)
@@ -135,7 +149,7 @@ class WorkingShiftViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object(); serializer = self.get_serializer(instance, data=request.data, partial=True); serializer.is_valid(raise_exception=True)
-        try: instance, impacted = update_working_shift(instance=instance, serializer=serializer, user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
+        try: instance, impacted = update_working_shift(instance=instance, serializer=serializer, user=request.user, confirm_appointment_impact=_confirm_appointment_impact(request), request=request)
         except AppointmentRuleError as exc: return _rule_error(exc)
         log_activity(request=request, action="working_shift_updated", entity_type="working_shift", entity_id=instance.id, metadata={"employee_id": instance.employee_id, "weekday": instance.weekday, "impacted_appointments_count": impacted})
         return Response({**self.get_serializer(instance).data, "impacted_appointments_count": impacted})
@@ -146,7 +160,7 @@ class WorkingShiftViewSet(viewsets.ModelViewSet):
     def deactivate(self, request, pk=None): return self._set_active(request, False, "working_shift_deactivated")
     def _set_active(self, request, active, audit_action):
         instance = self.get_object()
-        try: instance, impacted = set_working_shift_active(instance=instance, version=request.data.get("version"), is_active=active, user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
+        try: instance, impacted = set_working_shift_active(instance=instance, version=_submitted_version(request), is_active=active, user=request.user, confirm_appointment_impact=_confirm_appointment_impact(request), request=request)
         except AppointmentRuleError as exc: return _rule_error(exc)
         log_activity(request=request, action=audit_action, entity_type="working_shift", entity_id=instance.id, metadata={"employee_id": instance.employee_id, "impacted_appointments_count": impacted})
         return Response({**self.get_serializer(instance).data, "impacted_appointments_count": impacted})
@@ -154,7 +168,7 @@ class WorkingShiftViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="apply-default")
     def apply_default(self, request):
         employee = _employee_or_404(request.data.get("employee_id"))
-        try: result = apply_default_schedule(employee=employee, mode=request.data.get("mode"), user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
+        try: result = apply_default_schedule(employee=employee, mode=request.data.get("mode"), user=request.user, confirm_appointment_impact=_confirm_appointment_impact(request), request=request)
         except AppointmentRuleError as exc: return _rule_error(exc)
         log_activity(request=request, action="default_schedule_applied", entity_type="user", entity_id=employee.id, metadata={"employee_id": employee.id, "mode": request.data.get("mode"), **result})
         return Response({"employee": {"id": employee.id, "full_name": employee.full_name, "role": employee.role}, "mode": request.data.get("mode"), **result, "working_shifts": self.get_serializer(WorkingShift.objects.filter(employee=employee), many=True).data})
@@ -162,7 +176,7 @@ class WorkingShiftViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="copy-schedule")
     def copy_schedule(self, request):
         source = _employee_or_404(request.data.get("source_employee_id")); target = _employee_or_404(request.data.get("target_employee_id"))
-        try: result = copy_employee_schedule(source=source, target=target, mode=request.data.get("mode"), user=request.user, confirm_appointment_impact=bool(request.data.get("confirm_appointment_impact")), request=request)
+        try: result = copy_employee_schedule(source=source, target=target, mode=request.data.get("mode"), user=request.user, confirm_appointment_impact=_confirm_appointment_impact(request), request=request)
         except AppointmentRuleError as exc: return _rule_error(exc)
         log_activity(request=request, action="employee_schedule_copied", entity_type="user", entity_id=target.id, metadata={"source_employee_id": source.id, "target_employee_id": target.id, "mode": request.data.get("mode"), **result})
         return Response({"employee": {"id": target.id, "full_name": target.full_name, "role": target.role}, "mode": request.data.get("mode"), **result, "working_shifts": self.get_serializer(WorkingShift.objects.filter(employee=target), many=True).data})
@@ -177,12 +191,15 @@ class AvailabilityExceptionViewSet(viewsets.ModelViewSet):
             elif user.role == "STAFF": query = query.filter(Q(doctor__isnull=False) | Q(staff=user))
         for field in ("doctor_id", "staff_id", "type"):
             if self.request.query_params.get(field): query = query.filter(**{field: self.request.query_params[field]})
-        if self.request.query_params.get("start_from"): query = query.filter(start_datetime__gte=self.request.query_params["start_from"])
-        if self.request.query_params.get("end_to"): query = query.filter(end_datetime__lte=self.request.query_params["end_to"])
+        datetime_filters = _clinic_datetime_filters(self.request.query_params, "start_from", "end_to")
+        if datetime_filters.get("start_from"): query = query.filter(start_datetime__gte=datetime_filters["start_from"])
+        if datetime_filters.get("end_to"): query = query.filter(end_datetime__lte=datetime_filters["end_to"])
         if self.request.query_params.get("is_cancelled") in {"true", "false"}: query = query.filter(is_cancelled=self.request.query_params["is_cancelled"] == "true")
         return query
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data); serializer.is_valid(raise_exception=True); instance, marked = save_availability_exception(serializer=serializer, user=request.user, request=request)
+        serializer = self.get_serializer(data=request.data); serializer.is_valid(raise_exception=True)
+        try: instance, marked = save_availability_exception(serializer=serializer, user=request.user, request=request)
+        except AppointmentRuleError as exc: return _rule_error(exc)
         log_activity(request=request, action="availability_exception_created", entity_type="availability_exception", entity_id=instance.id, metadata={"doctor_id": instance.doctor_id, "staff_id": instance.staff_id, "marked_needs_reschedule_count": len(marked)})
         return Response({**self.get_serializer(instance).data, "marked_needs_reschedule_count": len(marked)}, status=status.HTTP_201_CREATED)
     def update(self, request, *args, **kwargs):
@@ -193,7 +210,7 @@ class AvailabilityExceptionViewSet(viewsets.ModelViewSet):
         return Response({**self.get_serializer(instance).data, "marked_needs_reschedule_count": len(marked)})
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
-        try: instance, restored, blocked = cancel_availability_exception(availability_exception=self.get_object(), user=request.user, version=request.data.get("version"), request=request)
+        try: instance, restored, blocked = cancel_availability_exception(availability_exception=self.get_object(), user=request.user, version=_submitted_version(request), request=request)
         except AppointmentRuleError as exc: return _rule_error(exc)
         log_activity(request=request, action="availability_exception_cancelled", entity_type="availability_exception", entity_id=instance.id, metadata={"restored_appointments_count": len(restored), "still_blocked_appointments_count": len(blocked)})
         return Response({**self.get_serializer(instance).data, "restored_appointments_count": len(restored), "still_blocked_appointments_count": len(blocked)})
@@ -217,12 +234,18 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     serializer_class = AppointmentDetailSerializer; permission_classes = [AppointmentPermission]; pagination_class = AppointmentPagination; http_method_names = ["get", "post", "patch", "head", "options"]
     def get_queryset(self):
         query = Appointment.objects.select_related("patient", "doctor", "created_by", "updated_by", "reschedule_source_exception", "reschedule_source_working_shift").all()
-        if self.request.user.is_authenticated and self.request.user.role == "DOCTOR": query = query.filter(doctor=self.request.user)
+        if self.request.user.is_authenticated and self.request.user.role == "DOCTOR":
+            query = query.filter(
+                doctor=self.request.user,
+                patient__in=get_patients_for_user(self.request.user),
+            )
         for field in ("doctor_id", "patient_id", "status"):
             if self.request.query_params.get(field): query = query.filter(**{field: self.request.query_params[field]})
         if self.request.query_params.get("date"): query = query.filter(start_datetime__date=self.request.query_params["date"])
-        if self.request.query_params.get("start_from"): query = query.filter(start_datetime__gte=self.request.query_params["start_from"])
-        if self.request.query_params.get("start_to"): query = query.filter(start_datetime__lte=self.request.query_params["start_to"])
+        datetime_filters = _clinic_datetime_filters(self.request.query_params, "start_from", "start_to")
+        if datetime_filters.get("start_from"): query = query.filter(start_datetime__gte=datetime_filters["start_from"])
+        # Calendar clients send the next period start, so bounded windows are [start, end).
+        if datetime_filters.get("start_to"): query = query.filter(start_datetime__lt=datetime_filters["start_to"])
         if self.request.query_params.get("search"):
             term = self.request.query_params["search"]
             query = query.filter(Q(patient__first_name__icontains=term) | Q(patient__last_name__icontains=term) | Q(patient__phone_number__icontains=term))
@@ -282,4 +305,4 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             slots = build_availability_slots(doctor=doctor, date_value=value, duration_minutes=minutes)
         except AppointmentRuleError as exc:
             return _rule_error(exc)
-        settings = get_clinic_settings(); return Response({"doctor_id": doctor.id, "date": value.isoformat(), "duration_minutes": minutes, "capacity_per_slot": settings.capacity_per_slot, "available_slots": slots})
+        settings = get_clinic_settings(); return Response({"doctor_id": doctor.id, "date": value.isoformat(), "duration_minutes": minutes, "capacity_per_slot": settings.capacity_per_slot, "clinic_closed": settings.is_weekday_closed(value.weekday()), "available_slots": slots})

@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 
 
@@ -33,6 +34,8 @@ if not settings.configured:
 from apps.ai_results.adapters.dentex import DentexConfig, DentexInferenceAdapter  # noqa: E402
 from apps.ai_results.model_contract import MAX_IMAGE_INPUT_BYTES, PIPELINE_VERSION  # noqa: E402
 from apps.ai_results.result_types import ImageInput  # noqa: E402
+from apps.xrays.image_validation import ImageValidationError, validate_image_upload  # noqa: E402
+from apps.xrays.request_limits import BoundedASGIRequestBodyMiddleware  # noqa: E402
 
 
 app = FastAPI(
@@ -41,6 +44,7 @@ app = FastAPI(
     redoc_url=None,
     openapi_url=None,
 )
+app.add_middleware(BoundedASGIRequestBodyMiddleware)
 _adapter = DentexInferenceAdapter(DentexConfig.from_settings())
 
 
@@ -90,10 +94,18 @@ async def analyze(
     content = await image.read(MAX_IMAGE_INPUT_BYTES + 1)
     if not content or len(content) > MAX_IMAGE_INPUT_BYTES:
         raise HTTPException(status_code=413, detail="Image must be between 1 byte and 10 MiB.")
+    extension = ".png" if content_type == "image/png" else ".jpg"
+    try:
+        validated = validate_image_upload(
+            SimpleUploadedFile(f"panoramic{extension}", content, content_type=content_type),
+            maximum_bytes=MAX_IMAGE_INPUT_BYTES,
+        )
+    except ImageValidationError as exc:
+        raise HTTPException(status_code=422, detail="The panoramic X-ray image is invalid.") from exc
 
     started = time.perf_counter()
     try:
-        result = _adapter.analyze(ImageInput(content=content, content_type=content_type))
+        result = _adapter.analyze(ImageInput(content=validated.content, content_type=validated.content_type))
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Locked DENTEX inference failed.") from exc
     if result.model_version != PIPELINE_VERSION:

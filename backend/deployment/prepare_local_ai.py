@@ -7,6 +7,11 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+try:
+    from deployment.archive_safety import extract_zip_safely
+except ModuleNotFoundError:  # direct `python deployment/prepare_local_ai.py`
+    from archive_safety import extract_zip_safely
+
 EXPECTED = {
     "weights/detector_yolo_fdi_seg_v1-3_best.pt": "29290c70b2a53e1485f90e79e78a30566be739b2366d545c8ac4db1c671b219b",
     "weights/classifier_exp1_epoch12.pt": "aa7e7d6c69de2c504d50e8813fddc6f0134613e22456ce2a6bbb1d6233d6861a",
@@ -60,7 +65,7 @@ def main() -> None:
             extracted = temp / "bundle"
             extracted.mkdir()
             with zipfile.ZipFile(source) as archive:
-                archive.extractall(extracted)
+                extract_zip_safely(archive, extracted)
             root = find_bundle_root(extracted)
         else:
             root = find_bundle_root(source)

@@ -1,8 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { clinicApi } from "../../api/endpoints/clinic";
 import type { AppointmentListItem, AppointmentViewMode } from "../../types/appointments";
 import { AppointmentsPage } from "./AppointmentsPage";
 
@@ -24,6 +26,7 @@ const item: AppointmentListItem = {
   duration_minutes: 30,
   reason: "Cleaning",
   status: "UPCOMING",
+  version: 1,
   reschedule_source_exception: null,
   reschedule_source_working_shift: null,
   reschedule_source_type: null,
@@ -40,13 +43,14 @@ function LocationProbe() {
 
 function renderPage(view: AppointmentViewMode, initialPath?: string) {
   const path = `/staff/appointments/${view}`;
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={[initialPath ?? `${path}?date=${view === "month" ? "2026-07-01" : "2026-07-13"}`]}>
+    <QueryClientProvider client={client}><MemoryRouter initialEntries={[initialPath ?? `${path}?date=${view === "month" ? "2026-07-01" : "2026-07-13"}`]}>
       <Routes>
         <Route path={path} element={<AppointmentsPage role="STAFF" view={view} />} />
         <Route path="*" element={<LocationProbe />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter></QueryClientProvider>,
   );
 }
 
@@ -61,7 +65,9 @@ describe("AppointmentsPage navigation", () => {
       error: null,
       refetch: vi.fn(),
     });
+    vi.spyOn(clinicApi, "getSettings").mockResolvedValue({ clinic_name: "Pearlix", address: "", phone: "", email: "", timezone: "UTC", capacity_per_slot: 1, default_appointment_duration_minutes: 30, allowed_durations_minutes: [30], default_currency: "SYP", supported_currencies: ["SYP"], default_language: "EN", weekly_closed_days: [6] });
   });
+  afterEach(() => vi.restoreAllMocks());
 
   it.each(["day", "week", "month", "list", "needs-reschedule"] as AppointmentViewMode[])("opens an exact appointment from the %s view", async (view) => {
     renderPage(view);
@@ -78,5 +84,27 @@ describe("AppointmentsPage navigation", () => {
 
     fireEvent.doubleClick(container.querySelector<HTMLElement>(selector)!);
     expect(screen.getByLabelText("location")).toHaveTextContent("/staff/appointments/day?doctor=9&status=UPCOMING&search=Maya&date=2026-07-14&page=1");
+  });
+
+  it("keeps a historical closed-weekday Day undecorated without hiding its rows", async () => {
+    mocks.useAppointments.mockReturnValue({
+      data: { count: 1, next: null, previous: null, results: [{ ...item, status: "COMPLETED", start_datetime: "2026-07-19T09:00:00Z" }], clinic_date: "2026-07-20", clinic_timezone: "UTC" },
+      isLoading: false, isError: false, isFetching: false, error: null, refetch: vi.fn(),
+    });
+    renderPage("day", "/staff/appointments/day?date=2026-07-19");
+
+    expect(screen.getByText("Maya Patient")).toBeInTheDocument();
+    await waitFor(() => expect(clinicApi.getSettings).toHaveBeenCalled());
+    expect(screen.queryByText("Clinic closed")).not.toBeInTheDocument();
+  });
+
+  it("labels a future configured closed Day", async () => {
+    mocks.useAppointments.mockReturnValue({
+      data: { count: 0, next: null, previous: null, results: [], clinic_date: "2026-07-20", clinic_timezone: "UTC" },
+      isLoading: false, isError: false, isFetching: false, error: null, refetch: vi.fn(),
+    });
+    renderPage("day", "/staff/appointments/day?date=2026-07-26");
+
+    expect(await screen.findByText("Clinic closed")).toHaveAttribute("role", "status");
   });
 });

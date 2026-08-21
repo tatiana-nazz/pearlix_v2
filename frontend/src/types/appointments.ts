@@ -20,9 +20,12 @@ export interface AppointmentList extends Timestamped {
   duration_minutes: number;
   reason: string;
   status: AppointmentStatus;
+  version: number;
   reschedule_source_exception: number | null;
   reschedule_source_working_shift: number | null;
-  reschedule_source_type: "LEAVE" | "SHIFT_CHANGE" | null;
+  reschedule_source_clinic_weekday?: number | null;
+  reschedule_source_kind?: "LEAVE" | "WORKING_SCHEDULE_CHANGE" | "CLINIC_WEEKLY_CLOSURE" | "SCHEDULING_RULE_CONFLICT" | null;
+  reschedule_source_type: "LEAVE" | "SHIFT_CHANGE" | "CLINIC_WEEKLY_CLOSURE" | "SCHEDULING_RULE_CONFLICT" | null;
   reschedule_source_label: string | null;
   reschedule_previous_status: AppointmentStatus | null;
 }
@@ -42,7 +45,7 @@ export interface CreateAppointmentPayload {
   notes?: string;
 }
 
-export type UpdateAppointmentPayload = Partial<CreateAppointmentPayload>;
+export type UpdateAppointmentPayload = Partial<CreateAppointmentPayload> & { version: number };
 export type AppointmentPayload = UpdateAppointmentPayload;
 export type AppointmentListItem = AppointmentList;
 export type AppointmentViewMode = "day" | "week" | "month" | "list" | "needs-reschedule";
@@ -85,5 +88,6 @@ export interface AppointmentAvailability {
   date: string;
   duration_minutes: number;
   capacity_per_slot: number;
+  clinic_closed: boolean;
   available_slots: AvailabilitySlot[];
 }

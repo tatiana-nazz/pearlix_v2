@@ -51,7 +51,10 @@ export function AiResultPanel({ result, isLoading, error, onRetry, showDisclaime
   if (!result) return <Card><div className="active-xray-ai-panel xray-ai-empty"><h3><Sparkles size={20} aria-hidden="true" />{c.aiResult}</h3><p>{c.noResult}</p></div></Card>;
 
   const active = isAiAnalysisActive(result.status);
-  const hasRealScores = result.findings.some((finding) => (
+  // Review-band decisions remain persisted for auditability, but they are not
+  // presented as clinical-facing findings. Legacy rows without a decision stay visible.
+  const visibleFindings = result.findings.filter((finding) => finding.decision !== "review");
+  const hasRealScores = visibleFindings.some((finding) => (
     typeof finding.model_score === "number" && Number.isFinite(finding.model_score)
   ));
   const disclaimer = language === "AR" ? result.disclaimer_ar : result.disclaimer;
@@ -65,7 +68,7 @@ export function AiResultPanel({ result, isLoading, error, onRetry, showDisclaime
     {active ? <p className="xray-analysis-progress" role="status">{c.analyzing}</p> : null}
     {result.status === "FAILED" && result.error_message ? <p className="form-error" role="alert">{result.error_message}</p> : null}
     {result.status === "COMPLETED" ? <section className="xray-findings" aria-labelledby="xray-findings-title"><h4 id="xray-findings-title">{c.findings}</h4>
-      {result.findings.length ? <div className="xray-findings-scroll"><table><thead><tr><th>{c.fdi}</th><th>{c.finding}</th><th>{c.decision}</th><th>{hasRealScores ? c.modelScore : c.confidence}</th></tr></thead><tbody>{result.findings.map((finding, index) => <tr key={`${finding.fdi_tooth_id ?? "finding"}-${index}`}><td dir="ltr">{xrayText(finding.fdi_tooth_id)}</td><td>{xrayText(finding.disease_label)}</td><td>{finding.decision ? <StatusPill className="xray-finding-decision" status={finding.decision} label={decisionLabel(finding.decision, c)} /> : "—"}</td><td><FindingScore finding={finding} copy={c} /></td></tr>)}</tbody></table></div> : <p>—</p>}
+      {visibleFindings.length ? <div className="xray-findings-scroll"><table><thead><tr><th>{c.fdi}</th><th>{c.finding}</th><th>{c.decision}</th><th>{hasRealScores ? c.modelScore : c.confidence}</th></tr></thead><tbody>{visibleFindings.map((finding, index) => <tr key={`${finding.fdi_tooth_id ?? "finding"}-${index}`}><td dir="ltr">{xrayText(finding.fdi_tooth_id)}</td><td>{xrayText(finding.disease_label)}</td><td>{finding.decision ? <StatusPill className="xray-finding-decision" status={finding.decision} label={decisionLabel(finding.decision, c)} /> : "—"}</td><td><FindingScore finding={finding} copy={c} /></td></tr>)}</tbody></table></div> : <p>—</p>}
     </section> : null}
     {showDisclaimer ? <div className="ai-disclaimer" role="note"><strong>{c.researchOnly}</strong><span>{disclaimer || `${c.requiresInterpretation}. ${c.notDiagnosis}.`}</span><span>{c.modelScoresUncalibrated}.</span></div> : null}
   </div></Card>;

@@ -2,9 +2,11 @@ import type { Page, QueryParams } from "../../types/api";
 import type { AIResult } from "../../types/ai";
 import type { ExternalAttachPayload, ExternalXrayCase, XrayAttachment } from "../../types/xrays";
 import { api } from "../http";
+import { getAllPages } from "../pagination";
 
 export const xraysApi = {
   list: (query?: QueryParams) => api.get<Page<XrayAttachment>>("/xrays/", query),
+  listAll: (query?: QueryParams) => getAllPages((page) => api.get<Page<XrayAttachment>>("/xrays/", { ...(query ?? {}), page })),
   detail: (id: number) => api.get<XrayAttachment>(`/xrays/${id}/`),
   delete: (id: number) => api.delete<void>(`/xrays/${id}/`),
   file: (id: number) => api.getBlob(`/xrays/${id}/file/`),

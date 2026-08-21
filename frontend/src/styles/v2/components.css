@@ -293,6 +293,24 @@
   padding-block-end: 10px;
   border-block-end: 1px solid var(--v2-divider);
 }
+.appointment-calendar-column.clinic-closed,
+.appointment-month-cell.clinic-closed {
+  background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--v2-muted) 7%, var(--v2-surface)), color-mix(in srgb, var(--v2-muted) 7%, var(--v2-surface)) 8px, var(--v2-surface-subtle) 8px, var(--v2-surface-subtle) 16px);
+}
+.appointment-clinic-closed-label,
+.appointment-day-closed {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--v2-border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: color-mix(in srgb, var(--v2-muted) 8%, var(--v2-surface));
+  color: var(--v2-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.appointment-clinic-closed-label { margin-block-end: var(--v2-space-2); }
+.appointment-day-closed { margin: 0 0 var(--v2-space-3); }
 .appointment-calendar-item {
   --appointment-status: var(--v2-info);
   box-sizing: border-box;
@@ -744,8 +762,8 @@
 .protected-xray-label { display: none; }
 .protected-xray-toolbar-actions { display: flex; min-width: 0; flex-wrap: wrap; gap: 7px; }
 .protected-xray-toolbar-actions .v2-button { min-block-size: 36px; border-color: #3d5670; background: #14283d; color: #edf5ff; padding-inline: 10px; font-size: 12px; }
-.protected-xray-canvas { box-sizing: border-box; display: grid; min-block-size: 0; block-size: 100%; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); place-items: center; overflow: hidden; padding: 8px; background: #030a12; }
-.protected-xray-media { display: grid; inline-size: 100%; block-size: 100%; min-inline-size: 0; min-block-size: 0; place-items: center; overflow: hidden; transform-origin: center center; transition: transform 160ms ease; }
+.protected-xray-canvas { box-sizing: border-box; display: grid; min-block-size: 0; block-size: 100%; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); place-items: start; overflow: auto; overscroll-behavior: contain; padding: 8px; background: #030a12; }
+.protected-xray-media { display: grid; min-inline-size: 0; min-block-size: 0; place-items: center; overflow: visible; transform-origin: top left; transition: inline-size 160ms ease, block-size 160ms ease; }
 .protected-xray-media img { grid-area: 1 / 1; display: block; inline-size: 100%; block-size: 100%; min-inline-size: 0; min-block-size: 0; max-inline-size: 100%; max-block-size: 100%; border-radius: 8px; object-fit: contain; }
 .protected-xray-overlay { pointer-events: none; }
 .protected-xray-scale { grid-column: 2; grid-row: 1; justify-self: end; color: #9fb1c6; font-size: 11px; }

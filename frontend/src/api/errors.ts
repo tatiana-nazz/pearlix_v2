@@ -48,6 +48,7 @@ export function normalizeApiError(error: unknown): ApiError {
 
 export function toApiClientError(error: unknown): ApiClientError {
   if (error instanceof ApiClientError) return error;
+  if (axios.isAxiosError(error)) return new ApiClientError(normalizeApiError(error));
   if (error && typeof error === "object" && "code" in error && "message" in error && "status" in error) {
     const payload = error as Partial<ApiError>;
     return new ApiClientError({

@@ -623,7 +623,7 @@ p {
 
 .protected-xray-viewer { display: grid; gap: var(--space-2); margin: var(--space-5) 0; }
 .protected-xray-toolbar { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); color:var(--color-muted); font-size:var(--font-size-sm); font-weight:700; }
-.protected-xray-canvas { position:relative; display:grid; place-items:center; min-height:320px; overflow:hidden; border:1px solid var(--v2-border); border-radius:var(--v2-radius-card); padding:var(--space-4); background:#172534; }
+.protected-xray-canvas { position:relative; display:grid; place-items:start; min-height:320px; overflow:auto; overscroll-behavior:contain; border:1px solid var(--v2-border); border-radius:var(--v2-radius-card); padding:var(--space-4); background:#172534; }
 .protected-xray-canvas img { grid-area:1 / 1; display:block; width:100%; height:auto; max-width:100%; max-height:560px; border-radius:var(--radius); object-fit:contain; }
 .protected-xray-overlay { pointer-events:none; }
 .protected-xray-overlay-state { position:absolute; inset-block-end:var(--space-4); inset-inline-start:50%; transform:translateX(-50%); border-radius:999px; padding:6px 10px; background:rgba(23,37,52,.82); color:#fff; font-size:var(--font-size-xs); }
@@ -893,6 +893,7 @@ p {
 .schedule-list li.clickable-row:hover,
 .schedule-list li.clickable-row:focus-visible { background: #fbfdfe; outline: 3px solid var(--color-primary); }
 .schedule-list li div, .shift-card { display: grid; gap: var(--space-1); }
+.schedule-closed-note { color: var(--v2-warning); font-size: .78rem; }
 .schedule-list span { color: var(--color-muted); font-size: var(--font-size-sm); }
 .schedule-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0; }
 .weekly-board { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); gap: var(--space-3); overflow-x: auto; }
@@ -1119,6 +1120,8 @@ p {
 }
 
 .detail-grid div {
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: var(--space-3);
@@ -1138,7 +1141,10 @@ p {
 }
 
 .detail-grid dd {
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .medical-summary-grid {
@@ -1167,9 +1173,21 @@ p {
 
 .inline-back-link {
   width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   color: var(--color-primary);
   font-weight: 750;
   text-decoration: none;
+}
+
+.inline-back-link-arrow {
+  display: inline-block;
+  line-height: 1;
+}
+
+[dir="rtl"] .inline-back-link-arrow {
+  transform: scaleX(-1);
 }
 
 @media (max-width: 1439px) {
@@ -1883,6 +1901,44 @@ p {
 }
 .settings-options label { display: inline-flex; align-items: center; gap: 6px; }
 .settings-options input { width: auto; margin: 0; }
+.weekly-closed-days {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-control);
+  padding: 12px;
+}
+.weekly-closed-days legend {
+  padding-inline: 5px;
+  color: var(--v2-text);
+  font-size: .88rem;
+  font-weight: 800;
+}
+.weekly-closed-days > p { margin: 0; color: var(--v2-muted); font-size: .8rem; line-height: 1.55; }
+.weekly-closed-days-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.weekly-closed-days-options label {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-control);
+  padding: 8px 10px;
+  background: var(--v2-surface-subtle);
+  color: var(--v2-text);
+  cursor: pointer;
+}
+.weekly-closed-days-options label.selected {
+  border-color: var(--v2-primary);
+  background: var(--v2-primary-soft);
+  color: var(--v2-primary-strong);
+}
+.weekly-closed-days-options input { inline-size: 18px; block-size: 18px; margin: 0; accent-color: var(--v2-primary); }
+.weekly-closed-days-options input:focus-visible { outline: 3px solid var(--v2-focus); outline-offset: 2px; }
+.clinic-closure-impact { display: grid; gap: 10px; }
+.clinic-closure-impact ul { max-height: 220px; margin: 0; overflow: auto; }
 .clinic-settings-actions {
   position: sticky;
   bottom: 16px;
@@ -1910,6 +1966,7 @@ p {
   .team-filter-toolbar { align-items: stretch; flex-direction: column; }
   .settings-field-wide { grid-column: auto; }
   .clinic-settings-actions { align-items: stretch; flex-direction: column; }
+  .weekly-closed-days-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .profile-page-v3 {
@@ -1973,6 +2030,13 @@ p {
 .schedule-matrix thead th,.leave-exceptions-table thead th { color: var(--color-muted); font-size: 12px; text-transform: uppercase; }
 .schedule-matrix td span { display: block; white-space: nowrap; }
 .schedule-matrix .schedule-off { color: var(--color-muted); }
+.schedule-matrix .schedule-clinic-closed {
+  background: color-mix(in srgb, var(--v2-muted) 7%, var(--v2-surface));
+  color: var(--v2-muted);
+}
+.schedule-matrix .schedule-clinic-closed > strong { display: block; color: var(--v2-text); font-size: .78rem; }
+.schedule-matrix .schedule-stored-shift { margin-block-start: 4px; font-size: .72rem; opacity: .72; }
+.schedule-matrix .schedule-stored-shift > span { display: inline; }
 
 @media (max-width: 1279px) {
   .profile-page-v3-grid {
@@ -2043,7 +2107,8 @@ body {
 /* Stage 4 — compact Users & Access and Team management workspaces. */
 .user-management-page { display: grid; gap: 18px; }
 .user-management-header,.team-profile-header { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 20px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-surface); padding: 20px 24px; box-shadow: var(--shadow-card); }
-.user-management-header h2,.user-management-header p,.team-profile-header h2,.team-profile-header p { margin: 0; }
+.user-management-header > div,.team-profile-header > div { min-width: 0; max-width: 100%; }
+.user-management-header h2,.user-management-header p,.team-profile-header h2,.team-profile-header p { min-width: 0; max-width: 100%; margin: 0; overflow-wrap: anywhere; }
 .user-management-header h2,.team-profile-header h2 { font-size: clamp(1.45rem,2vw,1.9rem); }
 .user-management-header p,.team-profile-header p { margin-block-start: 3px; color: var(--color-muted); }
 .user-header-status,.team-profile-header-actions,.team-profile-header-actions > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 9px; }
@@ -2067,7 +2132,7 @@ body {
 .access-level.read_only,.access-level.own_records,.access-level.operational { background: color-mix(in srgb,var(--color-primary) 10%,var(--color-surface)); color: var(--color-primary); }
 .access-level.no_access { opacity: .72; }
 .security-login-summary,.detail-list { display: grid; gap: 0; margin: 0 0 16px; }
-.security-login-summary > div,.detail-list > div { display: grid; grid-template-columns: minmax(110px,.45fr) minmax(0,1fr); gap: 12px; border-block-start: 1px solid var(--color-divider); padding-block: 10px; }
+.security-login-summary > div,.detail-list > div { display: grid; min-width: 0; max-width: 100%; grid-template-columns: minmax(110px,.45fr) minmax(0,1fr); gap: 12px; border-block-start: 1px solid var(--color-divider); padding-block: 10px; }
 .security-login-summary dt,.detail-list dt { color: var(--color-muted); font-size: 12px; font-weight: 800; }
 .security-login-summary dd,.detail-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-weight: 700; }
 .security-actions,.dialog-actions,.role-review-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
@@ -2091,7 +2156,7 @@ body {
 .role-review-actions { justify-content: flex-end; }
 .account-metadata-card { display: flex; align-items: center; gap: 22px; padding-block: 14px; }
 .account-metadata-card h3 { flex: 0 0 auto; margin: 0; font-size: 14px; }
-.account-metadata-card dl { display: grid; flex: 1; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }.account-metadata-card dl > div { display: flex; align-items: baseline; gap: 8px; }.account-metadata-card dt { color: var(--color-muted); font-size: 11px; font-weight: 800; }.account-metadata-card dd { margin: 0; font-size: 12px; font-weight: 700; }
+.account-metadata-card dl { display: grid; min-width: 0; max-width: 100%; flex: 1; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }.account-metadata-card dl > div { display: flex; min-width: 0; max-width: 100%; align-items: baseline; gap: 8px; }.account-metadata-card dt { color: var(--color-muted); font-size: 11px; font-weight: 800; }.account-metadata-card dd { min-width: 0; max-width: 100%; margin: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 700; }
 
 .team-profile-header-actions { max-width: 62%; }.team-profile-header-actions > div { margin-inline-end: 3px; }
 .profile-save-success { margin: -6px 0 0; }
@@ -2443,6 +2508,8 @@ body {
 
 .identity-details div {
   display: grid;
+  min-width: 0;
+  max-width: 100%;
   gap: 3px;
 }
 
@@ -2453,6 +2520,8 @@ body {
 }
 
 .identity-details dd {
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--color-text);

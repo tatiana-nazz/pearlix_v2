@@ -146,6 +146,69 @@ def test_doctor_default_visit_list_is_own_but_detail_read_is_clinic_wide(
 
 
 @pytest.mark.django_db
+def test_archived_patient_visits_are_hidden_from_doctor_collections_and_guessed_ids(
+    admin_client,
+    staff_client,
+    doctor_client,
+    doctor_user,
+    patient_factory,
+    appointment_factory,
+    visit_factory,
+):
+    archived_patient = patient_factory(
+        full_name="Archived Clinical History",
+        phone="0900000599",
+        is_archived=True,
+    )
+    archived_visit = _visit_for(
+        visit_factory,
+        appointment_factory,
+        doctor_user,
+        status=Visit.Status.COMPLETED,
+        patient=archived_patient,
+    )
+    archived_active_visit = _visit_for(
+        visit_factory,
+        appointment_factory,
+        doctor_user,
+        patient=archived_patient,
+        start_datetime="2026-07-20T11:00:00+03:00",
+        end_datetime="2026-07-20T11:30:00+03:00",
+    )
+
+    default_collection = doctor_client.get("/api/visits/")
+    patient_filtered = doctor_client.get(f"/api/visits/?patient_id={archived_patient.id}")
+    active_visit = doctor_client.get("/api/visits/active/")
+    guessed_detail = doctor_client.get(f"/api/visits/{archived_visit.id}/")
+    guessed_mutation = doctor_client.patch(
+        f"/api/visits/{archived_visit.id}/clinical-notes/",
+        {"diagnosis": "Must not be reachable"},
+        format="json",
+    )
+    patient_history = doctor_client.get(f"/api/patients/{archived_patient.id}/visits/")
+
+    assert default_collection.status_code == 200
+    assert default_collection.data["count"] == 0
+    assert patient_filtered.status_code == 200
+    assert patient_filtered.data["count"] == 0
+    assert active_visit.status_code == 404
+    assert guessed_detail.status_code == 404
+    assert guessed_mutation.status_code == 404
+    assert patient_history.status_code == 404
+
+    for client in (admin_client, staff_client):
+        historical_list = client.get(f"/api/visits/?patient_id={archived_patient.id}")
+        historical_detail = client.get(f"/api/visits/{archived_visit.id}/")
+        assert historical_list.status_code == 200
+        assert {item["id"] for item in historical_list.data["results"]} == {
+            archived_visit.id,
+            archived_active_visit.id,
+        }
+        assert historical_detail.status_code == 200
+        assert historical_detail.data["id"] == archived_visit.id
+
+
+@pytest.mark.django_db
 def test_connected_doctor_can_read_another_doctors_visit_detail_for_same_patient(
     doctor_client,
     doctor_user,

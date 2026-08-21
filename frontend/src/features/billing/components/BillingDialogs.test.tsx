@@ -37,4 +37,20 @@ describe("RecordPaymentDialog", () => {
     expect(screen.getByRole("textbox", { name: "Payment amount" })).toHaveValue("75.00");
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it("sends manual payment datetime as clinic-local input for backend interpretation", () => {
+    const onSubmit = vi.fn();
+    render(<RecordPaymentDialog handoff={handoff} pending={false} onCancel={vi.fn()} onSubmit={onSubmit} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "Payment amount" }), { target: { value: "30.00" } });
+    fireEvent.change(screen.getByLabelText(/Payment date \(clinic time\)/), {
+      target: { value: "2026-07-15T05:00" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Record payment & issue invoice" }));
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      amount: "30.00",
+      issued_at: "2026-07-15T05:00",
+      notes: "",
+    });
+  });
 });

@@ -74,7 +74,13 @@ class AIResultSerializer(serializers.ModelSerializer):
     def get_overall_confidence_percent(self, obj):
         if obj.overall_confidence is None:
             return None
-        return round(obj.overall_confidence * 100)
+        try:
+            value = float(obj.overall_confidence)
+        except (TypeError, ValueError):
+            return None
+        if not 0 <= value <= 1:
+            value = min(1, max(0, value))
+        return round(value * 100)
 
     def get_overlay_available(self, obj):
         return bool(obj.overlay_file)

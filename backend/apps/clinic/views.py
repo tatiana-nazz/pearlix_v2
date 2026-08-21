@@ -2,10 +2,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from apps.audit.services import log_activity
 from apps.clinic.models import ClinicSettings
 from apps.clinic.serializers import ClinicSafeSettingsSerializer, ClinicSettingsSerializer
 from apps.common.permissions import IsAdminRole
+from apps.scheduling.appointment_services import AppointmentRuleError
+from apps.scheduling.clinic_week_services import update_clinic_settings
 
 
 class ClinicSettingsView(APIView):
@@ -24,12 +25,13 @@ class ClinicSettingsView(APIView):
         settings = ClinicSettings.get_solo()
         serializer = ClinicSettingsSerializer(settings, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        settings = serializer.save()
-        log_activity(
-            request=request,
-            action="clinic_settings_updated",
-            entity_type="clinic_settings",
-            entity_id=settings.id,
-            metadata={"updated_fields": sorted(request.data.keys())},
-        )
-        return Response(serializer.data)
+        try:
+            settings, impact = update_clinic_settings(
+                settings=settings,
+                validated_data=serializer.validated_data,
+                actor=request.user,
+                request=request,
+            )
+        except AppointmentRuleError as exc:
+            return exc.to_response()
+        return Response({**ClinicSettingsSerializer(settings).data, **impact})

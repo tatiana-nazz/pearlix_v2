@@ -33,7 +33,9 @@ export function aiRunErrorMessage(error: unknown, copy: XrayCopy): string | null
   const code = aiErrorCode(error);
   if (!code) return null;
   if (code === "AI_ANALYSIS_IN_PROGRESS") return copy.analysisAlreadyRunning;
-  if (code === "AI_SERVICE_NOT_CONFIGURED") return copy.aiServiceUnavailable;
+  if (code === "AI_SERVICE_NOT_CONFIGURED") return copy.aiNotConfigured;
+  if (code === "AI_CAPACITY_BUSY") return copy.aiCapacityBusy;
+  if (code === "AI_RATE_LIMITED") return copy.aiRateLimited;
   if (code === "AI_IMAGE_INVALID") return copy.aiImageInvalid;
   return copy.aiRequestFailed;
 }

@@ -44,12 +44,15 @@ Write-Host ""
 Write-Host "Pearlix local AI is starting on http://127.0.0.1:$Port"
 Write-Host "Keep this terminal open."
 Write-Host ""
-Write-Host "AI_SERVICE_TOKEN (keep private; use this exact value in Vercel):"
-Write-Host $serviceToken
+Write-Host "The AI bearer token is stored locally and is intentionally NOT printed."
+Write-Host "Token file: $tokenFile"
+Write-Host "To copy it without echoing it to the terminal, run in a trusted PowerShell window:"
+Write-Host ('  Get-Content -Raw "{0}" | Set-Clipboard' -f $tokenFile)
 Write-Host ""
-Write-Host "After /health is ready, open a SECOND PowerShell window and run:"
+Write-Host "For a short-lived external smoke test only, after /health is ready open a SECOND PowerShell window and run:"
 Write-Host "  cloudflared tunnel --url http://127.0.0.1:$Port"
-Write-Host "Then use the generated https://...trycloudflare.com URL as AI_SERVICE_URL in Vercel."
+Write-Host "Use the generated HTTPS URL as AI_SERVICE_URL and the copied token as AI_SERVICE_TOKEN."
+Write-Host "Rotate/delete the local token after any public-tunnel test."
 Write-Host ""
 
 & $python -m uvicorn local_ai_service:app --app-dir $PSScriptRoot --host 127.0.0.1 --port $Port

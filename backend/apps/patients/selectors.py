@@ -15,6 +15,11 @@ ARCHIVE_BLOCKING_APPOINTMENT_STATUSES = (
 
 
 def get_patients_for_user(user) -> QuerySet[Patient]:
+    """Return the canonical patient scope for the authenticated principal.
+
+    Archived records remain available to Admin and Staff for historical work,
+    while Doctor-facing projections must always intersect this queryset.
+    """
     queryset = Patient.objects.select_related("created_by", "updated_by")
     if not user or not user.is_authenticated:
         return queryset.none()
@@ -50,13 +55,15 @@ def annotate_patient_directory(queryset: QuerySet[Patient]) -> QuerySet[Patient]
 def get_doctor_related_patients(user) -> QuerySet[Patient]:
     if not user or not user.is_authenticated or user.role != "DOCTOR" or not user.is_active:
         return Patient.objects.none()
-    return Patient.objects.filter(Q(appointments__doctor=user) | Q(visits__doctor=user)).distinct()
+    return get_patients_for_user(user).filter(
+        Q(appointments__doctor=user) | Q(visits__doctor=user)
+    ).distinct()
 
 
 def get_doctor_upcoming_patients(user) -> QuerySet[Patient]:
     if not user or not user.is_authenticated or user.role != "DOCTOR" or not user.is_active:
         return Patient.objects.none()
-    return Patient.objects.filter(
+    return get_patients_for_user(user).filter(
         appointments__doctor=user,
         appointments__status__in=[Appointment.Status.UPCOMING, Appointment.Status.CHECKED_IN],
         appointments__start_datetime__gte=timezone.now(),

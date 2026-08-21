@@ -43,7 +43,7 @@ export function PatientVisitsSummary({ role, visits, isLoading, error, onRetry, 
               </div>
               <div className="row-actions">
                 <StatusPill status={visit.status} />
-                <Link className="button secondary compact-button" to={`/${role.toLowerCase()}/visits/${visit.id}`}>
+                <Link className="button secondary compact-button" to={`/${role.toLowerCase()}/visits/${visit.id}`} state={{ visitParent: "patient" }}>
                   Open Visit
                 </Link>
               </div>

@@ -13,6 +13,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
 from apps.ai_results.models import AIResult
@@ -24,6 +25,7 @@ from apps.billing.services import (
     issue_invoice,
 )
 from apps.clinic.models import ClinicSettings
+from apps.common.demo_safety import assert_demo_environment_safe
 from apps.patients.models import Patient
 from apps.scheduling.appointment_services import update_appointment
 from apps.scheduling.exception_services import mark_overlapping_appointments_needs_reschedule
@@ -44,7 +46,6 @@ from apps.xrays.services import (
 DEMO_TAG = "phase-14a-integrated-demo-story"
 EMAIL_DOMAIN = "pearlix-demo.local"
 PATIENT_ID_PREFIX = "DEMO14A-"
-DEFAULT_PASSWORD = "PearlixDemo123!"
 def _png_chunk(kind, payload):
     return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", binascii.crc32(kind + payload) & 0xFFFFFFFF)
 
@@ -125,14 +126,16 @@ class Command(BaseCommand):
     help = "Create the deterministic, development-only Phase 14A integrated clinic demo story."
 
     def add_arguments(self, parser):
-        parser.add_argument("--password", default=DEFAULT_PASSWORD, help="Local demo password (default: PearlixDemo123!).")
+        parser.add_argument("--password", default="", help="Local/test demo password; never printed.")
         parser.add_argument("--reset-demo", action="store_true", help="Delete only records explicitly tagged as this demo story before seeding.")
         parser.add_argument("--include-must-change-user", action="store_true", help="Compatibility flag; the QA password-change account is always included.")
         parser.add_argument("--reference-date", help="Deterministic local reference date in YYYY-MM-DD format.")
 
     def handle(self, *args, **options):
+        assert_demo_environment_safe()
         if not settings.DEBUG:
             raise CommandError("Refusing to seed the demo clinic story when DEBUG is false.")
+        password = options["password"] or get_random_string(22)
         reference_date = self._reference_date(options["reference_date"])
         if options["reset_demo"]:
             self._reset_demo()
@@ -141,11 +144,12 @@ class Command(BaseCommand):
             return
 
         with transaction.atomic():
-            accounts = self._create_accounts(options["password"])
+            accounts = self._create_accounts(password)
             self._configure_clinic(accounts["admin"])
             patients = self._create_patients(accounts["staff.one"], reference_date)
             self._create_schedules(accounts, reference_date)
             story = self._create_appointments_and_visits(accounts, patients, reference_date)
+            self._assert_appointments_use_configured_operating_week()
             story["imaging"] = self._create_imaging_story(accounts, patients, story)
             story["billing"] = self._create_billing_story(accounts, patients, story)
             self._log_story(accounts, patients, story)
@@ -158,7 +162,8 @@ class Command(BaseCommand):
         ))
         self.stdout.write("QA accounts (local development only):")
         for key in ("admin", "staff.one", "staff.two", "doctor.one", "doctor.two", "doctor.three", "doctor.four", "doctor.mustchange"):
-            self.stdout.write(f"- {accounts[key].email} / {options['password']}")
+            self.stdout.write(f"- {accounts[key].email}")
+        self.stdout.write("  Credential values are not printed.")
         self.stdout.write(f"  {accounts['doctor.mustchange'].email} requires a password change.")
         self.stdout.write(f"- {accounts['staff.inactive'].email} (inactive; sign-in intentionally blocked)")
 
@@ -205,7 +210,7 @@ class Command(BaseCommand):
         clinic.allowed_durations_minutes = [15, 30, 45, 60]
         clinic.capacity_per_slot = 3
         clinic.save()
-        log_activity(actor=admin, action="clinic_settings_updated", entity_type="clinic_settings", entity_id=clinic.id, metadata={"demo_story": DEMO_TAG, "timezone": clinic.timezone})
+        log_activity(actor=admin, action="clinic_settings_updated", entity_type="clinic_settings", entity_id=clinic.id, metadata={"demo_story": DEMO_TAG, "timezone": clinic.timezone, "weekly_closed_days": clinic.weekly_closed_days})
 
     def _create_patients(self, staff, reference_date):
         patients = []
@@ -248,6 +253,39 @@ class Command(BaseCommand):
     def _dt(self, day, hour, minute=0):
         return timezone.make_aware(datetime.combine(day, time(hour, minute)), timezone.get_current_timezone())
 
+    def _appointment_day(self, desired_day, requirements, *, direction=1):
+        """Find a clinic-open day where every requested doctor slot is stored and free."""
+        closed_weekdays = set(ClinicSettings.get_solo().weekly_closed_days)
+        for offset in range(28):
+            candidate = desired_day + timedelta(days=offset * direction)
+            if candidate.weekday() in closed_weekdays:
+                continue
+            valid = True
+            for doctor, hour, minute, duration in requirements:
+                start = self._dt(candidate, hour, minute)
+                end = start + timedelta(minutes=duration)
+                if not WorkingShift.objects.filter(
+                    employee=doctor,
+                    weekday=candidate.weekday(),
+                    start_time__lte=start.time(),
+                    end_time__gte=end.time(),
+                    is_active=True,
+                ).exists():
+                    valid = False
+                    break
+                if Appointment.objects.filter(
+                    doctor=doctor,
+                    start_datetime__lt=end,
+                    end_datetime__gt=start,
+                ).exclude(status=Appointment.Status.CANCELLED).exists():
+                    valid = False
+                    break
+            if valid:
+                return candidate
+        raise CommandError(
+            f"No clinic-open stored-shift day is available near {desired_day}."
+        )
+
     def _appointment(self, *, patient, doctor, start, duration, status, staff, reason):
         end = start + timedelta(minutes=duration)
         appointment = Appointment.objects.create(patient=patient, doctor=doctor, start_datetime=start, end_datetime=end, duration_minutes=duration, status=status, reason=reason, notes="Synthetic Phase 14A appointment.", created_by=staff, updated_by=staff)
@@ -265,19 +303,48 @@ class Command(BaseCommand):
             appointment.save(update_fields=[*timestamp_fields, "updated_at"])
         return appointment
 
+    def _assert_appointments_use_configured_operating_week(self):
+        clinic = ClinicSettings.get_solo()
+        clinic_timezone = ZoneInfo(clinic.timezone)
+        closed_weekdays = set(clinic.weekly_closed_days)
+        invalid_ids = [
+            appointment.id
+            for appointment in Appointment.objects.filter(
+                patient__national_id_or_passport__startswith=PATIENT_ID_PREFIX
+            )
+            if timezone.localtime(
+                appointment.start_datetime, clinic_timezone
+            ).weekday()
+            in closed_weekdays
+        ]
+        if invalid_ids:
+            raise CommandError(
+                "Demo story generated appointments on configured closed weekdays: "
+                f"{invalid_ids}."
+            )
+
     def _completed_visit(self, appointment, doctor, staff, *, notes=True):
         started = appointment.start_datetime + timedelta(minutes=5)
         return Visit.objects.create(appointment=appointment, patient=appointment.patient, doctor=doctor, status=Visit.Status.COMPLETED, started_at=started, completed_at=started + timedelta(minutes=25), symptoms="Synthetic sensitivity" if notes else "", diagnosis="Synthetic finding" if notes else "", treatment="Synthetic treatment" if notes else "", clinical_notes="Synthetic clinical note" if notes else "", follow_up_notes="Synthetic follow-up" if notes else "", created_by=doctor, updated_by=doctor)
 
     def _create_appointments_and_visits(self, accounts, patients, reference_date):
         staff, d1, d2, d3, d4 = accounts["staff.one"], accounts["doctor.one"], accounts["doctor.two"], accounts["doctor.three"], accounts["doctor.four"]
-        today = reference_date
-        future = today + timedelta(days=3)
+        today = self._appointment_day(
+            reference_date,
+            ((d4, 14, 0, 30), (d3, 10, 0, 45)),
+        )
+        future = self._appointment_day(
+            today + timedelta(days=3),
+            ((d1, 9, 0, 30), (d1, 9, 30, 30), (d1, 10, 0, 30)),
+        )
         previous_day = lambda weekday: today - timedelta(days=((today.weekday() - weekday) % 7 or 7))
         app = {}
         app["today_confirmed"] = self._appointment(patient=patients[0], doctor=d4, start=self._dt(today, 14), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Today confirmed")
         app["checked_in"] = self._appointment(patient=patients[1], doctor=d3, start=self._dt(today, 10), duration=45, status=Appointment.Status.CHECKED_IN, staff=staff, reason="Checked in and ready to start")
-        active_app = self._appointment(patient=patients[2], doctor=d1, start=self._dt(previous_day(4), 14), duration=30, status=Appointment.Status.CHECKED_IN, staff=staff, reason="Active clinical review")
+        active_day = self._appointment_day(
+            previous_day(4), ((d1, 14, 0, 30),), direction=-1
+        )
+        active_app = self._appointment(patient=patients[2], doctor=d1, start=self._dt(active_day, 14), duration=30, status=Appointment.Status.CHECKED_IN, staff=staff, reason="Active clinical review")
         active_visit = start_visit_from_appointment(appointment=active_app, user=d1)
         active_visit.symptoms = "Synthetic sensitivity for active-visit QA."
         active_visit.clinical_notes = "Editable synthetic note created by the deterministic demo story."
@@ -292,16 +359,37 @@ class Command(BaseCommand):
                 weekday, hour = index % 5, (10 if index % 2 else 16)
             else:
                 weekday, hour = 2 + (index % 5), 14
-            appointment = self._appointment(patient=patients[index], doctor=doctor, start=self._dt(previous_day(weekday), hour), duration=(15, 30, 45, 60)[index % 4], status=Appointment.Status.COMPLETED, staff=staff, reason="Completed history")
+            duration = (15, 30, 45, 60)[index % 4]
+            appointment_day = self._appointment_day(
+                previous_day(weekday),
+                ((doctor, hour, 0, duration),),
+                direction=-1,
+            )
+            appointment = self._appointment(patient=patients[index], doctor=doctor, start=self._dt(appointment_day, hour), duration=duration, status=Appointment.Status.COMPLETED, staff=staff, reason="Completed history")
             completed.append(self._completed_visit(appointment, doctor, staff, notes=index != 13))
             app[f"completed_{index}"] = appointment
-        returning_appointment = self._appointment(patient=patients[3], doctor=d1, start=self._dt(previous_day(4) - timedelta(days=28), 15), duration=30, status=Appointment.Status.COMPLETED, staff=staff, reason="Returning patient history")
+        returning_day = self._appointment_day(
+            previous_day(4) - timedelta(days=28),
+            ((d1, 15, 0, 30),),
+            direction=-1,
+        )
+        returning_appointment = self._appointment(patient=patients[3], doctor=d1, start=self._dt(returning_day, 15), duration=30, status=Appointment.Status.COMPLETED, staff=staff, reason="Returning patient history")
         completed.append(self._completed_visit(returning_appointment, d1, staff))
         app["returning_history"] = returning_appointment
-        app["cancelled"] = self._appointment(patient=patients[19], doctor=d1, start=self._dt(today + timedelta(days=5), 9), duration=30, status=Appointment.Status.CANCELLED, staff=staff, reason="Cancelled demo")
-        app["no_show"] = self._appointment(patient=patients[20], doctor=d2, start=self._dt(previous_day(3), 16), duration=30, status=Appointment.Status.NO_SHOW, staff=staff, reason="No show demo")
-        app["future"] = self._appointment(patient=patients[21], doctor=d4, start=self._dt(today + timedelta(days=6), 14), duration=60, status=Appointment.Status.UPCOMING, staff=staff, reason="Future split shift")
-        app["future_second_doctor"] = self._appointment(patient=patients[22], doctor=d3, start=self._dt(today + timedelta(days=6), 14), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Parallel clinic capacity")
+        cancelled_day = self._appointment_day(
+            today + timedelta(days=5), ((d1, 9, 0, 30),)
+        )
+        no_show_day = self._appointment_day(
+            previous_day(3), ((d2, 16, 0, 30),), direction=-1
+        )
+        parallel_day = self._appointment_day(
+            today + timedelta(days=6),
+            ((d4, 14, 0, 60), (d3, 14, 0, 30)),
+        )
+        app["cancelled"] = self._appointment(patient=patients[19], doctor=d1, start=self._dt(cancelled_day, 9), duration=30, status=Appointment.Status.CANCELLED, staff=staff, reason="Cancelled demo")
+        app["no_show"] = self._appointment(patient=patients[20], doctor=d2, start=self._dt(no_show_day, 16), duration=30, status=Appointment.Status.NO_SHOW, staff=staff, reason="No show demo")
+        app["future"] = self._appointment(patient=patients[21], doctor=d4, start=self._dt(parallel_day, 14), duration=60, status=Appointment.Status.UPCOMING, staff=staff, reason="Future split shift")
+        app["future_second_doctor"] = self._appointment(patient=patients[22], doctor=d3, start=self._dt(parallel_day, 14), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Parallel clinic capacity")
         leave_impacted = []
         for index, minute in ((8, 0), (9, 30), (10, 0)):
             leave_impacted.append(self._appointment(patient=patients[index], doctor=d1, start=self._dt(future, 9, minute), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Leave conflict workflow"))
@@ -315,7 +403,16 @@ class Command(BaseCommand):
             app[f"leave_{index}"] = appointment
         rescheduled = marked[0]
         old_slot = {"doctor_id": rescheduled.doctor_id, "start_datetime": rescheduled.start_datetime.isoformat()}
-        appointment_serializer = AppointmentDetailSerializer(instance=rescheduled, data={"doctor_id": d2.id, "start_datetime": self._dt(future, 16), "duration_minutes": 30}, partial=True)
+        appointment_serializer = AppointmentDetailSerializer(
+            instance=rescheduled,
+            data={
+                "doctor_id": d2.id,
+                "start_datetime": self._dt(future, 16),
+                "duration_minutes": 30,
+                "version": rescheduled.version,
+            },
+            partial=True,
+        )
         appointment_serializer.is_valid(raise_exception=True)
         app["rescheduled"] = update_appointment(
             appointment=rescheduled,
@@ -324,9 +421,14 @@ class Command(BaseCommand):
             current_time=self._dt(today, 0),
         )
         log_activity(actor=staff, action="appointment_rescheduled", entity_type="appointment", entity_id=rescheduled.id, metadata={"demo_story": DEMO_TAG, "old": old_slot, "new": {"doctor_id": d2.id, "start_datetime": app["rescheduled"].start_datetime.isoformat()}})
-        second_leave = AvailabilityException.objects.create(doctor=d3, start_datetime=self._dt(today + timedelta(days=5), 13), end_datetime=self._dt(today + timedelta(days=5), 17), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo training leave", created_by=accounts["admin"], updated_by=accounts["admin"])
-        shift = WorkingShift.objects.filter(employee=d2, weekday=(today + timedelta(days=4)).weekday(), name="Morning").first()
-        shift_change_day = today + timedelta(days=4)
+        second_leave_day = self._appointment_day(
+            today + timedelta(days=5), ((d3, 13, 0, 120),)
+        )
+        second_leave = AvailabilityException.objects.create(doctor=d3, start_datetime=self._dt(second_leave_day, 13), end_datetime=self._dt(second_leave_day, 17), type=AvailabilityException.Type.UNAVAILABLE, reason="Demo training leave", created_by=accounts["admin"], updated_by=accounts["admin"])
+        shift_change_day = self._appointment_day(
+            today + timedelta(days=4), ((d2, 12, 30, 30),)
+        )
+        shift = WorkingShift.objects.filter(employee=d2, weekday=shift_change_day.weekday(), name="Morning").first()
         shifted = self._appointment(patient=patients[10], doctor=d2, start=self._dt(shift_change_day, 12, 30), duration=30, status=Appointment.Status.UPCOMING, staff=staff, reason="Shift change conflict workflow")
         shift_serializer = type("ShiftUpdate", (), {"validated_data": {"end_time": time(12), "version": shift.version}})()
         shift, impacted_count = update_working_shift(
@@ -368,6 +470,7 @@ class Command(BaseCommand):
         staff = accounts["staff.one"]
         visits = story["completed_visits"]
         reference_date = timezone.localtime(story["appointments"]["today_confirmed"].start_datetime).date()
+        story_now = self._dt(reference_date, 23, 59)
 
         visit_open = create_visit_completion_handoff(
             visit=visits[6],
@@ -391,16 +494,23 @@ class Command(BaseCommand):
                 "note": "Visit bill with two collection receipts",
             },
         )
-        self._set_story_timestamp(visit_partial, self._dt(reference_date - timedelta(days=21), 15, 30))
+        visit_partial_origin = visits[7].completed_at + timedelta(minutes=15)
+        self._set_story_timestamp(visit_partial, visit_partial_origin)
         partial_first, _ = issue_invoice(
             handoff=visit_partial,
             user=staff,
-            data={"amount": "100.00", "issued_at": self._dt(reference_date - timedelta(days=8), 16), "notes": "First instalment"},
+            data={
+                "amount": "100.00",
+                "issued_at": visit_partial_origin + timedelta(minutes=30),
+                "notes": "First instalment",
+            },
+            current_time=story_now,
         )
         partial_second, _ = issue_invoice(
             handoff=visit_partial,
             user=staff,
             data={"amount": "75.00", "issued_at": self._dt(reference_date, 10, 15), "notes": "Second instalment collected today"},
+            current_time=story_now,
         )
         self._set_story_timestamp(partial_first, partial_first.issued_at)
         self._set_story_timestamp(partial_second, partial_second.issued_at)
@@ -410,16 +520,27 @@ class Command(BaseCommand):
             user=visits[8].doctor,
             data={"description": "Dental cleaning and polish", "total_amount": "120.00", "currency": "USD", "note": "Fully paid in two receipts"},
         )
-        self._set_story_timestamp(visit_paid, self._dt(reference_date - timedelta(days=18), 9))
+        visit_paid_origin = visits[8].completed_at + timedelta(minutes=15)
+        self._set_story_timestamp(visit_paid, visit_paid_origin)
         paid_first, _ = issue_invoice(
             handoff=visit_paid,
             user=staff,
-            data={"amount": "50.00", "issued_at": self._dt(reference_date - timedelta(days=18), 9, 30), "notes": "Initial payment"},
+            data={
+                "amount": "50.00",
+                "issued_at": visit_paid_origin + timedelta(minutes=30),
+                "notes": "Initial payment",
+            },
+            current_time=story_now,
         )
         paid_second, _ = issue_invoice(
             handoff=visit_paid,
             user=staff,
-            data={"amount": "70.00", "issued_at": self._dt(reference_date - timedelta(days=17), 11), "notes": "Remaining balance"},
+            data={
+                "amount": "70.00",
+                "issued_at": visit_paid_origin + timedelta(days=1),
+                "notes": "Remaining balance",
+            },
+            current_time=story_now,
         )
         self._set_story_timestamp(paid_first, paid_first.issued_at)
         self._set_story_timestamp(paid_second, paid_second.issued_at)
@@ -436,16 +557,23 @@ class Command(BaseCommand):
             user=visits[10].doctor,
             data={"description": "Restorative treatment plan", "total_amount": "200000.00", "currency": "SYP", "note": "Partially paid bill generated from a completed visit"},
         )
-        self._set_story_timestamp(second_partial, self._dt(reference_date - timedelta(days=4), 10))
+        second_partial_origin = visits[10].completed_at + timedelta(minutes=15)
+        self._set_story_timestamp(second_partial, second_partial_origin)
         second_partial_first, _ = issue_invoice(
             handoff=second_partial,
             user=staff,
-            data={"amount": "50000.00", "issued_at": self._dt(reference_date - timedelta(days=4), 10, 30), "notes": "Deposit"},
+            data={
+                "amount": "50000.00",
+                "issued_at": second_partial_origin + timedelta(minutes=30),
+                "notes": "Deposit",
+            },
+            current_time=story_now,
         )
         second_partial_second, _ = issue_invoice(
             handoff=second_partial,
             user=staff,
             data={"amount": "25000.00", "issued_at": self._dt(reference_date, 11, 30), "notes": "Follow-up collection"},
+            current_time=story_now,
         )
         self._set_story_timestamp(second_partial_first, second_partial_first.issued_at)
         self._set_story_timestamp(second_partial_second, second_partial_second.issued_at)

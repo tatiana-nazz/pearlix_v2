@@ -8,10 +8,10 @@ Before and after deployment, run:
 
 ```powershell
 cd backend
-python manage.py check_profile_integrity
-python manage.py migrate --plan
-python manage.py migrate
-python manage.py check_profile_integrity --strict
+python manage.py check_profile_integrity --settings=config.settings.production
+python manage.py migrate --plan --settings=config.settings.production
+python manage.py migrate --settings=config.settings.production
+python manage.py check_profile_integrity --strict --settings=config.settings.production
 ```
 
 The command deterministically reports total users, linked Doctors/Staff, legacy unlinked professional accounts, dual profiles, role mismatches, and active Admin profiles. It exits non-zero in strict mode only for an inconsistent linkage. Legacy unlinked Doctor/Staff accounts are reported but preserved as `PROFILE_SETUP_REQUIRED`; they are intentionally not silently repaired or deleted.

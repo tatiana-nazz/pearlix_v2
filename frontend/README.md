@@ -37,7 +37,7 @@ Use `127.0.0.1` consistently for the local frontend and API:
 
 ```powershell
 cd backend
-.\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+.\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000 --settings=config.settings.local
 
 cd ..\frontend
 npm run dev
@@ -67,11 +67,18 @@ npm run test:e2e
 - Tokens are persisted in local storage for the MVP foundation.
 - The API client sends `Authorization: Bearer <access>`.
 - One automatic refresh is attempted on 401 using `/auth/refresh/`.
-- If refresh fails, auth state is cleared.
+- If refresh fails, local auth state is cleared. A terminal 401 also publishes
+  `SESSION_REVOKED` so matching sibling tabs clear auth and query caches.
 - Users with `must_change_password` are routed to `/change-password`.
 - Role guards separate Admin, Staff, and Doctor workspaces.
 - Authenticated users visiting `/login` are redirected to their role dashboard.
-- Logout calls `/auth/logout/` when a refresh token exists and clears local auth state even if backend logout fails.
+- Logout is per login/token family. `/auth/logout/` revokes that family's access
+  and refresh authority on the backend; account-version changes still invalidate
+  every older family for the account.
+- `LOGOUT`, `SESSION_REVOKED`, and `IDENTITY_CHANGED` storage events carry only
+  the opaque `auth_session_id`. Matching sibling tabs synchronously clear auth
+  and rotate the QueryClient without rebroadcasting; independent login families
+  ignore the event. Backend session validation remains authoritative.
 
 ## Role Redirects
 
@@ -100,7 +107,7 @@ Phase 13D.1 adds a local development QA account command. Local browser QA users 
 
 ```bash
 cd backend
-python manage.py seed_dev_qa_users --password "PearlixDev123!" --include-must-change-user
+python manage.py seed_dev_qa_users --password "<LOCAL_QA_PASSWORD>" --include-must-change-user --settings=config.settings.local
 ```
 
 - Admin: `admin.qa@pearlix.local`

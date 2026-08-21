@@ -24,6 +24,7 @@ const appointment: AppointmentListItem = {
   duration_minutes: 30,
   reason: "Review",
   status: "UPCOMING",
+  version: 1,
   reschedule_source_exception: null,
   reschedule_source_working_shift: null,
   reschedule_source_type: null,
@@ -72,6 +73,33 @@ describe("appointment calendar views", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Open day 2026-07-13" }));
     expect(onDaySelect).toHaveBeenCalledWith("2026-07-13");
+  });
+
+  it("keeps historical cards undecorated while applying current closure settings to future Week and Month days", () => {
+    const historicalFriday = { ...appointment, id: 44, status: "COMPLETED" as const, start_datetime: "2026-07-17T08:00:00Z", end_datetime: "2026-07-17T08:30:00Z" };
+    const futureFriday = { ...appointment, id: 45, start_datetime: "2026-07-24T08:00:00Z", end_datetime: "2026-07-24T08:30:00Z" };
+    const { container, rerender } = render(<AppointmentWeekView role="STAFF" date="2026-07-13" timezone="UTC" appointments={[historicalFriday]} onDetails={vi.fn()} onDaySelect={vi.fn()} weeklyClosedDays={[4]} currentDate="2026-07-20" />);
+
+    const pastFriday = container.querySelector<HTMLElement>('.appointment-calendar-column[data-date="2026-07-17"]')!;
+    expect(pastFriday).not.toHaveAttribute("data-clinic-closed");
+    expect(within(pastFriday).queryByText("Clinic closed")).not.toBeInTheDocument();
+    expect(within(pastFriday).getByText("Maya Patient")).toBeInTheDocument();
+
+    rerender(<AppointmentWeekView role="STAFF" date="2026-07-20" timezone="UTC" appointments={[futureFriday]} onDetails={vi.fn()} onDaySelect={vi.fn()} weeklyClosedDays={[4]} currentDate="2026-07-20" />);
+    const futureWeekFriday = container.querySelector<HTMLElement>('.appointment-calendar-column[data-date="2026-07-24"]')!;
+    expect(futureWeekFriday).toHaveAttribute("data-clinic-closed", "true");
+    expect(within(futureWeekFriday).getByText("Clinic closed")).toBeInTheDocument();
+
+    rerender(<AppointmentMonthView date="2026-07-01" timezone="UTC" appointments={[historicalFriday, futureFriday]} onDetails={vi.fn()} onDaySelect={vi.fn()} weeklyClosedDays={[4]} currentDate="2026-07-20" />);
+    const pastMonthFriday = container.querySelector<HTMLElement>('.appointment-month-cell[data-date="2026-07-17"]')!;
+    const futureMonthFriday = container.querySelector<HTMLElement>('.appointment-month-cell[data-date="2026-07-24"]')!;
+    expect(pastMonthFriday).not.toHaveAttribute("data-clinic-closed");
+    expect(within(pastMonthFriday).getByText("Maya Patient")).toBeInTheDocument();
+    expect(futureMonthFriday).toHaveAttribute("data-clinic-closed", "true");
+
+    rerender(<AppointmentWeekView role="STAFF" date="2026-07-20" timezone="UTC" appointments={[]} onDetails={vi.fn()} onDaySelect={vi.fn()} weeklyClosedDays={[6]} currentDate="2026-07-20" />);
+    expect(container.querySelector('.appointment-calendar-column[data-date="2026-07-24"]')).not.toHaveAttribute("data-clinic-closed");
+    expect(container.querySelector('.appointment-calendar-column[data-date="2026-07-26"]')).toHaveAttribute("data-clinic-closed", "true");
   });
 
   it("uses shared semantic tones and status-inclusive accessible labels for every Month status", async () => {

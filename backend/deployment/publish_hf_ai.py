@@ -2,10 +2,18 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 import shutil
+import subprocess
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
+
+try:
+    from deployment.archive_safety import extract_zip_safely
+except ModuleNotFoundError:  # direct `python deployment/publish_hf_ai.py`
+    from archive_safety import extract_zip_safely
 
 
 EXPECTED = {
@@ -21,7 +29,11 @@ CORE_FILES = (
     "backend/apps/ai_results/overlay.py",
     "backend/apps/ai_results/adapters/__init__.py",
     "backend/apps/ai_results/adapters/base.py",
+    "backend/apps/ai_results/adapters/mock.py",
     "backend/apps/ai_results/adapters/dentex.py",
+    "backend/apps/xrays/__init__.py",
+    "backend/apps/xrays/image_validation.py",
+    "backend/apps/xrays/request_limits.py",
 )
 
 
@@ -59,6 +71,103 @@ def build_space(repo_root: Path, output: Path) -> None:
         target = output / Path(rel).relative_to("backend")
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
+
+
+def _space_subdomain_part(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9-]+", "-", value.strip().lower()).strip("-")
+    if not normalized:
+        raise SystemExit("Could not derive the Hugging Face Space HTTPS hostname.")
+    return normalized
+
+
+def space_direct_url(repo_id: str) -> str:
+    try:
+        owner, name = repo_id.split("/", 1)
+    except ValueError as exc:
+        raise SystemExit("The Hugging Face Space repository ID is invalid.") from exc
+    return f"https://{_space_subdomain_part(owner)}-{_space_subdomain_part(name)}.hf.space"
+
+
+def validate_space_build(output: Path) -> None:
+    required = (
+        "app.py",
+        "requirements.txt",
+        "apps/ai_results/adapters/dentex.py",
+        "apps/xrays/image_validation.py",
+        "apps/xrays/request_limits.py",
+    )
+    missing = [relative for relative in required if not (output / relative).is_file()]
+    if missing:
+        raise SystemExit("Generated Space is incomplete: " + ", ".join(missing))
+    for source in output.rglob("*.py"):
+        try:
+            compile(source.read_text(encoding="utf-8"), str(source), "exec")
+        except (OSError, SyntaxError, UnicodeError) as exc:
+            raise SystemExit(f"Generated Space contains invalid Python: {source}") from exc
+    clean_import = r'''
+import runpy, sys, types
+from io import BytesIO
+root = sys.argv[1]
+sys.path.insert(0, root)
+class Context:
+    def __enter__(self): return self
+    def __exit__(self, *args): return False
+    def queue(self, **kwargs): return self
+    def launch(self): raise AssertionError("packaging validation must not launch")
+class Component:
+    def __init__(self, *args, **kwargs): pass
+    def click(self, *args, **kwargs): pass
+gr = types.ModuleType("gradio")
+gr.Blocks = lambda *args, **kwargs: Context()
+gr.Markdown = gr.File = gr.Button = gr.JSON = Component
+gr.Error = RuntimeError
+gr.mount_gradio_app = lambda app, demo, path: app
+spaces = types.ModuleType("spaces")
+spaces.GPU = lambda **kwargs: (lambda fn: fn)
+class HTTPException(Exception):
+    def __init__(self, status_code, detail):
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
+class UploadFile: pass
+class FastAPI:
+    def __init__(self, *args, **kwargs): pass
+    def add_middleware(self, *args, **kwargs): pass
+    def get(self, *args, **kwargs): return lambda fn: fn
+    def post(self, *args, **kwargs): return lambda fn: fn
+fastapi = types.ModuleType("fastapi")
+fastapi.FastAPI = FastAPI
+fastapi.File = lambda *args, **kwargs: None
+fastapi.HTTPException = HTTPException
+fastapi.UploadFile = UploadFile
+sys.modules["gradio"] = gr
+sys.modules["spaces"] = spaces
+sys.modules["fastapi"] = fastapi
+module = runpy.run_path(root + "/app.py", run_name="pearlix_space_package_validation")
+assert "app" in module and "analyze_api" in module and "health" in module
+from PIL import Image
+from django.core.files.uploadedfile import SimpleUploadedFile
+from apps.xrays.image_validation import validate_image_upload
+from apps.xrays.request_limits import BoundedASGIRequestBodyMiddleware
+buffer = BytesIO()
+Image.new("L", (32, 16), 100).save(buffer, format="PNG")
+validated = validate_image_upload(SimpleUploadedFile("probe.png", buffer.getvalue(), content_type="image/png"))
+assert validated.width == 32 and validated.height == 16
+assert BoundedASGIRequestBodyMiddleware is not None
+'''
+    completed = subprocess.run(
+        [sys.executable, "-I", "-c", clean_import, str(output)],
+        cwd=output.parent,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise SystemExit(
+            "Generated Space failed clean-room import validation: "
+            + (completed.stderr.strip() or completed.stdout.strip())
+        )
 
 
 def upload_model_bundle(api, *, bundle_root: Path, model_repo: str, legacy_upload: bool) -> None:
@@ -124,7 +233,7 @@ def main() -> None:
             extracted = temp / "bundle"
             extracted.mkdir()
             with zipfile.ZipFile(bundle_arg) as archive:
-                archive.extractall(extracted)
+                extract_zip_safely(archive, extracted)
             bundle_root = find_bundle_root(extracted)
         else:
             bundle_root = find_bundle_root(bundle_arg)
@@ -132,6 +241,10 @@ def main() -> None:
         print("Verifying all three locked SHA-256 identities...")
         verify_bundle(bundle_root)
         print("Model bundle verification PASS.")
+
+        space_build = temp / "space"
+        build_space(repo_root, space_build)
+        validate_space_build(space_build)
 
         api = HfApi()
         who = api.whoami()
@@ -143,6 +256,7 @@ def main() -> None:
 
         model_repo = f"{username}/{args.model_name}"
         space_repo = f"{username}/{args.space_name}"
+        direct_url = space_direct_url(space_repo)
 
         print(f"Creating/updating private model repo: {model_repo}")
         api.create_repo(repo_id=model_repo, repo_type="model", private=True, exist_ok=True)
@@ -152,9 +266,6 @@ def main() -> None:
             model_repo=model_repo,
             legacy_upload=args.legacy_upload,
         )
-
-        space_build = temp / "space"
-        build_space(repo_root, space_build)
 
         print(f"Creating/updating private ZeroGPU Space: {space_repo}")
         try:
@@ -191,17 +302,19 @@ def main() -> None:
         runtime = api.get_space_runtime(repo_id=space_repo)
         print("\nPearlix Hugging Face publication complete.")
         print(f"MODEL_REPO_ID={model_repo}")
-        print(f"AI_SERVICE_URL={space_repo}")
+        print(f"SPACE_REPO_ID={space_repo}")
+        print(f"AI_SERVICE_URL={direct_url}")
         print(f"SPACE_STAGE={runtime.stage}")
         print(f"SPACE_HARDWARE={runtime.hardware}")
         print(f"SPACE_REQUESTED_HARDWARE={runtime.requested_hardware}")
         print(
-            "\nNext: create a Hugging Face READ/fine-grained token for this private Space. "
-            "Do not paste it into chat."
+            "\nThe private Space exposes the production POST /analyze contract at AI_SERVICE_URL. "
+            "Create a Hugging Face READ/fine-grained token that can access this private Space. Do not paste it into chat."
         )
         print(
-            "Set that token in the Vercel backend as AI_SERVICE_TOKEN, and set AI_SERVICE_URL to the value above."
+            "Set that token in the Vercel backend as AI_SERVICE_TOKEN and set AI_SERVICE_URL to the HTTPS value above."
         )
+        print("Verify AI_SERVICE_URL/health with the token before enabling staging inference.")
 
 
 if __name__ == "__main__":

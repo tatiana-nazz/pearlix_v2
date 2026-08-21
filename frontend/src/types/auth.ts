@@ -37,9 +37,11 @@ export interface ChangePasswordPayload {
   new_password: string;
 }
 
+export type ChangePasswordResponse = LoginResponse;
+
 export interface PreferencesPayload {
   theme_preference?: ThemePreference;
   language_preference?: LanguagePreference;
 }
 
-export type AuthStatus = "unknown" | "authenticated" | "anonymous";
+export type AuthStatus = "unknown" | "authenticated" | "anonymous" | "restoration_error";

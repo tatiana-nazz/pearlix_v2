@@ -8,13 +8,14 @@ from zoneinfo import ZoneInfo
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.utils import timezone
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
 from apps.audit.models import ActivityLog
 from apps.billing.models import BillingHandoff, Invoice
 from apps.clinic.models import ClinicSettings
+from apps.common.demo_safety import assert_demo_environment_safe
 from apps.patients.models import Patient
 from apps.patients.selectors import annotate_patient_directory, patient_has_archive_blocking_appointments
 from apps.scheduling.appointment_services import (
@@ -44,6 +45,7 @@ class Command(BaseCommand):
     help = "Normalize demo-seed chronology and run a stronger cross-module consistency audit."
 
     def handle(self, *args, **options):
+        assert_demo_environment_safe()
         demo = Patient.objects.filter(national_id_or_passport__startswith=DEMO_PATIENT_PREFIX)
         if not demo.exists():
             raise CommandError("No Pearlix demo patients were found.")
@@ -56,7 +58,26 @@ class Command(BaseCommand):
             if errors:
                 raise CommandError("Final demo consistency audit failed:\n- " + "\n- ".join(errors))
 
+        historical_counts = self.historical_appointment_status_counts(demo)
+        self.stdout.write(
+            "Past appointment states: "
+            + ", ".join(
+                f"{status}={historical_counts[status]}"
+                for status, _label in Appointment.Status.choices
+            )
+        )
         self.stdout.write(self.style.SUCCESS("Pearlix demo finalization PASS: chronology, invoices, scheduling, visits, billing, and patient summaries are coherent."))
+
+    def historical_appointment_status_counts(self, demo, *, now=None):
+        cutoff = now or timezone.now()
+        counts = {status: 0 for status, _label in Appointment.Status.choices}
+        for row in (
+            Appointment.objects.filter(patient__in=demo, end_datetime__lt=cutoff)
+            .values("status")
+            .annotate(total=Count("id"))
+        ):
+            counts[row["status"]] = row["total"]
+        return counts
 
     def normalize_timestamps(self, demo):
         now = timezone.now()
@@ -178,11 +199,42 @@ class Command(BaseCommand):
         errors = []
         demo_ids = list(demo.values_list("id", flat=True))
         now = timezone.now()
+        clinic = ClinicSettings.get_solo()
+        clinic_timezone = ZoneInfo(clinic.timezone)
+        closed_weekdays = set(clinic.weekly_closed_days)
+        operational_statuses = {
+            Appointment.Status.UPCOMING,
+            Appointment.Status.CHECKED_IN,
+            Appointment.Status.ACTIVE,
+        }
+        historical_counts = self.historical_appointment_status_counts(demo, now=now)
+        if any(historical_counts[status] for status in operational_statuses):
+            errors.append(
+                "Past operational appointments remain: "
+                + ", ".join(
+                    f"{status}={historical_counts[status]}"
+                    for status in (
+                        Appointment.Status.UPCOMING,
+                        Appointment.Status.CHECKED_IN,
+                        Appointment.Status.ACTIVE,
+                    )
+                )
+            )
 
         for appointment in Appointment.objects.filter(patient_id__in=demo_ids).select_related(
             "doctor", "patient", "reschedule_source_exception"
         ):
             has_visit = Visit.objects.filter(appointment=appointment).exists()
+            local_weekday = timezone.localtime(
+                appointment.start_datetime, clinic_timezone
+            ).weekday()
+            if (
+                appointment.status in operational_statuses
+                and local_weekday in closed_weekdays
+            ):
+                errors.append(
+                    f"Operational appointment {appointment.id} falls on configured closed weekday {local_weekday}."
+                )
             if appointment.created_at > appointment.start_datetime:
                 errors.append(f"Appointment {appointment.id} was created after its scheduled start.")
             if appointment.patient.created_at > appointment.created_at:
@@ -210,8 +262,23 @@ class Command(BaseCommand):
                 except AppointmentRuleError as exc:
                     errors.append(f"Upcoming appointment {appointment.id} violates clinic rules: {exc.code}.")
             if appointment.status == Appointment.Status.NEEDS_RESCHEDULE:
-                if not appointment.reschedule_source_exception_id and not appointment.reschedule_source_working_shift_id:
+                if (
+                    not appointment.reschedule_source_exception_id
+                    and not appointment.reschedule_source_working_shift_id
+                    and appointment.reschedule_source_clinic_weekday is None
+                    and not appointment.reschedule_source_kind
+                ):
                     errors.append(f"Needs-reschedule appointment {appointment.id} has no source.")
+                if (
+                    appointment.reschedule_source_kind == Appointment.RescheduleSourceKind.LEAVE
+                    and not appointment.reschedule_source_exception_id
+                ):
+                    errors.append(f"Needs-reschedule appointment {appointment.id} has leave provenance without a leave source.")
+                if (
+                    appointment.reschedule_source_kind == Appointment.RescheduleSourceKind.CLINIC_WEEKLY_CLOSURE
+                    and appointment.reschedule_source_clinic_weekday is None
+                ):
+                    errors.append(f"Needs-reschedule appointment {appointment.id} has closure provenance without a weekday source.")
                 if appointment.reschedule_source_exception_id:
                     source = appointment.reschedule_source_exception
                     if source.is_cancelled or source.start_datetime >= appointment.end_datetime or source.end_datetime <= appointment.start_datetime:
@@ -247,9 +314,13 @@ class Command(BaseCommand):
             if handoff.status != expected:
                 errors.append(f"Bill {handoff.id} status disagrees with paid amount {paid}.")
 
-        for invoice in Invoice.objects.filter(billing_handoff__patient_id__in=demo_ids):
+        for invoice in Invoice.objects.filter(
+            billing_handoff__patient_id__in=demo_ids
+        ).select_related("billing_handoff"):
             if invoice.created_at > invoice.issued_at:
                 errors.append(f"Invoice {invoice.id} was created after its issued_at event.")
+            if invoice.issued_at < invoice.billing_handoff.created_at:
+                errors.append(f"Invoice {invoice.id} predates its billing handoff.")
             if not INVOICE_RE.match(invoice.invoice_number):
                 errors.append(f"Invoice {invoice.id} does not use Pearlix invoice-number format.")
 

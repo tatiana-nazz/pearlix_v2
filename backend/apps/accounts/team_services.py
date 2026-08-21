@@ -10,7 +10,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.accounts.models import DoctorProfile, StaffProfile, User
+from apps.accounts.models import AccountSecurityState, DoctorProfile, StaffProfile, User
 from apps.clinic.models import ClinicSettings
 from apps.scheduling.models import Appointment, AvailabilityException, WorkingShift
 from apps.visits.models import Visit
@@ -20,6 +20,110 @@ class TeamRuleError(Exception):
     def __init__(self, code: str, message: str, details: dict | None = None, status_code: int = 400):
         self.code, self.message, self.details, self.status_code = code, message, details or {}, status_code
         super().__init__(message)
+
+
+def _lock_account_security_scope() -> AccountSecurityState:
+    """Acquire the shared row lock before any active-Admin removal.
+
+    Locking a dedicated singleton serializes demotion and deactivation even
+    when concurrent requests target different User rows.  The row is created
+    by the accounts migration; absence therefore fails closed.
+    """
+
+    return AccountSecurityState.objects.select_for_update().get(pk=1)
+
+
+def _lock_authority_users(*user_ids: int) -> dict[int, User]:
+    users = (
+        # Lock only User rows. The related profiles are nullable outer joins,
+        # which PostgreSQL cannot include in a FOR UPDATE lock target.
+        User.objects.select_for_update(of=("self",))
+        .select_related("doctor_profile", "staff_profile")
+        .filter(pk__in=set(user_ids))
+        .order_by("pk")
+    )
+    return {user.id: user for user in users}
+
+
+def _assert_current_admin_actor(actor: User) -> None:
+    if actor.role != User.Role.ADMIN or not actor.is_active:
+        raise TeamRuleError(
+            "PERMISSION_DENIED",
+            "Current active Admin authority is required.",
+            status_code=403,
+        )
+
+
+def _has_maintenance_authority(user: User) -> bool:
+    """Return whether a user currently has usable Django maintenance authority."""
+
+    return bool(
+        user.role == User.Role.ADMIN
+        and user.is_active
+        and user.is_staff
+        and user.is_superuser
+    )
+
+
+def _assert_maintenance_mutation_allowed(*, actor: User, user: User) -> None:
+    """Keep business-account authority separate from Django maintenance authority."""
+
+    if user.is_superuser and not _has_maintenance_authority(actor):
+        raise TeamRuleError(
+            "PERMISSION_DENIED",
+            "Current maintenance authority is required for this account operation.",
+            status_code=403,
+        )
+
+
+def _assert_maintenance_removal_allowed(user: User) -> None:
+    """Reject any workflow that would remove the final usable superuser."""
+
+    if (
+        _has_maintenance_authority(user)
+        and User.objects.filter(
+            role=User.Role.ADMIN,
+            is_active=True,
+            is_staff=True,
+            is_superuser=True,
+        ).count()
+        <= 1
+    ):
+        raise TeamRuleError(
+            "LAST_ACTIVE_MAINTENANCE_PRINCIPAL",
+            "The last active maintenance principal cannot lose maintenance authority.",
+            status_code=409,
+        )
+
+
+def _assert_admin_removal_allowed(
+    user: User,
+    *,
+    code: str = "LAST_ACTIVE_ADMIN",
+    message: str = "The last active Admin cannot lose administrative authority.",
+) -> None:
+    if (
+        user.role == User.Role.ADMIN
+        and user.is_active
+        and User.objects.filter(role=User.Role.ADMIN, is_active=True).count() <= 1
+    ):
+        raise TeamRuleError(
+            code,
+            message,
+            status_code=409,
+        )
+
+
+def lock_account_mutation_target(*, actor_id: int, user_id: int) -> User:
+    """Lock and authorize an account mutation inside the caller's transaction."""
+
+    _lock_account_security_scope()
+    locked_users = _lock_authority_users(actor_id, user_id)
+    user = locked_users[user_id]
+    actor = locked_users[actor_id]
+    _assert_current_admin_actor(actor)
+    _assert_maintenance_mutation_allowed(actor=actor, user=user)
+    return user
 
 
 def profile_state(user: User) -> str:
@@ -127,14 +231,14 @@ def create_team_member(*, account: dict, role: str, profile: dict) -> User:
             DoctorProfile.objects.create(user=user, specialty=profile.get("specialty", ""), phone=profile.get("phone", ""), bio=profile.get("bio", ""), is_active=True)
         else:
             StaffProfile.objects.create(user=user, position=profile.get("position", ""), phone=profile.get("phone", ""), is_active=True)
-        user = User.objects.select_for_update().select_related("doctor_profile", "staff_profile").get(pk=user.pk)
+        user = User.objects.select_for_update(of=("self",)).select_related("doctor_profile", "staff_profile").get(pk=user.pk)
         assert_profile_integrity(user, require_profile=True)
         return user
 
 
 def update_team_profile(*, user_id: int, data: dict) -> User:
     with transaction.atomic():
-        user = User.objects.select_for_update().select_related("doctor_profile", "staff_profile").get(pk=user_id)
+        user = User.objects.select_for_update(of=("self",)).select_related("doctor_profile", "staff_profile").get(pk=user_id)
         assert_profile_integrity(user, require_profile=True)
         profile = linked_profile(user)
         if data["version"] != profile.version:
@@ -152,7 +256,7 @@ def update_team_profile(*, user_id: int, data: dict) -> User:
 
 def set_professional_status(*, user_id: int, is_active: bool, version: int) -> User:
     with transaction.atomic():
-        user = User.objects.select_for_update().select_related("doctor_profile", "staff_profile").get(pk=user_id)
+        user = User.objects.select_for_update(of=("self",)).select_related("doctor_profile", "staff_profile").get(pk=user_id)
         assert_profile_integrity(user, require_profile=True)
         profile = linked_profile(user)
         if version != profile.version:
@@ -171,6 +275,7 @@ def transition_preview(*, user: User, target_role: str, actor: User) -> dict:
         raise TeamRuleError("SELF_ROLE_CHANGE_FORBIDDEN", "Admins cannot change their own role.", status_code=403)
     if target_role not in set(User.Role.values):
         raise TeamRuleError("PROFILE_ROLE_MISMATCH", "The target role is not supported.")
+    _assert_maintenance_mutation_allowed(actor=actor, user=user)
     assert_profile_integrity(user)
     history = operational_history(user)
     blockers: list[dict] = []
@@ -208,11 +313,19 @@ def confirm_transition(*, user_id: int, actor: User, target_role: str, token: st
     if unexpected_profile_fields:
         raise TeamRuleError("PROFILE_INTEGRITY_ERROR", "The target profile contains unsupported fields.", {"profile": {field: ["This field is not allowed."] for field in unexpected_profile_fields}})
     with transaction.atomic():
-        user = User.objects.select_for_update().select_related("doctor_profile", "staff_profile").get(pk=user_id)
+        _lock_account_security_scope()
+        locked_users = _lock_authority_users(actor.id, user_id)
+        user = locked_users[user_id]
+        actor = locked_users[actor.id]
+        _assert_current_admin_actor(actor)
+        _assert_maintenance_mutation_allowed(actor=actor, user=user)
         if actor.id == user.id:
             raise TeamRuleError("SELF_ROLE_CHANGE_FORBIDDEN", "Admins cannot change their own role.", status_code=403)
         if bound != {"user_id": user.id, "source_role": user.role, "target_role": target_role, "version": user.version, "profile_state": profile_state(user)} or version != user.version:
             raise TeamRuleError("VERSION_CONFLICT", "The account changed after the transition preview.", {"current_version": user.version}, 409)
+        if target_role != User.Role.ADMIN:
+            _assert_admin_removal_allowed(user)
+            _assert_maintenance_removal_allowed(user)
         preview = transition_preview(user=user, target_role=target_role, actor=actor)
         if not preview["allowed"]:
             code = preview["blockers"][0]["code"] if preview["blockers"] else "ROLE_TRANSITION_CONFIRMATION_REQUIRED"
@@ -243,13 +356,53 @@ def confirm_transition(*, user_id: int, actor: User, target_role: str, token: st
                 staff.is_active = False; staff.version += 1; staff.save(update_fields=["is_active", "version", "updated_at"])
         user.role = target_role
         user.version += 1
-        user.save(update_fields=["role", "version", "updated_at"])
+        update_fields = ["role", "version", "updated_at"]
+        if target_role != User.Role.ADMIN:
+            # Non-ADMIN roles cannot retain the separate Django-admin
+            # authorization plane.  This reconciliation is committed in the
+            # same transaction as the role/profile transition.
+            user.is_staff = False
+            user.is_superuser = False
+            update_fields.extend(["is_staff", "is_superuser"])
+        user.save(update_fields=update_fields)
         return User.objects.select_related("doctor_profile", "staff_profile").get(pk=user.pk)
 
 
-def reactivate_user(*, user_id: int) -> User:
+def deactivate_user(*, user_id: int, actor_id: int) -> User:
     with transaction.atomic():
-        user = User.objects.select_for_update().select_related("doctor_profile", "staff_profile").get(pk=user_id)
+        _lock_account_security_scope()
+        locked_users = _lock_authority_users(actor_id, user_id)
+        user = locked_users[user_id]
+        actor = locked_users[actor_id]
+        _assert_current_admin_actor(actor)
+        if user.id == actor_id:
+            raise TeamRuleError(
+                "INVALID_OPERATION",
+                "Admin cannot deactivate their own account.",
+                status_code=400,
+            )
+        _assert_maintenance_mutation_allowed(actor=actor, user=user)
+        _assert_admin_removal_allowed(
+            user,
+            code="INVALID_OPERATION",
+            message="Cannot deactivate the last active admin.",
+        )
+        _assert_maintenance_removal_allowed(user)
+        if user.is_active:
+            user.is_active = False
+            user.version += 1
+            user.save(update_fields=["is_active", "version", "updated_at"])
+        return user
+
+
+def reactivate_user(*, user_id: int, actor_id: int) -> User:
+    with transaction.atomic():
+        _lock_account_security_scope()
+        locked_users = _lock_authority_users(actor_id, user_id)
+        user = locked_users[user_id]
+        actor = locked_users[actor_id]
+        _assert_current_admin_actor(actor)
+        _assert_maintenance_mutation_allowed(actor=actor, user=user)
         if user.is_active:
             raise TeamRuleError("USER_ALREADY_ACTIVE", "The account is already active.", status_code=409)
         assert_profile_integrity(user, require_profile=user.role in {User.Role.DOCTOR, User.Role.STAFF})

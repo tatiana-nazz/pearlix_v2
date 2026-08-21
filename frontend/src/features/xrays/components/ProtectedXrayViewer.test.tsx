@@ -23,7 +23,9 @@ describe("ProtectedXrayViewer", () => {
     expect(container.querySelectorAll(".protected-xray-canvas")).toHaveLength(1);
     expect(container.querySelector(".protected-xray-original")).toBeInTheDocument();
     expect(container.querySelector(".protected-xray-overlay")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Overlay colors")).toHaveTextContent("Q1 upper rightQ2 upper leftQ3 lower leftQ4 lower rightReview");
+    const legend = screen.getByLabelText("Overlay colors");
+    expect(legend).toHaveTextContent("Q1 upper rightQ2 upper leftQ3 lower leftQ4 lower right");
+    expect(legend).not.toHaveTextContent("Review");
 
     fireEvent.click(button);
     expect(screen.getByRole("button", { name: "Hide AI Overlay" })).toHaveAttribute("aria-pressed", "true");
@@ -74,6 +76,17 @@ describe("ProtectedXrayViewer", () => {
     expect(screen.getByRole("button", { name: "Exit Fullscreen" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Protected original image" })).not.toBeInTheDocument();
+  });
+
+  it("uses a width-scaled scrollable surface so zoom preserves the panoramic aspect ratio", () => {
+    const { container } = render(<ProtectedXrayViewer originalEndpoint="/original/" overlayEndpoint="/overlay/" overlayAvailable originalLabel="Protected original image" originalAlt="Dental X-ray" />);
+    const zoom = screen.getByRole("button", { name: "Zoom In" });
+    for (let step = 0; step < 8; step += 1) fireEvent.click(zoom);
+    const mediaLayer = container.querySelector<HTMLElement>(".protected-xray-media")!;
+    expect(mediaLayer).toHaveAttribute("data-scale", "3.00");
+    expect(mediaLayer.style.inlineSize).toBe("300%");
+    expect(mediaLayer.style.blockSize).toBe("");
+    expect(screen.getByTestId("xray-pan-viewport")).toHaveClass("protected-xray-canvas");
   });
 
   it("keeps an overlay switch usable without exiting the enlarged viewer", () => {

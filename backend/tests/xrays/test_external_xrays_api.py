@@ -1,4 +1,6 @@
 import pytest
+from io import BytesIO
+from PIL import Image
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
@@ -16,8 +18,16 @@ def temp_media_root(settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
 
 
-def upload_file(name="external.png", content_type="image/png", content=b"fake-image"):
-    return SimpleUploadedFile(name, content, content_type=content_type)
+from apps.accounts.management.commands.seed_demo_clinic_story import XRAY_PNG_BYTES
+
+_jpeg_buffer = BytesIO()
+Image.new("L", (32, 16), 128).save(_jpeg_buffer, format="JPEG")
+XRAY_JPEG_BYTES = _jpeg_buffer.getvalue()
+
+
+def upload_file(name="external.png", content_type="image/png", content=None):
+    payload = content if content is not None else (XRAY_JPEG_BYTES if content_type == "image/jpeg" else XRAY_PNG_BYTES)
+    return SimpleUploadedFile(name, payload, content_type=content_type)
 
 
 def set_ai_mode(mode):
@@ -436,6 +446,28 @@ def test_doctor_can_attach_own_external_case_to_active_patient_without_prior_vis
     assert external.attached_visit_id is None
     assert external.attached_xray.patient_id == patient.id
     assert external.attached_xray.visit_id is None
+
+
+@pytest.mark.django_db
+def test_attach_reserves_patient_quota_for_retained_external_and_saved_copy(
+    doctor_client, patient_factory, external_xray_case_factory, settings
+):
+    patient = patient_factory(full_name="Quota Patient")
+    external = external_xray_case_factory()
+    settings.PEARLIX_XRAY_PATIENT_QUOTA_BYTES = 2 * external.size_bytes - 1
+    settings.PEARLIX_XRAY_USER_QUOTA_BYTES = 10_000_000
+    settings.PEARLIX_XRAY_GLOBAL_QUOTA_BYTES = 10_000_000
+
+    response = doctor_client.post(
+        f"/api/external-xrays/{external.id}/attach-to-patient/",
+        {"patient_id": patient.id},
+        format="json",
+    )
+    assert response.status_code == 409
+    assert response.data["code"] == "STORAGE_QUOTA_EXCEEDED"
+    external.refresh_from_db()
+    assert external.status == ExternalXrayCase.Status.TEMPORARY
+    assert not XrayAttachment.objects.filter(patient=patient).exists()
 
 
 @pytest.mark.django_db

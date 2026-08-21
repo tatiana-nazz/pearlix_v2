@@ -6,18 +6,26 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status
 
 from apps.ai_results.adapters import InferenceAdapter, MOCK_MODEL_VERSION, MockInferenceAdapter
 from apps.ai_results.adapters.base import InferenceConfigurationError, InferenceImageInvalidError
-from apps.ai_results.models import AIResult
+from apps.ai_results.models import AIExecutionState, AIInvocationBucket, AIResult
 from apps.ai_results.model_contract import FINDINGS_SCHEMA_VERSION, MAX_IMAGE_INPUT_BYTES
 from apps.ai_results.result_types import ImageInput, PipelineResult
 from apps.clinic.models import ClinicSettings
 from apps.common.errors import error_response
 from apps.xrays.models import ExternalXrayCase, XrayAttachment
+from apps.xrays.image_validation import ImageValidationError, validate_image_upload
+from apps.xrays.quota import (
+    StorageQuotaExceeded,
+    enforce_storage_quota,
+    lock_storage_admission,
+    register_pending_imaging_deletion,
+)
 
 
 DEFAULT_PROCESSING_STALE_SECONDS = 15 * 60
@@ -54,6 +62,26 @@ class AIAnalysisInProgress(AIServiceError):
     audit_outcome = "rejected"
 
 
+class AICapacityBusy(AIServiceError):
+    code = "AI_CAPACITY_BUSY"
+    public_message = "AI capacity is busy. Try again shortly."
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    audit_outcome = "rejected"
+
+
+class AIRateLimited(AIServiceError):
+    code = "AI_RATE_LIMITED"
+    public_message = "AI invocation limit reached. Try again after the current window."
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    audit_outcome = "rejected"
+
+
+class AIStorageQuotaExceeded(AIServiceError):
+    code = "AI_STORAGE_QUOTA_EXCEEDED"
+    public_message = "Imaging storage quota exceeded while saving the AI overlay."
+    status_code = status.HTTP_409_CONFLICT
+
+
 class AIImageUnavailable(AIServiceError):
     code = "AI_IMAGE_UNAVAILABLE"
     public_message = "X-ray image is unavailable for analysis."
@@ -87,7 +115,11 @@ class _ProcessingClaim:
 
 def select_inference_adapter(ai_mode: str) -> InferenceAdapter:
     if ai_mode == ClinicSettings.AiMode.MOCK_ADAPTER:
-        if getattr(settings, "PEARLIX_ALLOW_MOCK_AI", False):
+        is_production = (
+            str(getattr(settings, "PEARLIX_RUNTIME_ENVIRONMENT", "") or "").strip().lower()
+            == "production"
+        )
+        if getattr(settings, "PEARLIX_ALLOW_MOCK_AI", False) and not is_production:
             return _MOCK_ADAPTER
         raise AIServiceNotConfigured
     if ai_mode == ClinicSettings.AiMode.DJANGO_INTERNAL:
@@ -136,13 +168,31 @@ def _is_active_processing(result: AIResult) -> bool:
     return result.updated_at > cutoff
 
 
-def _safe_delete_storage_file(storage, name: str) -> None:
+def _safe_delete_storage_file(
+    storage,
+    name: str,
+    *,
+    size_bytes: int,
+    uploader_id: int | None,
+    patient_id: int | None,
+) -> None:
     try:
         storage.delete(name)
-    except Exception:
-        # Storage cleanup is best effort and must not change the persisted AI
-        # lifecycle or disclose storage details to an API caller.
+    except Exception as exc:
+        register_pending_imaging_deletion(
+            storage_name=name,
+            size_bytes=size_bytes,
+            uploader_id=uploader_id,
+            patient_id=patient_id,
+            last_error=str(exc),
+        )
         return
+
+
+def _process_pending_deletion_task(task_id: int) -> None:
+    from apps.xrays.services import process_imaging_deletion_task
+
+    process_imaging_deletion_task(task_id)
 
 
 def _validate_locked_source(source) -> None:
@@ -150,8 +200,71 @@ def _validate_locked_source(source) -> None:
         raise AISourceStateInvalid
 
 
-def _claim_processing(*, source_model, source_id: int, source_field: str) -> tuple[_ProcessingClaim, object]:
+def _locked_invocation_bucket(*, scope: str, key: str, now, expires_at) -> AIInvocationBucket:
+    bucket, created = AIInvocationBucket.objects.get_or_create(
+        scope=scope,
+        key=key,
+        defaults={
+            "request_count": 0,
+            "window_started_at": now,
+            "expires_at": expires_at,
+        },
+    )
+    if not created:
+        bucket = AIInvocationBucket.objects.select_for_update().get(pk=bucket.pk)
+    if bucket.expires_at <= now:
+        bucket.request_count = 0
+        bucket.window_started_at = now
+        bucket.expires_at = expires_at
+    return bucket
+
+
+def _consume_invocation_budget(*, user) -> None:
+    """Consume one admitted start; downstream validation/provider failures still count."""
+
+    now = timezone.now()
+    window_seconds = max(1, int(settings.PEARLIX_AI_INVOCATION_WINDOW_SECONDS))
+    expires_at = now + timedelta(seconds=window_seconds)
+    user_bucket = _locked_invocation_bucket(
+        scope=AIInvocationBucket.Scope.USER,
+        key=str(user.id),
+        now=now,
+        expires_at=expires_at,
+    )
+    clinic_bucket = _locked_invocation_bucket(
+        scope=AIInvocationBucket.Scope.CLINIC,
+        key="clinic",
+        now=now,
+        expires_at=expires_at,
+    )
+    if user_bucket.request_count >= max(1, int(settings.PEARLIX_AI_MAX_INVOCATIONS_PER_USER)):
+        raise AIRateLimited
+    if clinic_bucket.request_count >= max(1, int(settings.PEARLIX_AI_MAX_INVOCATIONS_GLOBAL)):
+        raise AIRateLimited
+    user_bucket.request_count += 1
+    clinic_bucket.request_count += 1
+    user_bucket.save(
+        update_fields=[
+            "request_count",
+            "window_started_at",
+            "expires_at",
+            "updated_at",
+        ]
+    )
+    clinic_bucket.save(
+        update_fields=[
+            "request_count",
+            "window_started_at",
+            "expires_at",
+            "updated_at",
+        ]
+    )
+
+
+def _claim_processing(*, source_model, source_id: int, source_field: str, user) -> tuple[_ProcessingClaim, object]:
     with transaction.atomic():
+        AIExecutionState.objects.get_or_create(pk=1)
+        AIExecutionState.objects.select_for_update().get(pk=1)
         source = source_model.objects.select_for_update().get(pk=source_id)
         _validate_locked_source(source)
         result = (
@@ -162,13 +275,29 @@ def _claim_processing(*, source_model, source_id: int, source_field: str) -> tup
         if result is not None and _is_active_processing(result):
             raise AIAnalysisInProgress(result_id=result.id)
 
+        cutoff = timezone.now() - timedelta(seconds=_processing_stale_seconds())
+        active = AIResult.objects.filter(status=AIResult.Status.PROCESSING, updated_at__gt=cutoff)
+        user_active = active.filter(requested_by_id=user.id).count()
+        if user_active >= max(1, int(settings.PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER)):
+            raise AICapacityBusy
+        if active.count() >= max(1, int(settings.PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL)):
+            raise AICapacityBusy
+        _consume_invocation_budget(user=user)
+
         old_overlay = None
         if result is None:
             result = AIResult(**{source_field: source})
         elif result.overlay_file:
-            old_overlay = (result.overlay_file.storage, result.overlay_file.name)
+            old_overlay = (
+                result.overlay_file.storage,
+                result.overlay_file.name,
+                result.overlay_size_bytes,
+                source.uploaded_by_id,
+                source.patient_id if isinstance(source, XrayAttachment) else None,
+            )
 
         result.status = AIResult.Status.PROCESSING
+        result.requested_by = user
         result.result_summary = ""
         result.overall_confidence = None
         result.findings_json = {
@@ -178,14 +307,23 @@ def _claim_processing(*, source_model, source_id: int, source_field: str) -> tup
             "display_findings": [],
         }
         result.overlay_file = None
+        result.overlay_size_bytes = 0
         result.model_version = ""
         result.error_message = ""
         result.full_clean()
         result.save()
 
         if old_overlay:
-            storage, name = old_overlay
-            transaction.on_commit(lambda storage=storage, name=name: _safe_delete_storage_file(storage, name))
+            _storage, name, size_bytes, uploader_id, patient_id = old_overlay
+            task = register_pending_imaging_deletion(
+                storage_name=name,
+                size_bytes=size_bytes,
+                uploader_id=uploader_id,
+                patient_id=patient_id,
+            )
+            transaction.on_commit(
+                lambda task_id=task.id: _process_pending_deletion_task(task_id)
+            )
         return _ProcessingClaim(result_id=result.id, claimed_at=result.updated_at), source
 
 
@@ -209,6 +347,7 @@ def _complete_result(claim: _ProcessingClaim, pipeline_result: PipelineResult) -
     created_overlay = None
     try:
         with transaction.atomic():
+            lock_storage_admission()
             result = AIResult.objects.select_for_update().get(pk=claim.result_id)
             if not _claim_is_current(result, claim):
                 raise AIAnalysisInProgress(result_id=result.id, model_version=pipeline_result.model_version)
@@ -221,18 +360,46 @@ def _complete_result(claim: _ProcessingClaim, pipeline_result: PipelineResult) -
             result.model_version = payload["model_version"]
             result.error_message = payload["error_message"]
             if pipeline_result.overlay_png is not None:
-                result.overlay_file.save(f"{uuid4().hex}.png", ContentFile(pipeline_result.overlay_png), save=False)
-                created_overlay = (result.overlay_file.storage, result.overlay_file.name)
+                overlay_upload = SimpleUploadedFile("overlay.png", pipeline_result.overlay_png, content_type="image/png")
+                try:
+                    validated_overlay = validate_image_upload(
+                        overlay_upload, require_png=True, maximum_bytes=20 * 1024 * 1024
+                    )
+                except ImageValidationError as exc:
+                    raise ValueError("Inference overlay failed validation.") from exc
+                source = result.xray_attachment or result.external_xray_case
+                patient_id = result.xray_attachment.patient_id if result.xray_attachment_id else None
+                enforce_storage_quota(
+                    additional_bytes=validated_overlay.size_bytes,
+                    uploader_id=source.uploaded_by_id,
+                    patient_id=patient_id,
+                )
+                result.overlay_file.save(f"{uuid4().hex}.png", ContentFile(validated_overlay.content), save=False)
+                result.overlay_size_bytes = validated_overlay.size_bytes
+                created_overlay = (
+                    result.overlay_file.storage,
+                    result.overlay_file.name,
+                    result.overlay_size_bytes,
+                    source.uploaded_by_id,
+                    patient_id,
+                )
             result.full_clean()
             result.save()
             return result
     except Exception:
         if created_overlay:
-            _safe_delete_storage_file(*created_overlay)
+            storage, name, size_bytes, uploader_id, patient_id = created_overlay
+            _safe_delete_storage_file(
+                storage,
+                name,
+                size_bytes=size_bytes,
+                uploader_id=uploader_id,
+                patient_id=patient_id,
+            )
         raise
 
 
-def _execute_analysis(*, source_model, source_id: int, source_field: str, content_type: str) -> AIResult:
+def _execute_analysis(*, source_model, source_id: int, source_field: str, content_type: str, user) -> AIResult:
     clinic_settings = ClinicSettings.get_solo()
     adapter = select_inference_adapter(clinic_settings.ai_mode)
     if not isinstance(adapter, InferenceAdapter):
@@ -242,6 +409,7 @@ def _execute_analysis(*, source_model, source_id: int, source_field: str, conten
         source_model=source_model,
         source_id=source_id,
         source_field=source_field,
+        user=user,
     )
     try:
         image = load_image_input(locked_source.original_file, content_type=content_type)
@@ -266,6 +434,13 @@ def _execute_analysis(*, source_model, source_id: int, source_field: str, conten
         service_error = AIServiceNotConfigured(result_id=claim.result_id, model_version=adapter.model_version)
         _mark_failed(claim, error_message=service_error.public_message)
         raise service_error from exc
+    except StorageQuotaExceeded as exc:
+        service_error = AIStorageQuotaExceeded(
+            result_id=claim.result_id,
+            model_version=adapter.model_version,
+        )
+        _mark_failed(claim, error_message=service_error.public_message)
+        raise service_error from exc
     except Exception as exc:
         _mark_failed(claim, error_message=AIAnalysisFailed.public_message)
         raise AIAnalysisFailed(result_id=claim.result_id, model_version=adapter.model_version) from exc
@@ -277,6 +452,7 @@ def run_ai_for_xray(*, xray_attachment, user):
         source_id=xray_attachment.id,
         source_field="xray_attachment",
         content_type=xray_attachment.content_type,
+        user=user,
     )
 
 
@@ -286,4 +462,5 @@ def run_ai_for_external_case(*, external_xray_case, user):
         source_id=external_xray_case.id,
         source_field="external_xray_case",
         content_type=external_xray_case.content_type,
+        user=user,
     )

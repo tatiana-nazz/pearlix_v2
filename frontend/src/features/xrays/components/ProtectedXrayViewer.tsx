@@ -154,8 +154,12 @@ export function ProtectedXrayViewer({
         </button>
         {!canToggleOverlay ? <span className="protected-xray-fullscreen-overlay-unavailable">{c.noOverlayAvailable}</span> : null}
       </div> : null}
-      <div className="protected-xray-canvas">
-        <div className="protected-xray-media" data-scale={scale.toFixed(2)} style={{ transform: `scale(${scale})` }}>
+      <div className="protected-xray-canvas" data-testid="xray-pan-viewport">
+        <div
+          className="protected-xray-media"
+          data-scale={scale.toFixed(2)}
+          style={{ inlineSize: `${scale * 100}%` }}
+        >
           <img className="protected-xray-original" src={original.url} alt={originalAlt} />
           {overlayVisible && overlay.url ? <img className="protected-xray-overlay" src={overlay.url} alt="" aria-hidden="true" /> : null}
         </div>
@@ -179,7 +183,6 @@ export function ProtectedXrayViewer({
         <span><i className="q2" aria-hidden="true" />{c.quadrantUpperLeft}</span>
         <span><i className="q3" aria-hidden="true" />{c.quadrantLowerLeft}</span>
         <span><i className="q4" aria-hidden="true" />{c.quadrantLowerRight}</span>
-        <span><i className="review" aria-hidden="true" />{c.reviewColor}</span>
       </div> : null}
       {overlayFailed ? <p className="protected-xray-overlay-error" role="alert">{c.overlayUnavailable}</p> : null}
     </figure>
