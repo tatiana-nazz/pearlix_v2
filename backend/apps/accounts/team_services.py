@@ -35,7 +35,9 @@ def _lock_account_security_scope() -> AccountSecurityState:
 
 def _lock_authority_users(*user_ids: int) -> dict[int, User]:
     users = (
-        User.objects.select_for_update()
+        # Lock only User rows. The related profiles are nullable outer joins,
+        # which PostgreSQL cannot include in a FOR UPDATE lock target.
+        User.objects.select_for_update(of=("self",))
         .select_related("doctor_profile", "staff_profile")
         .filter(pk__in=set(user_ids))
         .order_by("pk")
@@ -175,14 +177,14 @@ def create_team_member(*, account: dict, role: str, profile: dict) -> User:
             DoctorProfile.objects.create(user=user, specialty=profile.get("specialty", ""), phone=profile.get("phone", ""), bio=profile.get("bio", ""), is_active=True)
         else:
             StaffProfile.objects.create(user=user, position=profile.get("position", ""), phone=profile.get("phone", ""), is_active=True)
-        user = User.objects.select_for_update().select_related("doctor_profile", "staff_profile").get(pk=user.pk)
+        user = User.objects.select_for_update(of=("self",)).select_related("doctor_profile", "staff_profile").get(pk=user.pk)
         assert_profile_integrity(user, require_profile=True)
         return user
 
 
 def update_team_profile(*, user_id: int, data: dict) -> User:
     with transaction.atomic():
-        user = User.objects.select_for_update().select_related("doctor_profile", "staff_profile").get(pk=user_id)
+        user = User.objects.select_for_update(of=("self",)).select_related("doctor_profile", "staff_profile").get(pk=user_id)
         assert_profile_integrity(user, require_profile=True)
         profile = linked_profile(user)
         if data["version"] != profile.version:
@@ -200,7 +202,7 @@ def update_team_profile(*, user_id: int, data: dict) -> User:
 
 def set_professional_status(*, user_id: int, is_active: bool, version: int) -> User:
     with transaction.atomic():
-        user = User.objects.select_for_update().select_related("doctor_profile", "staff_profile").get(pk=user_id)
+        user = User.objects.select_for_update(of=("self",)).select_related("doctor_profile", "staff_profile").get(pk=user_id)
         assert_profile_integrity(user, require_profile=True)
         profile = linked_profile(user)
         if version != profile.version:

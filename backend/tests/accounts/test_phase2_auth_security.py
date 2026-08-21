@@ -576,6 +576,9 @@ def test_postgresql_concurrent_admin_removals_leave_one_active_admin(
     first_kind,
     second_kind,
 ):
+    # Transactional tests flush data between parametrized cases; restore the
+    # migration-created singleton that production retains for its lifetime.
+    AccountSecurityState.objects.get_or_create(pk=1)
     admin_a = _make_admin(f"pg-a-{first_kind}-{second_kind}@example.com")
     admin_b = _make_admin(f"pg-b-{first_kind}-{second_kind}@example.com")
     demote_a = _demotion_kwargs(admin_a, admin_b)
