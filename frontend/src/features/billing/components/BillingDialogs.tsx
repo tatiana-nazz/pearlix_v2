@@ -26,8 +26,10 @@ export function RecordPaymentDialog({
   const [paymentDate, setPaymentDate] = useState("");
   const [notes, setNotes] = useState("");
   const [validation, setValidation] = useState("");
+  const dirty = Boolean(amount || paymentDate || notes);
+  const cancel = () => { if (!dirty || window.confirm("Discard the unsaved payment details?")) onCancel(); };
 
-  return <Modal open title="Record payment & issue invoice" description="The invoice is the immutable receipt for this payment." onClose={onCancel} pending={pending}>
+  return <Modal open title="Record payment & issue invoice" description="The invoice is the immutable receipt for this payment." onClose={onCancel} dirty={dirty} pending={pending}>
     <form className="clinical-notes-form payment-form" onSubmit={(event) => {
       event.preventDefault();
       if (!validAmount(amount) || Number(amount) > Number(handoff.remaining_amount)) {
@@ -53,7 +55,7 @@ export function RecordPaymentDialog({
       <label>Notes <span>(optional)</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
       {validation ? <p className="field-error" role="alert">{validation}</p> : null}
       {error ? <ErrorState error={error} title="Payment was not recorded" /> : null}
-      <div className="form-actions"><button className="button secondary" type="button" disabled={pending} onClick={onCancel}>Cancel</button><button className="button primary" disabled={pending}>{pending ? "Issuing…" : "Record payment & issue invoice"}</button></div>
+      <div className="form-actions"><button className="button secondary" type="button" disabled={pending} onClick={cancel}>Cancel</button><button className="button primary" disabled={pending}>{pending ? "Issuing…" : "Record payment & issue invoice"}</button></div>
     </form>
   </Modal>;
 }

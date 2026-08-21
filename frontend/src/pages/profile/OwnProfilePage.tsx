@@ -32,7 +32,7 @@ export function OwnProfilePage() {
   if (!user) return null;
   const initials = user.full_name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 
-  return <main className="profile-page-v3">
+  return <div className="profile-page-v3">
     <header className="profile-page-v3-header"><h1>{c.title}</h1><p>{c.description}</p></header>
     <div className="profile-page-v3-grid">
       <SurfaceCard className="profile-information-card">
@@ -55,5 +55,5 @@ export function OwnProfilePage() {
         </SurfaceCard>
       </div> : null}
     </div>
-  </main>;
+  </div>;
 }

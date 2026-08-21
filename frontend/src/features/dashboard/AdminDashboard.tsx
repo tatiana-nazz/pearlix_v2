@@ -21,7 +21,7 @@ export function AdminDashboard() {
   const upcomingTitle = language === "AR" ? "ضغط المواعيد القادم" : "Upcoming clinic load";
   const upcomingEyebrow = language === "AR" ? "الأيام الـ14 القادمة" : "Next 14 days";
 
-  return <main className="dashboard-v2 dashboard-v2-admin" data-role="ADMIN">
+  return <div className="dashboard-v2 dashboard-v2-admin" data-role="ADMIN">
     <DashboardHeader language={language} clinicDate={data.clinic_date} clinicTimezone={data.clinic_timezone} title={c.adminTitle} description={c.adminDescription} />
     <DashboardMetrics count={5}>
       <DashboardMetric tone="blue" icon={<CalendarDays size={21} />} label={c.todaysAppointments} value={data.today_appointments_count} to={dayPath} />
@@ -56,5 +56,5 @@ export function AdminDashboard() {
       <DashboardSection title={c.todaysAppointments} action={<Link to={dayPath}>{c.viewDay}</Link>}><DashboardAppointmentList language={language} clinicTimezone={data.clinic_timezone} items={data.today_appointments} empty={c.noAppointmentsToday} role="ADMIN" showDoctor limit={7} /></DashboardSection>
       <DashboardSection title={c.recentBills} action={<Link to="/admin/billing/handoffs">{c.viewHandoffHistory}</Link>}><DashboardHandoffList language={language} items={data.recent_handoffs} role="ADMIN" empty={c.noOpenBills} showTotal /></DashboardSection>
     </div>
-  </main>;
+  </div>;
 }

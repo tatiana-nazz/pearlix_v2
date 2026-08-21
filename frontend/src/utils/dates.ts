@@ -35,7 +35,9 @@ export function formatDateRange(start: string | null | undefined, end: string | 
   return `${formatDateTime(start)} - ${formatTime(end)}`;
 }
 
-export function formatWeekday(value: number): string {
-  const labels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+export function formatWeekday(value: number, language: "EN" | "AR" = "EN"): string {
+  const labels = language === "AR"
+    ? ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
+    : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   return labels[value] ?? `Day ${value}`;
 }

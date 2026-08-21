@@ -34,7 +34,8 @@ describe("ScheduleManagementPage clinic operating week", () => {
     fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
 
     expect(await screen.findByText("Unable to update schedule")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "Default shift details" })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0]);
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 });

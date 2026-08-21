@@ -27,6 +27,7 @@ import { getPatientPermissions, patientListPath } from "../../features/patients/
 import type { PatientFormValues } from "../../features/patients/utils/patientFormMapping";
 import type { UserRole } from "../../types/auth";
 import { useAuthStore } from "../../auth/authStore";
+import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 
 interface PatientProfilePageProps {
   role: UserRole;
@@ -66,6 +67,7 @@ export function PatientProfilePage({ role, defaultTab = "overview" }: PatientPro
     && editSection
     && ((visibleTab === "overview" && editSection === "general") || (visibleTab === "medical" && editSection === "medical")),
   );
+  useUnsavedChanges(isEditing && editDirty, c.discardChanges);
 
   useEffect(() => {
     if (!patient.data) return;

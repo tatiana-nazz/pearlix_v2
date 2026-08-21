@@ -22,6 +22,8 @@ export function XrayUploadDialog({ title, isSubmitting, error, onCancel, onSubmi
   const [titleValue, setTitleValue] = useState("");
   const [notes, setNotes] = useState("");
   const [fileError, setFileError] = useState<string | null>(null);
+  const dirty = Boolean(file || titleValue || notes);
+  const cancel = () => { if (!dirty || window.confirm(c.discardChanges)) onCancel(); };
 
   function selectFile(nextFile: File | null) {
     const nextError = validateXrayFile(nextFile);
@@ -37,7 +39,7 @@ export function XrayUploadDialog({ title, isSubmitting, error, onCancel, onSubmi
   }
 
   return (
-    <Modal open title={title} description={c.supportedFiles} onClose={onCancel} pending={isSubmitting}>
+    <Modal open title={title} description={c.supportedFiles} onClose={onCancel} dirty={dirty} pending={isSubmitting}>
       <form className="xray-upload-form" onSubmit={submit}>
         <div className="v2-field">
           <label htmlFor={inputId}>{c.imageFile}</label>
@@ -50,7 +52,7 @@ export function XrayUploadDialog({ title, isSubmitting, error, onCancel, onSubmi
         <label className="v2-field">{c.description}<textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} disabled={isSubmitting} /></label>
         {error ? <ErrorState error={error} title={c.uploadFailed} /> : null}
         <div className="xray-dialog-actions">
-          <Button variant="secondary" type="button" onClick={onCancel} disabled={isSubmitting}>{c.cancel}</Button>
+          <Button variant="secondary" type="button" onClick={cancel} disabled={isSubmitting}>{c.cancel}</Button>
           <Button type="submit" loading={isSubmitting}>{isSubmitting ? c.uploading : c.upload}</Button>
         </div>
       </form>

@@ -206,6 +206,9 @@ describe("Admin clinic operating week", () => {
     render(<div dir="rtl"><TestProviders><AdminClinicSettingsPage /></TestProviders></div>);
 
     expect(await screen.findByRole("group", { name: "أيام إغلاق العيادة الأسبوعية" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "إعدادات العيادة" })).toBeInTheDocument();
+    expect(screen.getByLabelText("اسم العيادة")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "المدد المسموح بها" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "الجمعة" })).toBeChecked();
     expect(screen.getByRole("group", { name: "أيام إغلاق العيادة الأسبوعية" }).closest("[dir=rtl]")).toBeInTheDocument();
   });

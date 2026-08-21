@@ -17,9 +17,15 @@ describe("Phase 14C production workspace shell", () => {
     useAuthStore.setState({ user:user(2) }); renderShell(); expect(document.querySelector(".app-shell")).toHaveAttribute("data-collapsed", "false");
   });
   it("opens and closes production drawer controls while retaining logout and the Admin Team link", () => {
-    renderShell(); const opener = screen.getByRole("button", { name:"Open navigation" }); opener.focus(); fireEvent.click(opener); expect(document.querySelector(".app-shell")).toHaveAttribute("data-drawer-open", "true"); expect(document.querySelector(".drawer-close")).toBeInTheDocument(); expect(screen.getAllByRole("button", { name:"Logout" }).some((item) => item.classList.contains("sidebar-logout"))).toBe(true); expect(screen.getByRole("link", { name:"Team" })).toHaveAttribute("href", "/admin/team"); fireEvent.keyDown(document, { key:"Escape" }); expect(document.querySelector(".app-shell")).toHaveAttribute("data-drawer-open", "false");
+    renderShell(); const opener = screen.getByRole("button", { name:"Open navigation" }); opener.focus(); fireEvent.click(opener); expect(document.querySelector(".app-shell")).toHaveAttribute("data-drawer-open", "true"); expect(document.querySelector(".drawer-close")).toBeInTheDocument(); expect(document.querySelector(".app-workspace")).toHaveProperty("inert", true); expect(screen.getAllByRole("button", { name:"Logout" }).some((item) => item.classList.contains("sidebar-logout"))).toBe(true); expect(screen.getByRole("link", { name:"Team" })).toHaveAttribute("href", "/admin/team"); fireEvent.keyDown(document, { key:"Escape" }); expect(document.querySelector(".app-shell")).toHaveAttribute("data-drawer-open", "false");
   });
   it("uses top-only compact control, logical RTL direction, and no horizontal sidebar overflow contract", async () => {
     renderShell(); const shell = document.querySelector(".app-shell")!; useAuthStore.setState({ user:{ ...user(1), language_preference:"AR" } }); await waitFor(() => expect(shell).toHaveAttribute("dir", "rtl")); expect(document.querySelectorAll(".app-sidebar .sidebar-toggle")).toHaveLength(1); expect(document.querySelector(".app-sidebar-footer .sidebar-toggle")).toBeNull(); expect(document.querySelector(".app-sidebar")).toHaveClass("app-sidebar");
+  });
+  it("provides one primary main landmark and a keyboard-visible skip target", () => {
+    renderShell();
+    expect(screen.getByRole("link", { name:"Skip to main content" })).toHaveAttribute("href", "#main-content");
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
   });
 });

@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../auth/authStore";
+import type { UserRole } from "../types/auth";
 import { loginErrorMessage } from "../utils/apiErrors";
 import { dashboardPathForRole } from "../utils/roles";
 
@@ -30,7 +31,7 @@ export function LoginPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to={mustChangePassword ? "/change-password" : safeReturnPath(location.state) ?? dashboardPathForRole(role)} replace />;
+    return <Navigate to={mustChangePassword ? "/change-password" : safeReturnPathForRole(location.state, role) ?? dashboardPathForRole(role)} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -43,7 +44,7 @@ export function LoginPage() {
     setIsSubmitting(true);
     try {
       const user = await login({ email, password });
-      navigate(user.must_change_password ? "/change-password" : safeReturnPath(location.state) ?? dashboardPathForRole(user.role), { replace: true });
+      navigate(user.must_change_password ? "/change-password" : safeReturnPathForRole(location.state, user.role) ?? dashboardPathForRole(user.role), { replace: true });
     } catch (err) {
       setError(loginErrorMessage(err, language));
     } finally {
@@ -84,4 +85,11 @@ export function safeReturnPath(state: unknown): string | null {
   const search = String((from as { search?: unknown }).search ?? "");
   const hash = String((from as { hash?: unknown }).hash ?? "");
   return `${pathname}${search.startsWith("?") ? search : ""}${hash.startsWith("#") ? hash : ""}`;
+}
+
+export function safeReturnPathForRole(state: unknown, role: UserRole | null): string | null {
+  if (!role) return null;
+  const path = safeReturnPath(state);
+  const roleRoot = `/${role.toLowerCase()}`;
+  return path && (path === roleRoot || path.startsWith(`${roleRoot}/`)) ? path : null;
 }

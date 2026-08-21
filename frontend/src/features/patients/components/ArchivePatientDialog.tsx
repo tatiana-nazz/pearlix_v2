@@ -1,9 +1,8 @@
-import { useEffect } from "react";
-
 import { getErrorMessage } from "../../../utils/apiErrors";
 import { useAuthStore } from "../../../auth/authStore";
 import type { PatientDetail, PatientListItem } from "../../../types/patients";
 import { patientCopy } from "../i18n";
+import { Modal } from "../../../components/v2";
 
 interface ArchivePatientDialogProps {
   patient: PatientDetail | PatientListItem | null;
@@ -16,21 +15,12 @@ interface ArchivePatientDialogProps {
 
 export function ArchivePatientDialog({ patient, mode, isSubmitting, error, onCancel, onConfirm }: ArchivePatientDialogProps) {
   const c = patientCopy(useAuthStore((state) => state.user?.language_preference));
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !isSubmitting) onCancel();
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSubmitting, onCancel]);
 
   if (!patient) return null;
   const isArchive = mode === "archive";
 
   return (
-    <div className="dialog-backdrop" role="presentation">
-      <section className="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="archive-patient-title">
-        <h3 id="archive-patient-title">{isArchive ? c.archivePatient : c.unarchivePatient}</h3>
+    <Modal open title={isArchive ? c.archivePatient : c.unarchivePatient} onClose={onCancel} pending={isSubmitting}>
         <p>
           {isArchive
             ? c.archiveStoredDescription
@@ -48,7 +38,6 @@ export function ArchivePatientDialog({ patient, mode, isSubmitting, error, onCan
             {isSubmitting ? c.saving : isArchive ? c.archivePatient : c.unarchivePatient}
           </button>
         </div>
-      </section>
-    </div>
+    </Modal>
   );
 }

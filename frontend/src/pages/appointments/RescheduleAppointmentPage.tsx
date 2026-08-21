@@ -1,6 +1,8 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { clinicApi, clinicSettingsQueryKey } from "../../api/endpoints/clinic";
+import { useState } from "react";
+import { flushSync } from "react-dom";
 
 import { ErrorState } from "../../components/ErrorState";
 import { LoadingState } from "../../components/LoadingState";
@@ -10,6 +12,7 @@ import { useUpdateAppointment } from "../../features/appointments/hooks/useAppoi
 import { useAppointment } from "../../features/appointments/hooks/useAppointments";
 import { useDoctors } from "../../features/appointments/hooks/useDoctors";
 import { appointmentViewPath } from "../../features/appointments/utils/appointmentPermissions";
+import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 
 export function RescheduleAppointmentPage() {
   const navigate = useNavigate();
@@ -18,6 +21,8 @@ export function RescheduleAppointmentPage() {
   const doctors = useDoctors();
   const updateAppointment = useUpdateAppointment(appointmentId);
   const clinicSettings = useQuery({ queryKey: clinicSettingsQueryKey, queryFn: clinicApi.getSettings, staleTime: 300_000 });
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty, "You have an unfinished reschedule. Leave this page and discard it?");
 
   return (
     <div className="appointment-page">
@@ -41,8 +46,12 @@ export function RescheduleAppointmentPage() {
           isSubmitting={updateAppointment.isPending}
           error={updateAppointment.error}
           clinicTimezone={clinicSettings.data?.timezone}
+          onDirtyChange={setDirty}
           onSubmit={async (payload) => {
             await updateAppointment.mutateAsync(payload);
+            // Commit the clean state before navigating so the unsaved-changes
+            // blocker cannot intercept a successful reschedule.
+            flushSync(() => setDirty(false));
             navigate(appointmentViewPath("STAFF", "needs-reschedule"));
           }}
         />

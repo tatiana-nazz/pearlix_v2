@@ -21,7 +21,7 @@ export function DoctorDashboard() {
   const ready = data.today_appointments.find((appointment) => appointment.status === "CHECKED_IN");
   const next = ready ?? data.today_appointments.find((appointment) => appointment.status === "UPCOMING");
   const dayPath = `/doctor/appointments/day?date=${data.clinic_date}`;
-  return <main className="dashboard-v2 dashboard-v2-doctor" data-role="DOCTOR">
+  return <div className="dashboard-v2 dashboard-v2-doctor" data-role="DOCTOR">
     <DashboardHeader language={language} clinicDate={data.clinic_date} clinicTimezone={data.clinic_timezone} title={c.doctorTitle} description={c.doctorDescription} actions={data.own_active_visit ? <Link className="v2-button" to="/doctor/visits/active">{c.continueVisit}</Link> : undefined} />
     <DashboardMetrics>
       <DashboardMetric tone="blue" icon={<CalendarDays size={21} />} label={c.todaysAppointments} value={data.today_appointments_count} to={dayPath} />
@@ -34,5 +34,5 @@ export function DoctorDashboard() {
       <DashboardSection title={c.todaysSchedule} action={<Link to={dayPath}>{c.viewDay}</Link>}><DashboardAppointmentList language={language} clinicTimezone={data.clinic_timezone} items={data.today_appointments} empty={c.noAppointmentsToday} role="DOCTOR" /></DashboardSection>
       <DashboardSection title={c.nextPatient} className="dashboard-v2-next-patient">{next ? <Link className="dashboard-v2-next-focus" aria-label={`${c.openAppointment} ${next.id}: ${next.patient.full_name}`} to={appointmentDetailPath("DOCTOR", next.id)}><span className={`dashboard-v2-priority ${next.status === "CHECKED_IN" ? "ready" : "next"}`}>{next.status === "CHECKED_IN" ? c.ready : c.next}</span><strong>{next.patient.full_name}</strong><span dir="ltr">{dashboardTime(next.start_datetime, language, data.clinic_timezone)}</span><small>{next.reason || c.noReason}</small><AppointmentStatusBadge status={next.status} /><b>{c.openAppointment}</b></Link> : <p className="dashboard-v2-empty">{c.noMorePatients}</p>}</DashboardSection>
     </div>
-  </main>;
+  </div>;
 }

@@ -16,7 +16,7 @@ export function StaffDashboard() {
   if (!query.data) return <DashboardEmpty language={language} />;
   const data = query.data;
   const dayPath = `/staff/appointments/day?date=${data.clinic_date}`;
-  return <main className="dashboard-v2 dashboard-v2-staff" data-role="STAFF">
+  return <div className="dashboard-v2 dashboard-v2-staff" data-role="STAFF">
     <DashboardHeader language={language} clinicDate={data.clinic_date} clinicTimezone={data.clinic_timezone} title={c.staffTitle} description={c.staffDescription} actions={<><Link className="v2-button" to="/staff/appointments/day">{c.newAppointment}</Link><Link className="v2-button secondary" to="/staff/patients/new">{c.newPatient}</Link></>} />
     <DashboardMetrics count={5}>
       <DashboardMetric tone="blue" icon={<CalendarDays size={21} />} label={c.todaysAppointments} value={data.today_appointments_count} to={dayPath} />
@@ -35,5 +35,5 @@ export function StaffDashboard() {
       ]} /></DashboardSection>
     </div>
     <DashboardSection title={c.billsFollowUp} action={<Link to="/staff/billing/overview">{c.viewBilling}</Link>}><DashboardHandoffList language={language} items={data.open_handoffs} role="STAFF" empty={c.noOpenBills} /></DashboardSection>
-  </main>;
+  </div>;
 }

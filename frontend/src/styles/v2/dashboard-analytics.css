@@ -452,3 +452,20 @@
     overscroll-behavior-inline: contain;
   }
 }
+
+.analytics-completeness {
+  margin-block-end: 0.55rem;
+  font-weight: 700;
+}
+
+.analytics-utilization-scroll {
+  max-block-size: 520px;
+  overflow: auto;
+  border-radius: 10px;
+  scrollbar-gutter: stable;
+}
+
+.analytics-utilization-scroll:focus-visible {
+  outline: 3px solid var(--v2-focus);
+  outline-offset: 2px;
+}

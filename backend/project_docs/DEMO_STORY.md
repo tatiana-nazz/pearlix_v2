@@ -1,4 +1,9 @@
-# Phase 14A Integrated Demo Clinic Story
+# Phase 14A Integrated Demo Clinic Story (legacy)
+
+> **Deprecated for release demos.** This command remains as a historical
+> regression fixture. Use the canonical `seed_demo` →
+> `populate_demo_analytics_realistic` → `finalize_demo_seed` workflow documented
+> in `DEMO_WORKFLOW.md`.
 
 The Phase 14A demo is a deterministic, development-only dataset for exercising every implemented Pearlix workspace. It creates synthetic records only; its PNG assets are clearly non-clinical, contain no patient data, and must never be presented as diagnostic images.
 

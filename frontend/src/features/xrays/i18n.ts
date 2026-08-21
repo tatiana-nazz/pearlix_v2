@@ -12,6 +12,7 @@ export type XrayCopy = {
   chooseFile: string;
   supportedFiles: string;
   cancel: string;
+  discardChanges: string;
   upload: string;
   uploading: string;
   aiResult: string;
@@ -105,6 +106,7 @@ const en: XrayCopy = {
   chooseFile: "Choose file",
   supportedFiles: "PNG, JPG, or JPEG only. Maximum size 10 MB.",
   cancel: "Cancel",
+  discardChanges: "Discard the unsaved X-ray upload?",
   upload: "Upload",
   uploading: "Uploading…",
   aiResult: "AI Result",
@@ -209,6 +211,7 @@ const ar: XrayCopy = {
   chooseFile: "اختر ملفاً",
   supportedFiles: "PNG أو JPG أو JPEG فقط. الحد الأقصى للحجم 10 ميغابايت.",
   cancel: "إلغاء",
+  discardChanges: "هل تريد تجاهل بيانات رفع الأشعة غير المحفوظة؟",
   upload: "رفع",
   uploading: "جارٍ الرفع…",
   aiResult: "نتيجة الذكاء الاصطناعي",

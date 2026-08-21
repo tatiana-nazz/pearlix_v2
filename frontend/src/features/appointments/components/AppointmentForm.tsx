@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { AppointmentDetail, AppointmentListItem, CreateAppointmentPayload, UpdateAppointmentPayload } from "../../../types/appointments";
 import type { DoctorListItem } from "../../../types/schedule";
@@ -25,6 +25,7 @@ interface AppointmentFormBaseProps {
   error?: unknown;
   clinicTimezone?: string;
   onCancel?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
   onSubmit: (payload: CreateAppointmentPayload | UpdateAppointmentPayload) => void | Promise<void>;
 }
 
@@ -54,11 +55,17 @@ export function AppointmentForm(props: AppointmentFormProps) {
   const backendErrors = useMemo(() => apiFieldErrors(props.error), [props.error]);
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = appointmentCopy(language);
+  const initialSnapshot = useRef(JSON.stringify(initialValues(props)));
 
   useEffect(() => {
     setValues(initialValues(props));
     setSelectedPatient(props.appointment?.patient ?? null);
+    initialSnapshot.current = JSON.stringify(initialValues(props));
   }, [props.appointment, props.initialDate, props.initialDoctorId, props.clinicTimezone]);
+
+  useEffect(() => {
+    props.onDirtyChange?.(JSON.stringify(values) !== initialSnapshot.current);
+  }, [props.onDirtyChange, values]);
 
   function setField(field: keyof AppointmentFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));

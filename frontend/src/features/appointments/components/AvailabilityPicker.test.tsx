@@ -31,4 +31,9 @@ describe("AvailabilityPicker", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Clinic closed");
     expect(screen.queryByText(/No available slots/)).not.toBeInTheDocument();
   });
+
+  it("renders slot wall times in the configured clinic timezone", () => {
+    render(<AvailabilityPicker clinicTimezone="UTC" availability={{ ...availability, available_slots: [{ ...availability.available_slots[0], start_datetime: "2026-08-23T09:00:00+03:00", end_datetime: "2026-08-23T09:30:00+03:00" }] }} onSelect={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /6:00 AM - 6:30 AM/ })).toBeInTheDocument();
+  });
 });

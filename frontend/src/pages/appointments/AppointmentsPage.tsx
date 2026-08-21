@@ -34,6 +34,7 @@ const calendarViews: AppointmentViewMode[] = ["day", "week", "month", "list"];
 export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isCreateOpen, setCreateOpen] = useState(false);
+  const [createDirty, setCreateDirty] = useState(false);
   const navigate = useNavigate();
   const language = useAuthStore((state) => state.user?.language_preference ?? "EN");
   const c = appointmentCopy(language);
@@ -59,6 +60,11 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
   const doctors = useDoctors();
   const createAppointment = useCreateAppointment();
   const permissions = getAppointmentPermissions(role);
+  function closeCreate(force = false) {
+    if (!force && createDirty && !window.confirm(language === "AR" ? "هل تريد تجاهل بيانات الموعد غير المحفوظة؟" : "Discard the unsaved appointment details?")) return;
+    setCreateDirty(false);
+    setCreateOpen(false);
+  }
 
   function setParam(key: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -101,7 +107,7 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
     : formatAppointmentDate(date, language, clinicTimezone, view === "month" ? { month: "long", year: "numeric" } : { dateStyle: "full" });
 
   return (
-    <main className="appointments-v2" data-role={role}>
+    <div className="appointments-v2" data-role={role}>
       <header className="appointments-v2-header"><div><h1>{c.title}</h1><span>{role === "STAFF" ? c.staffDescription : c.readDescription}</span></div><div className="appointments-v2-actions">{permissions.canCreate ? <Button type="button" onClick={() => setCreateOpen(true)}>{c.newAppointment}</Button> : null}</div></header>
 
       <SurfaceCard className="appointments-navigation-card">
@@ -132,8 +138,8 @@ export function AppointmentsPage({ role, view }: AppointmentsPageProps) {
         {["day", "week", "month"].includes(view) && appointments.data ? <AppointmentPeriodSummary rows={rows} total={appointments.data.count} language={language} periodLabel={view === "day" ? c.daySummary : view === "month" ? c.monthSummary : c.weekSummary} totalLabel={c.periodTotal} loadedLabel={c.loadedStatusSummary} /> : null}
       </div>
 
-      {isCreateOpen ? <Modal open title={c.newAppointment} onClose={() => setCreateOpen(false)} wide><AppointmentForm mode="create" doctors={doctors.data ?? []} clinicTimezone={clinicTimezone} initialDate={date} initialDoctorId={Number(doctorId) || undefined} isSubmitting={createAppointment.isPending} error={createAppointment.error} onCancel={() => setCreateOpen(false)} onSubmit={submitCreate} /></Modal> : null}
-    </main>
+      {isCreateOpen ? <Modal open title={c.newAppointment} dirty={createDirty} onClose={() => closeCreate(true)} wide><AppointmentForm mode="create" doctors={doctors.data ?? []} clinicTimezone={clinicTimezone} initialDate={date} initialDoctorId={Number(doctorId) || undefined} isSubmitting={createAppointment.isPending} error={createAppointment.error} onCancel={() => closeCreate(false)} onDirtyChange={setCreateDirty} onSubmit={submitCreate} /></Modal> : null}
+    </div>
   );
 }
 
