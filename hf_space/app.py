@@ -37,6 +37,7 @@ from apps.ai_results.adapters.dentex import (  # noqa: E402
 from apps.ai_results.model_contract import MAX_IMAGE_INPUT_BYTES, PIPELINE_VERSION  # noqa: E402
 from apps.ai_results.result_types import ImageInput  # noqa: E402
 from apps.xrays.image_validation import ImageValidationError, validate_image_upload  # noqa: E402
+from apps.xrays.request_limits import BoundedASGIRequestBodyMiddleware  # noqa: E402
 
 MAX_REMOTE_OVERLAY_BYTES = 20 * 1024 * 1024
 MAX_REMOTE_TOOTH_ROWS = 32
@@ -166,6 +167,7 @@ api = FastAPI(
     redoc_url=None,
     openapi_url=None,
 )
+api.add_middleware(BoundedASGIRequestBodyMiddleware)
 
 
 @api.get("/health")
