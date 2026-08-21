@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 import shutil
 import subprocess
 import sys
@@ -71,6 +72,21 @@ def build_space(repo_root: Path, output: Path) -> None:
         shutil.copy2(source, target)
 
 
+def _space_subdomain_part(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9-]+", "-", value.strip().lower()).strip("-")
+    if not normalized:
+        raise SystemExit("Could not derive the Hugging Face Space HTTPS hostname.")
+    return normalized
+
+
+def space_direct_url(repo_id: str) -> str:
+    try:
+        owner, name = repo_id.split("/", 1)
+    except ValueError as exc:
+        raise SystemExit("The Hugging Face Space repository ID is invalid.") from exc
+    return f"https://{_space_subdomain_part(owner)}-{_space_subdomain_part(name)}.hf.space"
+
+
 def validate_space_build(output: Path) -> None:
     required = (
         "app.py",
@@ -103,11 +119,29 @@ gr = types.ModuleType("gradio")
 gr.Blocks = lambda *args, **kwargs: Context()
 gr.Markdown = gr.File = gr.Button = gr.JSON = Component
 gr.Error = RuntimeError
+gr.mount_gradio_app = lambda app, demo, path: app
 spaces = types.ModuleType("spaces")
 spaces.GPU = lambda **kwargs: (lambda fn: fn)
+class HTTPException(Exception):
+    def __init__(self, status_code, detail):
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
+class UploadFile: pass
+class FastAPI:
+    def __init__(self, *args, **kwargs): pass
+    def get(self, *args, **kwargs): return lambda fn: fn
+    def post(self, *args, **kwargs): return lambda fn: fn
+fastapi = types.ModuleType("fastapi")
+fastapi.FastAPI = FastAPI
+fastapi.File = lambda *args, **kwargs: None
+fastapi.HTTPException = HTTPException
+fastapi.UploadFile = UploadFile
 sys.modules["gradio"] = gr
 sys.modules["spaces"] = spaces
-runpy.run_path(root + "/app.py", run_name="pearlix_space_package_validation")
+sys.modules["fastapi"] = fastapi
+module = runpy.run_path(root + "/app.py", run_name="pearlix_space_package_validation")
+assert "app" in module and "analyze_api" in module and "health" in module
 from PIL import Image
 from django.core.files.uploadedfile import SimpleUploadedFile
 from apps.xrays.image_validation import validate_image_upload
@@ -217,6 +251,7 @@ def main() -> None:
 
         model_repo = f"{username}/{args.model_name}"
         space_repo = f"{username}/{args.space_name}"
+        direct_url = space_direct_url(space_repo)
 
         print(f"Creating/updating private model repo: {model_repo}")
         api.create_repo(repo_id=model_repo, repo_type="model", private=True, exist_ok=True)
@@ -262,17 +297,19 @@ def main() -> None:
         runtime = api.get_space_runtime(repo_id=space_repo)
         print("\nPearlix Hugging Face publication complete.")
         print(f"MODEL_REPO_ID={model_repo}")
-        print(f"AI_SERVICE_URL={space_repo}")
+        print(f"SPACE_REPO_ID={space_repo}")
+        print(f"AI_SERVICE_URL={direct_url}")
         print(f"SPACE_STAGE={runtime.stage}")
         print(f"SPACE_HARDWARE={runtime.hardware}")
         print(f"SPACE_REQUESTED_HARDWARE={runtime.requested_hardware}")
         print(
-            "\nNext: create a Hugging Face READ/fine-grained token for this private Space. "
-            "Do not paste it into chat."
+            "\nThe private Space exposes the production POST /analyze contract at AI_SERVICE_URL. "
+            "Create a Hugging Face READ/fine-grained token that can access this private Space. Do not paste it into chat."
         )
         print(
-            "Set that token in the Vercel backend as AI_SERVICE_TOKEN, and set AI_SERVICE_URL to the value above."
+            "Set that token in the Vercel backend as AI_SERVICE_TOKEN and set AI_SERVICE_URL to the HTTPS value above."
         )
+        print("Verify AI_SERVICE_URL/health with the token before enabling staging inference.")
 
 
 if __name__ == "__main__":
