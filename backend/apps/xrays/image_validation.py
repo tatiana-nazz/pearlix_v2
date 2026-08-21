@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from threading import BoundedSemaphore
 import warnings
 
 from PIL import Image, UnidentifiedImageError
@@ -18,6 +19,12 @@ MAX_DECODED_BYTES = 160_000_000
 MAX_IMAGE_FRAMES = 1
 FORMAT_EXTENSIONS = {"PNG": {".png"}, "JPEG": {".jpg", ".jpeg"}}
 FORMAT_CONTENT_TYPES = {"PNG": "image/png", "JPEG": "image/jpeg"}
+
+# Decoded-image memory is process-local, so the admission guard belongs to the
+# worker that will allocate it. One decode at a time prevents two worst-case
+# 160 MB decoded surfaces from being materialized concurrently in one Vercel/
+# Django worker while still allowing independent serverless workers to scale.
+_IMAGE_DECODE_SLOT = BoundedSemaphore(value=1)
 
 
 class ImageValidationError(ValueError):
@@ -69,34 +76,36 @@ def validate_image_upload(uploaded_file, *, require_png: bool = False, maximum_b
     original_name = safe_basename(getattr(uploaded_file, "name", ""))
     extension = Path(original_name).suffix.lower()
     content = _read_bounded(uploaded_file, maximum_bytes)
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error", Image.DecompressionBombWarning)
-            with Image.open(BytesIO(content)) as image:
-                actual_format = str(image.format or "").upper()
-                width, height = image.size
-                frames = int(getattr(image, "n_frames", 1))
-                if actual_format not in FORMAT_EXTENSIONS or (require_png and actual_format != "PNG"):
-                    raise ImageValidationError("Only PNG and JPEG images are supported.")
-                if extension not in FORMAT_EXTENSIONS[actual_format]:
-                    raise ImageValidationError("The filename extension does not match the image format.")
-                declared_type = str(getattr(uploaded_file, "content_type", "") or "").lower()
-                if declared_type != FORMAT_CONTENT_TYPES[actual_format]:
-                    raise ImageValidationError("The declared content type does not match the image format.")
-                if frames != MAX_IMAGE_FRAMES:
-                    raise ImageValidationError("Multi-frame images are not supported.")
-                pixels = width * height
-                if width <= 0 or height <= 0 or width > MAX_IMAGE_WIDTH or height > MAX_IMAGE_HEIGHT:
-                    raise ImageValidationError("The image dimensions exceed the supported limit.")
-                if pixels > MAX_IMAGE_PIXELS or pixels * 4 > MAX_DECODED_BYTES:
-                    raise ImageValidationError("The decoded image surface exceeds the supported limit.")
-                image.verify()
-            with Image.open(BytesIO(content)) as decoded:
-                decoded.load()
-    except (ImageValidationError, Image.DecompressionBombWarning):
-        raise
-    except (UnidentifiedImageError, OSError, SyntaxError, ValueError) as exc:
-        raise ImageValidationError("The image payload is malformed or truncated.") from exc
+
+    with _IMAGE_DECODE_SLOT:
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", Image.DecompressionBombWarning)
+                with Image.open(BytesIO(content)) as image:
+                    actual_format = str(image.format or "").upper()
+                    width, height = image.size
+                    frames = int(getattr(image, "n_frames", 1))
+                    if actual_format not in FORMAT_EXTENSIONS or (require_png and actual_format != "PNG"):
+                        raise ImageValidationError("Only PNG and JPEG images are supported.")
+                    if extension not in FORMAT_EXTENSIONS[actual_format]:
+                        raise ImageValidationError("The filename extension does not match the image format.")
+                    declared_type = str(getattr(uploaded_file, "content_type", "") or "").lower()
+                    if declared_type != FORMAT_CONTENT_TYPES[actual_format]:
+                        raise ImageValidationError("The declared content type does not match the image format.")
+                    if frames != MAX_IMAGE_FRAMES:
+                        raise ImageValidationError("Multi-frame images are not supported.")
+                    pixels = width * height
+                    if width <= 0 or height <= 0 or width > MAX_IMAGE_WIDTH or height > MAX_IMAGE_HEIGHT:
+                        raise ImageValidationError("The image dimensions exceed the supported limit.")
+                    if pixels > MAX_IMAGE_PIXELS or pixels * 4 > MAX_DECODED_BYTES:
+                        raise ImageValidationError("The decoded image surface exceeds the supported limit.")
+                    image.verify()
+                with Image.open(BytesIO(content)) as decoded:
+                    decoded.load()
+        except (ImageValidationError, Image.DecompressionBombWarning):
+            raise
+        except (UnidentifiedImageError, OSError, SyntaxError, ValueError) as exc:
+            raise ImageValidationError("The image payload is malformed or truncated.") from exc
 
     return ValidatedImage(
         content=content,
