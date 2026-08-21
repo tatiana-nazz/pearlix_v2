@@ -115,7 +115,14 @@ def test_admin_password_reset_revokes_old_access_and_refresh(admin_client):
 
 
 @pytest.mark.django_db
-def test_deactivation_and_reactivation_never_restore_pre_deactivation_tokens(admin_client):
+def test_deactivation_and_reactivation_never_restore_pre_deactivation_tokens():
+    maintenance_actor = User.objects.create_superuser(
+        email="reactivation-maintenance-actor@example.com",
+        password=PASSWORD,
+        full_name="Reactivation Maintenance Actor",
+    )
+    maintenance_client = APIClient()
+    maintenance_client.force_authenticate(user=maintenance_actor)
     user = User.objects.create_superuser(
         email="reactivation-session@example.com",
         password=PASSWORD,
@@ -124,13 +131,13 @@ def test_deactivation_and_reactivation_never_restore_pre_deactivation_tokens(adm
     initial_version = user.version
     login = _login(APIClient(), user)
 
-    deactivated = admin_client.post(f"/api/users/{user.id}/deactivate/")
+    deactivated = maintenance_client.post(f"/api/users/{user.id}/deactivate/")
     assert deactivated.status_code == 200
     user.refresh_from_db()
     assert user.version == initial_version + 1
     _assert_pair_rejected(login.data["access"], login.data["refresh"])
 
-    reactivated = admin_client.post(f"/api/users/{user.id}/reactivate/")
+    reactivated = maintenance_client.post(f"/api/users/{user.id}/reactivate/")
     assert reactivated.status_code == 200
     user.refresh_from_db()
     assert user.version == initial_version + 2
@@ -413,6 +420,12 @@ def test_admin_removal_paths_serialize_and_reject_stale_actor(first_kind, second
 
     assert exc_info.value.code == "PERMISSION_DENIED"
     assert User.objects.filter(role=User.Role.ADMIN, is_active=True).count() == 1
+    assert User.objects.filter(
+        role=User.Role.ADMIN,
+        is_active=True,
+        is_staff=True,
+        is_superuser=True,
+    ).count() == 1
 
 
 @pytest.mark.django_db
@@ -440,7 +453,13 @@ def test_account_security_scope_row_exists_and_is_locked_by_both_removal_paths(m
 
 @pytest.mark.django_db
 def test_role_transition_rolls_back_when_required_audit_write_fails(monkeypatch, admin_client, admin_user):
-    target = _make_admin("rollback-transition@example.com")
+    target = User.objects.create_user(
+        email="rollback-transition@example.com",
+        password=PASSWORD,
+        full_name="Rollback Transition",
+        role=User.Role.ADMIN,
+        is_staff=True,
+    )
     initial_version = target.version
     preview = transition_preview(
         user=target,
@@ -612,3 +631,9 @@ def test_postgresql_concurrent_admin_removals_leave_one_active_admin(
 
     assert results.count("ok") == 1
     assert User.objects.filter(role=User.Role.ADMIN, is_active=True).count() == 1
+    assert User.objects.filter(
+        role=User.Role.ADMIN,
+        is_active=True,
+        is_staff=True,
+        is_superuser=True,
+    ).count() == 1

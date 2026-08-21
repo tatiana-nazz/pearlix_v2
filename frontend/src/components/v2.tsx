@@ -205,6 +205,8 @@ export function FormSection({ title, children }: PropsWithChildren<{ title:strin
 export function StickyActionBar({ children }: PropsWithChildren) { return <div className="v2-sticky-actions">{children}</div>; }
 
 type OverlayProps = PropsWithChildren<{ open:boolean; title:string; description?:string; onClose:()=>void; dirty?:boolean; pending?:boolean; wide?:boolean }>;
+const overlayFocusableSelector = "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])";
+
 function Overlay({ open, title, description, onClose, dirty, pending, wide, children, drawer = false }: OverlayProps & { drawer?:boolean }) {
   const dialog = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
@@ -241,7 +243,11 @@ function Overlay({ open, title, description, onClose, dirty, pending, wide, chil
     const background = Array.from(document.body.children).filter((element) => element !== backdrop) as HTMLElement[];
     const backgroundState = background.map((element) => ({ element, inert: element.inert, ariaHidden: element.getAttribute("aria-hidden") }));
     background.forEach((element) => { element.inert = true; element.setAttribute("aria-hidden", "true"); });
-    const timer = window.setTimeout(() => dialog.current?.querySelector<HTMLElement>("button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])")?.focus() ?? dialog.current?.focus(), 0);
+    const timer = window.setTimeout(() => {
+      const firstFocusable = dialog.current?.querySelector<HTMLElement>(overlayFocusableSelector);
+      if (firstFocusable) firstFocusable.focus();
+      else dialog.current?.focus();
+    }, 0);
     const onKey = (event:KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -250,13 +256,19 @@ function Overlay({ open, title, description, onClose, dirty, pending, wide, chil
       }
       if (event.key === "Tab" && dialog.current) {
         const scope = confirmDiscardRef.current ? discardRef.current : dialog.current;
-        const focusable = Array.from(scope?.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])") ?? []);
-        if (!focusable.length) return;
+        const focusable = Array.from(scope?.querySelectorAll<HTMLElement>(overlayFocusableSelector) ?? []);
+        if (!focusable.length) {
+          event.preventDefault();
+          dialog.current.focus();
+          return;
+        }
+        const active = document.activeElement;
         const last = focusable[focusable.length - 1];
-        if (event.shiftKey && document.activeElement === focusable[0]) {
+        const focusEscaped = !scope?.contains(active);
+        if (event.shiftKey && (active === focusable[0] || active === scope || focusEscaped)) {
           event.preventDefault();
           last?.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
+        } else if (!event.shiftKey && (active === last || active === scope || focusEscaped)) {
           event.preventDefault();
           focusable[0].focus();
         }

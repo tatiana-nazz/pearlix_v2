@@ -31,6 +31,10 @@ def enforce_storage_quota(*, additional_bytes: int, uploader_id: int, patient_id
 
     if patient_id is not None:
         patient_total = _sum(XrayAttachment.objects.filter(patient_id=patient_id))
+        patient_total += _sum(
+            AIResult.objects.filter(xray_attachment__patient_id=patient_id),
+            "overlay_size_bytes",
+        )
         if patient_total + additional_bytes > patient_limit:
             raise StorageQuotaExceeded("patient", patient_limit)
 

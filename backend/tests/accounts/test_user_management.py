@@ -286,7 +286,6 @@ def test_admin_can_deactivate_another_admin_when_one_active_admin_remains(admin_
         full_name="Other Admin",
         role=User.Role.ADMIN,
         is_staff=True,
-        is_superuser=True,
     )
 
     response = admin_client.post(f"/api/users/{other_admin.id}/deactivate/")

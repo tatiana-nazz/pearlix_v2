@@ -50,6 +50,11 @@ PEARLIX_AI_CLASSIFIER_PATH=weights/classifier_exp1_epoch12.pt
 PEARLIX_AI_FDI_MAP_PATH=contract/fdi_class_map.json
 PEARLIX_AI_DEVICE=cpu|cuda
 PEARLIX_AI_MAX_CONCURRENT_INFERENCES=1
+PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL=2
+PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER=1
+PEARLIX_AI_INVOCATION_WINDOW_SECONDS=3600
+PEARLIX_AI_MAX_INVOCATIONS_PER_USER=10
+PEARLIX_AI_MAX_INVOCATIONS_GLOBAL=50
 ```
 
 ### `SEPARATE_SERVICE`
@@ -90,6 +95,18 @@ Enable real inference only after the target path is ready:
 6. Verify persisted findings and overlay survive reload and remain protected by Pearlix authorization.
 
 The demo seed must never enable mock AI or fabricate AI findings.
+
+## Shared admission and invocation policy
+
+AI admission is serialized through PostgreSQL state shared by every backend
+instance. The per-user active-job limit is attributed to the authenticated
+requester, not the X-ray uploader. Stable fixed-window database buckets also
+bound cumulative starts per requester and across the clinic; the defaults allow
+10 starts per user and 50 clinic-wide starts per hour and can be tuned through
+the variables above. Every admitted start consumes the budget, including an
+attempt that later fails image validation or at the provider boundary. A request
+rejected before admission does not create a processing result or consume a
+budget slot.
 
 ## Safe disablement and mock policy
 

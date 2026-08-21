@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.core.exceptions import PermissionDenied
 
 from apps.accounts.models import DoctorProfile, StaffProfile, User
+from apps.common.admin import ServiceOwnedReadOnlyAdmin
 
 
 @admin.register(User)
@@ -66,12 +67,12 @@ class UserAdmin(DjangoUserAdmin):
 
 
 @admin.register(DoctorProfile)
-class DoctorProfileAdmin(admin.ModelAdmin):
+class DoctorProfileAdmin(ServiceOwnedReadOnlyAdmin):
     list_display = ("user", "specialty", "phone", "is_active")
     search_fields = ("user__email", "user__full_name", "specialty", "phone")
 
 
 @admin.register(StaffProfile)
-class StaffProfileAdmin(admin.ModelAdmin):
+class StaffProfileAdmin(ServiceOwnedReadOnlyAdmin):
     list_display = ("user", "position", "phone", "is_active")
     search_fields = ("user__email", "user__full_name", "position", "phone")

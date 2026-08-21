@@ -41,6 +41,7 @@ from apps.accounts.team_services import (
     create_team_member,
     deactivate_user,
     linked_profile,
+    lock_account_mutation_target,
     profile_state,
     reactivate_user,
     set_professional_status,
@@ -213,11 +214,21 @@ class UserViewSet(viewsets.ModelViewSet):
             return super().create(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
-        user = self.get_object()
-        if "role" in request.data and request.data["role"] != user.role:
-            return error_response("PROFILE_INTEGRITY_ERROR", "Use the transition-role action for professional role changes.", {"role": ["Direct role changes are protected."]})
-        with transaction.atomic():
-            return super().partial_update(request, *args, **kwargs)
+        target_id = self.get_object().id
+        try:
+            with transaction.atomic():
+                user = lock_account_mutation_target(
+                    actor_id=request.user.id,
+                    user_id=target_id,
+                )
+                if "role" in request.data and request.data["role"] != user.role:
+                    return error_response("PROFILE_INTEGRITY_ERROR", "Use the transition-role action for professional role changes.", {"role": ["Direct role changes are protected."]})
+                serializer = self.get_serializer(user, data=request.data, partial=True)
+                serializer.is_valid(raise_exception=True)
+                self.perform_update(serializer)
+                return Response(serializer.data)
+        except TeamRuleError as exc:
+            return error_response(exc.code, exc.message, exc.details, exc.status_code)
 
     def perform_create(self, serializer):
         user = serializer.save()
@@ -244,37 +255,43 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="reset-password")
     def reset_password(self, request, pk=None):
         target_id = self.get_object().id
-        with transaction.atomic():
-            user = User.objects.select_for_update().get(pk=target_id)
-            serializer = AdminResetPasswordSerializer(
-                data=request.data,
-                context={"target_user": user},
-            )
-            serializer.is_valid(raise_exception=True)
-            user.set_user_password(
-                serializer.validated_data["temporary_password"],
-                must_change_password=True,
-                mark_changed=False,
-            )
-            user.version += 1
-            user.save(
-                update_fields=[
-                    "password",
-                    "must_change_password",
-                    "password_changed_at",
-                    "version",
-                    "updated_at",
-                ]
-            )
-            log_activity(
-                request=request,
-                action="user_password_reset",
-                entity_type="user",
-                entity_id=user.id,
-                metadata={"target_user_role": user.role},
-                raise_on_error=True,
-            )
-            response_data = UserManagementSerializer(user).data
+        try:
+            with transaction.atomic():
+                user = lock_account_mutation_target(
+                    actor_id=request.user.id,
+                    user_id=target_id,
+                )
+                serializer = AdminResetPasswordSerializer(
+                    data=request.data,
+                    context={"target_user": user},
+                )
+                serializer.is_valid(raise_exception=True)
+                user.set_user_password(
+                    serializer.validated_data["temporary_password"],
+                    must_change_password=True,
+                    mark_changed=False,
+                )
+                user.version += 1
+                user.save(
+                    update_fields=[
+                        "password",
+                        "must_change_password",
+                        "password_changed_at",
+                        "version",
+                        "updated_at",
+                    ]
+                )
+                log_activity(
+                    request=request,
+                    action="user_password_reset",
+                    entity_type="user",
+                    entity_id=user.id,
+                    metadata={"target_user_role": user.role},
+                    raise_on_error=True,
+                )
+                response_data = UserManagementSerializer(user).data
+        except TeamRuleError as exc:
+            return error_response(exc.code, exc.message, exc.details, exc.status_code)
         return Response(response_data)
 
     @action(detail=True, methods=["post"])

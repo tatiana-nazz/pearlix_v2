@@ -113,7 +113,11 @@ def test_database_shared_ai_per_user_admission(settings, xray_attachment_factory
     settings.PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER = 1
     first = xray_attachment_factory(uploaded_by=doctor_user)
     second = xray_attachment_factory(uploaded_by=doctor_user)
-    AIResult.objects.create(xray_attachment=first, status=AIResult.Status.PROCESSING)
+    AIResult.objects.create(
+        xray_attachment=first,
+        requested_by=doctor_user,
+        status=AIResult.Status.PROCESSING,
+    )
     with pytest.raises(AICapacityBusy):
         _claim_processing(source_model=XrayAttachment, source_id=second.id, source_field="xray_attachment", user=doctor_user)
 

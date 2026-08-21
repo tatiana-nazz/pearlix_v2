@@ -8,13 +8,12 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
-from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 
 from apps.ai_results.adapters import InferenceAdapter, MOCK_MODEL_VERSION, MockInferenceAdapter
 from apps.ai_results.adapters.base import InferenceConfigurationError, InferenceImageInvalidError
-from apps.ai_results.models import AIExecutionState, AIResult
+from apps.ai_results.models import AIExecutionState, AIInvocationBucket, AIResult
 from apps.ai_results.model_contract import FINDINGS_SCHEMA_VERSION, MAX_IMAGE_INPUT_BYTES
 from apps.ai_results.result_types import ImageInput, PipelineResult
 from apps.clinic.models import ClinicSettings
@@ -63,6 +62,19 @@ class AICapacityBusy(AIServiceError):
     public_message = "AI capacity is busy. Try again shortly."
     status_code = status.HTTP_429_TOO_MANY_REQUESTS
     audit_outcome = "rejected"
+
+
+class AIRateLimited(AIServiceError):
+    code = "AI_RATE_LIMITED"
+    public_message = "AI invocation limit reached. Try again after the current window."
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    audit_outcome = "rejected"
+
+
+class AIStorageQuotaExceeded(AIServiceError):
+    code = "AI_STORAGE_QUOTA_EXCEEDED"
+    public_message = "Imaging storage quota exceeded while saving the AI overlay."
+    status_code = status.HTTP_409_CONFLICT
 
 
 class AIImageUnavailable(AIServiceError):
@@ -169,6 +181,67 @@ def _validate_locked_source(source) -> None:
         raise AISourceStateInvalid
 
 
+def _locked_invocation_bucket(*, scope: str, key: str, now, expires_at) -> AIInvocationBucket:
+    bucket, created = AIInvocationBucket.objects.get_or_create(
+        scope=scope,
+        key=key,
+        defaults={
+            "request_count": 0,
+            "window_started_at": now,
+            "expires_at": expires_at,
+        },
+    )
+    if not created:
+        bucket = AIInvocationBucket.objects.select_for_update().get(pk=bucket.pk)
+    if bucket.expires_at <= now:
+        bucket.request_count = 0
+        bucket.window_started_at = now
+        bucket.expires_at = expires_at
+    return bucket
+
+
+def _consume_invocation_budget(*, user) -> None:
+    """Consume one admitted start; downstream validation/provider failures still count."""
+
+    now = timezone.now()
+    window_seconds = max(1, int(settings.PEARLIX_AI_INVOCATION_WINDOW_SECONDS))
+    expires_at = now + timedelta(seconds=window_seconds)
+    user_bucket = _locked_invocation_bucket(
+        scope=AIInvocationBucket.Scope.USER,
+        key=str(user.id),
+        now=now,
+        expires_at=expires_at,
+    )
+    clinic_bucket = _locked_invocation_bucket(
+        scope=AIInvocationBucket.Scope.CLINIC,
+        key="clinic",
+        now=now,
+        expires_at=expires_at,
+    )
+    if user_bucket.request_count >= max(1, int(settings.PEARLIX_AI_MAX_INVOCATIONS_PER_USER)):
+        raise AIRateLimited
+    if clinic_bucket.request_count >= max(1, int(settings.PEARLIX_AI_MAX_INVOCATIONS_GLOBAL)):
+        raise AIRateLimited
+    user_bucket.request_count += 1
+    clinic_bucket.request_count += 1
+    user_bucket.save(
+        update_fields=[
+            "request_count",
+            "window_started_at",
+            "expires_at",
+            "updated_at",
+        ]
+    )
+    clinic_bucket.save(
+        update_fields=[
+            "request_count",
+            "window_started_at",
+            "expires_at",
+            "updated_at",
+        ]
+    )
+
+
 def _claim_processing(*, source_model, source_id: int, source_field: str, user) -> tuple[_ProcessingClaim, object]:
     with transaction.atomic():
         AIExecutionState.objects.get_or_create(pk=1)
@@ -185,13 +258,12 @@ def _claim_processing(*, source_model, source_id: int, source_field: str, user) 
 
         cutoff = timezone.now() - timedelta(seconds=_processing_stale_seconds())
         active = AIResult.objects.filter(status=AIResult.Status.PROCESSING, updated_at__gt=cutoff)
-        if active.count() >= max(1, int(settings.PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL)):
-            raise AICapacityBusy
-        user_active = active.filter(
-            Q(xray_attachment__uploaded_by_id=user.id) | Q(external_xray_case__uploaded_by_id=user.id)
-        ).count()
+        user_active = active.filter(requested_by_id=user.id).count()
         if user_active >= max(1, int(settings.PEARLIX_AI_MAX_ACTIVE_JOBS_PER_USER)):
             raise AICapacityBusy
+        if active.count() >= max(1, int(settings.PEARLIX_AI_MAX_ACTIVE_JOBS_GLOBAL)):
+            raise AICapacityBusy
+        _consume_invocation_budget(user=user)
 
         old_overlay = None
         if result is None:
@@ -200,6 +272,7 @@ def _claim_processing(*, source_model, source_id: int, source_field: str, user) 
             old_overlay = (result.overlay_file.storage, result.overlay_file.name)
 
         result.status = AIResult.Status.PROCESSING
+        result.requested_by = user
         result.result_summary = ""
         result.overall_confidence = None
         result.findings_json = {
@@ -313,6 +386,13 @@ def _execute_analysis(*, source_model, source_id: int, source_field: str, conten
         raise service_error from exc
     except InferenceConfigurationError as exc:
         service_error = AIServiceNotConfigured(result_id=claim.result_id, model_version=adapter.model_version)
+        _mark_failed(claim, error_message=service_error.public_message)
+        raise service_error from exc
+    except StorageQuotaExceeded as exc:
+        service_error = AIStorageQuotaExceeded(
+            result_id=claim.result_id,
+            model_version=adapter.model_version,
+        )
         _mark_failed(claim, error_message=service_error.public_message)
         raise service_error from exc
     except Exception as exc:

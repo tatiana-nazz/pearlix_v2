@@ -31,10 +31,16 @@ def _login(client, user, password=TEMPORARY_PASSWORD):
 )
 def test_admin_demotion_atomically_revokes_django_and_token_authority(
     api_client,
-    admin_client,
     target_role,
     profile,
 ):
+    maintenance_actor = User.objects.create_superuser(
+        email=f"maintenance-actor-{target_role.lower()}@example.com",
+        password=TEMPORARY_PASSWORD,
+        full_name="Maintenance Actor",
+    )
+    maintenance_client = APIClient()
+    maintenance_client.force_authenticate(user=maintenance_actor)
     target = User.objects.create_superuser(
         email=f"demoted-{target_role.lower()}@example.com",
         password=TEMPORARY_PASSWORD,
@@ -53,7 +59,7 @@ def test_admin_demotion_atomically_revokes_django_and_token_authority(
     django_session.force_login(target)
     assert django_session.get("/admin/").status_code == 200
 
-    preview = admin_client.post(
+    preview = maintenance_client.post(
         f"/api/users/{target.id}/transition-role/",
         {"target_role": target_role, "mode": "PREVIEW"},
         format="json",
@@ -61,7 +67,7 @@ def test_admin_demotion_atomically_revokes_django_and_token_authority(
     assert preview.status_code == 200
     assert preview.data["allowed"] is True
 
-    confirmed = admin_client.post(
+    confirmed = maintenance_client.post(
         f"/api/users/{target.id}/transition-role/",
         {
             "target_role": target_role,
@@ -106,7 +112,12 @@ def test_admin_demotion_atomically_revokes_django_and_token_authority(
 
 
 @pytest.mark.django_db
-def test_role_and_privilege_reconciliation_roll_back_together(monkeypatch, admin_user):
+def test_role_and_privilege_reconciliation_roll_back_together(monkeypatch):
+    maintenance_actor = User.objects.create_superuser(
+        email="atomic-maintenance-actor@example.com",
+        password=TEMPORARY_PASSWORD,
+        full_name="Atomic Maintenance Actor",
+    )
     target = User.objects.create_superuser(
         email="atomic-target@example.com",
         password=TEMPORARY_PASSWORD,
@@ -115,7 +126,7 @@ def test_role_and_privilege_reconciliation_roll_back_together(monkeypatch, admin
     preview = transition_preview(
         user=target,
         target_role=User.Role.STAFF,
-        actor=admin_user,
+        actor=maintenance_actor,
     )
 
     def fail_profile_creation(**kwargs):
@@ -125,7 +136,7 @@ def test_role_and_privilege_reconciliation_roll_back_together(monkeypatch, admin
     with pytest.raises(RuntimeError, match="profile creation failed"):
         confirm_transition(
             user_id=target.id,
-            actor=admin_user,
+            actor=maintenance_actor,
             target_role=User.Role.STAFF,
             token=preview["confirmation_token"],
             version=target.version,
@@ -141,10 +152,12 @@ def test_role_and_privilege_reconciliation_roll_back_together(monkeypatch, admin
 
 @pytest.mark.django_db
 def test_last_active_admin_cannot_transition_away_from_admin():
-    target = User.objects.create_superuser(
+    target = User.objects.create_user(
         email="last-admin@example.com",
         password=TEMPORARY_PASSWORD,
         full_name="Last Admin",
+        role=User.Role.ADMIN,
+        is_staff=True,
     )
     inactive_actor = User.objects.create_user(
         email="inactive-admin@example.com",
@@ -166,7 +179,7 @@ def test_last_active_admin_cannot_transition_away_from_admin():
     target.refresh_from_db()
     assert target.role == User.Role.ADMIN
     assert target.is_staff is True
-    assert target.is_superuser is True
+    assert target.is_superuser is False
 
 
 @pytest.mark.django_db

@@ -384,6 +384,7 @@ def _copy_external_ai_result(*, external_case, xray_attachment, created_storage_
         return None
     result = AIResult(
         xray_attachment=xray_attachment,
+        requested_by=external_result.requested_by,
         status=external_result.status,
         result_summary=external_result.result_summary,
         overall_confidence=external_result.overall_confidence,

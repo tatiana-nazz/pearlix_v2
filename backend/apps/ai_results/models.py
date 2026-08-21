@@ -39,6 +39,13 @@ class AIResult(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="ai_result",
     )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="requested_ai_results",
+    )
     result_summary = models.CharField(max_length=255, blank=True)
     overall_confidence = models.FloatField(null=True, blank=True)
     findings_json = models.JSONField(default=list)
@@ -115,3 +122,29 @@ class AIExecutionState(models.Model):
 
     def __str__(self) -> str:
         return "AI execution admission state"
+
+
+class AIInvocationBucket(models.Model):
+    """Stable fixed-window counters protected by the AI execution-state lock."""
+
+    class Scope(models.TextChoices):
+        USER = "USER", "User"
+        CLINIC = "CLINIC", "Clinic"
+
+    scope = models.CharField(max_length=20, choices=Scope.choices)
+    key = models.CharField(max_length=64)
+    request_count = models.PositiveIntegerField(default=0)
+    window_started_at = models.DateTimeField()
+    expires_at = models.DateTimeField(db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["scope", "key"],
+                name="ai_invocation_bucket_scope_key_unique",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.scope}:{self.key}"

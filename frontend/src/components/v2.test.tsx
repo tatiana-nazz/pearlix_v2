@@ -104,4 +104,51 @@ describe("Phase 14C shared primitives", () => {
     rerender(<Example dirty />); fireEvent.click(screen.getByRole("button", { name:"Open" })); fireEvent.click(screen.getByRole("button", { name:"Close" })); expect(screen.getByRole("alertdialog")).toBeInTheDocument(); fireEvent.click(screen.getByRole("button", { name:"Keep editing" })); expect(screen.getByRole("dialog")).toBeInTheDocument(); fireEvent.click(screen.getByRole("button", { name:"Close" })); fireEvent.click(screen.getByRole("button", { name:"Discard" })); expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     rerender(<Example pending />); fireEvent.click(screen.getByRole("button", { name:"Open" })); fireEvent.keyDown(document, { key:"Escape" }); expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
+
+  it("focuses only the first modal control and wraps Tab in both directions", async () => {
+    function Example() { const [open, setOpen] = useState(false); return <><button onClick={() => setOpen(true)}>Launch</button><Modal open={open} title="Focus contract" onClose={() => setOpen(false)}><button>First body action</button><button>Last body action</button></Modal></>; }
+    render(<Example />);
+    const opener = screen.getByRole("button", { name:"Launch" });
+    opener.focus();
+    fireEvent.click(opener);
+    const dialog = screen.getByRole("dialog");
+    const dialogFocus = vi.spyOn(dialog, "focus");
+    const close = screen.getByRole("button", { name:"Close" });
+    const last = screen.getByRole("button", { name:"Last body action" });
+
+    await waitFor(() => expect(close).toHaveFocus());
+    expect(dialogFocus).not.toHaveBeenCalled();
+    const background = opener.parentElement!;
+    expect(background.inert).toBe(true);
+
+    fireEvent.keyDown(document, { key:"Tab", shiftKey:true });
+    expect(last).toHaveFocus();
+    expect(document.body).not.toHaveFocus();
+    fireEvent.keyDown(document, { key:"Tab" });
+    expect(close).toHaveFocus();
+
+    dialog.focus();
+    fireEvent.keyDown(document, { key:"Tab", shiftKey:true });
+    expect(last).toHaveFocus();
+    expect(document.body).not.toHaveFocus();
+
+    fireEvent.keyDown(document, { key:"Escape" });
+    await waitFor(() => expect(opener).toHaveFocus());
+    expect(background.inert).not.toBe(true);
+  });
+
+  it("contains backward focus when a modal has only fallback dialog focus", async () => {
+    function Example() { const [open, setOpen] = useState(false); return <><button onClick={() => setOpen(true)}>Launch fallback</button><Modal open={open} title="No enabled controls" pending onClose={() => setOpen(false)} /></>; }
+    const { rerender } = render(<Example />);
+    const opener = screen.getByRole("button", { name:"Launch fallback" });
+    opener.focus();
+    fireEvent.click(opener);
+    const dialog = screen.getByRole("dialog");
+    await waitFor(() => expect(dialog).toHaveFocus());
+    fireEvent.keyDown(document, { key:"Tab", shiftKey:true });
+    expect(dialog).toHaveFocus();
+    expect(document.body).not.toHaveFocus();
+    rerender(<button>Closed state</button>);
+    await waitFor(() => expect(opener).not.toBeInTheDocument());
+  });
 });
