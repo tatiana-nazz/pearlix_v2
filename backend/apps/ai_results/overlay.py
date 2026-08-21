@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from apps.ai_results.model_contract import DISEASE_CLASSES
-from apps.ai_results.result_types import FindingDecision, ToothDecision
+from apps.ai_results.result_types import ToothDecision
 
 
 QUADRANT_COLORS = {
@@ -12,7 +12,6 @@ QUADRANT_COLORS = {
     "3": (0, 190, 255),
     "4": (255, 220, 0),
 }
-REVIEW_COLOR = (255, 165, 0)
 NOTICE_LINES = (
     "Research only - not clinical diagnosis",
     "Scores are uncalibrated model scores",
@@ -22,7 +21,6 @@ NOTICE_LINES = (
 @dataclass(frozen=True)
 class OverlayFinding:
     flagged_diseases: tuple[str, ...]
-    is_review: bool
 
 
 @dataclass(frozen=True)
@@ -42,12 +40,17 @@ def fdi_parts(value: str) -> tuple[str, str]:
 
 
 def select_overlay_finding(tooth: ToothDecision) -> OverlayFinding:
+    """Return only positive findings that should be drawn for clinicians.
+
+    Any-Caries REVIEW decisions remain in the persisted inference envelope for
+    research/audit traceability, but they are intentionally not an overlay
+    finding and therefore never create an orange box or REVIEW label.
+    """
     decisions = {item.disease_label: item for item in tooth.decisions}
     flagged = [label for label in DISEASE_CLASSES if decisions[label].is_positive]
     if "Deep Caries" in flagged and "Any Caries" in flagged:
         flagged.remove("Any Caries")
-    is_review = not flagged and decisions["Any Caries"].decision == FindingDecision.REVIEW
-    return OverlayFinding(flagged_diseases=tuple(flagged), is_review=is_review)
+    return OverlayFinding(flagged_diseases=tuple(flagged))
 
 
 def overlay_scale(image_height: int, image_width: int) -> OverlayScale:
@@ -86,12 +89,9 @@ def _finding_lines(tooth: ToothDecision, finding: OverlayFinding) -> list[str]:
     quadrant, tooth_number = fdi_parts(tooth.tooth.fdi_tooth_id)
     score_map = tooth.scores.to_json()
     lines = [f"Q={quadrant}", f"N={tooth_number}"]
-    if finding.is_review:
-        lines.extend(["D=Any Caries REVIEW", f"S={score_map['Any Caries']:.0%}"])
-    else:
-        for index, disease in enumerate(finding.flagged_diseases):
-            prefix = "D=" if index == 0 else "  "
-            lines.append(f"{prefix}{disease} {score_map[disease]:.0%}")
+    for index, disease in enumerate(finding.flagged_diseases):
+        prefix = "D=" if index == 0 else "  "
+        lines.append(f"{prefix}{disease} {score_map[disease]:.0%}")
     return lines
 
 
@@ -125,7 +125,7 @@ def render_overlay_png(image_rgb, teeth: tuple[ToothDecision, ...], *, cv2_modul
 
     for tooth in teeth:
         finding = select_overlay_finding(tooth)
-        if not finding.flagged_diseases and not finding.is_review:
+        if not finding.flagged_diseases:
             continue
 
         x1, y1, x2, y2 = [round(value) for value in tooth.tooth.bbox_xyxy]
@@ -135,7 +135,7 @@ def render_overlay_png(image_rgb, teeth: tuple[ToothDecision, ...], *, cv2_modul
         y2 = _clip(y2, 0, image_height - 1)
 
         quadrant, _ = fdi_parts(tooth.tooth.fdi_tooth_id)
-        color = REVIEW_COLOR if finding.is_review else QUADRANT_COLORS.get(quadrant, (255, 255, 255))
+        color = QUADRANT_COLORS.get(quadrant, (255, 255, 255))
         lines = _finding_lines(tooth, finding)
 
         cv2_module.rectangle(canvas, (x1, y1), (x2, y2), color, scale.box_thickness)

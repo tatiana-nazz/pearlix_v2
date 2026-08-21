@@ -183,7 +183,6 @@ export function ProtectedXrayViewer({
         <span><i className="q2" aria-hidden="true" />{c.quadrantUpperLeft}</span>
         <span><i className="q3" aria-hidden="true" />{c.quadrantLowerLeft}</span>
         <span><i className="q4" aria-hidden="true" />{c.quadrantLowerRight}</span>
-        <span><i className="review" aria-hidden="true" />{c.reviewColor}</span>
       </div> : null}
       {overlayFailed ? <p className="protected-xray-overlay-error" role="alert">{c.overlayUnavailable}</p> : null}
     </figure>

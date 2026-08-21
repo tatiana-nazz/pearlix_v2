@@ -1,6 +1,5 @@
 from apps.ai_results.overlay import (
     QUADRANT_COLORS,
-    REVIEW_COLOR,
     overlay_scale,
     preferred_label_top,
     select_overlay_finding,
@@ -17,18 +16,16 @@ def test_overlay_suppresses_generic_any_caries_when_deep_is_flagged():
     finding = select_overlay_finding(decide("36", 0.60, deep=0.70, lesion=0.80))
 
     assert finding.flagged_diseases == ("Deep Caries", "Periapical Lesion")
-    assert finding.is_review is False
 
 
-def test_overlay_review_only_applies_when_no_disease_is_flagged():
-    review = select_overlay_finding(decide("11", 0.30))
+def test_overlay_hides_review_only_decisions_but_preserves_policy_state():
+    review_decision = decide("11", 0.30)
+    review = select_overlay_finding(review_decision)
     review_with_positive = select_overlay_finding(decide("11", 0.30, impacted=0.60))
 
+    assert review_decision.any_caries_decision == FindingDecision.REVIEW
     assert review.flagged_diseases == ()
-    assert review.is_review is True
     assert review_with_positive.flagged_diseases == ("Impacted",)
-    assert review_with_positive.is_review is False
-    assert decide("11", 0.30).any_caries_decision == FindingDecision.REVIEW
 
 
 def test_overlay_jaw_placement_and_scale_formulas_are_exact():
@@ -45,11 +42,10 @@ def test_overlay_jaw_placement_and_scale_formulas_are_exact():
     assert scale.margin == 8
 
 
-def test_overlay_colors_match_final_notebook():
+def test_overlay_colors_match_positive_finding_palette():
     assert QUADRANT_COLORS == {
         "1": (0, 230, 130),
         "2": (255, 75, 45),
         "3": (0, 190, 255),
         "4": (255, 220, 0),
     }
-    assert REVIEW_COLOR == (255, 165, 0)
