@@ -35,6 +35,7 @@ from apps.ai_results.adapters.dentex import DentexConfig, DentexInferenceAdapter
 from apps.ai_results.model_contract import MAX_IMAGE_INPUT_BYTES, PIPELINE_VERSION  # noqa: E402
 from apps.ai_results.result_types import ImageInput  # noqa: E402
 from apps.xrays.image_validation import ImageValidationError, validate_image_upload  # noqa: E402
+from apps.xrays.request_limits import BoundedASGIRequestBodyMiddleware  # noqa: E402
 
 
 app = FastAPI(
@@ -43,6 +44,7 @@ app = FastAPI(
     redoc_url=None,
     openapi_url=None,
 )
+app.add_middleware(BoundedASGIRequestBodyMiddleware)
 _adapter = DentexInferenceAdapter(DentexConfig.from_settings())
 
 

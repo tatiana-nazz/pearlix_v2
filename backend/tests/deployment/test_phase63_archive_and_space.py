@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import zipfile
 from pathlib import Path
 
@@ -8,7 +7,7 @@ import pytest
 
 from deployment import archive_safety
 from deployment.archive_safety import extract_zip_safely
-from deployment.publish_hf_ai import build_space, validate_space_build
+from deployment.publish_hf_ai import build_space, space_direct_url, validate_space_build
 
 
 def _archive(path: Path, entries, *, compression=zipfile.ZIP_DEFLATED):
@@ -82,9 +81,34 @@ def test_archive_rejects_symlink_and_corrupt_stream(tmp_path):
             extract_zip_safely(archive, output)
 
 
-def test_generated_space_packages_xray_validator_and_imports_without_repo_path(tmp_path):
+def test_generated_space_packages_xray_validator_and_direct_https_contract(tmp_path):
     repo_root = Path(__file__).resolve().parents[3]
     output = tmp_path / "space"
     build_space(repo_root, output)
     validate_space_build(output)
     assert (output / "apps/xrays/image_validation.py").is_file()
+    assert (output / "apps/xrays/request_limits.py").is_file()
+
+    app_source = (output / "app.py").read_text(encoding="utf-8")
+    assert '@api.post("/analyze")' in app_source
+    assert '"overlay_png_base64"' in app_source
+    assert "api.add_middleware(BoundedASGIRequestBodyMiddleware)" in app_source
+    assert 'gr.mount_gradio_app(api, demo, path="/ui")' in app_source
+    requirements = (output / "requirements.txt").read_text(encoding="utf-8")
+    assert "fastapi" in requirements
+    assert "python-multipart" in requirements
+
+
+def test_space_direct_url_matches_private_space_https_origin():
+    assert space_direct_url("tay164/pearlix-dentex-ai") == "https://tay164-pearlix-dentex-ai.hf.space"
+
+
+def test_local_ai_launcher_does_not_print_bearer_token_and_service_bounds_requests():
+    repo_root = Path(__file__).resolve().parents[3]
+    launcher = (repo_root / "backend/deployment/start_local_ai.ps1").read_text(encoding="utf-8")
+    service = (repo_root / "backend/deployment/local_ai_service.py").read_text(encoding="utf-8")
+
+    assert "Write-Host $serviceToken" not in launcher
+    assert "Set-Clipboard" in launcher
+    assert "intentionally NOT printed" in launcher
+    assert "app.add_middleware(BoundedASGIRequestBodyMiddleware)" in service
